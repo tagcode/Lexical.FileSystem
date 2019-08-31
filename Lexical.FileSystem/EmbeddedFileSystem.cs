@@ -106,5 +106,26 @@ namespace Lexical.FileSystem
             if (s == null) throw new FileNotFoundException(path);
             return s;
         }
+
+        /// <summary>
+        /// Add <paramref name="disposable"/> to list of objects to be disposed along with the system.
+        /// </summary>
+        /// <param name="disposable"></param>
+        /// <returns>filesystem</returns>
+        public EmbeddedFileSystem AddDisposable(object disposable) => AddDisposableBase(disposable) as EmbeddedFileSystem;
+
+        /// <summary>
+        /// Remove disposable from dispose list.
+        /// </summary>
+        /// <param name="disposable"></param>
+        /// <returns></returns>
+        public EmbeddedFileSystem RemoveDisposable(object disposable) => RemoveDisposableBase(disposable) as EmbeddedFileSystem;
+
+        /// <summary>
+        /// Print info
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+            => Assembly.FullName;
     }
 }

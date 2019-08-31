@@ -381,7 +381,7 @@ namespace Lexical.FileSystem
 
                 // Clear file system reference, and remove watcher from dispose list.
                 IFileSystem _fileSystem = Interlocked.Exchange(ref fileSystem, null);
-                if (_fileSystem is FileSystemBase __fileSystem) __fileSystem.RemoveDisposable(this);
+                if (_fileSystem is FileSystemBase __fileSystem) __fileSystem.RemoveDisposableBase(this);
 
                 StructList2<Exception> errors = new StructList2<Exception>();
                 if (_observer != null)
@@ -414,6 +414,20 @@ namespace Lexical.FileSystem
                 if (errors.Count > 0) throw new AggregateException(errors);
             }
         }
+
+        /// <summary>
+        /// Add <paramref name="disposable"/> to list of objects to be disposed along with the system.
+        /// </summary>
+        /// <param name="disposable"></param>
+        /// <returns>filesystem</returns>
+        public FileSystem AddDisposable(object disposable) => AddDisposableBase(disposable) as FileSystem;
+
+        /// <summary>
+        /// Remove disposable from dispose list.
+        /// </summary>
+        /// <param name="disposable"></param>
+        /// <returns></returns>
+        public FileSystem RemoveDisposable(object disposable) => RemoveDisposableBase(disposable) as FileSystem;
 
         /// <summary>
         /// Print info

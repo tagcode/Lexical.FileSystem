@@ -38,7 +38,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposable"></param>
         /// <returns>filesystem</returns>
-        public IFileSystem AddDisposable(object disposable)
+        internal protected IFileSystem AddDisposableBase(object disposable)
         {
             if (disposable is IDisposable disp)
             {
@@ -56,7 +56,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposable"></param>
         /// <returns></returns>
-        public IFileSystem RemoveDisposable(object disposable)
+        internal protected IFileSystem RemoveDisposableBase(object disposable)
         {
             if (disposable is IDisposable disp)
             {

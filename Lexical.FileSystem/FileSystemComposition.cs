@@ -320,6 +320,20 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Add <paramref name="disposable"/> to list of objects to be disposed along with the system.
+        /// </summary>
+        /// <param name="disposable"></param>
+        /// <returns>filesystem</returns>
+        public FileSystemComposition AddDisposable(object disposable) => AddDisposableBase(disposable) as FileSystemComposition;
+
+        /// <summary>
+        /// Remove disposable from dispose list.
+        /// </summary>
+        /// <param name="disposable"></param>
+        /// <returns></returns>
+        public FileSystemComposition RemoveDisposable(object disposable) => RemoveDisposableBase(disposable) as FileSystemComposition;
+
+        /// <summary>
         /// Get file systems
         /// </summary>
         /// <returns></returns>

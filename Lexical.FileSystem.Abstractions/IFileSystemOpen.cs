@@ -9,6 +9,7 @@ using System.Security;
 
 namespace Lexical.FileSystem
 {
+    // <doc>
     /// <summary>
     /// File system where files can be opened for reading and writing. 
     /// </summary>

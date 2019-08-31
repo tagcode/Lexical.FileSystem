@@ -87,7 +87,8 @@ namespace Lexical.FileSystem
         File = 1,
         /// <summary>Entry is directory</summary>
         Directory = 2
-    }    // </doc>
+    }    
+    // </doc>
 
     /// <summary>
     /// Extension methods for <see cref="IFileSystem"/>.
