@@ -3,17 +3,9 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Internal;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Primitives;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Security;
-using System.Threading;
 
 namespace Lexical.FileSystem
 {
@@ -59,7 +51,7 @@ namespace Lexical.FileSystem
             if (Assembly.Location != null && File.Exists(Assembly.Location))
                 time = new FileInfo(Assembly.Location).LastWriteTimeUtc;
             else
-                time = DateTimeOffset.FromUnixTimeSeconds(0L);            
+                time = DateTimeOffset.FromUnixTimeSeconds(0L);
 
             FileSystemEntry[] result = new FileSystemEntry[names.Length];
             for (int i = 0; i < names.Length; i++)

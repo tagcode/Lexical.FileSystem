@@ -53,7 +53,7 @@ Directories and files can be deleted.
 filesystem.Delete("dir", recursive: true);
 ```
 
-Files and directories can be renamed.
+Files and directories can be moved and renamed.
 
 ```csharp
 filesystem.CreateDirectory("dir");
