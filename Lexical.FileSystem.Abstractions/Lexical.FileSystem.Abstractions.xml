@@ -1,0 +1,472 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Lexical.FileSystem.Abstractions</name>
+    </assembly>
+    <members>
+        <member name="T:Lexical.FileSystem.IFileSystem">
+            <summary>
+            Root interface for file system interfaces. See sub-interfaces:
+            <list type="bullet">
+                <item><see cref="T:Lexical.FileSystem.IFileSystemOpen"/></item>
+                <item><see cref="T:Lexical.FileSystem.IFileSystemCreateDirectory"/></item>
+                <item><see cref="T:Lexical.FileSystem.IFileSystemBrowse"/></item>
+                <item><see cref="T:Lexical.FileSystem.IFileSystemDelete"/></item>
+                <item><see cref="T:Lexical.FileSystem.IFileSystemMove"/></item>
+                <item><see cref="T:Lexical.FileSystem.IFileSystemObserve"/></item>
+            </list>
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.IFileSystem.Capabilities">
+            <summary>
+            The capabilities of the implementing class. 
+            
+            Note, that even if class is capable of certain operation, for example delete,
+            the operation may be not supported for specific files, and the class may throw
+            <see cref="T:System.NotSupportedException"/>.
+            </summary>
+        </member>
+        <member name="T:Lexical.FileSystem.FileSystemCapabilities">
+            <summary>
+            File system operation capabilities
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Open">
+            <summary>Can open file stream (<see cref="T:Lexical.FileSystem.IFileSystemOpen"/>).</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Read">
+            <summary>Can open file for reading(<see cref="T:Lexical.FileSystem.IFileSystemOpen"/>).</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Write">
+            <summary>Can open file for writing (<see cref="T:Lexical.FileSystem.IFileSystemOpen"/>).</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.CreateFile">
+            <summary>Can open and create file (<see cref="T:Lexical.FileSystem.IFileSystemOpen"/>).</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.CreateDirectory">
+            <summary>Can create directory (<see cref="T:Lexical.FileSystem.IFileSystemCreateDirectory"/>)</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Browse">
+            <summary>Can browse directories</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Delete">
+            <summary>Can delete files and directories</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Move">
+            <summary>Can move and rename files and directories.</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Observe">
+            <summary>Can observe for directories and files</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Reserved0">
+            <summary>Reserved for implementing classes to use for any purpose.</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Reserved1">
+            <summary>Reserved for implementing classes to use for any purpose.</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Reserved2">
+            <summary>Reserved for implementing classes to use for any purpose.</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Reserved3">
+            <summary>Reserved for implementing classes to use for any purpose.</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Reserved4">
+            <summary>Reserved for implementing classes to use for any purpose.</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Reserved5">
+            <summary>Reserved for implementing classes to use for any purpose.</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Reserved6">
+            <summary>Reserved for implementing classes to use for any purpose.</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemCapabilities.Reserved7">
+            <summary>Reserved for implementing classes to use for any purpose.</summary>
+        </member>
+        <member name="T:Lexical.FileSystem.IFileSystemBrowse">
+            <summary>
+            File system that can be browsed for files and subdirectories.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemBrowse.Browse(System.String)">
+            <summary>
+            Browse a directory for file and subdirectory entries.
+            </summary>
+            <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+            <returns>a snapshot of file and directory entries</returns>
+            <exception cref="T:System.IO.DirectoryNotFoundException"></exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support browse</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="T:Lexical.FileSystem.FileSystemEntry">
+            <summary>
+            File entry used by <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            The entry represents the snapshot state at the time of creation.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntry.FileSystem">
+            <summary>
+            (optional) Associated file system.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntry.Type">
+            <summary>
+            File entry type.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntry.Path">
+            <summary>
+            Path that is relative to the <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            Separator is "/".
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntry.Length">
+            <summary>
+            File length. -1 if is folder or length is unknown.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntry.Name">
+            <summary>
+            Entry name without path.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntry.LastModified">
+            <summary>
+            Date time of last modification.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemEntry.ToString">
+            <summary>
+            Print info (path).
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Lexical.FileSystem.FileSystemEntryType">
+            <summary>
+            <see cref="T:Lexical.FileSystem.FileSystemEntry"/> type.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntryType.File">
+            <summary>Entry is file</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntryType.Directory">
+            <summary>Entry is directory</summary>
+        </member>
+        <member name="T:Lexical.FileSystem.IFileSystemExtensions">
+            <summary>
+            Extension methods for <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            </summary>
+            <summary>
+            Extension methods for <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            </summary>
+            <summary>
+            Extension methods for <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            </summary>
+            <summary>
+            Extension methods for <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            </summary>
+            <summary>
+            Extension methods for <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            </summary>
+            <summary>
+            Extension methods for <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemExtensions.Browse(Lexical.FileSystem.IFileSystem,System.String)">
+            <summary>
+            Browse a directory for file and subdirectory entries.
+            </summary>
+            <param name="fileSystem"></param>
+            <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+            <returns>a snapshot of file and directory entries</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support browse</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemExtensions.CreateDirectory(Lexical.FileSystem.IFileSystem,System.String)">
+            <summary>
+            Create a directory, or multiple cascading directories.
+            
+            If directory at <paramref name="path"/> already exists, then returns without exception.
+            </summary>
+            <param name="fileSystem"></param>
+            <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <returns>true if directory exists after the method, false if directory doesn't exist</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support create directory</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemExtensions.Delete(Lexical.FileSystem.IFileSystem,System.String,System.Boolean)">
+            <summary>
+            Delete a file or directory.
+            
+            If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="T:System.IO.IOException"/> is thrown.
+            If <paramref name="recursive"/> is true, then any file or directory within <paramref name="path"/> is deleted as well.
+            </summary>
+            <param name="fileSystem"></param>
+            <param name="path">path to a file or directory</param>
+            <param name="recursive">if path refers to directory, recurse into sub directories</param>
+            <exception cref="T:System.IO.FileNotFoundException">The specified path is invalid.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support deleting files</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemExtensions.Move(Lexical.FileSystem.IFileSystem,System.String,System.String)">
+            <summary>
+            Try to move/rename a file or directory.
+            </summary>
+            <param name="fileSystem"></param>
+            <param name="oldPath">old path of a file or directory</param>
+            <param name="newPath">new path of a file or directory</param>
+            <exception cref="T:System.IO.FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.FileNotFoundException">The specified path is invalid.</exception>
+            <exception cref="T:System.ArgumentNullException">path is null</exception>
+            <exception cref="T:System.ArgumentException">path is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support renaming/moving files</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemExtensions.Observe(Lexical.FileSystem.IFileSystem,System.String,System.IObserver{Lexical.FileSystem.FileSystemEntryEvent})">
+            <summary>
+            Attach an <paramref name="observer"/> on to a single file or directory. 
+            Observing a directory will observe the whole subtree.
+            </summary>
+            <param name="fileSystem"></param>
+            <param name="path">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <param name="observer"></param>
+            <returns>dispose handle</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support observe</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemExtensions.CreateFile(Lexical.FileSystem.IFileSystem,System.String)">
+            <summary>
+            Create a new file. If file exists, does nothing.
+            </summary>
+            <param name="fileSystem"></param>
+            <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/file"</param>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support create directory</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemExtensions.Open(Lexical.FileSystem.IFileSystem,System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare)">
+            <summary>
+            Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="F:System.IO.FileMode.Create"/> or <see cref="F:System.IO.FileMode.CreateNew"/>.
+            </summary>
+            <param name="fileSystem"></param>
+            <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
+            <param name="fileMode">determines whether to open or to create the file</param>
+            <param name="fileAccess">how to access the file, read, write or read and write</param>
+            <param name="fileShare">how the file will be shared by processes</param>
+            <returns>open file stream</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support opening files</exception>
+            <exception cref="T:System.IO.FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="T:Lexical.FileSystem.IFileSystemCreateDirectory">
+            <summary>
+            File system that where directories can be created.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemCreateDirectory.CreateDirectory(System.String)">
+            <summary>
+            Create a directory, or multiple cascading directories.
+            
+            If directory at <paramref name="path"/> already exists, then returns without exception.
+            </summary>
+            <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <returns>true if directory exists after the method, false if directory doesn't exist</returns>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support create directory</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="T:Lexical.FileSystem.IFileSystemDelete">
+            <summary>
+            File system that can delete files and directories.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemDelete.Delete(System.String,System.Boolean)">
+            <summary>
+            Delete a file or directory.
+            
+            If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="T:System.IO.IOException"/> is thrown.
+            If <paramref name="recursive"/> is true, then any file or directory within <paramref name="path"/> is deleted as well.
+            </summary>
+            <param name="path">path to a file or directory</param>
+            <param name="recursive">if path refers to directory, recurse into sub directories</param>
+            <exception cref="T:System.IO.FileNotFoundException">The specified path is invalid.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support deleting files</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="T:Lexical.FileSystem.IFileSystemMove">
+            <summary>
+            File system that can move/rename files and directories.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemMove.Move(System.String,System.String)">
+            <summary>
+            Try to move/rename a file or directory.
+            </summary>
+            <param name="oldPath">old path of a file or directory</param>
+            <param name="newPath">new path of a file or directory</param>
+            <exception cref="T:System.IO.FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException">path is null</exception>
+            <exception cref="T:System.ArgumentException">path is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support renaming/moving files</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="T:Lexical.FileSystem.IFileSystemObserve">
+            <summary>
+            File system that can be observed for file and directory changes.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemObserve.Observe(System.String,System.IObserver{Lexical.FileSystem.FileSystemEntryEvent})">
+            <summary>
+            Attach an <paramref name="observer"/> on to a single file or directory. 
+            Observing a directory will observe the whole subtree.
+            </summary>
+            <param name="path">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <param name="observer"></param>
+            <returns>disposable handle</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support observe</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="T:Lexical.FileSystem.FileSystemEntryEvent">
+            <summary>
+            File entry event.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntryEvent.FileSystem">
+            <summary>
+            The file system where the observer was attached.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntryEvent.Path">
+            <summary>
+            The affected file or directory.
+            
+            Path is relative to the <see cref="F:Lexical.FileSystem.FileSystemEntryEvent.FileSystem"/>'s root.
+            
+            Directory separator is "/". Root path doesn't use separator.
+            
+            Example: "dir/file.ext"
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemEntryEvent.ChangeEvents">
+            <summary>
+            Change events
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemEntryEvent.ToString">
+            <summary>
+            Print info
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Lexical.FileSystem.IFileSystemOpen">
+            <summary>
+            File system where files can be opened for reading and writing. 
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.IFileSystemOpen.Open(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare)">
+            <summary>
+            Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="F:System.IO.FileMode.Create"/> or <see cref="F:System.IO.FileMode.CreateNew"/>.
+            </summary>
+            <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
+            <param name="fileMode">determines whether to open or to create the file</param>
+            <param name="fileAccess">how to access the file, read, write or read and write</param>
+            <param name="fileShare">how the file will be shared by processes</param>
+            <returns>open file stream</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support opening files</exception>
+            <exception cref="T:System.IO.FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+    </members>
+</doc>

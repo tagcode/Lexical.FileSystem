@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29215.179
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lexical.FileSystem.Abstractions", "Lexical.FileSystem.Abstractions\Lexical.FileSystem.Abstractions.csproj", "{2015F185-484F-4A21-8154-E8A00609A84E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lexical.FileSystem", "Lexical.FileSystem\Lexical.FileSystem.csproj", "{BFBAB19B-1576-4B52-ABB0-72F7B1A888EA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2015F185-484F-4A21-8154-E8A00609A84E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2015F185-484F-4A21-8154-E8A00609A84E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2015F185-484F-4A21-8154-E8A00609A84E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2015F185-484F-4A21-8154-E8A00609A84E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFBAB19B-1576-4B52-ABB0-72F7B1A888EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFBAB19B-1576-4B52-ABB0-72F7B1A888EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFBAB19B-1576-4B52-ABB0-72F7B1A888EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFBAB19B-1576-4B52-ABB0-72F7B1A888EA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8AE9EB17-3EDC-4B73-930B-555E26676EA2}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>0.9.0</Version>
+    <Authors>Toni Kalajainen</Authors>
+    <Company>Lexical</Company>
+    <Description>IFileSystem implementations.</Description>
+    <PackageProjectUrl>https://lexical.fi/FileSystem/index.html</PackageProjectUrl>
+    <PackageIconUrl>http://lexical.fi/theme/logo_blue.svg</PackageIconUrl>
+    <RepositoryUrl>https://github.com/tagcode/Lexical.FileSystem</RepositoryUrl>
+    <PackageTags>FileSystem FileProvider Lexical</PackageTags>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>N:\Lexical\FileSystem\Lexical.FileSystem\Lexical.FileSystem.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="2.0.0" PrivateAssets="all" />
+    <ProjectReference Include="..\Lexical.FileSystem.Abstractions\Lexical.FileSystem.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

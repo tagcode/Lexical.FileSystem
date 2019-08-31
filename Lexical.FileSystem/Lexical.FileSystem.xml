@@ -1,0 +1,1445 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Lexical.FileSystem</name>
+    </assembly>
+    <members>
+        <member name="T:Lexical.FileSystem.EmbeddedFileSystem">
+            <summary>
+            File System that represents embedded resources of an <see cref="T:System.Reflection.Assembly"/>.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.EmbeddedFileSystem.Assembly">
+            <summary>
+            Associated Assembly
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.EmbeddedFileSystem.Capabilities">
+            <summary>
+            Get capabilities.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.EmbeddedFileSystem.entries">
+            <summary>
+            Snapshot of entries.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.EmbeddedFileSystem.#ctor(System.Reflection.Assembly)">
+            <summary>
+            Create embedded 
+            </summary>
+            <param name="assembly"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.EmbeddedFileSystem.CreateEntries">
+            <summary>
+            Create a snapshot of entries.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.EmbeddedFileSystem.Browse(System.String)">
+            <summary>
+            Browse a list of embedded resources.
+            
+            For example:
+                "assembly.res1"
+                "assembly.res2"
+            </summary>
+            <param name="path"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.EmbeddedFileSystem.Open(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare)">
+            <summary>
+            Open embedded resource for reading.
+            </summary>
+            <param name="path"></param>
+            <param name="fileMode"></param>
+            <param name="fileAccess"></param>
+            <param name="fileShare"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Lexical.FileSystem.FileProviderSystem">
+            <summary>
+            File system that reads, observes and browses files from <see cref="T:Microsoft.Extensions.FileProviders.IFileProvider"/> source.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.SubPath">
+            <summary>
+            Optional subpath within the source <see cref="F:Lexical.FileSystem.FileProviderSystem.fileProvider"/>.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.fileProvider">
+            <summary>
+            Source file provider. This value is nulled upon dispose.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.capabilities">
+            <summary>
+            IFileProvider capabilities
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.FileProviderSystem.Capabilities">
+            <summary>
+            IFileProvider capabilities
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.FileProviderSystem.#ctor(Microsoft.Extensions.FileProviders.IFileProvider,System.String,Lexical.FileSystem.FileSystemCapabilities)">
+            <summary>
+            Create file provider based file system.
+            </summary>
+            <param name="fileProvider"></param>
+            <param name="subpath">(optional) subpath within the file provider</param>
+            <param name="capabilities">file provider capabilities</param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileProviderSystem.Open(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare)">
+            <summary>
+            Open a file for reading. 
+            </summary>
+            <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
+            <param name="fileMode">determines whether to open or to create the file</param>
+            <param name="fileAccess">how to access the file, read, write or read and write</param>
+            <param name="fileShare">how the file will be shared by processes</param>
+            <returns>open file stream</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support opening files</exception>
+            <exception cref="T:System.IO.FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.FileProviderSystem.Browse(System.String)">
+            <summary>
+            Browse a directory for file and subdirectory entries.
+            </summary>
+            <param name="path">path to directory, "" is root, separator is "/"</param>
+            <returns>a snapshot of file and directory entries</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support browse</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.FileProviderSystem.Observe(System.String,System.IObserver{Lexical.FileSystem.FileSystemEntryEvent})">
+            <summary>
+            Attach an <paramref name="observer"/> on to a single file or directory. 
+            Observing a directory will observe the whole subtree.
+            </summary>
+            <param name="path">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <param name="observer"></param>
+            <returns>dispose handle</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support observe</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="T:Lexical.FileSystem.FileProviderSystem.Watcher">
+            <summary>
+            File watcher.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.Watcher.FileProviderPath">
+            <summary>
+            Path to supply to <see cref="F:Lexical.FileSystem.FileProviderSystem.Watcher.fileProvider"/>.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.Watcher.RelativePath">
+            <summary>
+            Relative path. Path is relative to the <see cref="F:Lexical.FileSystem.FileProviderSystem.Watcher.fileSystem"/>'s root.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.Watcher.observer">
+            <summary>
+            Associated observer
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.Watcher.fileSystem">
+            <summary>
+            The parent file system.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.Watcher.fileProvider">
+            <summary>
+            File provider
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.Watcher.watcher">
+            <summary>
+            Watcher class
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.Watcher.existed">
+            <summary>
+            Previous state of file existing.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileProviderSystem.Watcher.changeToken">
+            <summary>
+            Change token
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.FileProviderSystem.Watcher.ToString">
+            <summary>
+            Print info
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.FileProviderSystem.Watcher.#ctor(Lexical.FileSystem.IFileSystem,Microsoft.Extensions.FileProviders.IFileProvider,System.IObserver{Lexical.FileSystem.FileSystemEntryEvent},System.String,System.String)">
+            <summary>
+            Create observer for one file.
+            </summary>
+            <param name="system"></param>
+            <param name="fileProvider"></param>
+            <param name="observer"></param>
+            <param name="fileProviderPath">Absolute path</param>
+            <param name="relativePath">Relative path (separator is '/')</param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileProviderSystem.Watcher.OnEvent(System.Object)">
+            <summary>
+            Forward event
+            </summary>
+            <param name="sender"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileProviderSystem.Watcher.Dispose">
+            <summary>
+            Dispose observer
+            </summary>
+        </member>
+        <member name="T:Lexical.FileSystem.FileSystem">
+            <summary>
+            File system based <see cref="T:Lexical.FileSystem.IFileSystem"/> that loads local file system files.
+            
+            If file watchers have been created, and file system is disposed, then watchers will be disposed also. 
+            <see cref="M:System.IObserver`1.OnCompleted"/> event is forwarded to watchers.
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.FileSystem.ApplicationRoot">
+            <summary>
+            File system system that reads from application base directory (application resources).
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.FileSystem.OSRoot">
+            <summary>
+            File system system that reads from operating system root.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystem.RootPath">
+            <summary>
+            The root path as provided with constructor.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystem.AbsoluteRootPath">
+            <summary>
+            Full absolute root path.
+            <see cref="F:Lexical.FileSystem.FileSystem.RootPath"/> ran with <see cref="M:System.IO.Path.GetFullPath(System.String)"/>.
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.FileSystem.Capabilities">
+            <summary>
+            Get capabilities.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.#ctor(System.String)">
+            <summary>
+            Create asset file system
+            </summary>
+            <param name="rootPath"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Open(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare)">
+            <summary>
+            Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="F:System.IO.FileMode.Create"/> or <see cref="F:System.IO.FileMode.CreateNew"/>.
+            </summary>
+            <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
+            <param name="fileMode">determines whether to open or to create the file</param>
+            <param name="fileAccess">how to access the file, read, write or read and write</param>
+            <param name="fileShare">how the file will be shared by processes</param>
+            <returns>open file stream</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support opening files</exception>
+            <exception cref="T:System.IO.FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.CreateDirectory(System.String)">
+            <summary>
+            Create a directory, or multiple cascading directories.
+            
+            If directory at <paramref name="path"/> already exists, then returns without exception.
+            </summary>
+            <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <returns>true if directory exists after the method, false if directory doesn't exist</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support create directory</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Browse(System.String)">
+            <summary>
+            Browse a directory for file and subdirectory entries.
+            </summary>
+            <param name="path">path to directory, "" is root, separator is "/"</param>
+            <returns>a snapshot of file and directory entries</returns>
+            <exception cref="T:System.IO.DirectoryNotFoundException"></exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support browse</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Delete(System.String,System.Boolean)">
+            <summary>
+            Delete a file or directory.
+            
+            If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="T:System.InvalidOperationException"/> is thrown.
+            If <paramref name="recursive"/> is true, then any file or directory within <paramref name="path"/> is deleted as well.
+            </summary>
+            <param name="path">path to a file or directory</param>
+            <param name="recursive">if path refers to directory, recurse into sub directories</param>
+            <exception cref="T:System.IO.FileNotFoundException">The specified path is invalid.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support deleting files</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false, or <paramref name="path"/> refers to non-file device</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Move(System.String,System.String)">
+            <summary>
+            Try to move/rename a file or directory.
+            </summary>
+            <param name="oldPath">old path of a file or directory</param>
+            <param name="newPath">new path of a file or directory</param>
+            <exception cref="T:System.IO.FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.FileNotFoundException">The specified path is invalid.</exception>
+            <exception cref="T:System.ArgumentNullException">path is null</exception>
+            <exception cref="T:System.ArgumentException">path is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support renaming/moving files</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Observe(System.String,System.IObserver{Lexical.FileSystem.FileSystemEntryEvent})">
+            <summary>
+            Attach an <paramref name="observer"/> on to a single file or directory. 
+            Observing a directory will observe the whole subtree.
+            </summary>
+            <param name="path">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <param name="observer"></param>
+            <returns>dispose handle</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support observe</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        </member>
+        <member name="T:Lexical.FileSystem.FileSystem.Watcher">
+            <summary>
+            File or folder watcher.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystem.Watcher.fileSystem">
+            <summary>
+            Associated system
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystem.Watcher.AbsolutePath">
+            <summary>
+            Absolute path as OS path. Separator is '\\' or '/'.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystem.Watcher.RelativePath">
+            <summary>
+            Relative path. Path is relative to the <see cref="F:Lexical.FileSystem.FileSystem.Watcher.fileSystem"/>'s root.
+            The directory separator is '/'.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystem.Watcher.WatcherDirectoryRelativePath">
+            <summary>
+            Relative path that is passed for FileSystemWatcher.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystem.Watcher.watcher">
+            <summary>
+            Watcher
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystem.Watcher.observer">
+            <summary>
+            Callback object.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Watcher.#ctor(Lexical.FileSystem.IFileSystem,System.IObserver{Lexical.FileSystem.FileSystemEntryEvent},System.String,System.String)">
+            <summary>
+            Create observer for one file.
+            </summary>
+            <param name="fileSystem">associated file system</param>
+            <param name="observer">observer for callbacks</param>
+            <param name="absolutePath">Absolute path</param>
+            <param name="relativePath">Relative path (separator is '/')</param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Watcher.OnError(System.Object,System.IO.ErrorEventArgs)">
+            <summary>
+            Handle (Forward) error event.
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Watcher.OnEvent(System.Object,System.IO.FileSystemEventArgs)">
+            <summary>
+            Forward event
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.Watcher.Dispose">
+            <summary>
+            Dispose observer
+            </summary>
+            <exception cref="T:System.AggregateException"></exception>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystem.ToString">
+            <summary>
+            Print info
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Lexical.FileSystem.FileSystemBase">
+            <summary>
+            Base implementation for <see cref="T:Lexical.FileSystem.IFileSystem"/>. 
+            
+            Disposables can be attached to be disposed along with <see cref="T:Lexical.FileSystem.IFileSystem"/>.
+            Watchers can be attached as disposables, so that they forward <see cref="M:System.IObserver`1.OnCompleted"/> event upon IFileSystem dispose.
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.FileSystemBase.Capabilities">
+            <summary>
+            Get capabilities.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemBase.m_lock">
+            <summary>
+            Lock for modifying dispose list.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemBase.disposeList">
+            <summary>
+            Attached disposables.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemBase.AddDisposable(System.Object)">
+            <summary>
+            Add <paramref name="disposable"/> to list of objects to be disposed along with the system.
+            </summary>
+            <param name="disposable"></param>
+            <returns>filesystem</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemBase.RemoveDisposable(System.Object)">
+            <summary>
+            Remove disposable from dispose list.
+            </summary>
+            <param name="disposable"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemBase.Dispose">
+            <summary>
+            Dispose attached disposables.
+            </summary>
+            <exception cref="T:System.AggregateException">If dispose exception occurs</exception>
+        </member>
+        <member name="T:Lexical.FileSystem.FileSystemComposition">
+            <summary>
+            Composition of multiple <see cref="T:Lexical.FileSystem.IFileSystem"/>s.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemComposition.fileSystems">
+            <summary>
+            File system components.
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.FileSystemComposition.Count">
+            <summary>
+            Count 
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.FileSystemComposition.capabilities">
+            <summary>
+            Union of capabilities
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.FileSystemComposition.Capabilities">
+            <summary>
+            Union of capabilities.
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.#ctor(Lexical.FileSystem.IFileSystem[])">
+            <summary>
+            Create composition of file systems
+            </summary>
+            <param name="fileSystems"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.#ctor(System.Collections.Generic.IEnumerable{Lexical.FileSystem.IFileSystem})">
+            <summary>
+            Create colletion of file systems
+            </summary>
+            <param name="fileSystems"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.Browse(System.String)">
+            <summary>
+            Browse a directory for file and subdirectory entries.
+            </summary>
+            <param name="path">path to directory, "" is root, separator is "/"</param>
+            <returns>a snapshot of file and directory entries</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support browse</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.Open(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare)">
+            <summary>
+            Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="F:System.IO.FileMode.Create"/> or <see cref="F:System.IO.FileMode.CreateNew"/>.
+            </summary>
+            <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
+            <param name="fileMode">determines whether to open or to create the file</param>
+            <param name="fileAccess">how to access the file, read, write or read and write</param>
+            <param name="fileShare">how the file will be shared by processes</param>
+            <returns>open file stream</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support opening files</exception>
+            <exception cref="T:System.IO.FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.Delete(System.String,System.Boolean)">
+            <summary>
+            Delete a file or directory.
+            
+            If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="T:System.IO.IOException"/> is thrown.
+            If <paramref name="recursive"/> is true, then any file or directory within <paramref name="path"/> is deleted as well.
+            </summary>
+            <param name="path">path to a file or directory</param>
+            <param name="recursive">if path refers to directory, recurse into sub directories</param>
+            <exception cref="T:System.IO.FileNotFoundException">The specified path is invalid.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support deleting files</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.Move(System.String,System.String)">
+            <summary>
+            Try to move/rename a file or directory.
+            </summary>
+            <param name="oldPath">old path of a file or directory</param>
+            <param name="newPath">new path of a file or directory</param>
+            <exception cref="T:System.IO.FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.FileNotFoundException">The specified path is invalid.</exception>
+            <exception cref="T:System.ArgumentNullException">path is null</exception>
+            <exception cref="T:System.ArgumentException">path is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support renaming/moving files</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.CreateDirectory(System.String)">
+            <summary>
+            Create a directory, or multiple cascading directories.
+            
+            If directory at <paramref name="path"/> already exists, then returns without exception.
+            </summary>
+            <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <returns>true if directory exists after the method, false if directory doesn't exist</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support create directory</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.Observe(System.String,System.IObserver{Lexical.FileSystem.FileSystemEntryEvent})">
+            <summary>
+            Attach an <paramref name="observer"/> on to a single file or directory. 
+            Observing a directory will observe the whole subtree.
+            </summary>
+            <param name="path">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+            <param name="observer"></param>
+            <returns>dispose handle</returns>
+            <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
+            <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Lexical.FileSystem.IFileSystem"/> doesn't support observe</exception>
+            <exception cref="T:System.UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
+            <exception cref="T:System.IO.PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+            <exception cref="T:System.InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+            <exception cref="T:System.ObjectDisposedException"/>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.GetEnumerator">
+            <summary>
+            Get file systems
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.FileSystemComposition.ToString">
+            <summary>
+            Print info
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.StructList2`1">
+            <summary>
+            A list where the first 2 element(s) are stack allocated, and rest are allocated from heap when needed.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList2`1.StackCount">
+            <summary>
+            The number of elements that are stack allocated.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList2`1.count">
+            <summary>
+            Number of elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList2`1._0">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList2`1._1">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList2`1.rest">
+            <summary>
+            Elements after <see cref="F:Lexical.FileSystem.Internal.StructList2`1.StackCount"/>.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList2`1.elementComparer">
+            <summary>
+            Element comparer
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.#ctor(System.Collections.Generic.IEqualityComparer{`0})">
+            <summary>
+            Construct lazy list.
+            </summary>
+            <param name="elementComparer"></param>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList2`1.Item(System.Int32)">
+            <summary>
+            Gets or sets the element at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the element to get or set.</param>
+            <returns>The element at the specified index.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList2`1.</exception>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList2`1.Count">
+            <summary>
+            Number of elements in the list
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList2`1.IsReadOnly">
+            <summary>
+            Is list readonly
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.Add(`0)">
+            <summary>
+            Adds an item to the StructList2`1.
+            </summary>
+            <param name="item">The object to add to the StructList2`1.</param>
+            <exception cref="T:System.NotSupportedException">The StructList2`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.AddIfNew(`0)">
+            <summary>
+            Adds an item to the StructList2`1, if the item isn't already in the list.
+            </summary>
+            <param name="item">The object to add to the StructList2`1.</param>
+            <exception cref="T:System.NotSupportedException">The StructList2`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.Remove(`0)">
+            <summary>
+            Removes the first occurrence of a specific object from the StructList2`1.
+            </summary>
+            <param name="item">The object to remove from the StructList2`1.</param>
+            <returns>true if item was successfully removed from the StructList2`1; otherwise, false. This method also returns false if item is not found in the original StructList2`1.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.RemoveAt(System.Int32)">
+            <summary>
+            Removes the StructList2`1 item at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the item to remove.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList2`1.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.Dequeue">
+            <summary>
+            Removes and returns the element at the end of the list.
+            </summary>
+            <returns>the last element</returns>
+            <exception cref="T:System.InvalidOperationException">If list is empty</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.Clear">
+            <summary>
+            Removes all items from the StructList2`1.
+            </summary>
+            <exception cref="T:System.NotSupportedException">The StructList2`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.Contains(`0)">
+            <summary>
+            Determines whether the StructList2`1 contains a specific value.
+            </summary>
+            <param name="item">The object to locate in the StructList2`1.</param>
+            <returns>true if item is found in the StructList2`1; otherwise, false.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.IndexOf(`0)">
+            <summary>
+            Determines the index of a specific item in the StructList2`1.
+            </summary>
+            <param name="item">The object to locate in the StructList2`1.</param>
+            <returns>The index of item if found in the list; otherwise, -1.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.Insert(System.Int32,`0)">
+            <summary>
+            Inserts an item to the StructList2`1 at the specified index.
+            </summary>
+            <param name="index">The zero-based index at which item should be inserted.</param>
+            <param name="item">The object to insert into the StructList2`1.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList2`1.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.CopyTo(`0[],System.Int32)">
+            <summary>
+            Copies the elements of the StructList2`1 to an System.Array, starting at a particular System.Array index.
+            </summary>
+            <param name="array">The one-dimensional System.Array that is the destination of the elements copied from StructList2`1. The System.Array must have zero-based indexing.</param>
+            <param name="arrayIndex">The zero-based index in array at which copying begins.</param>
+            <exception cref="T:System.ArgumentNullException">array is null.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">arrayIndex is less than 0.</exception>
+            <exception cref="T:System.ArgumentException">The number of elements in the source StructList2`1 is greater than the available space from arrayIndex to the end of the destination array.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.ToArray">
+            <summary>
+            Create array.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.ToReverseArray">
+            <summary>
+            Create array with elements reversed.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>An enumerator that can be used to iterate through the collection.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList2`1.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>An enumerator that can be used to iterate through the collection.</returns>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.StructList4`1">
+            <summary>
+            A list where the first 4 element(s) are stack allocated, and rest are allocated from heap when needed.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList4`1.StackCount">
+            <summary>
+            The number of elements that are stack allocated.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList4`1.count">
+            <summary>
+            Number of elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList4`1._0">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList4`1._1">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList4`1._2">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList4`1._3">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList4`1.rest">
+            <summary>
+            Elements after <see cref="F:Lexical.FileSystem.Internal.StructList4`1.StackCount"/>.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList4`1.elementComparer">
+            <summary>
+            Element comparer
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.#ctor(System.Collections.Generic.IEqualityComparer{`0})">
+            <summary>
+            Construct lazy list.
+            </summary>
+            <param name="elementComparer"></param>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList4`1.Item(System.Int32)">
+            <summary>
+            Gets or sets the element at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the element to get or set.</param>
+            <returns>The element at the specified index.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList4`1.</exception>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList4`1.Count">
+            <summary>
+            Number of elements in the list
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList4`1.IsReadOnly">
+            <summary>
+            Is list readonly
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.Add(`0)">
+            <summary>
+            Adds an item to the StructList4`1.
+            </summary>
+            <param name="item">The object to add to the StructList4`1.</param>
+            <exception cref="T:System.NotSupportedException">The StructList4`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.AddIfNew(`0)">
+            <summary>
+            Adds an item to the StructList4`1, if the item isn't already in the list.
+            </summary>
+            <param name="item">The object to add to the StructList4`1.</param>
+            <exception cref="T:System.NotSupportedException">The StructList4`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.Remove(`0)">
+            <summary>
+            Removes the first occurrence of a specific object from the StructList4`1.
+            </summary>
+            <param name="item">The object to remove from the StructList4`1.</param>
+            <returns>true if item was successfully removed from the StructList4`1; otherwise, false. This method also returns false if item is not found in the original StructList4`1.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.RemoveAt(System.Int32)">
+            <summary>
+            Removes the StructList4`1 item at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the item to remove.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList4`1.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.Dequeue">
+            <summary>
+            Removes and returns the element at the end of the list.
+            </summary>
+            <returns>the last element</returns>
+            <exception cref="T:System.InvalidOperationException">If list is empty</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.Clear">
+            <summary>
+            Removes all items from the StructList4`1.
+            </summary>
+            <exception cref="T:System.NotSupportedException">The StructList4`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.Contains(`0)">
+            <summary>
+            Determines whether the StructList4`1 contains a specific value.
+            </summary>
+            <param name="item">The object to locate in the StructList4`1.</param>
+            <returns>true if item is found in the StructList4`1; otherwise, false.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.IndexOf(`0)">
+            <summary>
+            Determines the index of a specific item in the StructList4`1.
+            </summary>
+            <param name="item">The object to locate in the StructList4`1.</param>
+            <returns>The index of item if found in the list; otherwise, -1.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.Insert(System.Int32,`0)">
+            <summary>
+            Inserts an item to the StructList4`1 at the specified index.
+            </summary>
+            <param name="index">The zero-based index at which item should be inserted.</param>
+            <param name="item">The object to insert into the StructList4`1.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList4`1.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.CopyTo(`0[],System.Int32)">
+            <summary>
+            Copies the elements of the StructList4`1 to an System.Array, starting at a particular System.Array index.
+            </summary>
+            <param name="array">The one-dimensional System.Array that is the destination of the elements copied from StructList4`1. The System.Array must have zero-based indexing.</param>
+            <param name="arrayIndex">The zero-based index in array at which copying begins.</param>
+            <exception cref="T:System.ArgumentNullException">array is null.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">arrayIndex is less than 0.</exception>
+            <exception cref="T:System.ArgumentException">The number of elements in the source StructList4`1 is greater than the available space from arrayIndex to the end of the destination array.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.ToArray">
+            <summary>
+            Create array.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.ToReverseArray">
+            <summary>
+            Create array with elements reversed.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>An enumerator that can be used to iterate through the collection.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList4`1.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>An enumerator that can be used to iterate through the collection.</returns>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.StructList12`1">
+            <summary>
+            A list where the first 12 element(s) are stack allocated, and rest are allocated from heap when needed.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1.StackCount">
+            <summary>
+            The number of elements that are stack allocated.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1.count">
+            <summary>
+            Number of elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._0">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._1">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._2">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._3">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._4">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._5">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._6">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._7">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._8">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._9">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._10">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1._11">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1.rest">
+            <summary>
+            Elements after <see cref="F:Lexical.FileSystem.Internal.StructList12`1.StackCount"/>.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList12`1.elementComparer">
+            <summary>
+            Element comparer
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.#ctor(System.Collections.Generic.IEqualityComparer{`0})">
+            <summary>
+            Construct lazy list.
+            </summary>
+            <param name="elementComparer"></param>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList12`1.Item(System.Int32)">
+            <summary>
+            Gets or sets the element at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the element to get or set.</param>
+            <returns>The element at the specified index.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList12`1.</exception>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList12`1.Count">
+            <summary>
+            Number of elements in the list
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList12`1.IsReadOnly">
+            <summary>
+            Is list readonly
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.Add(`0)">
+            <summary>
+            Adds an item to the StructList12`1.
+            </summary>
+            <param name="item">The object to add to the StructList12`1.</param>
+            <exception cref="T:System.NotSupportedException">The StructList12`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.AddIfNew(`0)">
+            <summary>
+            Adds an item to the StructList12`1, if the item isn't already in the list.
+            </summary>
+            <param name="item">The object to add to the StructList12`1.</param>
+            <exception cref="T:System.NotSupportedException">The StructList12`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.Remove(`0)">
+            <summary>
+            Removes the first occurrence of a specific object from the StructList12`1.
+            </summary>
+            <param name="item">The object to remove from the StructList12`1.</param>
+            <returns>true if item was successfully removed from the StructList12`1; otherwise, false. This method also returns false if item is not found in the original StructList12`1.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.RemoveAt(System.Int32)">
+            <summary>
+            Removes the StructList12`1 item at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the item to remove.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList12`1.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.Dequeue">
+            <summary>
+            Removes and returns the element at the end of the list.
+            </summary>
+            <returns>the last element</returns>
+            <exception cref="T:System.InvalidOperationException">If list is empty</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.Clear">
+            <summary>
+            Removes all items from the StructList12`1.
+            </summary>
+            <exception cref="T:System.NotSupportedException">The StructList12`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.Contains(`0)">
+            <summary>
+            Determines whether the StructList12`1 contains a specific value.
+            </summary>
+            <param name="item">The object to locate in the StructList12`1.</param>
+            <returns>true if item is found in the StructList12`1; otherwise, false.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.IndexOf(`0)">
+            <summary>
+            Determines the index of a specific item in the StructList12`1.
+            </summary>
+            <param name="item">The object to locate in the StructList12`1.</param>
+            <returns>The index of item if found in the list; otherwise, -1.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.Insert(System.Int32,`0)">
+            <summary>
+            Inserts an item to the StructList12`1 at the specified index.
+            </summary>
+            <param name="index">The zero-based index at which item should be inserted.</param>
+            <param name="item">The object to insert into the StructList12`1.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList12`1.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.CopyTo(`0[],System.Int32)">
+            <summary>
+            Copies the elements of the StructList12`1 to an System.Array, starting at a particular System.Array index.
+            </summary>
+            <param name="array">The one-dimensional System.Array that is the destination of the elements copied from StructList12`1. The System.Array must have zero-based indexing.</param>
+            <param name="arrayIndex">The zero-based index in array at which copying begins.</param>
+            <exception cref="T:System.ArgumentNullException">array is null.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">arrayIndex is less than 0.</exception>
+            <exception cref="T:System.ArgumentException">The number of elements in the source StructList12`1 is greater than the available space from arrayIndex to the end of the destination array.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.ToArray">
+            <summary>
+            Create array.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.ToReverseArray">
+            <summary>
+            Create array with elements reversed.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>An enumerator that can be used to iterate through the collection.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList12`1.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>An enumerator that can be used to iterate through the collection.</returns>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.StructList24`1">
+            <summary>
+            A list where the first 24 element(s) are stack allocated, and rest are allocated from heap when needed.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1.StackCount">
+            <summary>
+            The number of elements that are stack allocated.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1.count">
+            <summary>
+            Number of elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._0">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._1">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._2">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._3">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._4">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._5">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._6">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._7">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._8">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._9">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._10">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._11">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._12">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._13">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._14">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._15">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._16">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._17">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._18">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._19">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._20">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._21">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._22">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1._23">
+            <summary>
+            First elements
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1.rest">
+            <summary>
+            Elements after <see cref="F:Lexical.FileSystem.Internal.StructList24`1.StackCount"/>.
+            </summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.StructList24`1.elementComparer">
+            <summary>
+            Element comparer
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.#ctor(System.Collections.Generic.IEqualityComparer{`0})">
+            <summary>
+            Construct lazy list.
+            </summary>
+            <param name="elementComparer"></param>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList24`1.Item(System.Int32)">
+            <summary>
+            Gets or sets the element at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the element to get or set.</param>
+            <returns>The element at the specified index.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList24`1.</exception>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList24`1.Count">
+            <summary>
+            Number of elements in the list
+            </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.StructList24`1.IsReadOnly">
+            <summary>
+            Is list readonly
+            </summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.Add(`0)">
+            <summary>
+            Adds an item to the StructList24`1.
+            </summary>
+            <param name="item">The object to add to the StructList24`1.</param>
+            <exception cref="T:System.NotSupportedException">The StructList24`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.AddIfNew(`0)">
+            <summary>
+            Adds an item to the StructList24`1, if the item isn't already in the list.
+            </summary>
+            <param name="item">The object to add to the StructList24`1.</param>
+            <exception cref="T:System.NotSupportedException">The StructList24`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.Remove(`0)">
+            <summary>
+            Removes the first occurrence of a specific object from the StructList24`1.
+            </summary>
+            <param name="item">The object to remove from the StructList24`1.</param>
+            <returns>true if item was successfully removed from the StructList24`1; otherwise, false. This method also returns false if item is not found in the original StructList24`1.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.RemoveAt(System.Int32)">
+            <summary>
+            Removes the StructList24`1 item at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the item to remove.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList24`1.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.Dequeue">
+            <summary>
+            Removes and returns the element at the end of the list.
+            </summary>
+            <returns>the last element</returns>
+            <exception cref="T:System.InvalidOperationException">If list is empty</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.Clear">
+            <summary>
+            Removes all items from the StructList24`1.
+            </summary>
+            <exception cref="T:System.NotSupportedException">The StructList24`1 is read-only.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.Contains(`0)">
+            <summary>
+            Determines whether the StructList24`1 contains a specific value.
+            </summary>
+            <param name="item">The object to locate in the StructList24`1.</param>
+            <returns>true if item is found in the StructList24`1; otherwise, false.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.IndexOf(`0)">
+            <summary>
+            Determines the index of a specific item in the StructList24`1.
+            </summary>
+            <param name="item">The object to locate in the StructList24`1.</param>
+            <returns>The index of item if found in the list; otherwise, -1.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.Insert(System.Int32,`0)">
+            <summary>
+            Inserts an item to the StructList24`1 at the specified index.
+            </summary>
+            <param name="index">The zero-based index at which item should be inserted.</param>
+            <param name="item">The object to insert into the StructList24`1.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is not a valid index in the StructList24`1.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.CopyTo(`0[],System.Int32)">
+            <summary>
+            Copies the elements of the StructList24`1 to an System.Array, starting at a particular System.Array index.
+            </summary>
+            <param name="array">The one-dimensional System.Array that is the destination of the elements copied from StructList24`1. The System.Array must have zero-based indexing.</param>
+            <param name="arrayIndex">The zero-based index in array at which copying begins.</param>
+            <exception cref="T:System.ArgumentNullException">array is null.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">arrayIndex is less than 0.</exception>
+            <exception cref="T:System.ArgumentException">The number of elements in the source StructList24`1 is greater than the available space from arrayIndex to the end of the destination array.</exception>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.ToArray">
+            <summary>
+            Create array.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.ToReverseArray">
+            <summary>
+            Create array with elements reversed.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>An enumerator that can be used to iterate through the collection.</returns>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StructList24`1.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>An enumerator that can be used to iterate through the collection.</returns>
+        </member>
+    </members>
+</doc>
