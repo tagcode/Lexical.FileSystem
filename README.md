@@ -45,14 +45,6 @@ using (IDisposable handle = filesystem.Observe("", observer))
 }
 ```
 
-<details>
-  <summary><b>Observer.cs</b> above. (<u>Click here</u>)</summary>
-
-```csharp
-
-```
-</details>
-
 Directories can be created.
 
 ```csharp
