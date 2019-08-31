@@ -7,7 +7,7 @@
     <Company>Lexical</Company>
     <Description>Virtual file system IFileSystem interfaces.</Description>
     <Copyright>Toni Kalajainen</Copyright>
-    <PackageProjectUrl>https://lexical.fi/FileSystem/index.html</PackageProjectUrl>
+    <PackageProjectUrl>https://lexical.fi/FileSystem/docs/index.html</PackageProjectUrl>
     <PackageIconUrl>http://lexical.fi/theme/logo_blue.svg</PackageIconUrl>
     <RepositoryUrl>https://github.com/tagcode/Lexical.FileSystem</RepositoryUrl>
     <PackageTags>FileSystem FileProvider Lexical</PackageTags>
