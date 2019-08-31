@@ -6,7 +6,7 @@ NuGet Packages:
 * Lexical.FileSystem
 
 **Links**
-* [Website](http://lexical.fi/FileSystem/index.html)
+* [Website](http://lexical.fi/FileSystem/docs/index.html)
 * [Github](https://github.com/tagcode/Lexical.FileSystem)
 * [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/)
 
