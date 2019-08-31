@@ -1,11 +1,7 @@
 # Introduction
 Lexical.FileSystem is a virtual filesystem class libraries for .NET.
 
-NuGet Packages:
-* Lexical.FileSystem.Abstractions
-* Lexical.FileSystem
-
-IFileSystem is accesses a file-system through abstraction.
+IFileSystem accesses a file-system through abstraction.
 
 ```csharp
 IFileSystem filesystem = new FileSystem(AppDomain.CurrentDomain.BaseDirectory);
@@ -27,7 +23,7 @@ using (Stream s = filesystem.Open("file.txt", FileMode.Open, FileAccess.Read, Fi
 }
 ```
 
-Files can be opened for writing.
+... and for writing.
 
 ```csharp
 using (Stream s = filesystem.Open("somefile.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
@@ -51,7 +47,7 @@ Directories can be created.
 filesystem.CreateDirectory("dir");
 ```
 
-Directories can be deleted.
+Directories and files can be deleted.
 
 ```csharp
 filesystem.Delete("dir", recursive: true);
