@@ -51,14 +51,6 @@ using (IDisposable handle = filesystem.Observe("", observer))
 }
 ```
 
-<details>
-  <summary><b>Observer.cs</b> above. (<u>Click here</u>)</summary>
-
-```csharp
-
-```
-</details>
-
 Directories can be created.
 
 ```csharp
@@ -110,14 +102,6 @@ using (IDisposable handle = filesystem.Observe("", observer))
 {                    
 }
 ```
-
-<details>
-  <summary><b>Observer</b> of the example above. (<u>Click here</u>)</summary>
-
-```csharp
-
-```
-</details>
 
 # EmbeddedFileSystem
 EmbeddedFileSystem is a file system to the embedded resources of an assembly.
