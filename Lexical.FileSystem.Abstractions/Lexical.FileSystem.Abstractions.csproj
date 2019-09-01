@@ -3,14 +3,14 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>Toni Kalajainen</Authors>
-    <Version>0.9.2</Version>
+    <Version>0.9.4</Version>
     <Company>Lexical</Company>
     <Description>Virtual file system IFileSystem interfaces.</Description>
     <Copyright>Toni Kalajainen</Copyright>
-    <PackageProjectUrl>https://lexical.fi/FileSystem/docs/index.html</PackageProjectUrl>
+    <PackageProjectUrl>https://lexical.fi/FileSystem/index.html</PackageProjectUrl>
     <PackageIconUrl>http://lexical.fi/theme/logo_blue.svg</PackageIconUrl>
     <RepositoryUrl>https://github.com/tagcode/Lexical.FileSystem</RepositoryUrl>
-    <PackageTags>FileSystem FileProvider Lexical</PackageTags>
+    <PackageTags>FileSystem FileProvider Lexical vfs virtual</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
