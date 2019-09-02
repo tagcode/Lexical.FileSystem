@@ -11,7 +11,7 @@ NuGet Packages:
 * [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/)
 
 # FileSystem
-FileSystem accesses a directory in local file-system.
+**FileSystem** is an access to local file-system.
 
 ```csharp
 IFileSystem filesystem = new FileSystem(AppDomain.CurrentDomain.BaseDirectory);
