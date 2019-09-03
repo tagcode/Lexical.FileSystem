@@ -10,6 +10,7 @@ NuGet Packages:
 * [Github](https://github.com/tagcode/Lexical.FileSystem)
 * [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/)
 
+# FileSystem
 **new FileSystem(<i>path</i>)** creates an instance to a path in local directory.
 
 ```csharp
