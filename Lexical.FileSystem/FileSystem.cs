@@ -29,14 +29,14 @@ namespace Lexical.FileSystem
         internal protected static Regex PathPattern = new Regex("(^(?<windows_driveletter>[a-zA-Z]\\:)((\\\\|\\/)(?<windows_path>.*))?$)|(^\\\\\\\\(?<share_server>[^\\\\]+)\\\\(?<share_name>[^\\\\]+)((\\\\|\\/)(?<share_path>.*))?$)|((?<unix_rooted_path>\\/.*)$)|(?<relativepath>^.*$)", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture);
 
         /// <summary>
-        /// Native sseparator character in the running OS.
+        /// Native separator character in the running OS.
         /// </summary>
         internal protected static string osSeparator = Path.DirectorySeparatorChar + "";
 
         /// <summary>
         /// Is OS Windows, Linux, or OSX.
         /// </summary>
-        internal protected static bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows), isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Windows), isOsx = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        internal protected static bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows), isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux), isOsx = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         static FileSystem osRoot = new FileSystem("");
 
@@ -64,6 +64,11 @@ namespace Lexical.FileSystem
         public readonly string AbsoluteRootPath;
 
         /// <summary>
+        /// Constructed to file-system root.
+        /// </summary>
+        public readonly bool FileSystemRoot;
+
+        /// <summary>
         /// Get capabilities.
         /// </summary>
         public override FileSystemCapabilities Capabilities =>
@@ -85,6 +90,7 @@ namespace Lexical.FileSystem
         {
             RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
             AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(rootPath);
+            FileSystemRoot = rootPath == "" || ((isLinux || isOsx) && (rootPath == "/"));
         }
 
         /// <summary>
@@ -110,7 +116,7 @@ namespace Lexical.FileSystem
         {
             string concatenatedPath = Path.Combine(AbsoluteRootPath, path);
             string absolutePath = Path.GetFullPath(concatenatedPath);
-            if (!absolutePath.StartsWith(AbsoluteRootPath)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+            if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
             return new FileStream(absolutePath, fileMode, fileAccess, fileShare);
         }
 
@@ -134,7 +140,7 @@ namespace Lexical.FileSystem
         {
             string concatenatedPath = Path.Combine(AbsoluteRootPath, path);
             string absolutePath = Path.GetFullPath(concatenatedPath);
-            if (!absolutePath.StartsWith(AbsoluteRootPath)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+            if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
             Directory.CreateDirectory(absolutePath);
         }
 
@@ -155,16 +161,73 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers over constructed root, e.g. ".."</exception>
         string ConcatenateAndAssertPath(string path, out string concatenatedPath, out string absolutePath)
         {
-            // "dir\" remove OS directory separator from end.
-            if (path.EndsWith(osSeparator) || path.EndsWith("/")) path = path.Substring(0, path.Length - 1);
-            // Concatenate root path from construction to argumen path
-            concatenatedPath = RootPath == null || RootPath == "" ? path : (RootPath.EndsWith("/") || RootPath.EndsWith("\\") || RootPath.EndsWith(":")) ? RootPath + path : RootPath + "/" + path;
-            // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
-            absolutePath = Path.GetFullPath(isWindows && RootPath == "" && path.EndsWith(":") ? concatenatedPath + osSeparator : concatenatedPath);
-            // Assert that we are not browsing the parent of constructed path
-            if (!absolutePath.StartsWith(AbsoluteRootPath)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
-            // Return path without trailing separator
-            return path;
+            // Assert not null
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Check settings for windows
+            if (isWindows)
+            {
+                // "dir\" remove OS directory separator from end.
+                if (path.EndsWith(osSeparator, StringComparison.InvariantCulture) || path.EndsWith("/", StringComparison.InvariantCulture)) path = path.Substring(0, path.Length - 1);
+                // Concatenate root path from construction to argumen path
+                concatenatedPath = RootPath == "" ? path : (RootPath.EndsWith("/", StringComparison.InvariantCulture) || RootPath.EndsWith("\\", StringComparison.InvariantCulture) || RootPath.EndsWith(":", StringComparison.InvariantCulture)) ? RootPath + path : RootPath + "/" + path;
+                // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
+                absolutePath = Path.GetFullPath(isWindows && RootPath == "" && path.EndsWith(":", StringComparison.InvariantCulture) ? concatenatedPath + osSeparator : concatenatedPath);
+                // Assert that we are not browsing the parent of constructed path
+                if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+                // Return path without trailing separator
+                return path;
+            }
+            else if (isLinux || isOsx || osSeparator == "/")
+            {
+                // Constructed to OS-Root
+                if (FileSystemRoot)
+                {
+                    // Requests root files
+                    if (path == "" || path == "/")
+                    {
+                        concatenatedPath = "/";
+                        absolutePath = "/";
+                        return "";
+                    }
+                    else
+                    // Requests a specific dir
+                    {
+                        // Add preceding "/" on linux.
+                        if (!path.StartsWith("/", StringComparison.InvariantCulture)) path = "/" + path;
+                        // Remove trailing from "/dir/" -> "/dir"
+                        if (path.EndsWith(osSeparator, StringComparison.InvariantCulture) || path.EndsWith("/", StringComparison.InvariantCulture)) path = path.Substring(0, path.Length - 1);
+                        // Concatenate root path from construction to argument path
+                        concatenatedPath = path;
+                        // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
+                        absolutePath = Path.GetFullPath(concatenatedPath);
+                        // Assert that we are not browsing the parent of constructed path
+                        if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+                        // Return path without trailing separator
+                        return path;
+                    }
+                }
+                // Constructed to specific directory
+                else
+                {
+                    // Remove preceding "/" from "/dir"
+                    if (path.StartsWith(osSeparator, StringComparison.InvariantCulture)) path = path.Substring(1, path.Length - 1);
+                    // Remove trailing "/" from "dir/"
+                    if (path.EndsWith(osSeparator, StringComparison.InvariantCulture)) path = path.Substring(0, path.Length - 1);
+                    // Concatenate paths
+                    concatenatedPath = path == "" || path == "/" ? RootPath : RootPath + (RootPath.EndsWith("/", StringComparison.InvariantCulture) ? "" : "/") + path;
+                    // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
+                    absolutePath = Path.GetFullPath(concatenatedPath);
+                    // Assert that we are not browsing the parent of constructed path
+                    if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+                    // Return path without trailing separator
+                    return path;
+                }
+            }
+            else
+            {
+                throw new NotSupportedException("This OS is not supported.");
+            }
+
         }
 
         /// <summary>
@@ -192,14 +255,34 @@ namespace Lexical.FileSystem
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
             if (dir.Exists)
             {
+                string prefix = path.Length > 0 ? (path.EndsWith("/", StringComparison.InvariantCulture) ? path : path + "/") : null;
+                if (FileSystemRoot && path == "" || path == "/") prefix = "/";
                 StructList24<FileSystemEntry> list = new StructList24<FileSystemEntry>();
                 foreach (DirectoryInfo di in dir.GetDirectories())
                 {
-                    list.Add(new FileSystemEntry { FileSystem = this, LastModified = di.LastWriteTimeUtc, Name = di.Name, Path = path.Length > 0 ? path + "/" + di.Name : di.Name, Length = -1L, Type = FileSystemEntryType.Directory });
+                    FileSystemEntry e = new FileSystemEntry
+                    {
+                        FileSystem = this,
+                        LastModified = di.LastWriteTimeUtc,
+                        Name = di.Name,
+                        Path = prefix == null ? di.Name : prefix + di.Name,
+                        Length = -1L,
+                        Type = FileSystemEntryType.Directory
+                    };
+                    list.Add(e);
                 }
                 foreach (FileInfo _fi in dir.GetFiles())
                 {
-                    list.Add(new FileSystemEntry { FileSystem = this, LastModified = _fi.LastWriteTimeUtc, Name = _fi.Name, Path = path.Length > 0 ? path + "/" + _fi.Name : _fi.Name, Length = _fi.Length, Type = FileSystemEntryType.File });
+                    FileSystemEntry e = new FileSystemEntry
+                    {
+                        FileSystem = this,
+                        LastModified = _fi.LastWriteTimeUtc,
+                        Name = _fi.Name,
+                        Path = prefix == null ? _fi.Name : prefix + _fi.Name,
+                        Length = _fi.Length,
+                        Type = FileSystemEntryType.File
+                    };
+                    list.Add(e);
                 }
                 return list.ToArray();
             }
