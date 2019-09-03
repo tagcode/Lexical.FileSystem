@@ -10,11 +10,28 @@ NuGet Packages:
 * [Github](https://github.com/tagcode/Lexical.FileSystem)
 * [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/)
 
-# FileSystem
-**FileSystem** access a path in file-system.
+**new FileSystem(<i>path</i>)** creates an instance to a path in local directory.
 
 ```csharp
-IFileSystem filesystem = new FileSystem(AppDomain.CurrentDomain.BaseDirectory);
+string path = AppDomain.CurrentDomain.BaseDirectory;
+IFileSystem filesystem = new FileSystem(path);
+```
+
+**new FileSystem("")** creates OS file-system root, which returns drive letters.
+
+```csharp
+IFileSystem filesystem = new FileSystem("");
+```
+
+```none
+C:
+D:
+```
+
+Singleton instance **FileSystem.OSRoot** refers to the same OS root.
+
+```csharp
+IFileSystem filesystem = FileSystem.OSRoot;
 ```
 
 Files can be browsed.
@@ -70,103 +87,11 @@ filesystem.CreateDirectory("dir");
 filesystem.Move("dir", "new-name");
 ```
 
-# FileProviderSystem
-FileProviderSystem is adapts IFileProvider into IFileSystem.
+If FileSystem is constructed with relative drive letter "C:", then the instance refers to the absolute path at time of the construction.
+If working directory is modified later on, the FileSystem instance is not affected.
 
 ```csharp
-IFileProvider fp = new PhysicalFileProvider(AppDomain.CurrentDomain.BaseDirectory);
-IFileSystem filesystem = new FileProviderSystem(fp).AddDisposable(fp);
-```
-
-Files can be browsed.
-
-```csharp
+IFileSystem filesystem = new FileSystem("c:");
 foreach (var entry in filesystem.Browse(""))
     Console.WriteLine(entry.Path);
 ```
-
-Files can be opened for reading.
-
-```csharp
-using (Stream s = filesystem.Open("file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
-{
-    Console.WriteLine(s.Length);
-}
-```
-
-Files and directories can be observed for changes.
-
-```csharp
-IObserver<FileSystemEntryEvent> observer = new Observer();
-using (IDisposable handle = filesystem.Observe("", observer))
-{                    
-}
-```
-
-# EmbeddedFileSystem
-EmbeddedFileSystem is a file system to the embedded resources of an assembly.
-
-```csharp
-IFileSystem filesystem = new EmbeddedFileSystem(typeof(Program).Assembly);
-```
-
-Embedded resources can be browsed.
-
-```csharp
-foreach (var entry in filesystem.Browse(""))
-    Console.WriteLine(entry.Path);
-```
-
-Embedded resources can be read.
-
-```csharp
-using(Stream s = filesystem.Open("docs.example-file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
-{
-    Console.WriteLine(s.Length);
-}
-```
-
-# FileSystemComposition
-FileSystemComposition is a composition of multiple IFileSystem instances.
-
-```csharp
-IFileSystem filesystem1 = new FileSystem("c:\\");
-IFileProvider fp = new PhysicalFileProvider(AppDomain.CurrentDomain.BaseDirectory);
-IFileSystem filesystem2 = new FileProviderSystem(fp).AddDisposable(fp);
-IFileSystem filesystem3 = new EmbeddedFileSystem(typeof(Program).Assembly);
-
-IFileSystem composition = new FileSystemComposition(filesystem1, filesystem2, filesystem3)
-    .AddDisposable(filesystem1)
-    .AddDisposable(filesystem2)
-    .AddDisposable(filesystem3);
-```
-
-Composed set of files can be browsed.
-
-```csharp
-foreach (var entry in composition.Browse(""))
-    Console.WriteLine(entry.Path);
-```
-
-Composed set of files can be read.
-
-```csharp
-using (Stream s = composition.Open("docs.example-file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
-{
-    Console.WriteLine(s.Length);
-}
-```
-
-# Utils
-FileScanner scans file-system tree structure for files that match configured criteria.
-
-```csharp
-IFileSystem filesystem = new FileSystem(@"C:\");
-
-// Scan every file
-foreach (var entry in new FileScanner(filesystem).AddWildcard("*"))
-{
-    Console.WriteLine(entry);
-}
-```
-

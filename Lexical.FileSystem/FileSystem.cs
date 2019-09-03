@@ -72,7 +72,12 @@ namespace Lexical.FileSystem
             FileSystemCapabilities.Open | FileSystemCapabilities.Write | FileSystemCapabilities.Read | FileSystemCapabilities.CreateFile;
 
         /// <summary>
-        /// Create asset file system.
+        /// Create an access to local file-system.
+        /// 
+        /// If <paramref name="rootPath"/> is "", then FileSystem returns drive letters on Windows "C:" and "/" on Linux.
+        /// 
+        /// If FileSystem is constructed with relative drive letter "C:", then the instance refers to the absolute path at time of the construction.
+        /// If working directory is modified later on, the FileSystem instance is not affected.
         /// </summary>
         /// <param name="rootPath">Path to root directory, or "" for OS root which returns drive letters.</param>
         public FileSystem(string rootPath) : base()
