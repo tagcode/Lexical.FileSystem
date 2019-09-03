@@ -134,12 +134,26 @@ namespace Lexical.FileSystem.Utils
             return Regex.Escape(match.Value);
         }
 
+        /// <summary>
+        /// Create glob pattern as regular expression text.
+        /// </summary>
+        /// <param name="globPattern"></param>
+        /// <returns></returns>
         public string CreateRegexText(string globPattern)
             => GlobPattern.Replace(globPattern, matchEvaluator);
 
+        /// <summary>
+        /// Create glob pattern as compiled regular expression instance.
+        /// </summary>
+        /// <param name="globPattern"></param>
+        /// <returns></returns>
         public Regex CreateRegex(string globPattern)
             => new Regex("^" + CreateRegexText(globPattern) + "$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Print info
+        /// </summary>
+        /// <returns></returns>
         public override string ToString()
             => $"{GetType().FullName}(DirectorySeparators={DirectorySeparatorChars})";
     }

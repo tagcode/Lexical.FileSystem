@@ -141,14 +141,14 @@ IFileSystem composition = new FileSystemComposition(filesystem1, filesystem2, fi
     .AddDisposable(filesystem3);
 ```
 
-Embedded resources can be browsed.
+Composed set of files can be browsed.
 
 ```csharp
 foreach (var entry in composition.Browse(""))
     Console.WriteLine(entry.Path);
 ```
 
-Embedded resources can be read.
+Composed set of files can be read.
 
 ```csharp
 using (Stream s = composition.Open("docs.example-file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -156,7 +156,6 @@ using (Stream s = composition.Open("docs.example-file.txt", FileMode.Open, FileA
     Console.WriteLine(s.Length);
 }
 ```
-
 
 # Utils
 FileScanner scans file-system tree structure for files that match configured criteria.

@@ -5,21 +5,35 @@
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// File system based <see cref="IFileSystem"/> that loads local file system files.
+    /// File system based <see cref="IFileSystem"/> that loads local file-system files.
     /// 
     /// If file watchers have been created, and file system is disposed, then watchers will be disposed also. 
     /// <see cref="IObserver{T}.OnCompleted"/> event is forwarded to watchers.
     /// </summary>
     public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve
     {
+        /// <summary>
+        /// Regex pattern that extracts features and classifies paths.
+        /// </summary>
+        internal protected static Regex PathPattern = new Regex("(^(?<windows_driveletter>[a-zA-Z]\\:)((\\\\|\\/)(?<windows_path>.*))?$)|(^\\\\\\\\(?<share_server>[^\\\\]+)\\\\(?<share_name>[^\\\\]+)((\\\\|\\/)(?<share_path>.*))?$)|((?<unix_rooted_path>\\/.*)$)|(?<relativepath>^.*$)", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture);
+
+        /// <summary>
+        /// Native sseparator character in the running OS.
+        /// </summary>
+        internal protected static string OSseparator = Path.DirectorySeparatorChar + "";
+
         static FileSystem osRoot = new FileSystem("");
+
         static Lazy<FileSystem> applicationRoot = new Lazy<FileSystem>(() => new FileSystem(AppDomain.CurrentDomain.BaseDirectory));
 
         /// <summary>
@@ -52,13 +66,13 @@ namespace Lexical.FileSystem
             FileSystemCapabilities.Open | FileSystemCapabilities.Write | FileSystemCapabilities.Read | FileSystemCapabilities.CreateFile;
 
         /// <summary>
-        /// Create asset file system
+        /// Create asset file system.
         /// </summary>
-        /// <param name="rootPath"></param>
+        /// <param name="rootPath">Path to root directory, or "" for OS root which returns drive letters.</param>
         public FileSystem(string rootPath) : base()
         {
             RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
-            AbsoluteRootPath = System.IO.Path.GetFullPath(rootPath);
+            AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(rootPath);
         }
 
         /// <summary>
@@ -72,7 +86,7 @@ namespace Lexical.FileSystem
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
-        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support opening files</exception>
         /// <exception cref="FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
         /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
@@ -121,13 +135,16 @@ namespace Lexical.FileSystem
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
-        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support browse</exception>
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         public FileSystemEntry[] Browse(string path)
         {
+            // Return OS-root, return drive letters.
+            if (path == "" && RootPath == "") return BrowseRoot();
+
             string concatenatedPath = RootPath == null ? path : (RootPath.EndsWith("/") || RootPath.EndsWith("\\")) ? RootPath + path : RootPath + "/" + path;
             string absolutePath = Path.GetFullPath(concatenatedPath);
             if (!absolutePath.StartsWith(AbsoluteRootPath)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
@@ -163,6 +180,59 @@ namespace Lexical.FileSystem
             }
 
             throw new DirectoryNotFoundException(path);
+        }
+
+        /// <summary>
+        /// Browse root drive letters
+        /// </summary>
+        /// <returns></returns>
+        protected FileSystemEntry[] BrowseRoot()
+        {
+            IEnumerable<DriveInfo> driveInfos = DriveInfo.GetDrives().Where(di => di.IsReady);
+
+            Match[] matches = driveInfos.Select(di => PathPattern.Match(di.Name)).ToArray();
+            int windows = matches.Where(m => m.Groups["windows_driveletter"].Success).Count();
+            int unix = matches.Where(m => m.Groups["unix_rooted_path"].Success).Count();
+
+            // Reduce all "/mnt/xx" into single "/" entry.
+            if (unix > 0)
+            {
+                FileSystemEntry e = new FileSystemEntry
+                {
+                    FileSystem = this,
+                    LastModified = DateTimeOffset.MinValue,
+                    Length = -1L,
+                    Name = "",
+                    Path = "/",
+                    Type = FileSystemEntryType.Directory
+                };
+                return new FileSystemEntry[] { e };
+            }
+
+            List<FileSystemEntry> list = new List<FileSystemEntry>(matches.Length);
+
+            foreach (Match m in matches)
+            {
+                // Reduce all "/mnt/xx" into one "/" root.
+                if (m.Groups["unix_rooted_path"].Success) continue;
+
+                string path = m.Value;
+                DirectoryInfo directoryInfo = new DirectoryInfo(path);
+                if (path.EndsWith(OSseparator)) path = path.Substring(0, path.Length - 1);
+
+                FileSystemEntry e = new FileSystemEntry
+                {
+                    FileSystem = this,
+                    LastModified = DateTimeOffset.MinValue,
+                    Length = -1L,
+                    Name = path,
+                    Path = path,
+                    Type = FileSystemEntryType.Directory
+                };
+                list.Add(e);
+            }
+
+            return list.ToArray();
         }
 
         /// <summary>
@@ -240,7 +310,7 @@ namespace Lexical.FileSystem
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
-        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support observe</exception>
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>

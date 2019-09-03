@@ -17,11 +17,11 @@ namespace Lexical.FileSystem.Utils
     /// <summary>
     /// This class scans directories and searches for files that match a wildcard and regex patterns.
     /// 
-    /// The class itself is IEnumerable, it will start a new scan IEnumerator is acquired.
+    /// The class itself is IEnumerable, it will start a new scan for each IEnumerator that is requested.
     /// 
     /// It uses concurrent threads for scanning. Tasks are spawned with Task.StartNew. 
     /// If TaskFactory is congested, the scanning may not start immediately. 
-    /// Caller may provide customized TaskFactory to avoid issues.
+    /// Caller may provide customized <see cref="TaskFactory"/> to avoid issues.
     /// 
     /// The FileScanner is programmed so that it's internal separator is '/', and results use '/' as separator.
     /// For instance, to scan a network drive with RootFileSystem, use '/' separator after volume 
@@ -183,6 +183,12 @@ namespace Lexical.FileSystem.Utils
             return this;
         }
 
+        /// <summary>
+        /// Add regular expression pattern to scanner match patterns.
+        /// </summary>
+        /// <param name="subpath"></param>
+        /// <param name="regex"></param>
+        /// <returns></returns>
         public FileScanner AddRegex(string subpath, Regex regex)
         {
             PatternSet set;
@@ -191,6 +197,11 @@ namespace Lexical.FileSystem.Utils
             return this;
         }
 
+        /// <summary>
+        /// Add custom <paramref name="taskFactory"/> that constructs the browsing sub-tasks.
+        /// </summary>
+        /// <param name="taskFactory"></param>
+        /// <returns></returns>
         public FileScanner SetTaskFactory(TaskFactory taskFactory)
         {
             this.TaskFactory = taskFactory;
@@ -220,6 +231,12 @@ namespace Lexical.FileSystem.Utils
             return this;
         }
 
+        /// <summary>
+        /// Add a custom directory qualifier <paramref name="func"/> that approves or disapprovies whether to 
+        /// continue scan into a directory.
+        /// </summary>
+        /// <param name="func"></param>
+        /// <returns></returns>
         public FileScanner SetDirectoryEvaluator(Func<string, bool> func)
         {
             this.DirectoryEvaluator = func;
@@ -266,6 +283,9 @@ namespace Lexical.FileSystem.Utils
     /// </summary>
     public class PatternScanner : IEnumerator<string>
     {
+        /// <summary>
+        /// Collection or errors are placed here.
+        /// </summary>
         public IProducerConsumerCollection<Exception> errors;
         IFileSystem FileSystem;
         List<KeyValuePair<string, PatternSet>> paths;
@@ -276,6 +296,17 @@ namespace Lexical.FileSystem.Utils
         bool returnDirectories;
         bool returnFiles;
 
+        /// <summary>
+        /// Create scanner.
+        /// </summary>
+        /// <param name="FileSystem"></param>
+        /// <param name="rootPrefix"></param>
+        /// <param name="patterns"></param>
+        /// <param name="taskFactory"></param>
+        /// <param name="errors"></param>
+        /// <param name="directoryEvaluator"></param>
+        /// <param name="returnDirectories"></param>
+        /// <param name="returnFiles"></param>
         public PatternScanner(IFileSystem FileSystem, string rootPrefix, IEnumerable<KeyValuePair<string, PatternSet>> patterns, TaskFactory taskFactory, IProducerConsumerCollection<Exception> errors, Func<string, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
         {
             this.FileSystem = FileSystem;
@@ -291,9 +322,16 @@ namespace Lexical.FileSystem.Utils
                 taskFactory.StartNew(this.job.Scan);
         }
 
+        /// <summary>
+        /// Get current path.
+        /// </summary>
         public string Current => job?.Current;
+
         object IEnumerator.Current => job?.Current;
 
+        /// <summary>
+        /// Dispose scanner
+        /// </summary>
         public void Dispose()
         {
             var j = job;
@@ -301,12 +339,19 @@ namespace Lexical.FileSystem.Utils
             job = null;
         }
 
+        /// <summary>
+        /// Move to next element
+        /// </summary>
+        /// <returns></returns>
         public bool MoveNext()
         {
             var j = job;
             if (j == null) return false; else return j.MoveNext();
         }
 
+        /// <summary>
+        /// Reset scanner
+        /// </summary>
         public void Reset()
         {
             var j = job;

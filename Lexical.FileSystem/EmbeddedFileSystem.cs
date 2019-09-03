@@ -22,7 +22,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Get capabilities.
         /// </summary>
-        public override FileSystemCapabilities Capabilities => FileSystemCapabilities.Browse | FileSystemCapabilities.Open | FileSystemCapabilities.Read;
+        public override FileSystemCapabilities Capabilities => FileSystemCapabilities.Browse | FileSystemCapabilities.Open | FileSystemCapabilities.Read | FileSystemCapabilities.CaseSensitive;
 
         /// <summary>
         /// Snapshot of entries.
