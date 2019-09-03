@@ -19,6 +19,11 @@ namespace Lexical.FileSystem
     public class FileProviderSystem : FileSystemBase, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen
     {
         /// <summary>
+        /// Default capabilities of IFileProvider.
+        /// </summary>
+        public const FileSystemCapabilities DefaultCapabilities = FileSystemCapabilities.Open | FileSystemCapabilities.Read | FileSystemCapabilities.Observe | FileSystemCapabilities.Browse | FileSystemCapabilities.Exists;
+
+        /// <summary>
         /// Optional subpath within the source <see cref="fileProvider"/>.
         /// </summary>
         protected String SubPath;
@@ -44,7 +49,7 @@ namespace Lexical.FileSystem
         /// <param name="fileProvider"></param>
         /// <param name="subpath">(optional) subpath within the file provider</param>
         /// <param name="capabilities">file provider capabilities</param>
-        public FileProviderSystem(IFileProvider fileProvider, string subpath = null, FileSystemCapabilities capabilities = FileSystemCapabilities.Open | FileSystemCapabilities.Read | FileSystemCapabilities.Observe | FileSystemCapabilities.Browse) : base()
+        public FileProviderSystem(IFileProvider fileProvider, string subpath = null, FileSystemCapabilities capabilities = DefaultCapabilities) : base()
         {
             this.fileProvider = fileProvider ?? throw new ArgumentNullException(nameof(subpath));
             this.SubPath = subpath;
@@ -134,6 +139,40 @@ namespace Lexical.FileSystem
             }
 
             throw new DirectoryNotFoundException(path);
+        }
+
+        /// <summary>
+        /// Tests whether a file or directory exists.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support exists</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public bool Exists(string path)
+        {
+            // Make path
+            string concatenatedPath = SubPath == null ? path : (SubPath.EndsWith("/") || SubPath.EndsWith("\\")) ? SubPath + path : SubPath + "/" + path;
+            // Is disposed?
+            IFileProvider fp = fileProvider;
+            if (fp == null) throw new ObjectDisposedException(nameof(FileProviderSystem));
+
+            // Directory
+            IDirectoryContents contents = fp.GetDirectoryContents(concatenatedPath);
+            if (contents.Exists) return true;
+
+            // File
+            IFileInfo fi = fp.GetFileInfo(concatenatedPath);
+            if (fi.Exists) return true;
+
+            // Nothing was found
+            return false;
         }
 
         /// <summary>

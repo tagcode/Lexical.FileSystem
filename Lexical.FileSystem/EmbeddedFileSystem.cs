@@ -15,6 +15,11 @@ namespace Lexical.FileSystem
     public class EmbeddedFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemOpen
     {
         /// <summary>
+        /// Zero entries.
+        /// </summary>
+        protected internal static FileSystemEntry[] NoEntries = new FileSystemEntry[0];
+
+        /// <summary>
         /// Associated Assembly
         /// </summary>
         public readonly Assembly Assembly;
@@ -79,7 +84,32 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <returns></returns>
         public FileSystemEntry[] Browse(string path)
-            => entries ?? (entries = CreateEntries());
+        {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (path == "") return entries ?? (entries = CreateEntries());
+            return NoEntries;
+        }
+
+        /// <summary>
+        /// Tests whether a file or directory exists.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support exists</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public bool Exists(string path)
+        {
+            FileSystemEntry[] _entries = entries ?? (entries = CreateEntries());
+            foreach (FileSystemEntry e in _entries)
+                if (e.Path == path) return true;
+            return false;
+        }
 
         /// <summary>
         /// Open embedded resource for reading.

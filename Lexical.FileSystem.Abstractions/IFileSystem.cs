@@ -49,6 +49,8 @@ namespace Lexical.FileSystem
         CreateDirectory = 1 << 6,
         /// <summary>Can browse directories</summary>
         Browse = 1 << 8,
+        /// <summary>Can test existance of files and directories</summary>
+        Exists = 1 << 9,
         /// <summary>Can delete files and directories</summary>
         Delete = 1 << 10,
         /// <summary>Can move and rename files and directories.</summary>

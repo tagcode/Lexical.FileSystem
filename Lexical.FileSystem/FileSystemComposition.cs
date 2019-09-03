@@ -97,6 +97,39 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Tests whether a file or directory exists.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support exists</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public bool Exists(string path)
+        {
+            bool supported = false;
+            foreach (var filesystem in fileSystems)
+            {
+                if ((filesystem.Capabilities & FileSystemCapabilities.Exists) == 0UL) continue;
+                try
+                {
+                    bool exists = filesystem.Exists(path);
+                    if (exists) return true;
+                    supported = true;
+                }
+                catch (DirectoryNotFoundException) { supported = true; }
+                catch (NotSupportedException) { }
+            }
+            if (!supported) throw new NotSupportedException(nameof(Browse));
+            return false;
+        }
+
+        /// <summary>
         /// Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="FileMode.Create"/> or <see cref="FileMode.CreateNew"/>.
         /// </summary>
         /// <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>

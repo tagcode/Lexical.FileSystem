@@ -67,7 +67,8 @@ namespace Lexical.FileSystem
         /// Get capabilities.
         /// </summary>
         public override FileSystemCapabilities Capabilities =>
-            FileSystemCapabilities.Browse | FileSystemCapabilities.CreateDirectory | FileSystemCapabilities.Delete | FileSystemCapabilities.Move |
+            FileSystemCapabilities.Browse | FileSystemCapabilities.Exists |
+            FileSystemCapabilities.CreateDirectory | FileSystemCapabilities.Delete | FileSystemCapabilities.Move |
             FileSystemCapabilities.Observe |
             FileSystemCapabilities.Open | FileSystemCapabilities.Write | FileSystemCapabilities.Read | FileSystemCapabilities.CreateFile;
 
@@ -219,6 +220,35 @@ namespace Lexical.FileSystem
             }
 
             throw new DirectoryNotFoundException(path);
+        }
+
+        /// <summary>
+        /// Tests whether a file or directory exists.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support exists</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public bool Exists(string path)
+        {
+            // Return OS-root, return drive letters.
+            if (path == "" && RootPath == "") return true;
+            // Concatenate paths and assert that path doesn't refer to parent of the constructed path
+            string concatenatedPath, absolutePath;
+            path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
+
+            DirectoryInfo dir = new DirectoryInfo(absolutePath);
+            if (dir.Exists) return true;
+            FileInfo fi = new FileInfo(absolutePath);
+            if (fi.Exists) return true;
+            return false;
         }
 
         /// <summary>
