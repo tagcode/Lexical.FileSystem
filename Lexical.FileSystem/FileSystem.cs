@@ -90,7 +90,7 @@ namespace Lexical.FileSystem
         {
             RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
             AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(rootPath);
-            FileSystemRoot = rootPath == "" || ((isLinux || isOsx) && (rootPath == "/"));
+            FileSystemRoot = rootPath == "";
         }
 
         /// <summary>
