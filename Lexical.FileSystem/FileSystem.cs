@@ -225,7 +225,7 @@ namespace Lexical.FileSystem
             }
             else
             {
-                throw new NotSupportedException("This OS is not supported.");
+                throw new PlatformNotSupportedException("This OS is not supported.");
             }
 
         }

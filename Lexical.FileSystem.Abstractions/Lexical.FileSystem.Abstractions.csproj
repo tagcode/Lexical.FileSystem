@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>Toni Kalajainen</Authors>
-    <Version>0.9.5</Version>
+    <Version>0.9.6</Version>
     <Company>Lexical</Company>
     <Description>Virtual file system IFileSystem interfaces.</Description>
     <Copyright>Toni Kalajainen</Copyright>
