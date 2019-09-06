@@ -39,6 +39,11 @@ namespace Lexical.FileSystem
         public override FileSystemCapabilities Capabilities => capabilities;
 
         /// <summary>
+        /// File system components.
+        /// </summary>
+        public IFileSystem[] FileSystems => fileSystems;
+
+        /// <summary>
         /// Create composition of file systems
         /// </summary>
         /// <param name="fileSystems"></param>

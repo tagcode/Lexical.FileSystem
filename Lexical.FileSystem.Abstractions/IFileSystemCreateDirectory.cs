@@ -11,7 +11,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>
-    /// File system that where directories can be created.
+    /// File system that can create directories.
     /// </summary>
     public interface IFileSystemCreateDirectory : IFileSystem
     {

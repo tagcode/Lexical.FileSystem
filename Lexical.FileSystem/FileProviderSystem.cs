@@ -29,7 +29,7 @@ namespace Lexical.FileSystem
         protected String SubPath;
 
         /// <summary>
-        /// Source file provider. This value is nulled upon dispose.
+        /// Source file provider. This value is nulled on dispose.
         /// </summary>
         protected IFileProvider fileProvider;
 
@@ -42,6 +42,11 @@ namespace Lexical.FileSystem
         /// IFileProvider capabilities
         /// </summary>
         public override FileSystemCapabilities Capabilities => capabilities;
+
+        /// <summary>
+        /// Source file provider. This value is nulled on dispose.
+        /// </summary>
+        public IFileProvider FileProvider => fileProvider;
 
         /// <summary>
         /// Create file provider based file system.

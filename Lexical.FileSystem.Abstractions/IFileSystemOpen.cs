@@ -11,7 +11,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>
-    /// File system where files can be opened for reading and writing. 
+    /// File system that can open files for reading and writing. 
     /// </summary>
     public interface IFileSystemOpen : IFileSystem
     {

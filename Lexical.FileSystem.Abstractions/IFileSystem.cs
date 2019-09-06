@@ -9,7 +9,9 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>
-    /// Root interface for file system interfaces. See sub-interfaces:
+    /// Root interface for file system interfaces. 
+    /// 
+    /// See sub-interfaces:
     /// <list type="bullet">
     ///     <item><see cref="IFileSystemOpen"/></item>
     ///     <item><see cref="IFileSystemCreateDirectory"/></item>

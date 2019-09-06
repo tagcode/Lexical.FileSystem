@@ -11,7 +11,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>
-    /// File system that can be observed for file and directory changes.
+    /// File system that observe file and directory changes.
     /// </summary>
     public interface IFileSystemObserve : IFileSystem
     {

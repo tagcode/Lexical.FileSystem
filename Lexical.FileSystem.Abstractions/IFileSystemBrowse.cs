@@ -11,7 +11,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>
-    /// File system that can be browsed for files and subdirectories.
+    /// File system that can browse directories.
     /// </summary>
     public interface IFileSystemBrowse : IFileSystem
     {

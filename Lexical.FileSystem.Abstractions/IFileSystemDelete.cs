@@ -19,7 +19,7 @@ namespace Lexical.FileSystem
         /// Delete a file or directory.
         /// 
         /// If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="IOException"/> is thrown.
-        /// If <paramref name="recursive"/> is true, then any file or directory within <paramref name="path"/> is deleted as well.
+        /// If <paramref name="recursive"/> is true, then any file or directory in <paramref name="path"/> is deleted as well.
         /// </summary>
         /// <param name="path">path to a file or directory</param>
         /// <param name="recursive">if path refers to directory, recurse into sub directories</param>
@@ -46,7 +46,7 @@ namespace Lexical.FileSystem
         /// Delete a file or directory.
         /// 
         /// If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="IOException"/> is thrown.
-        /// If <paramref name="recursive"/> is true, then any file or directory within <paramref name="path"/> is deleted as well.
+        /// If <paramref name="recursive"/> is true, then any file or directory in <paramref name="path"/> is deleted as well.
         /// </summary>
         /// <param name="fileSystem"></param>
         /// <param name="path">path to a file or directory</param>
