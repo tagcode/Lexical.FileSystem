@@ -60,6 +60,8 @@ namespace Lexical.FileSystem
         /// <summary>Can observe for directories and files</summary>
         Observe = 1 << 32,
 
+        /// <summary>Can provide file-system reference</summary>
+        Referable = 1 << 47,
         /// <summary>FileSystem uses case-sensitive filenames and paths. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
         CaseSensitive = 1 << 48,
         /// <summary>FileSystem uses case-insensitive filenames and paths. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>

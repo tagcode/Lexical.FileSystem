@@ -21,7 +21,7 @@ namespace Lexical.FileSystem
     /// If file watchers have been created, and file system is disposed, then watchers will be disposed also. 
     /// <see cref="IObserver{T}.OnCompleted"/> event is forwarded to watchers.
     /// </summary>
-    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve
+    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemReference
     {
         /// <summary>
         /// Regex pattern that extracts features and classifies paths.
@@ -69,9 +69,15 @@ namespace Lexical.FileSystem
         public readonly bool FileSystemRoot;
 
         /// <summary>
+        /// Reference to file-system.
+        /// </summary>
+        public String Reference { get; protected set; }
+
+        /// <summary>
         /// Get capabilities.
         /// </summary>
         public override FileSystemCapabilities Capabilities =>
+            FileSystemCapabilities.Referable |
             FileSystemCapabilities.Browse | FileSystemCapabilities.Exists |
             FileSystemCapabilities.CreateDirectory | FileSystemCapabilities.Delete | FileSystemCapabilities.Move |
             FileSystemCapabilities.Observe |
@@ -91,6 +97,10 @@ namespace Lexical.FileSystem
             RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
             AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(rootPath);
             FileSystemRoot = rootPath == "";
+            string relativePathSeparatorFixed = FileSystemRoot ? "" : osSeparator == "/" ? rootPath : rootPath.Replace(osSeparator, " / ");
+            string reference = $"file://{relativePathSeparatorFixed}";
+            if (!reference.EndsWith("/")) reference += "/"; 
+            Reference = reference;
         }
 
         /// <summary>
