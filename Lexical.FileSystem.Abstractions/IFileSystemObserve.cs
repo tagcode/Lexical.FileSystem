@@ -16,6 +16,11 @@ namespace Lexical.FileSystem
     public interface IFileSystemObserve : IFileSystem
     {
         /// <summary>
+        /// Has Observe capability.
+        /// </summary>
+        bool CanObserve { get; }
+
+        /// <summary>
         /// Attach an <paramref name="observer"/> on to a single file or directory. 
         /// Observing a directory will observe the whole subtree.
         /// </summary>
@@ -73,6 +78,14 @@ namespace Lexical.FileSystem
     /// </summary>
     public static partial class IFileSystemExtensions
     {
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Observe capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has Observe capability</returns>
+        public static bool CanObserve(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemObserve observer ? observer.CanObserve : false;
+
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a single file or directory. 
         /// Observing a directory will observe the whole subtree.

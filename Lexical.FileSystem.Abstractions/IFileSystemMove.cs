@@ -16,6 +16,11 @@ namespace Lexical.FileSystem
     public interface IFileSystemMove : IFileSystem
     {
         /// <summary>
+        /// Has Move capability.
+        /// </summary>
+        bool CanMove { get; }
+
+        /// <summary>
         /// Try to move/rename a file or directory.
         /// </summary>
         /// <param name="oldPath">old path of a file or directory</param>
@@ -39,6 +44,14 @@ namespace Lexical.FileSystem
     /// </summary>
     public static partial class IFileSystemExtensions
     {
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Move capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has Move capability</returns>
+        public static bool CanMove(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemMove mover ? mover.CanMove : false;
+
         /// <summary>
         /// Try to move/rename a file or directory.
         /// </summary>

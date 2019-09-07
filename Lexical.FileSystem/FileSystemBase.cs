@@ -16,12 +16,12 @@ namespace Lexical.FileSystem
     /// Disposables can be attached to be disposed along with <see cref="IFileSystem"/>.
     /// Watchers can be attached as disposables, so that they forward <see cref="IObserver{T}.OnCompleted"/> event upon IFileSystem dispose.
     /// </summary>
-    public abstract class FileSystemBase : IFileSystem, IDisposable
+    public abstract class FileSystemBase : IDisposableFileSystem
     {
         /// <summary>
         /// Get capabilities.
         /// </summary>
-        public virtual FileSystemCapabilities Capabilities { get; }
+        public virtual FileSystemFeatures Features { get; protected set; } = FileSystemFeatures.None;
 
         /// <summary>
         /// Lock for modifying dispose list.

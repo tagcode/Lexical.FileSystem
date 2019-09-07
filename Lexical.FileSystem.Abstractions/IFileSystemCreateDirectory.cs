@@ -16,6 +16,11 @@ namespace Lexical.FileSystem
     public interface IFileSystemCreateDirectory : IFileSystem
     {
         /// <summary>
+        /// Has CreateDirectory capability.
+        /// </summary>
+        bool CanCreateDirectory { get; }
+
+        /// <summary>
         /// Create a directory, or multiple cascading directories.
         /// 
         /// If directory at <paramref name="path"/> already exists, then returns without exception.
@@ -41,6 +46,14 @@ namespace Lexical.FileSystem
     /// </summary>
     public static partial class IFileSystemExtensions
     {
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has CreateDirectory capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has CreateDirectory capability</returns>
+        public static bool CanCreateDirectory(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : false;
+
         /// <summary>
         /// Create a directory, or multiple cascading directories.
         /// 

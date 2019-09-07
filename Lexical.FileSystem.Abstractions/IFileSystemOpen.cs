@@ -15,6 +15,15 @@ namespace Lexical.FileSystem
     /// </summary>
     public interface IFileSystemOpen : IFileSystem
     {
+        /// <summary>Can open file</summary>
+        bool CanOpen { get; }
+        /// <summary>Can open file for reading(</summary>
+        bool CanRead { get; }
+        /// <summary>Can open file for writing.</summary>
+        bool CanWrite { get; }
+        /// <summary>Can open and create file.</summary>
+        bool CanCreateFile { get; }
+
         /// <summary>
         /// Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="FileMode.Create"/> or <see cref="FileMode.CreateNew"/>.
         /// </summary>
@@ -44,6 +53,38 @@ namespace Lexical.FileSystem
     /// </summary>
     public static partial class IFileSystemExtensions
     {
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Open capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has Open capability</returns>
+        public static bool CanOpen(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemOpen opener ? opener.CanOpen : false;
+
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Read capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has Read capability</returns>
+        public static bool CanRead(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemOpen opener ? opener.CanRead : false;
+
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Write capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has Write capability</returns>
+        public static bool CanWrite(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemOpen opener ? opener.CanWrite : false;
+
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has CreateFile capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has CreateFile capability</returns>
+        public static bool CanCreateFile(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemOpen opener ? opener.CanCreateFile : false;
+
         /// <summary>
         /// Create a new file. If file exists, does nothing.
         /// </summary>

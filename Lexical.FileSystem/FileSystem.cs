@@ -73,15 +73,28 @@ namespace Lexical.FileSystem
         /// </summary>
         public String Reference { get; protected set; }
 
-        /// <summary>
-        /// Get capabilities.
-        /// </summary>
-        public override FileSystemCapabilities Capabilities =>
-            FileSystemCapabilities.Referable |
-            FileSystemCapabilities.Browse | FileSystemCapabilities.Exists |
-            FileSystemCapabilities.CreateDirectory | FileSystemCapabilities.Delete | FileSystemCapabilities.Move |
-            FileSystemCapabilities.Observe |
-            FileSystemCapabilities.Open | FileSystemCapabilities.Write | FileSystemCapabilities.Read | FileSystemCapabilities.CreateFile;
+        /// <inheritdoc/>
+        public virtual bool CanBrowse => true;
+        /// <inheritdoc/>
+        public virtual bool CanTestExists => true;
+        /// <inheritdoc/>
+        public virtual bool CanObserve => true;
+        /// <inheritdoc/>
+        public virtual bool CanOpen => true;
+        /// <inheritdoc/>
+        public virtual bool CanRead => true;
+        /// <inheritdoc/>
+        public virtual bool CanWrite => true;
+        /// <inheritdoc/>
+        public virtual bool CanCreateFile => true;
+        /// <inheritdoc/>
+        public virtual bool CanDelete => true;
+        /// <inheritdoc/>
+        public virtual bool CanMove => true;
+        /// <inheritdoc/>
+        public virtual bool CanCreateDirectory => true;
+        /// <inheritdoc/>
+        public virtual bool CanReference => true;
 
         /// <summary>
         /// Create an access to local file-system.

@@ -1,6 +1,6 @@
 ﻿// --------------------------------------------------------
 // Copyright:      Toni Kalajainen
-// Date:           14.6.2019
+// Date:           7.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
@@ -16,6 +16,11 @@ namespace Lexical.FileSystem
     /// </summary>
     public interface IFileSystemReference : IFileSystem
     {
+        /// <summary>
+        /// Has Reference capability.
+        /// </summary>
+        bool CanReference { get; }
+
         /// <summary>
         /// Reference to file-system. Note, this doesn't include path within the file-system.
         /// 
@@ -37,6 +42,14 @@ namespace Lexical.FileSystem
     /// </summary>
     public static partial class IFileSystemExtensions
     {
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Reference capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has Reference capability</returns>
+        public static bool CanReference(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemReference referable ? referable.CanReference : false;
+
         /// <summary>
         /// Reference to file-system. Note, this doesn't include path within the file-system.
         /// 

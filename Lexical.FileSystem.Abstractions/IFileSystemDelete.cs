@@ -16,6 +16,11 @@ namespace Lexical.FileSystem
     public interface IFileSystemDelete : IFileSystem
     {
         /// <summary>
+        /// Has Delete capability.
+        /// </summary>
+        bool CanDelete { get; }
+
+        /// <summary>
         /// Delete a file or directory.
         /// 
         /// If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="IOException"/> is thrown.
@@ -42,6 +47,14 @@ namespace Lexical.FileSystem
     /// </summary>
     public static partial class IFileSystemExtensions
     {
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Delete capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true, if has Delete capability</returns>
+        public static bool CanDelete(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemDelete deleter ? deleter.CanDelete : false;
+
         /// <summary>
         /// Delete a file or directory.
         /// 

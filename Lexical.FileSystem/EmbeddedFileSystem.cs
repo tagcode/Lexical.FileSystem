@@ -25,11 +25,6 @@ namespace Lexical.FileSystem
         public readonly Assembly Assembly;
 
         /// <summary>
-        /// Get capabilities.
-        /// </summary>
-        public override FileSystemCapabilities Capabilities => FileSystemCapabilities.Browse | FileSystemCapabilities.Open | FileSystemCapabilities.Read | FileSystemCapabilities.CaseSensitive | FileSystemCapabilities.Referable;
-
-        /// <summary>
         /// Snapshot of entries.
         /// </summary>
         protected FileSystemEntry[] entries;
@@ -38,6 +33,26 @@ namespace Lexical.FileSystem
         /// Reference to file-system.
         /// </summary>
         public String Reference { get; protected set; }
+
+        /// <summary>
+        /// File-system features.
+        /// </summary>
+        public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive;
+
+        /// <inheritdoc/>
+        public virtual bool CanBrowse => true;
+        /// <inheritdoc/>
+        public virtual bool CanTestExists => true;
+        /// <inheritdoc/>
+        public virtual bool CanOpen => true;
+        /// <inheritdoc/>
+        public virtual bool CanRead => true;
+        /// <inheritdoc/>
+        public virtual bool CanWrite => false;
+        /// <inheritdoc/>
+        public virtual bool CanCreateFile => false;
+        /// <inheritdoc/>
+        public virtual bool CanReference => true;
 
         /// <summary>
         /// Create embedded 

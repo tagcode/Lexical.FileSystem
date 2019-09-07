@@ -16,7 +16,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.
     /// </summary>
-    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory
+    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemReference
     {
         /// <summary>
         /// File system components.
@@ -31,17 +31,42 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Union of capabilities
         /// </summary>
-        protected FileSystemCapabilities capabilities;
+        protected FileSystemFeatures features;
 
         /// <summary>
         /// Union of capabilities.
         /// </summary>
-        public override FileSystemCapabilities Capabilities => capabilities;
+        public override FileSystemFeatures Features => features;
 
         /// <summary>
         /// File system components.
         /// </summary>
         public IFileSystem[] FileSystems => fileSystems;
+
+        /// <inheritdoc/>
+        public virtual bool CanBrowse { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanTestExists { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanObserve { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanOpen { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanRead { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanWrite { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanCreateFile { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanDelete { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanMove { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanCreateDirectory { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanReference { get; protected set; }
+        /// <inheritdoc/>
+        public string Reference => throw new NotSupportedException();
 
         /// <summary>
         /// Create composition of file systems
@@ -50,8 +75,23 @@ namespace Lexical.FileSystem
         public FileSystemComposition(params IFileSystem[] fileSystems)
         {
             this.fileSystems = fileSystems;
+            CanReference = true;
             foreach (IFileSystem fs in fileSystems)
-                capabilities |= fs.Capabilities;            
+            {
+                features |= fs.Features;
+                CanBrowse |= fs.CanBrowse();
+                CanTestExists |= fs.CanTestExists();
+                CanObserve |= fs.CanObserve();
+                CanOpen |= fs.CanOpen();
+                CanRead |= fs.CanRead();
+                CanWrite |= fs.CanWrite();
+                CanCreateFile |= fs.CanCreateFile();
+                CanDelete |= fs.CanDelete();
+                CanMove |= fs.CanMove();
+                CanCreateDirectory |= fs.CanCreateDirectory();
+                CanReference &= fs.CanReference();
+            }
+            CanReference = false; // Not implemented
         }
 
         /// <summary>
@@ -61,7 +101,7 @@ namespace Lexical.FileSystem
         public FileSystemComposition(IEnumerable<IFileSystem> fileSystems)
         {
             this.fileSystems = fileSystems.ToArray();
-            foreach (IFileSystem fs in this.fileSystems) capabilities |= fs.Capabilities;
+            foreach (IFileSystem fs in this.fileSystems) features |= fs.Features;
         }
 
         /// <summary>
@@ -85,7 +125,7 @@ namespace Lexical.FileSystem
             bool exists = false, supported = false;
             foreach (var filesystem in fileSystems)
             {
-                if ((filesystem.Capabilities & FileSystemCapabilities.Browse) == 0UL) continue;
+                if (!filesystem.CanBrowse()) continue;
                 try
                 {
                     FileSystemEntry[] list = filesystem.Browse(path);
@@ -120,7 +160,7 @@ namespace Lexical.FileSystem
             bool supported = false;
             foreach (var filesystem in fileSystems)
             {
-                if ((filesystem.Capabilities & FileSystemCapabilities.Exists) == 0UL) continue;
+                if (!filesystem.CanTestExists()) continue;
                 try
                 {
                     bool exists = filesystem.Exists(path);
@@ -159,7 +199,7 @@ namespace Lexical.FileSystem
             bool supported = false;
             foreach (var filesystem in fileSystems)
             {
-                if ((filesystem.Capabilities & FileSystemCapabilities.Open) == 0UL) continue;
+                if (!filesystem.CanOpen()) continue;
                 try
                 {
                     return filesystem.Open(path, fileMode, fileAccess, fileShare);
@@ -195,7 +235,7 @@ namespace Lexical.FileSystem
             bool ok = false;
             foreach (var filesystem in fileSystems)
             {
-                if ((filesystem.Capabilities & FileSystemCapabilities.Delete) == 0UL) continue;
+                if (!filesystem.CanDelete()) continue;
                 try
                 {
                     filesystem.Delete(path, recursive);
@@ -230,7 +270,7 @@ namespace Lexical.FileSystem
             bool ok = false;
             foreach (IFileSystem filesystem in fileSystems)
             {
-                if ((filesystem.Capabilities & FileSystemCapabilities.Move) == 0UL) continue;
+                if (!filesystem.CanMove()) continue;
                 try
                 {
                     filesystem.Move(oldPath, newPath);
@@ -266,7 +306,7 @@ namespace Lexical.FileSystem
             bool ok = false;
             foreach (IFileSystem filesystem in fileSystems)
             {
-                if ((filesystem.Capabilities & FileSystemCapabilities.CreateDirectory) == 0UL) continue;
+                if (!filesystem.CanCreateDirectory()) continue;
                 try
                 {
                     filesystem.CreateDirectory(path);
@@ -301,7 +341,7 @@ namespace Lexical.FileSystem
             ObserverAdapter adapter = new ObserverAdapter(this, observer);
             foreach (var filesystem in fileSystems)
             {
-                if ((filesystem.Capabilities & FileSystemCapabilities.Observe) == 0UL) continue;
+                if (!filesystem.CanObserve()) continue;
                 try
                 {
                     IDisposable disposable = filesystem.Observe(path, adapter);

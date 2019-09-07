@@ -16,6 +16,16 @@ namespace Lexical.FileSystem
     public interface IFileSystemBrowse : IFileSystem
     {
         /// <summary>
+        /// Has Browse capability.
+        /// </summary>
+        bool CanBrowse { get; }
+
+        /// <summary>
+        /// Has Exists capability.
+        /// </summary>
+        bool CanTestExists { get; }
+
+        /// <summary>
         /// Browse a directory for file and subdirectory entries.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
@@ -111,6 +121,22 @@ namespace Lexical.FileSystem
     /// </summary>
     public static partial class IFileSystemExtensions
     {
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Browse capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true if has Browse capability</returns>
+        public static bool CanBrowse(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemBrowse browser ? browser.CanBrowse : false;
+
+        /// <summary>
+        /// Test if <paramref name="fileSystem"/> has Exists capability.
+        /// <param name="fileSystem"></param>
+        /// </summary>
+        /// <returns>true if has Exists capability</returns>
+        public static bool CanTestExists(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemBrowse browser ? browser.CanTestExists : false;
+
         /// <summary>
         /// Browse a directory for file and subdirectory entries.
         /// </summary>

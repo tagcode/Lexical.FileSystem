@@ -19,11 +19,6 @@ namespace Lexical.FileSystem
     public class FileProviderSystem : FileSystemBase, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen
     {
         /// <summary>
-        /// Default capabilities of IFileProvider.
-        /// </summary>
-        public const FileSystemCapabilities DefaultCapabilities = FileSystemCapabilities.Open | FileSystemCapabilities.Read | FileSystemCapabilities.Observe | FileSystemCapabilities.Browse | FileSystemCapabilities.Exists;
-
-        /// <summary>
         /// Optional subpath within the source <see cref="fileProvider"/>.
         /// </summary>
         protected String SubPath;
@@ -34,31 +29,40 @@ namespace Lexical.FileSystem
         protected IFileProvider fileProvider;
 
         /// <summary>
-        /// IFileProvider capabilities
-        /// </summary>
-        protected FileSystemCapabilities capabilities;
-
-        /// <summary>
-        /// IFileProvider capabilities
-        /// </summary>
-        public override FileSystemCapabilities Capabilities => capabilities;
-
-        /// <summary>
         /// Source file provider. This value is nulled on dispose.
         /// </summary>
         public IFileProvider FileProvider => fileProvider;
+
+        /// <inheritdoc/>
+        public virtual bool CanBrowse { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanTestExists { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanObserve { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanOpen { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanRead { get; protected set; }
+        /// <inheritdoc/>
+        public virtual bool CanWrite => false;
+        /// <inheritdoc/>
+        public virtual bool CanCreateFile => false;
 
         /// <summary>
         /// Create file provider based file system.
         /// </summary>
         /// <param name="fileProvider"></param>
         /// <param name="subpath">(optional) subpath within the file provider</param>
-        /// <param name="capabilities">file provider capabilities</param>
-        public FileProviderSystem(IFileProvider fileProvider, string subpath = null, FileSystemCapabilities capabilities = DefaultCapabilities) : base()
+        /// <param name="canBrowse"></param>
+        /// <param name="canObserve"></param>
+        /// <param name="canOpen"></param>
+        public FileProviderSystem(IFileProvider fileProvider, string subpath = null, bool canBrowse = true, bool canObserve = true, bool canOpen = true) : base()
         {
             this.fileProvider = fileProvider ?? throw new ArgumentNullException(nameof(subpath));
             this.SubPath = subpath;
-            this.capabilities = capabilities;
+            this.CanBrowse = this.CanTestExists = canBrowse;
+            this.CanObserve = canObserve;
+            this.CanOpen = this.CanRead = canOpen;
         }
 
         /// <summary>

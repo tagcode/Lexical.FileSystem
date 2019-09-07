@@ -19,70 +19,57 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemDelete"/></item>
     ///     <item><see cref="IFileSystemMove"/></item>
     ///     <item><see cref="IFileSystemObserve"/></item>
+    ///     <item><see cref="IFileSystemReference"/></item>
     /// </list>
     /// </summary>
     public interface IFileSystem
     {
         /// <summary>
-        /// The capabilities of the implementing class. 
-        /// 
-        /// Note, that even if class is capable of certain operation, for example delete,
-        /// the operation may be not supported for specific files, and the class may throw
-        /// <see cref="NotSupportedException"/>.
+        /// Features of the file-system.
         /// </summary>
-        FileSystemCapabilities Capabilities { get; }
+        FileSystemFeatures Features { get; }
     }
 
     /// <summary>
     /// File system operation capabilities
     /// </summary>
     [Flags]
-    public enum FileSystemCapabilities : UInt64
+    public enum FileSystemFeatures : UInt64
     {
-        /// <summary>Can open file stream (<see cref="IFileSystemOpen"/>).</summary>
-        Open = 1 << 0,
-        /// <summary>Can open file for reading(<see cref="IFileSystemOpen"/>).</summary>
-        Read = 1 << 1,
-        /// <summary>Can open file for writing (<see cref="IFileSystemOpen"/>).</summary>
-        Write = 1 << 2,
-        /// <summary>Can open and create file (<see cref="IFileSystemOpen"/>).</summary>
-        CreateFile = 1 << 3,
-        /// <summary>Can create directory (<see cref="IFileSystemCreateDirectory"/>)</summary>
-        CreateDirectory = 1 << 6,
-        /// <summary>Can browse directories</summary>
-        Browse = 1 << 8,
-        /// <summary>Can test existance of files and directories</summary>
-        Exists = 1 << 9,
-        /// <summary>Can delete files and directories</summary>
-        Delete = 1 << 10,
-        /// <summary>Can move and rename files and directories.</summary>
-        Move = 1 << 16,
-        /// <summary>Can observe for directories and files</summary>
-        Observe = 1 << 32,
+        /// <summary></summary>
+        None = 0UL,
 
-        /// <summary>Can provide file-system reference</summary>
-        Referable = 1 << 47,
         /// <summary>FileSystem uses case-sensitive filenames and paths. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
-        CaseSensitive = 1 << 48,
+        CaseSensitive = 1UL << 48,
         /// <summary>FileSystem uses case-insensitive filenames and paths. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
-        CaseInsensitive = 1 << 49,
+        CaseInsensitive = 1UL << 49,
 
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved0 = 1 << 56,
+        Reserved0 = 1UL << 56,
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved1 = 1 << 57,
+        Reserved1 = 1UL << 57,
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved2 = 1 << 58,
+        Reserved2 = 1UL << 58,
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved3 = 1 << 59,
+        Reserved3 = 1UL << 59,
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved4 = 1 << 60,
+        Reserved4 = 1UL << 60,
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved5 = 1 << 61,
+        Reserved5 = 1UL << 61,
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved6 = 1 << 62,
+        Reserved6 = 1UL << 62,
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
         Reserved7 = 1UL << 63
+    }
+
+    /// <summary>
+    /// Signals that the file-system is also disposable.
+    /// 
+    /// Used when returning file-system from methods to signal disposability.
+    /// </summary>
+    public interface IDisposableFileSystem : IFileSystem, IDisposable
+    {
+
     }
     // </doc>
 
