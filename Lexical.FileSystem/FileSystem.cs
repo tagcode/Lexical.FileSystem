@@ -110,10 +110,14 @@ namespace Lexical.FileSystem
             RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
             AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(rootPath);
             FileSystemRoot = rootPath == "";
-            string relativePathSeparatorFixed = FileSystemRoot ? "" : osSeparator == "/" ? rootPath : rootPath.Replace(osSeparator, " / ");
-            string reference = $"file://{relativePathSeparatorFixed}";
-            if (!reference.EndsWith("/")) reference += "/"; 
-            Reference = reference;
+            // Canonized relative path uses "/" as separator. Ends with "/".
+            string canonizedRelativePath = FileSystemRoot ? "" : osSeparator == "/" ? rootPath : rootPath.Replace(osSeparator, " / ");
+            if (!canonizedRelativePath.EndsWith("/")) canonizedRelativePath += "/";
+            // "file://canonized/path/"
+            Reference = $"file://{canonizedRelativePath}";
+
+            if (isWindows) this.Features |= FileSystemFeatures.CaseInsensitive;
+            if (isLinux || isOsx) this.Features |= FileSystemFeatures.CaseSensitive;
         }
 
         /// <summary>

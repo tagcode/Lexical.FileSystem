@@ -39,9 +39,9 @@ namespace Lexical.FileSystem
         /// <summary></summary>
         None = 0UL,
 
-        /// <summary>FileSystem uses case-sensitive filenames and paths. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
+        /// <summary>Some or all files use case-sensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
         CaseSensitive = 1UL << 48,
-        /// <summary>FileSystem uses case-insensitive filenames and paths. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
+        /// <summary>Some or all files use case-insensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
         CaseInsensitive = 1UL << 49,
 
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
