@@ -2,15 +2,11 @@
 Lexical.FileSystem is a virtual filesystem class libraries for .NET.
 
 NuGet Packages:
-* Lexical.FileSystem.Abstractions
-* Lexical.FileSystem
-
-**Links**
-* [Website](http://lexical.fi/FileSystem/index.html)
-* [Github](https://github.com/tagcode/Lexical.FileSystem)
-* [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/)
+* Lexical.FileSystem ([Website](http://lexical.fi/FileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/))
+* Lexical.FileSystem.Abstractions ([Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
 
 # FileSystem
+
 **new FileSystem(<i>path</i>)** creates an instance to a path in local directory.
 
 ```csharp
@@ -27,12 +23,13 @@ IFileSystem filesystem = new FileSystem("");
 ```none
 C:
 D:
+/
 ```
 
-Singleton instance **FileSystem.OSRoot** refers to the same OS root.
+Singleton instance **FileSystem.OS** refers to the same OS root.
 
 ```csharp
-IFileSystem filesystem = FileSystem.OSRoot;
+IFileSystem filesystem = FileSystem.OS;
 ```
 
 Files can be browsed.
@@ -63,8 +60,8 @@ using (Stream s = filesystem.Open("somefile.txt", FileMode.OpenOrCreate, FileAcc
 Files and directories can be observed for changes.
 
 ```csharp
-IObserver<FileSystemEntryEvent> observer = new Observer();
-using (IDisposable handle = filesystem.Observe("", observer))
+IObserver<IFileSystemEvent> observer = new Observer();
+using (IDisposable handle = filesystem.Observe("**", observer))
 {
 }
 ```
