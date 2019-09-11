@@ -4,6 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
+using Lexical.FileSystem.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,7 +39,7 @@ namespace Lexical.FileSystem
         /// </summary>
         internal protected static bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows), isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux), isOsx = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
-        static FileSystem osRoot = new FileSystem("");
+        static FileSystem os = new FileSystem("");
 
         static Lazy<FileSystem> applicationRoot = new Lazy<FileSystem>(() => new FileSystem(AppDomain.CurrentDomain.BaseDirectory));
 
@@ -50,7 +51,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// File system system that reads from operating system root.
         /// </summary>
-        public static FileSystem OSRoot => osRoot;
+        public static FileSystem OS => os;
 
         /// <summary>
         /// The root path as provided with constructor.
@@ -271,7 +272,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public FileSystemEntry[] Browse(string path)
+        public IFileSystemEntry[] Browse(string path)
         {
             // Return OS-root, return drive letters.
             if (path == "" && RootPath == "") return BrowseRoot();
@@ -284,31 +285,15 @@ namespace Lexical.FileSystem
             {
                 string prefix = path.Length > 0 ? (path.EndsWith("/", StringComparison.InvariantCulture) ? path : path + "/") : null;
                 if (FileSystemRoot && path == "" || path == "/") prefix = "/";
-                StructList24<FileSystemEntry> list = new StructList24<FileSystemEntry>();
+                StructList24<IFileSystemEntry> list = new StructList24<IFileSystemEntry>();
                 foreach (DirectoryInfo di in dir.GetDirectories())
                 {
-                    FileSystemEntry e = new FileSystemEntry
-                    {
-                        FileSystem = this,
-                        LastModified = di.LastWriteTimeUtc,
-                        Name = di.Name,
-                        Path = prefix == null ? di.Name : prefix + di.Name,
-                        Length = -1L,
-                        Type = FileSystemEntryType.Directory
-                    };
+                    IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(prefix) ? di.Name : prefix + di.Name, di.Name, di.LastWriteTimeUtc);
                     list.Add(e);
                 }
                 foreach (FileInfo _fi in dir.GetFiles())
                 {
-                    FileSystemEntry e = new FileSystemEntry
-                    {
-                        FileSystem = this,
-                        LastModified = _fi.LastWriteTimeUtc,
-                        Name = _fi.Name,
-                        Path = prefix == null ? _fi.Name : prefix + _fi.Name,
-                        Length = _fi.Length,
-                        Type = FileSystemEntryType.File
-                    };
+                    IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtc, _fi.Length);
                     list.Add(e);
                 }
                 return list.ToArray();
@@ -317,16 +302,8 @@ namespace Lexical.FileSystem
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists)
             {
-                FileSystemEntry e = new FileSystemEntry
-                {
-                    FileSystem = this,
-                    LastModified = fi.LastWriteTimeUtc,
-                    Name = fi.Name,
-                    Path = path,
-                    Length = fi.Length,
-                    Type = FileSystemEntryType.File
-                };
-                return new FileSystemEntry[] { e };
+                IFileSystemEntry e = new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtc, fi.Length);
+                return new IFileSystemEntry[] { e };
             }
 
             throw new DirectoryNotFoundException(path);
@@ -365,32 +342,24 @@ namespace Lexical.FileSystem
         /// Browse root drive letters
         /// </summary>
         /// <returns></returns>
-        protected FileSystemEntry[] BrowseRoot()
+        protected IFileSystemEntry[] BrowseRoot()
         {
-            IEnumerable<DriveInfo> driveInfos = DriveInfo.GetDrives().Where(di => di.IsReady);
+            IEnumerable<DriveInfo> driveInfos = DriveInfo.GetDrives();
 
-            Match[] matches = driveInfos.Select(di => PathPattern.Match(di.Name)).ToArray();
-            int windows = matches.Where(m => m.Groups["windows_driveletter"].Success).Count();
-            int unix = matches.Where(m => m.Groups["unix_rooted_path"].Success).Count();
+            (DriveInfo, Match)[] matches = driveInfos.Select(di => (di, PathPattern.Match(di.Name))).ToArray();
+            int windows = matches.Where(m => m.Item2.Groups["windows_driveletter"].Success).Count();
+            int unix = matches.Where(m => m.Item2.Groups["unix_rooted_path"].Success).Count();
 
             // Reduce all "/mnt/xx" into single "/" entry.
             if (unix > 0)
             {
-                FileSystemEntry e = new FileSystemEntry
-                {
-                    FileSystem = this,
-                    LastModified = DateTimeOffset.MinValue,
-                    Length = -1L,
-                    Name = "",
-                    Path = "/",
-                    Type = FileSystemEntryType.Directory
-                };
-                return new FileSystemEntry[] { e };
+                IFileSystemEntry e = new FileSystemEntryDriveDirectory(this, "/", "", DateTimeOffset.MinValue);
+                return new IFileSystemEntry[] { e };
             }
 
-            List<FileSystemEntry> list = new List<FileSystemEntry>(matches.Length);
+            List<IFileSystemEntry> list = new List<IFileSystemEntry>(matches.Length);
 
-            foreach (Match m in matches)
+            foreach ((DriveInfo di, Match m) in matches)
             {
                 // Reduce all "/mnt/xx" into one "/" root.
                 if (m.Groups["unix_rooted_path"].Success) continue;
@@ -399,15 +368,10 @@ namespace Lexical.FileSystem
                 DirectoryInfo directoryInfo = new DirectoryInfo(path);
                 if (path.EndsWith(osSeparator)) path = path.Substring(0, path.Length - 1);
 
-                FileSystemEntry e = new FileSystemEntry
-                {
-                    FileSystem = this,
-                    LastModified = DateTimeOffset.MinValue,
-                    Length = -1L,
-                    Name = path,
-                    Path = path,
-                    Type = FileSystemEntryType.Directory
-                };
+                IFileSystemEntry e =
+                    di.IsReady ?
+                    new FileSystemEntryDriveDirectory(this, path, path, DateTimeOffset.MinValue) :
+                    new FileSystemEntryDrive(this, path, path, DateTimeOffset.MinValue);
                 list.Add(e);
             }
 
@@ -478,56 +442,70 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Attach an <paramref name="observer"/> on to a single file or directory. 
-        /// Observing a directory will observe the whole subtree.
+        /// Attach an <paramref name="observer"/> on to a directory. 
         /// </summary>
-        /// <param name="path">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+        /// <param name="filter">glob pattern to filter events. "**" means any directory. For example "mydir/**/somefile.txt", or "**" for <paramref name="filter"/> and sub-directories</param>
         /// <param name="observer"></param>
-        /// <returns>dispose handle</returns>
+        /// <param name="state">(optional) </param>
+        /// <returns>disposable handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
-        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="filter"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="filter"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support observe</exception>
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
-        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public IDisposable Observe(string path, IObserver<FileSystemEntryEvent> observer)
+        /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
         {
-            // Concatenate paths and assert that path doesn't refer to parent of the constructed path
-            string concatenatedPath, absolutePath;
-            path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
+            // Parse filter
+            GlobPatternInfo info = new GlobPatternInfo(filter);
 
-            return new Watcher(this, observer, absolutePath, path);
+            // Monitor single file (or dir, we don't know "dir")
+            if (!info.HasWildcards)
+            {
+                // "dir/" observes nothing
+                if (filter.EndsWith("/")) return new DummyObserver(this, filter, observer, state);
 
+                string concatenatedPath, absolutePath;
+                string path = ConcatenateAndAssertPath(filter, out concatenatedPath, out absolutePath);
+                return new FileObserver(this, path, observer, state, AbsoluteRootPath, absolutePath);
+            }
+            else
+            // Has wildcards, e.g. "**/file.txt"
+            {
+                // Concatenate paths and assert that path doesn't refer to parent of the constructed path
+                string concatenatedPath, absolutePathToPrefixPart;
+
+                string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(info.Prefix, out concatenatedPath, out absolutePathToPrefixPart);
+
+                return new PatternObserver(this, observer, state, filter, AbsoluteRootPath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, info.Suffix);
+            }
+            
             // TODO Add watcher that monitors changes to drive letters.
+            // What kind of filter monitors root contents "*" and "**"
         }
 
         /// <summary>
-        /// File or folder watcher.
+        /// Single file observer.
         /// </summary>
-        public class Watcher : IDisposable
+        protected internal class FileObserver : FileSystemObserver
         {
             /// <summary>
-            /// Associated system
+            /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
             /// </summary>
-            protected IFileSystem fileSystem;
+            public readonly string FileSystemRootAbsolutePath;
 
             /// <summary>
-            /// Absolute path as OS path. Separator is '\\' or '/'.
+            /// Absolute path to file. Separator is '\\' or '/' depending on operating system.
             /// </summary>
             public readonly string AbsolutePath;
 
             /// <summary>
-            /// Relative path. Path is relative to the <see cref="fileSystem"/>'s root.
-            /// The directory separator is '/'.
+            /// Relative path (<see cref="FileSystem"/> path). The directory separator is '/'.
             /// </summary>
             public readonly string RelativePath;
-
-            /// <summary>
-            /// Relative path that is passed for FileSystemWatcher.
-            /// </summary>
-            public readonly string WatcherDirectoryRelativePath;
 
             /// <summary>
             /// Watcher
@@ -535,44 +513,24 @@ namespace Lexical.FileSystem
             protected FileSystemWatcher watcher;
 
             /// <summary>
-            /// Callback object.
-            /// </summary>
-            protected IObserver<FileSystemEntryEvent> observer;
-
-            /// <summary>
             /// Create observer for one file.
             /// </summary>
             /// <param name="fileSystem">associated file system</param>
+            /// <param name="relativePath">path to file as <see cref="IFileSystem"/> path</param>
             /// <param name="observer">observer for callbacks</param>
-            /// <param name="absolutePath">Absolute path</param>
-            /// <param name="relativePath">Relative path (separator is '/')</param>
-            public Watcher(IFileSystem fileSystem, IObserver<FileSystemEntryEvent> observer, string absolutePath, string relativePath)
+            /// <param name="state"></param>
+            /// <param name="fileSystemRootAbsolutePath">Absolute path to filesystem root.</param>
+            /// <param name="absolutePath">Absolute path to the file</param>
+            /// <exception cref="DirectoryNotFoundException">If directory in <paramref name="fileSystemRootAbsolutePath"/> is not found.</exception>
+            public FileObserver(IFileSystem fileSystem, string relativePath, IObserver<IFileSystemEvent> observer, object state, string fileSystemRootAbsolutePath, string absolutePath) : base(fileSystem, relativePath, observer, state)
             {
-                this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+                this.FileSystemRootAbsolutePath = fileSystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(fileSystemRootAbsolutePath));
                 this.AbsolutePath = absolutePath ?? throw new ArgumentNullException(nameof(absolutePath));
                 this.RelativePath = relativePath ?? throw new ArgumentNullException(nameof(relativePath));
-                this.observer = observer ?? throw new ArgumentNullException(nameof(observer));
-                relativePath = relativePath ?? throw new ArgumentNullException(nameof(relativePath));
                 FileInfo fi = new FileInfo(absolutePath);
-                DirectoryInfo di = new DirectoryInfo(absolutePath);
-                // Watch directory
-                if (di.Exists)
-                {
-                    watcher = new FileSystemWatcher(absolutePath);
-                    watcher.IncludeSubdirectories = true;
-                    watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.Size;
-                    WatcherDirectoryRelativePath = RelativePath;
-                }
-                // Watch file
-                else //if (fi.Exists)
-                {
-                    watcher = new FileSystemWatcher(fi.Directory.FullName, fi.Name);
-                    watcher.IncludeSubdirectories = false;
-                    watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.Size;
-                    int ix = RelativePath.LastIndexOf('/');
-                    WatcherDirectoryRelativePath = ix < 0 ? "" : RelativePath.Substring(0, ix);
-                }
-
+                watcher = new FileSystemWatcher(fi.Directory.FullName, fi.Name);
+                watcher.IncludeSubdirectories = false;
+                watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.Size;
                 watcher.Error += OnError;
                 watcher.Changed += OnEvent;
                 watcher.Created += OnEvent;
@@ -588,15 +546,17 @@ namespace Lexical.FileSystem
             /// <param name="e"></param>
             void OnError(object sender, ErrorEventArgs e)
             {
-                var _observer = observer;
+                var _observer = Observer;
                 if (_observer == null) return;
 
                 // Disposed
-                IFileSystem _fileSystem = fileSystem;
+                IFileSystem _fileSystem = FileSystem;
                 if (_fileSystem == null) return;
 
-                // Forward event.
-                observer.OnError(e.GetException());
+                // Forward error as event object.
+                Observer.OnNext(new FileSystemErrorEvent(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath));
+                // Forward exception
+                //observer.OnError(e.GetException());
             }
 
             /// <summary>
@@ -606,46 +566,67 @@ namespace Lexical.FileSystem
             /// <param name="e"></param>
             void OnEvent(object sender, FileSystemEventArgs e)
             {
-                var _observer = observer;
+                var _observer = Observer;
                 if (_observer == null) return;
 
                 // Disposed
-                IFileSystem _fileSystem = fileSystem;
+                IFileSystem _fileSystem = FileSystem;
                 if (_fileSystem == null) return;
 
-                // Forward event.
-                FileSystemEntryEvent ae = new FileSystemEntryEvent { FileSystem = _fileSystem, ChangeEvents = e.ChangeType, Path = WatcherDirectoryRelativePath == "" ? e.Name : WatcherDirectoryRelativePath + "/" + e.Name };
-                if (Path.DirectorySeparatorChar != '/') ae.Path = ae.Path.Replace(Path.DirectorySeparatorChar, '/');
-                observer.OnNext(ae);
+                // Forward event(s)
+                DateTimeOffset time = DateTimeOffset.UtcNow;
+                string path = ConvertPath(e.FullPath);
+
+                // Event type
+                WatcherChangeTypes type = e.ChangeType;
+                // HasFlag has been optimized since .Net core 2.1 and does not box any more
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null) _observer.OnNext(new FileSystemCreateEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null) _observer.OnNext(new FileSystemChangeEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null) _observer.OnNext(new FileSystemDeleteEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re)
+                {
+                    string oldPath = ConvertPath(re.OldFullPath);
+                    // One path must be within watcher's interest
+                    if (oldPath != null || path != null)
+                    {
+                        // Send event
+                        _observer.OnNext(new FileSystemRenameEvent(this, time, oldPath, path));
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Convert path from <see cref="FileSystemEventArgs"/> into relative path of <see cref="IFileSystem"/>.
+            /// </summary>
+            /// <param name="absolutePath">absolute file path to file that is to be converted to relative path</param>
+            /// <returns>relative path, or null if failed</returns>
+            String ConvertPath(string absolutePath)
+            {
+                if (absolutePath == AbsolutePath) return RelativePath;
+                // 
+                if (absolutePath.StartsWith(FileSystemRootAbsolutePath))
+                {
+                    // Cut the relative path
+                    int length = absolutePath.Length > FileSystemRootAbsolutePath.Length && absolutePath[FileSystemRootAbsolutePath.Length] == Path.DirectorySeparatorChar ? absolutePath.Length - FileSystemRootAbsolutePath.Length - 1 : absolutePath.Length - FileSystemRootAbsolutePath.Length;
+                    string _relativePath = absolutePath.Substring(absolutePath.Length-length, length);
+                    // Convert separator back-slash '\' into slash '/'.
+                    if (Path.DirectorySeparatorChar != '/') _relativePath = _relativePath.Replace(Path.DirectorySeparatorChar, '/');
+                    // Return
+                    return _relativePath;
+                }
+                else
+                {
+                    return null;
+                }
             }
 
             /// <summary>
             /// Dispose observer
             /// </summary>
             /// <exception cref="AggregateException"></exception>
-            public void Dispose()
+            public override void InnerDispose(ref StructList2<Exception> errors)
             {
                 var _watcher = watcher;
-                var _observer = observer;
-
-                // Clear file system reference, and remove watcher from dispose list.
-                IFileSystem _fileSystem = Interlocked.Exchange(ref fileSystem, null);
-                if (_fileSystem is FileSystemBase __fileSystem) __fileSystem.RemoveDisposableBase(this);
-
-                StructList2<Exception> errors = new StructList2<Exception>();
-                if (_observer != null)
-                {
-                    observer = null;
-                    try
-                    {
-                        _observer.OnCompleted();
-                    }
-                    catch (Exception e)
-                    {
-                        errors.Add(e);
-                    }
-                }
-
                 if (_watcher != null)
                 {
                     watcher = null;
@@ -658,9 +639,193 @@ namespace Lexical.FileSystem
                         errors.Add(e);
                     }
                 }
+            }
+        }
 
-                // Throw exceptions
-                if (errors.Count > 0) throw new AggregateException(errors);
+
+        /// <summary>
+        /// Watches a group of files using a pattern.
+        /// </summary>
+        protected internal class PatternObserver : FileSystemObserver
+        {
+            /// <summary>
+            /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
+            /// </summary>
+            public readonly string FileSystemRootAbsolutePath;
+
+            /// <summary>
+            /// Absolute path to file. Separator is '\\' or '/' depending on operating system.
+            /// 
+            /// For example, if filter string is "dir/**" then this is "C:\temp\dir". 
+            /// </summary>
+            public readonly string AbsolutePathToPrefixPart;
+
+            /// <summary>
+            /// Relative path (<see cref="FileSystem"/> path). The directory separator is '/'.
+            /// 
+            /// For example, if filter string is "dir/**" then this is "dir".
+            /// </summary>
+            public readonly string RelativePathToPrefixPartWithoutTrailingSeparatorRelativePath;
+
+            /// <summary>
+            /// Suffix part of filter string that contains wildcards and filenames.
+            /// 
+            /// For example, if filter string is "dir/**", then this is "**".
+            /// </summary>
+            public readonly string SuffixPart;
+
+            /// <summary>
+            /// Filter info.
+            /// </summary>
+            protected GlobPatternInfo filterInfo;
+
+            /// <summary>
+            /// Watcher
+            /// </summary>
+            protected FileSystemWatcher watcher;
+
+            /// <summary>
+            /// Filter glob pattern
+            /// </summary>
+            public readonly Regex Pattern;
+
+            /// <summary>
+            /// Create observer for one file.
+            /// </summary>
+            /// <param name="fileSystem">associated file system</param>
+            /// <param name="observer">observer for callbacks</param>
+            /// <param name="state"></param>
+            /// <param name="filterString">original filter string</param>
+            /// <param name="fileSystemRootAbsolutePath">Absolute path to <see cref="FileSystem"/> root.</param>
+            /// <param name="relativePathToPrefixPartWithoutTrailingSeparator">prefix part of <paramref name="filterString"/>, for example "dir" if filter string is "dir/**"</param>
+            /// <param name="absolutePathToPrefixPart">absolute path to prefix part of <paramref name="filterString"/>, for example "C:\Temp\Dir", if filter string is "dir/**" and <paramref name="fileSystemRootAbsolutePath"/> is "C:\temp"</param>
+            /// <param name="suffixPart">Suffix part of <paramref name="filterString"/>, for example "**" if filter string is "dir/**"</param>
+            public PatternObserver(
+                IFileSystem fileSystem, 
+                IObserver<IFileSystemEvent> observer, 
+                object state,
+                string filterString,
+                string fileSystemRootAbsolutePath, 
+                string relativePathToPrefixPartWithoutTrailingSeparator,
+                string absolutePathToPrefixPart,
+                string suffixPart)
+            : base(fileSystem, filterString, observer, state)
+            {
+                this.FileSystemRootAbsolutePath = fileSystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(fileSystemRootAbsolutePath));
+                this.AbsolutePathToPrefixPart = absolutePathToPrefixPart ?? throw new ArgumentNullException(nameof(absolutePathToPrefixPart));
+                this.RelativePathToPrefixPartWithoutTrailingSeparatorRelativePath = relativePathToPrefixPartWithoutTrailingSeparator ?? throw new ArgumentNullException(nameof(relativePathToPrefixPartWithoutTrailingSeparator));
+                this.SuffixPart = suffixPart ?? throw new ArgumentNullException(nameof(suffixPart));
+                this.Pattern = GlobPatternFactory.Slash.CreateRegex(filterString ?? throw new ArgumentNullException(nameof(filterString)));
+                watcher = new FileSystemWatcher(AbsolutePathToPrefixPart);
+                watcher.IncludeSubdirectories = true;
+                watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.Size;
+                watcher.Error += OnError;
+                watcher.Changed += OnEvent;
+                watcher.Created += OnEvent;
+                watcher.Deleted += OnEvent;
+                watcher.Renamed += OnEvent;
+                watcher.EnableRaisingEvents = true;
+            }
+
+            /// <summary>
+            /// Handle (Forward) error event.
+            /// </summary>
+            /// <param name="sender"></param>
+            /// <param name="e"></param>
+            void OnError(object sender, ErrorEventArgs e)
+            {
+                var _observer = Observer;
+                if (_observer == null) return;
+
+                // Disposed
+                IFileSystem _fileSystem = FileSystem;
+                if (_fileSystem == null) return;
+
+                // Forward error as event object.
+                Observer.OnNext(new FileSystemErrorEvent(this, DateTimeOffset.UtcNow, e.GetException(), null));
+                // Forward exception
+                //observer.OnError(e.GetException());
+            }
+
+            /// <summary>
+            /// Forward event
+            /// </summary>
+            /// <param name="sender"></param>
+            /// <param name="e"></param>
+            void OnEvent(object sender, FileSystemEventArgs e)
+            {
+                var _observer = Observer;
+                if (_observer == null) return;
+
+                // Disposed
+                IFileSystem _fileSystem = FileSystem;
+                if (_fileSystem == null) return;
+
+                // Forward event(s)
+                DateTimeOffset time = DateTimeOffset.UtcNow;
+                string path = ConvertPath(e.FullPath);
+
+                // Event type
+                WatcherChangeTypes type = e.ChangeType;
+                // HasFlag has been optimized since .Net core 2.1
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))) _observer.OnNext(new FileSystemCreateEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) _observer.OnNext(new FileSystemChangeEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) _observer.OnNext(new FileSystemDeleteEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re) 
+                {
+                    string oldPath = ConvertPath(re.OldFullPath);
+                    // One path match match glob pattenr
+                    if ((oldPath != null && (Pattern.IsMatch(oldPath)||Pattern.IsMatch("/"+oldPath))) || (path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))))
+                    {
+                        // Send event
+                        _observer.OnNext(new FileSystemRenameEvent(this, time, oldPath, path));
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Convert path from <see cref="FileSystemEventArgs"/> into relative path of <see cref="IFileSystem"/>.
+            /// </summary>
+            /// <param name="absolutePath">absolute file path to file that is to be converted to relative path</param>
+            /// <returns>relative path, or null if failed</returns>
+            String ConvertPath(string absolutePath)
+            {
+                // 
+                if (absolutePath.StartsWith(FileSystemRootAbsolutePath))
+                {
+                    // Cut the relative path
+                    int length = absolutePath.Length > FileSystemRootAbsolutePath.Length && absolutePath[FileSystemRootAbsolutePath.Length] == Path.DirectorySeparatorChar ? absolutePath.Length - FileSystemRootAbsolutePath.Length - 1 : absolutePath.Length - FileSystemRootAbsolutePath.Length;
+                    string _relativePath = absolutePath.Substring(absolutePath.Length - length, length);
+                    // Convert separator back-slash '\' into slash '/'.
+                    if (Path.DirectorySeparatorChar != '/') _relativePath = _relativePath.Replace(Path.DirectorySeparatorChar, '/');
+                    // Return
+                    return _relativePath;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+
+            /// <summary>
+            /// Dispose observer
+            /// </summary>
+            /// <exception cref="AggregateException"></exception>
+            public override void InnerDispose(ref StructList2<Exception> errors)
+            {
+                var _watcher = watcher;
+                if (_watcher != null)
+                {
+                    watcher = null;
+                    try
+                    {
+                        _watcher.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
             }
         }
 

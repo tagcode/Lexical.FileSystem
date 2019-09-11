@@ -4,11 +4,15 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
+using Lexical.FileSystem.Utils;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Security;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Lexical.FileSystem
@@ -18,6 +22,8 @@ namespace Lexical.FileSystem
     /// </summary>
     public class FileProviderSystem : FileSystemBase, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen
     {
+        static IFileSystemEntry[] NO_ENTRIES = new IFileSystemEntry[0];
+
         /// <summary>
         /// Optional subpath within the source <see cref="fileProvider"/>.
         /// </summary>
@@ -86,6 +92,8 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
+            // Assert open is enabled
+            if (!CanOpen) throw new NotSupportedException("Open is not supported");
             // Check mode is for opening existing file
             if (fileMode != FileMode.Open) throw new NotSupportedException("FileMode = " + fileMode + " is not supported");
             // Check access is for reading
@@ -120,8 +128,10 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public FileSystemEntry[] Browse(string path)
+        public IFileSystemEntry[] Browse(string path)
         {
+            // Assert browse is enabled
+            if (!CanBrowse) throw new NotSupportedException("Browse is not supported");
             // Make path
             string concatenatedPath = SubPath == null ? path : (SubPath.EndsWith("/") || SubPath.EndsWith("\\")) ? SubPath + path : SubPath + "/" + path;
             // Is disposed?
@@ -132,10 +142,15 @@ namespace Lexical.FileSystem
             if (contents.Exists)
             {
                 // Convert result
-                StructList24<FileSystemEntry> list = new StructList24<FileSystemEntry>();
+                StructList24<IFileSystemEntry> list = new StructList24<IFileSystemEntry>();
                 foreach (IFileInfo _fi in contents)
                 {
-                    list.Add(new FileSystemEntry { FileSystem = this, LastModified = _fi.LastModified, Name = _fi.Name, Path = concatenatedPath.Length > 0 ? concatenatedPath + "/" + _fi.Name : _fi.Name, Length = _fi.IsDirectory ? -1L : _fi.Length, Type = _fi.IsDirectory ? FileSystemEntryType.Directory : FileSystemEntryType.File });
+                    string entryPath = concatenatedPath.Length > 0 ? concatenatedPath + "/" + _fi.Name : _fi.Name;
+                    IFileSystemEntry e =
+                        _fi.IsDirectory ? 
+                        (IFileSystemEntry)new FileSystemEntryDirectory(this, entryPath, _fi.Name, _fi.LastModified) :
+                        (IFileSystemEntry)new FileSystemEntryFile(this, entryPath, _fi.Name, _fi.LastModified, _fi.Length);
+                    list.Add(e);
                 }
                 return list.ToArray();
             }
@@ -143,8 +158,8 @@ namespace Lexical.FileSystem
             IFileInfo fi = fp.GetFileInfo(concatenatedPath);
             if (fi.Exists)
             {
-                FileSystemEntry e = new FileSystemEntry { FileSystem = this, LastModified = fi.LastModified, Name = fi.Name, Path = concatenatedPath, Length = fi.IsDirectory ? -1L : fi.Length, Type = fi.IsDirectory ? FileSystemEntryType.Directory : FileSystemEntryType.File };
-                return new FileSystemEntry[] { e };
+                IFileSystemEntry e = new FileSystemEntryFile(this, concatenatedPath, fi.Name, fi.LastModified, fi.Length);
+                return new IFileSystemEntry[] { e };
             }
 
             throw new DirectoryNotFoundException(path);
@@ -188,68 +203,58 @@ namespace Lexical.FileSystem
         /// Attach an <paramref name="observer"/> on to a single file or directory. 
         /// Observing a directory will observe the whole subtree.
         /// </summary>
-        /// <param name="path">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+        /// <param name="filter">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
         /// <param name="observer"></param>
+        /// <param name="state">(optional) </param>
         /// <returns>dispose handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
-        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="filter"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="filter"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support observe</exception>
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
-        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IDisposable Observe(string path, IObserver<FileSystemEntryEvent> observer)
+        public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
-            // Make path
-            string concatenatedPath = SubPath == null ? path : (SubPath.EndsWith("/") || SubPath.EndsWith("\\")) ? SubPath + path : SubPath + "/" + path;
-            // Is disposed?
+            // Assert observe is enabled.
+            if (!CanObserve) throw new NotSupportedException("Observe not supported.");
+            // Assert not diposed
             IFileProvider fp = fileProvider;
-            if (fp == null) throw new ObjectDisposedException(nameof(FileProviderSystem));
-            // Observe
-            return new Watcher(this, fp, observer, concatenatedPath, path);
+            if (fp == null) return new DummyObserver(this, filter, observer, state);
+            // Parse filter
+            GlobPatternInfo filterInfo = new GlobPatternInfo(filter);
+            // Monitor single file (or dir, we don't know "dir")
+            if (!filterInfo.HasWildcards)
+            {
+                // "dir/" observes nothing
+                if (filter.EndsWith("/")) return new DummyObserver(this, filter, observer, state);
+
+                // Create observer that watches one file
+                return new FileObserver(this, filter, observer, state);
+            }
+            else
+            // Has wildcards, e.g. "**/file.txt"
+            {
+                return new PatternObserver(this, filterInfo, observer, state);
+            }
         }
 
         /// <summary>
-        /// File watcher.
+        /// Single file observer.
         /// </summary>
-        public class Watcher : IDisposable
+        public class FileObserver : FileSystemObserver
         {
             /// <summary>
-            /// Path to supply to <see cref="fileProvider"/>.
+            /// File-system
             /// </summary>
-            public readonly string FileProviderPath;
+            protected IFileProvider FileProvider => ((FileProviderSystem)this.FileSystem).FileProvider;
 
             /// <summary>
-            /// Relative path. Path is relative to the <see cref="fileSystem"/>'s root.
+            /// Previous state of the file.
             /// </summary>
-            public readonly string RelativePath;
-
-            /// <summary>
-            /// Associated observer
-            /// </summary>
-            protected IObserver<FileSystemEntryEvent> observer;
-
-            /// <summary>
-            /// The parent file system.
-            /// </summary>
-            protected IFileSystem fileSystem;
-
-            /// <summary>
-            /// File provider
-            /// </summary>
-            protected IFileProvider fileProvider;
-
-            /// <summary>
-            /// Watcher class
-            /// </summary>
-            protected IDisposable watcher;
-
-            /// <summary>
-            /// Previous state of file existing.
-            /// </summary>
-            protected int existed;
+            protected IFileSystemEntry previousEntry;
 
             /// <summary>
             /// Change token
@@ -257,30 +262,37 @@ namespace Lexical.FileSystem
             protected IChangeToken changeToken;
 
             /// <summary>
+            /// Change token callback handle.
+            /// </summary>
+            protected IDisposable watcher;
+
+            /// <summary>
             /// Print info
             /// </summary>
             /// <returns></returns>
             public override string ToString()
-                => fileProvider?.ToString() ?? "disposed";
+                => FileSystem?.ToString();
 
             /// <summary>
             /// Create observer for one file.
             /// </summary>
-            /// <param name="system"></param>
-            /// <param name="fileProvider"></param>
+            /// <param name="filesystem"></param>
+            /// <param name="path"></param>
             /// <param name="observer"></param>
-            /// <param name="fileProviderPath">Absolute path</param>
-            /// <param name="relativePath">Relative path (separator is '/')</param>
-            public Watcher(IFileSystem system, IFileProvider fileProvider, IObserver<FileSystemEntryEvent> observer, string fileProviderPath, string relativePath)
+            /// <param name="state"></param>
+            public FileObserver(IFileSystem filesystem, string path, IObserver<IFileSystemEvent> observer, object state)
+                : base(filesystem, path, observer, state)
             {
-                this.fileSystem = system ?? throw new ArgumentNullException(nameof(system));
-                this.observer = observer ?? throw new ArgumentNullException(nameof(observer));
-                this.fileProvider = fileProvider ?? throw new ArgumentNullException(nameof(fileProvider));
-                this.FileProviderPath = fileProviderPath ?? throw new ArgumentNullException(nameof(fileProviderPath));
-                this.RelativePath = relativePath ?? throw new ArgumentNullException(nameof(relativePath));
-                this.changeToken = fileProvider.Watch(FileProviderPath);
+                this.changeToken = FileProvider.Watch(path);
+                this.previousEntry = ReadFileEntry();
                 this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
-                this.existed = fileProvider.GetFileInfo(FileProviderPath).Exists ? 1 : 0;
+            }
+
+            IFileSystemEntry ReadFileEntry()
+            {
+                IFileSystemEntry[] entries = FileSystem.Browse(Filter);
+                if (entries.Length == 1) return entries[0];
+                return null;
             }
 
             /// <summary>
@@ -289,57 +301,45 @@ namespace Lexical.FileSystem
             /// <param name="sender"></param>
             void OnEvent(object sender)
             {
-                var _observer = observer;
+                var _observer = Observer;
                 if (_observer == null) return;
 
                 // Disposed
-                IFileProvider _fileProvider = fileProvider;
-                IFileSystem _fileSystem = fileSystem;
-                if (_fileProvider == null || _fileSystem == null) return;
+                IFileProvider _fileProvider = FileProvider;
+                if (_fileProvider == null || _observer == null) return;
+
+                // Event to send
+                IFileSystemEvent _event = null;
+
+                // Create new token
+                if (!IsDisposing) this.changeToken = FileProvider.Watch(Filter);
 
                 // Figure out change type
-                bool exists = _fileProvider.GetFileInfo(FileProviderPath).Exists;
-                bool _existed = Interlocked.CompareExchange(ref existed, exists ? 1 : 0, existed) == 1;
+                IFileSystemEntry currentEntry = ReadFileEntry();
+                bool exists = currentEntry != null;
+                bool existed = previousEntry != null;
+                DateTimeOffset time = DateTimeOffset.UtcNow;
 
-                WatcherChangeTypes eventType = default;
-                if (_existed)
-                {
-                    eventType = exists ? WatcherChangeTypes.Changed : WatcherChangeTypes.Deleted;
-                }
-                else
-                {
-                    eventType = exists ? WatcherChangeTypes.Created : WatcherChangeTypes.Deleted;
-                }
+                if (exists && existed) _event = new FileSystemChangeEvent(this, time, Filter);
+                else if (exists && !existed) _event = new FileSystemCreateEvent(this, time, Filter);
+                else if (!exists && existed) _event = new FileSystemDeleteEvent(this, time, Filter);
 
-                FileSystemEntryEvent ae = new FileSystemEntryEvent { FileSystem = _fileSystem, ChangeEvents = eventType, Path = RelativePath };
-                observer.OnNext(ae);
+                // Replace entry
+                previousEntry = currentEntry;
+
+                // Send event
+                if (_event != null) _observer.OnNext(_event);
+
+                // Start watching again
+                if (!IsDisposing) this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
             }
 
             /// <summary>
             /// Dispose observer
             /// </summary>
-            public void Dispose()
+            public override void InnerDispose(ref StructList2<Exception> errors)
             {
                 var _watcher = watcher;
-                var _observer = observer;
-
-                // Clear file system reference, and remove watcher from dispose list.
-                IFileSystem _fileSystem = Interlocked.Exchange(ref fileSystem, null);
-                if (_fileSystem is FileSystemBase __fileSystem) __fileSystem.RemoveDisposableBase(this);
-
-                StructList2<Exception> errors = new StructList2<Exception>();
-                if (_observer != null)
-                {
-                    observer = null;
-                    try
-                    {
-                        _observer.OnCompleted();
-                    }
-                    catch (Exception e)
-                    {
-                        errors.Add(e);
-                    }
-                }
 
                 if (_watcher != null)
                 {
@@ -353,9 +353,139 @@ namespace Lexical.FileSystem
                         errors.Add(e);
                     }
                 }
+            }
+        }
 
-                if (errors.Count > 0) throw new AggregateException(errors);
-                fileProvider = null;
+        /// <summary>
+        /// Observer that monitors a range of files with glob pattern.
+        /// 
+        /// Since <see cref="IFileProvider"/> doesn't provide information about what was changed,
+        /// this observer implementation reads a whole snapshot of the whole file provider, in 
+        /// order to determine the changes.
+        /// </summary>
+        public class PatternObserver : FileSystemObserver
+        {
+            /// <summary>
+            /// File-system
+            /// </summary>
+            protected IFileProvider FileProvider => ((FileProviderSystem)this.FileSystem).FileProvider;
+
+            /// <summary>
+            /// Previous state of file existing.
+            /// </summary>
+            protected IFileSystemEntry[] previousEntries;
+
+            /// <summary>
+            /// Change token
+            /// </summary>
+            protected IChangeToken changeToken;
+
+            /// <summary>
+            /// Change token handle
+            /// </summary>
+            protected IDisposable watcher;
+
+            /// <summary>
+            /// Previous snapshot of detected dirs and files
+            /// </summary>
+            protected Dictionary<string, IFileSystemEntry> previousSnapshot;
+
+            /// <summary>
+            /// Create observer for one file.
+            /// </summary>
+            /// <param name="filesystem"></param>
+            /// <param name="filterInfo"></param>
+            /// <param name="observer"></param>
+            /// <param name="state"></param>
+            public PatternObserver(IFileSystem filesystem, GlobPatternInfo filterInfo, IObserver<IFileSystemEvent> observer, object state)
+                : base(filesystem, filterInfo.Source, observer, state)
+            {
+                this.changeToken = FileProvider.Watch(filterInfo.Source);
+                this.previousSnapshot = ReadSnapshot();
+                this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
+            }
+
+            /// <summary>
+            /// Read a snapshot of files and folders that match filter.
+            /// </summary>
+            /// <returns></returns>
+            Dictionary<string, IFileSystemEntry> ReadSnapshot()
+            {
+                Dictionary<string, IFileSystemEntry> result = new Dictionary<string, IFileSystemEntry>();
+                FileScanner scanner = new FileScanner(FileSystem).AddGlobPattern(Filter).SetReturnDirectories(true);
+
+                // Run scan
+                foreach (IFileSystemEntry entry in scanner)
+                    result[entry.Path] = entry;
+
+                return result;
+            }
+
+            /// <summary>
+            /// Forward event
+            /// </summary>
+            /// <param name="sender"></param>
+            void OnEvent(object sender)
+            {
+                var _observer = Observer;
+                if (_observer == null) return;
+
+                // Create new token
+                if (!IsDisposing) this.changeToken = FileProvider.Watch(Filter);
+
+                // Get new snapshot 
+                DateTimeOffset time = DateTimeOffset.UtcNow;
+                Dictionary<string, IFileSystemEntry> newSnapshot = ReadSnapshot();
+
+                // Find adds
+                foreach(KeyValuePair<string, IFileSystemEntry> newEntry in newSnapshot)
+                {
+                    string path = newEntry.Key;
+                    // Find matching previous entry
+                    IFileSystemEntry prevEntry;
+                    if (previousSnapshot.TryGetValue(path, out prevEntry))
+                    {
+                        // Send change event
+                        if (!FileSystemEntryComparer.Instance.Equals(newEntry.Value, prevEntry))
+                            _observer.OnNext(new FileSystemChangeEvent(this, time, path));
+                    }
+                    // Send create event
+                    else _observer.OnNext(new FileSystemCreateEvent(this, time, path));
+                }
+                // Find Deletes
+                foreach (KeyValuePair<string, IFileSystemEntry> oldEntry in previousSnapshot)
+                {
+                    string path = oldEntry.Key;
+                    if (!newSnapshot.ContainsKey(path)) _observer.OnNext(new FileSystemDeleteEvent(this, time, path));
+                }
+
+                // Replace entires
+                previousSnapshot = newSnapshot;
+
+                // Start watching again
+                if (!IsDisposing) this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
+
+            }
+
+            /// <summary>
+            /// Dispose observer
+            /// </summary>
+            public override void InnerDispose(ref StructList2<Exception> errors)
+            {
+                var _watcher = watcher;
+
+                if (_watcher != null)
+                {
+                    watcher = null;
+                    try
+                    {
+                        _watcher.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
             }
         }
 

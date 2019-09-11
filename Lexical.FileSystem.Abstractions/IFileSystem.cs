@@ -67,10 +67,7 @@ namespace Lexical.FileSystem
     /// 
     /// Used when returning file-system from methods to signal disposability.
     /// </summary>
-    public interface IDisposableFileSystem : IFileSystem, IDisposable
-    {
-
-    }
+    public interface IDisposableFileSystem : IFileSystem, IDisposable { }
     // </doc>
 
 }

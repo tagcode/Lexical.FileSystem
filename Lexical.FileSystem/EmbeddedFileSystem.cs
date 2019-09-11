@@ -17,7 +17,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Zero entries.
         /// </summary>
-        protected internal static FileSystemEntry[] NoEntries = new FileSystemEntry[0];
+        protected internal static IFileSystemEntry[] NoEntries = new IFileSystemEntry[0];
 
         /// <summary>
         /// Associated Assembly
@@ -27,7 +27,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Snapshot of entries.
         /// </summary>
-        protected FileSystemEntry[] entries;
+        protected IFileSystemEntry[] entries;
 
         /// <summary>
         /// Reference to file-system.
@@ -68,7 +68,7 @@ namespace Lexical.FileSystem
         /// Create a snapshot of entries.
         /// </summary>
         /// <returns></returns>
-        protected FileSystemEntry[] CreateEntries()
+        protected IFileSystemEntry[] CreateEntries()
         {
             string[] names = Assembly.GetManifestResourceNames();
 
@@ -79,18 +79,10 @@ namespace Lexical.FileSystem
             else
                 time = DateTimeOffset.FromUnixTimeSeconds(0L);
 
-            FileSystemEntry[] result = new FileSystemEntry[names.Length];
+            IFileSystemEntry[] result = new IFileSystemEntry[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
-                result[i] = new FileSystemEntry
-                {
-                    FileSystem = this,
-                    LastModified = time,
-                    Length = -1L,
-                    Name = names[i],
-                    Path = names[i],
-                    Type = FileSystemEntryType.File
-                };
+                result[i] = new FileSystemEntryFile(this, names[i], names[i], time, -1L);
             }
             return result;
         }
@@ -104,7 +96,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public FileSystemEntry[] Browse(string path)
+        public IFileSystemEntry[] Browse(string path)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (path == "") return entries ?? (entries = CreateEntries());
@@ -126,8 +118,8 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public bool Exists(string path)
         {
-            FileSystemEntry[] _entries = entries ?? (entries = CreateEntries());
-            foreach (FileSystemEntry e in _entries)
+            IFileSystemEntry[] _entries = entries ?? (entries = CreateEntries());
+            foreach (IFileSystemEntry e in _entries)
                 if (e.Path == path) return true;
             return false;
         }

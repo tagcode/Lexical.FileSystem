@@ -35,6 +35,21 @@ namespace Lexical.FileSystem.Utils
         /// <param name="directorySeparatorCharacters"></param>
         /// <param name="options"></param>
         public GlobPattern(string globPattern, string directorySeparatorCharacters, RegexOptions options) : base(MakeRegexPattern(globPattern, directorySeparatorCharacters), options) { }
+
+        /// <summary>
+        /// Analyses whether <paramref name="patternText"/> is a glob-pattern.
+        /// </summary>
+        /// <param name="patternText"></param>
+        /// <returns>true if contains characters '?' or '*'</returns>
+        public static bool IsGlobPattern(string patternText)
+        {
+            for (int i=0; i<patternText.Length; i++)
+            {
+                char ch = patternText[i];
+                if (ch == '*' || ch == '?') return true;
+            }
+            return false;
+        }
     }
 
     /// <summary>
