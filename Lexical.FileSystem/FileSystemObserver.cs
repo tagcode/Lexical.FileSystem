@@ -12,7 +12,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Base implementation file-system observer
     /// </summary>
-    public abstract class FileSystemObserver : IFileSystemObserver
+    public abstract class FileSystemObserver : IFileSystemObserveHandle
     {
         /// <summary>
         /// The file system where the observer was attached.

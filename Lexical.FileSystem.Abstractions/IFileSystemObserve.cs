@@ -47,7 +47,7 @@ namespace Lexical.FileSystem
         /// <param name="filter">file filter as glob pattern. </param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
-        /// <returns>disposable handle</returns>
+        /// <returns>handle to the observer, dispose to cancel the observe</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="filter"/> is null</exception>
@@ -57,13 +57,13 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
+        IFileSystemObserveHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
     }
 
     /// <summary>
     /// Observer object that must be disposed to end observing
     /// </summary>
-    public interface IFileSystemObserver : IDisposable
+    public interface IFileSystemObserveHandle : IDisposable
     {
         /// <summary>
         /// The file system where the observer was attached.
@@ -107,7 +107,7 @@ namespace Lexical.FileSystem
         /// <param name="filter">glob pattern to filter events. "**" means any directory. For example "mydir/**/somefile.txt", or "**" for <paramref name="filter"/> and sub-directories</param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
-        /// <returns>disposable handle</returns>
+        /// <returns>handle to the observer, dispose to cancel the observe</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="filter"/> is null</exception>
@@ -117,7 +117,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemObserver Observe(this IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public static IFileSystemObserveHandle Observe(this IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
             if (fileSystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state);
             else throw new NotSupportedException(nameof(Observe));

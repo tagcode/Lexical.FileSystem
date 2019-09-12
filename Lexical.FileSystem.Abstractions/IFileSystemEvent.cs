@@ -16,7 +16,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// The observer object that monitors the file-system.
         /// </summary>
-        IFileSystemObserver Observer { get; }
+        IFileSystemObserveHandle Observer { get; }
 
         /// <summary>
         /// The time the event occured, or approximation if not exactly known.

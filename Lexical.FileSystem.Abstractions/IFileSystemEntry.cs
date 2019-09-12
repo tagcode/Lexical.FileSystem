@@ -70,6 +70,7 @@ namespace Lexical.FileSystem
         /// </summary>
         bool IsDirectory { get; }
     }
+    // </doc>
 
     /// <summary>
     /// Drive entry. 
@@ -83,7 +84,17 @@ namespace Lexical.FileSystem
         /// </summary>
         bool IsDrive { get; }
     }
-    // </doc>
+
+    /// <summary>
+    /// Entry that is actually a decoration.
+    /// </summary>
+    public interface IFileSystemEntryDecoration : IFileSystemEntry
+    {
+        /// <summary>
+        /// (Optional) Original entry that is being decorated.
+        /// </summary>
+        IFileSystemEntry Original { get; }
+    }
 
     /// <summary>
     /// Extension methods for <see cref="IFileSystemEntry"/>.

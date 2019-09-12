@@ -356,7 +356,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserver Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
+        public IFileSystemObserveHandle Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
         {
             StructList12<IDisposable> disposables = new StructList12<IDisposable>();
             ObserverAdapter adapter = new ObserverAdapter(this, path, observer, state);
@@ -375,7 +375,7 @@ namespace Lexical.FileSystem
             return adapter;
         }
 
-        class ObserverAdapter : IFileSystemObserver, IObserver<IFileSystemEvent>
+        class ObserverAdapter : IFileSystemObserveHandle, IObserver<IFileSystemEvent>
         {
             public IDisposable[] disposables;
             public IFileSystem FileSystem { get; protected set; }
@@ -429,7 +429,7 @@ namespace Lexical.FileSystem
         /// <param name="e"></param>
         /// <param name="observer">overriding observer</param>
         /// <returns></returns>
-        static IFileSystemEvent AdaptEvent(IFileSystemEvent e, IFileSystemObserver observer)
+        static IFileSystemEvent AdaptEvent(IFileSystemEvent e, IFileSystemObserveHandle observer)
         {
             switch(e)
             {
@@ -450,7 +450,7 @@ namespace Lexical.FileSystem
             public IFileSystem OriginalFileSystem { get; protected set; }
 
             /// <inheritdoc/>
-            public CompositionCreateEvent(IFileSystemObserver observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
+            public CompositionCreateEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
         }
 
         class CompositionDeleteEvent : FileSystemDeleteEvent, IFileSystemCompositionEvent
@@ -461,7 +461,7 @@ namespace Lexical.FileSystem
             public IFileSystem OriginalFileSystem { get; protected set; }
 
             /// <inheritdoc/>
-            public CompositionDeleteEvent(IFileSystemObserver observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
+            public CompositionDeleteEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
         }
 
         class CompositionChangeEvent : FileSystemChangeEvent, IFileSystemCompositionEvent
@@ -472,7 +472,7 @@ namespace Lexical.FileSystem
             public IFileSystem OriginalFileSystem { get; protected set; }
 
             /// <inheritdoc/>
-            public CompositionChangeEvent(IFileSystemObserver observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
+            public CompositionChangeEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
         }
 
         class CompositionRenameEvent : FileSystemRenameEvent, IFileSystemCompositionEvent
@@ -483,7 +483,7 @@ namespace Lexical.FileSystem
             public IFileSystem OriginalFileSystem { get; protected set; }
 
             /// <inheritdoc/>
-            public CompositionRenameEvent(IFileSystemObserver observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath, newPath) { OriginalFileSystem = originalFileSystem; }
+            public CompositionRenameEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath, newPath) { OriginalFileSystem = originalFileSystem; }
         }
 
         class CompositionErrorEvent : FileSystemErrorEvent, IFileSystemCompositionEvent
@@ -494,7 +494,7 @@ namespace Lexical.FileSystem
             public IFileSystem OriginalFileSystem { get; protected set; }
 
             /// <inheritdoc/>
-            public CompositionErrorEvent(IFileSystemObserver observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, Exception error) : base(observer, eventTime, error, null) { OriginalFileSystem = originalFileSystem; }
+            public CompositionErrorEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, Exception error) : base(observer, eventTime, error, null) { OriginalFileSystem = originalFileSystem; }
         }
 
         /// <summary>

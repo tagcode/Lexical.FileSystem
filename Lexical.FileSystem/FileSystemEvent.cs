@@ -15,7 +15,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// The file-system observer that sent the event.
         /// </summary>
-        public IFileSystemObserver Observer { get; protected set; }
+        public IFileSystemObserveHandle Observer { get; protected set; }
 
         /// <summary>
         /// The time the event occured, or approximation if not exactly known.
@@ -33,7 +33,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        protected FileSystemEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path)
+        protected FileSystemEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string path)
         {
             Observer = observer;
             EventTime = eventTime;
@@ -76,7 +76,7 @@ namespace Lexical.FileSystem
         /// <param name="eventTime"></param>
         /// <param name="oldPath"></param>
         /// <param name="newPath"></param>
-        public FileSystemRenameEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath)
+        public FileSystemRenameEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath)
         {
             NewPath = newPath;
         }
@@ -100,7 +100,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemCreateEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public FileSystemCreateEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
     }
@@ -116,7 +116,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemChangeEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public FileSystemChangeEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
     }
@@ -132,7 +132,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemDeleteEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public FileSystemDeleteEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
     }
@@ -154,7 +154,7 @@ namespace Lexical.FileSystem
         /// <param name="eventTime"></param>
         /// <param name="error"></param>
         /// <param name="path">(optional)</param>
-        public FileSystemErrorEvent(IFileSystemObserver observer, DateTimeOffset eventTime, Exception error, string path) : base(observer, eventTime, path)
+        public FileSystemErrorEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, Exception error, string path) : base(observer, eventTime, path)
         {
             this.Error = error;
         }

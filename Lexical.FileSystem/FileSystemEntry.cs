@@ -11,7 +11,7 @@ namespace Lexical.FileSystem
     /// File-system entry.
     /// Entry is a snapshot at the time of creationg.
     /// </summary>
-    public class FileSystemEntry : IFileSystemEntry
+    public abstract class FileSystemEntry : IFileSystemEntry
     {
         /// <summary>
         /// (optional) Associated file system.
