@@ -77,7 +77,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanBrowse => true;
         /// <inheritdoc/>
-        public virtual bool CanTestExists => true;
+        public virtual bool CanGetEntry => true;
         /// <inheritdoc/>
         public virtual bool CanObserve => true;
         /// <inheritdoc/>
@@ -310,10 +310,10 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Tests whether a file or directory exists.
+        /// Get entry of a single file or directory.
         /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -323,19 +323,22 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public bool Exists(string path)
+        public IFileSystemEntry GetEntry(string path)
         {
             // Return OS-root, return drive letters.
-            if (path == "" && RootPath == "") return true;
+            if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue);
+
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
             path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists) return true;
+            if (dir.Exists) return new FileSystemEntryDirectory(this, path, dir.Name, dir.LastWriteTimeUtc);
+
             FileInfo fi = new FileInfo(absolutePath);
-            if (fi.Exists) return true;
-            return false;
+            if (fi.Exists) return new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtc, fi.Length);
+
+            return null;
         }
 
         /// <summary>

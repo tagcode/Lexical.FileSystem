@@ -39,7 +39,7 @@ namespace Lexical.FileSystem
         string Name { get; }
 
         /// <summary>
-        /// Date time of last modification.
+        /// Date time of last modification. In UTC time, if possible.
         /// </summary>
         DateTimeOffset LastModified { get; }
     }

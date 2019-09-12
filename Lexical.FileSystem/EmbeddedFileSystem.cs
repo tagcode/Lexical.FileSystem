@@ -4,8 +4,11 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Security;
 
 namespace Lexical.FileSystem
 {
@@ -28,6 +31,18 @@ namespace Lexical.FileSystem
         /// Snapshot of entries.
         /// </summary>
         protected IFileSystemEntry[] entries;
+        /// <summary>
+        /// Lazy construction of entries.
+        /// </summary>
+        protected IFileSystemEntry[] Entries => entries ?? (entries = CreateEntries());
+        /// <summary>
+        /// Snapshot of entries as map
+        /// </summary>
+        protected Dictionary<string, IFileSystemEntry> entryMap;
+        /// <summary>
+        /// Lazy construction of entries as map.
+        /// </summary>
+        protected Dictionary<string, IFileSystemEntry> EntryMap => entryMap ?? (Entries.ToDictionary(e => e.Path));
 
         /// <summary>
         /// Reference to file-system.
@@ -42,7 +57,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanBrowse => true;
         /// <inheritdoc/>
-        public virtual bool CanTestExists => true;
+        public virtual bool CanGetEntry => true;
         /// <inheritdoc/>
         public virtual bool CanOpen => true;
         /// <inheritdoc/>
@@ -100,14 +115,16 @@ namespace Lexical.FileSystem
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (path == "") return entries ?? (entries = CreateEntries());
+            IFileSystemEntry e;
+            if (EntryMap.TryGetValue(path, out e)) return new IFileSystemEntry[] { e };
             return NoEntries;
         }
 
         /// <summary>
-        /// Tests whether a file or directory exists.
+        /// Get entry of a single file or directory.
         /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
@@ -116,12 +133,11 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public bool Exists(string path)
+        public IFileSystemEntry GetEntry(string path)
         {
-            IFileSystemEntry[] _entries = entries ?? (entries = CreateEntries());
-            foreach (IFileSystemEntry e in _entries)
-                if (e.Path == path) return true;
-            return false;
+            IFileSystemEntry e;
+            if (EntryMap.TryGetValue(path, out e)) return e;
+            return null;
         }
 
         /// <summary>

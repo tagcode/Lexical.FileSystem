@@ -21,9 +21,9 @@ namespace Lexical.FileSystem
         bool CanBrowse { get; }
 
         /// <summary>
-        /// Has Exists capability.
+        /// Has GetEntry capability.
         /// </summary>
-        bool CanTestExists { get; }
+        bool CanGetEntry { get; }
 
         /// <summary>
         /// Browse a directory for file and subdirectory entries.
@@ -43,10 +43,10 @@ namespace Lexical.FileSystem
         IFileSystemEntry[] Browse(string path);
 
         /// <summary>
-        /// Tests whether a file or directory exists.
+        /// Get entry of a single file or directory.
         /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -56,7 +56,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        bool Exists(string path);
+        IFileSystemEntry GetEntry(string path);
     }
     // </doc>
 
@@ -78,8 +78,8 @@ namespace Lexical.FileSystem
         /// <param name="fileSystem"></param>
         /// </summary>
         /// <returns>true if has Exists capability</returns>
-        public static bool CanTestExists(this IFileSystem fileSystem)
-            => fileSystem is IFileSystemBrowse browser ? browser.CanTestExists : false;
+        public static bool CanGetEntry(this IFileSystem fileSystem)
+            => fileSystem is IFileSystemBrowse browser ? browser.CanGetEntry : false;
 
         /// <summary>
         /// Browse a directory for file and subdirectory entries.
@@ -103,13 +103,12 @@ namespace Lexical.FileSystem
             else throw new NotSupportedException(nameof(Browse));
         }
 
-
         /// <summary>
-        /// Tests whether a file or directory exists.
+        /// Get entry of a single file or directory.
         /// </summary>
         /// <param name="fileSystem"></param>
-        /// <param name="path"></param>
-        /// <returns></returns>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -119,9 +118,9 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static bool Exists(this IFileSystem fileSystem, string path)
+        public static IFileSystemEntry GetEntry(this IFileSystem fileSystem, string path)
         {
-            if (fileSystem is IFileSystemBrowse browser) return browser.Exists(path);
+            if (fileSystem is IFileSystemBrowse browser) return browser.GetEntry(path);
             else throw new NotSupportedException(nameof(Browse));
         }
 

@@ -42,7 +42,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanBrowse { get; protected set; }
         /// <inheritdoc/>
-        public virtual bool CanTestExists { get; protected set; }
+        public virtual bool CanGetEntry { get; protected set; }
         /// <inheritdoc/>
         public virtual bool CanObserve { get; protected set; }
         /// <inheritdoc/>
@@ -66,7 +66,7 @@ namespace Lexical.FileSystem
         {
             this.fileProvider = fileProvider ?? throw new ArgumentNullException(nameof(subpath));
             this.SubPath = subpath;
-            this.CanBrowse = this.CanTestExists = canBrowse;
+            this.CanBrowse = this.CanGetEntry = canBrowse;
             this.CanObserve = canObserve;
             this.CanOpen = this.CanRead = canOpen;
         }
@@ -166,10 +166,10 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Tests whether a file or directory exists.
+        /// Get entry of a single file or directory.
         /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -179,24 +179,29 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public bool Exists(string path)
+        public IFileSystemEntry GetEntry(string path)
         {
+            if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue);
+
             // Make path
             string concatenatedPath = SubPath == null ? path : (SubPath.EndsWith("/") || SubPath.EndsWith("\\")) ? SubPath + path : SubPath + "/" + path;
             // Is disposed?
             IFileProvider fp = fileProvider;
             if (fp == null) throw new ObjectDisposedException(nameof(FileProviderSystem));
 
-            // Directory
-            IDirectoryContents contents = fp.GetDirectoryContents(concatenatedPath);
-            if (contents.Exists) return true;
-
             // File
             IFileInfo fi = fp.GetFileInfo(concatenatedPath);
-            if (fi.Exists) return true;
+            if (fi.Exists)
+                return fi.IsDirectory ?
+                    new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified):
+                    (IFileSystemEntry) new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, fi.Length);
+
+            // Directory
+            IDirectoryContents contents = fp.GetDirectoryContents(concatenatedPath);
+            if (contents.Exists) return new FileSystemEntryDirectory(this, path, Path.GetDirectoryName(path), DateTimeOffset.MinValue);
 
             // Nothing was found
-            return false;
+            return null;
         }
 
         /// <summary>

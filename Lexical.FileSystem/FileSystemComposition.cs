@@ -46,7 +46,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanBrowse { get; protected set; }
         /// <inheritdoc/>
-        public virtual bool CanTestExists { get; protected set; }
+        public virtual bool CanGetEntry { get; protected set; }
         /// <inheritdoc/>
         public virtual bool CanObserve { get; protected set; }
         /// <inheritdoc/>
@@ -80,7 +80,7 @@ namespace Lexical.FileSystem
             {
                 features |= fs.Features;
                 CanBrowse |= fs.CanBrowse();
-                CanTestExists |= fs.CanTestExists();
+                CanGetEntry |= fs.CanGetEntry();
                 CanObserve |= fs.CanObserve();
                 CanOpen |= fs.CanOpen();
                 CanRead |= fs.CanRead();
@@ -162,10 +162,10 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Tests whether a file or directory exists.
+        /// Get entry of a single file or directory.
         /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -175,23 +175,23 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public bool Exists(string path)
+        public IFileSystemEntry GetEntry(string path)
         {
             bool supported = false;
             foreach (var filesystem in fileSystems)
             {
-                if (!filesystem.CanTestExists()) continue;
+                if (!filesystem.CanGetEntry()) continue;
                 try
                 {
-                    bool exists = filesystem.Exists(path);
-                    if (exists) return true;
+                    IFileSystemEntry e = filesystem.GetEntry(path);
+                    if (e != null) return e;
                     supported = true;
                 }
                 catch (DirectoryNotFoundException) { supported = true; }
                 catch (NotSupportedException) { }
             }
             if (!supported) throw new NotSupportedException(nameof(Browse));
-            return false;
+            return null;
         }
 
         /// <summary>
