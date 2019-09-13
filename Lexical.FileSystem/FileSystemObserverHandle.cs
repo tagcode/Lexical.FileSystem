@@ -127,7 +127,7 @@ namespace Lexical.FileSystem
         /// <param name="newFileSystem"></param>
         /// <returns>decoration</returns>
         public static IFileSystemObserverHandle DecorateFileSystem(IFileSystemObserverHandle original, IFileSystem newFileSystem)
-            => new FileSystemObserverHandleDecoration.NewFileSystem(original, newFileSystem);
+            => new NewFileSystem(original, newFileSystem);
 
         /// <inheritdoc/>
         public virtual IFileSystem FileSystem => original.FileSystem;
@@ -156,7 +156,7 @@ namespace Lexical.FileSystem
             => original.Dispose();
 
         /// <summary>Class with overridden filesystem.</summary>
-        public class NewFileSystem : FileSystemObserverHandleDecoration
+        protected class NewFileSystem : FileSystemObserverHandleDecoration
         {
             /// <summary>Overriding filesystem.</summary>
             protected IFileSystem newFilesystem;

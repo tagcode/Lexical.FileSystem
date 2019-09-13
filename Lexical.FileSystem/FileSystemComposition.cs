@@ -132,7 +132,7 @@ namespace Lexical.FileSystem
                     exists = true; supported = true;
                     foreach (IFileSystemEntry e in list)
                     {
-                        entries.Add(new DecoratedEntry(this, e));
+                        entries.Add(FileSystemEntryDecoration.DecorateFileSystem(e, this));
                     }
                 }
                 catch (DirectoryNotFoundException) { supported = true; }
@@ -141,24 +141,6 @@ namespace Lexical.FileSystem
             if (!supported) throw new NotSupportedException(nameof(Browse));
             if (!exists) throw new DirectoryNotFoundException(path);
             return entries.ToArray();
-        }
-
-        class DecoratedEntry : IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive
-        {
-            public IFileSystemEntry Source { get; protected set; }
-            public IFileSystem FileSystem { get; protected set; }
-            public string Path => Source.Path;
-            public string Name => Source.Name;
-            public DateTimeOffset LastModified => Source.LastModified;
-            public bool IsFile => Source.IsFile();
-            public long Length => Source.Length();
-            public bool IsDrive => Source.IsDrive();
-            public bool IsDirectory => Source.IsDirectory();
-            public DecoratedEntry(IFileSystem fileSystem, IFileSystemEntry source)
-            {
-                Source = source;
-                FileSystem = fileSystem;
-            }
         }
 
         /// <summary>

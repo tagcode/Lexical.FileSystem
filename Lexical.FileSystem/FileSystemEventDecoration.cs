@@ -130,7 +130,7 @@ namespace Lexical.FileSystem
             => $"Rename({this.Observer}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
 
         /// <summary>Decoration with observer override.</summary>
-        public class NewObserver : FileSystemEventDecorationRename
+        public new class NewObserver : FileSystemEventDecorationRename
         {
             /// <summary>New observer value.</summary>
             protected IFileSystemObserver newObserver;
@@ -165,7 +165,7 @@ namespace Lexical.FileSystem
             => Path == null ? $"Create({Observer}, {EventTime})" : $"Create({Observer}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
-        public class NewObserver : FileSystemEventDecorationCreate
+        public new class NewObserver : FileSystemEventDecorationCreate
         {
             /// <summary>New observer value.</summary>
             protected IFileSystemObserver newObserver;
@@ -200,7 +200,7 @@ namespace Lexical.FileSystem
             => Path == null ? $"Change({Observer}, {EventTime})" : $"Change({Observer}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
-        public class NewObserver : FileSystemEventDecorationChange
+        public new class NewObserver : FileSystemEventDecorationChange
         {
             /// <summary>New observer value.</summary>
             protected IFileSystemObserver newObserver;
@@ -235,7 +235,7 @@ namespace Lexical.FileSystem
             => Path == null ? $"Delete({Observer}, {EventTime})" : $"Delete({Observer}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
-        public class NewObserver : FileSystemEventDecorationDelete
+        public new class NewObserver : FileSystemEventDecorationDelete
         {
             /// <summary>New observer value.</summary>
             protected IFileSystemObserver newObserver;
@@ -275,7 +275,7 @@ namespace Lexical.FileSystem
             => Path == null ? $"Error({Observer}, {EventTime})" : $"Error({Observer}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
-        public class NewObserver : FileSystemEventDecorationError
+        public new class NewObserver : FileSystemEventDecorationError
         {
             /// <summary>New observer value.</summary>
             protected IFileSystemObserver newObserver;
