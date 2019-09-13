@@ -12,7 +12,7 @@ namespace Lexical.FileSystem.Utils
     /// <summary>
     /// Dummy observer that returns no events.
     /// </summary>
-    public class DummyObserver : FileSystemObserver
+    public class DummyObserver : FileSystemObserverHandle
     {
         /// <summary>
         /// 

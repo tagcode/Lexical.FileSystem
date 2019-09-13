@@ -124,6 +124,26 @@ namespace Lexical.FileSystem
             else throw new NotSupportedException(nameof(Browse));
         }
 
+        /// <summary>
+        /// Tests if a file or directory exists.
+        /// </summary>
+        /// <param name="fileSystem"></param>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <returns>true if exists</returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support exists</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public static bool Exists(this IFileSystem fileSystem, string path)
+        {
+            if (fileSystem is IFileSystemBrowse browser) return browser.GetEntry(path) != null;
+            else throw new NotSupportedException(nameof(Browse));
+        }
     }
 
 }

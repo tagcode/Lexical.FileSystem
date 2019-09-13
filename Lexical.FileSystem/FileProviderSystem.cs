@@ -221,7 +221,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserveHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public IFileSystemObserverHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
             // Assert observe is enabled.
             if (!CanObserve) throw new NotSupportedException("Observe not supported.");
@@ -249,7 +249,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Single file observer.
         /// </summary>
-        public class FileObserver : FileSystemObserver
+        public class FileObserver : FileSystemObserverHandle
         {
             /// <summary>
             /// File-system
@@ -325,9 +325,9 @@ namespace Lexical.FileSystem
                 bool existed = previousEntry != null;
                 DateTimeOffset time = DateTimeOffset.UtcNow;
 
-                if (exists && existed) _event = new FileSystemChangeEvent(this, time, Filter);
-                else if (exists && !existed) _event = new FileSystemCreateEvent(this, time, Filter);
-                else if (!exists && existed) _event = new FileSystemDeleteEvent(this, time, Filter);
+                if (exists && existed) _event = new FileSystemEventChange(this, time, Filter);
+                else if (exists && !existed) _event = new FileSystemEventCreate(this, time, Filter);
+                else if (!exists && existed) _event = new FileSystemEventDelete(this, time, Filter);
 
                 // Replace entry
                 previousEntry = currentEntry;
@@ -368,7 +368,7 @@ namespace Lexical.FileSystem
         /// this observer implementation reads a whole snapshot of the whole file provider, in 
         /// order to determine the changes.
         /// </summary>
-        public class PatternObserver : FileSystemObserver
+        public class PatternObserver : FileSystemObserverHandle
         {
             /// <summary>
             /// File-system
@@ -452,16 +452,16 @@ namespace Lexical.FileSystem
                     {
                         // Send change event
                         if (!FileSystemEntryComparer.Instance.Equals(newEntry.Value, prevEntry))
-                            _observer.OnNext(new FileSystemChangeEvent(this, time, path));
+                            _observer.OnNext(new FileSystemEventChange(this, time, path));
                     }
                     // Send create event
-                    else _observer.OnNext(new FileSystemCreateEvent(this, time, path));
+                    else _observer.OnNext(new FileSystemEventCreate(this, time, path));
                 }
                 // Find Deletes
                 foreach (KeyValuePair<string, IFileSystemEntry> oldEntry in previousSnapshot)
                 {
                     string path = oldEntry.Key;
-                    if (!newSnapshot.ContainsKey(path)) _observer.OnNext(new FileSystemDeleteEvent(this, time, path));
+                    if (!newSnapshot.ContainsKey(path)) _observer.OnNext(new FileSystemEventDelete(this, time, path));
                 }
 
                 // Replace entires

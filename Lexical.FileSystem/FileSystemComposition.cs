@@ -356,7 +356,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserveHandle Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
+        public IFileSystemObserverHandle Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
         {
             StructList12<IDisposable> disposables = new StructList12<IDisposable>();
             ObserverAdapter adapter = new ObserverAdapter(this, path, observer, state);
@@ -375,7 +375,7 @@ namespace Lexical.FileSystem
             return adapter;
         }
 
-        class ObserverAdapter : IFileSystemObserveHandle, IObserver<IFileSystemEvent>
+        class ObserverAdapter : IFileSystemObserverHandle, IObserver<IFileSystemEvent>
         {
             public IDisposable[] disposables;
             public IFileSystem FileSystem { get; protected set; }
@@ -398,7 +398,7 @@ namespace Lexical.FileSystem
                 => Observer.OnError(error);
 
             public void OnNext(IFileSystemEvent @event)
-                => Observer.OnNext(FileSystemComposition.AdaptEvent(@event, this));
+                => Observer.OnNext(FileSystemEventDecoration.DecorateObserver(@event, this));
 
             public void Dispose()
             {
@@ -421,80 +421,6 @@ namespace Lexical.FileSystem
 
                 if (errors.Count > 0) throw new AggregateException(errors);
             }
-        }
-
-        /// <summary>
-        /// Convert <paramref name="e"/> to implement <see cref="IFileSystemCompositionEvent"/> when possible.
-        /// </summary>
-        /// <param name="e"></param>
-        /// <param name="observer">overriding observer</param>
-        /// <returns></returns>
-        static IFileSystemEvent AdaptEvent(IFileSystemEvent e, IFileSystemObserveHandle observer)
-        {
-            switch(e)
-            {
-                case FileSystemCreateEvent ce: return new CompositionCreateEvent(observer, ce.Observer.FileSystem, ce.EventTime, ce.Path);
-                case FileSystemDeleteEvent de: return new CompositionDeleteEvent(observer, de.Observer.FileSystem, de.EventTime, de.Path);
-                case FileSystemChangeEvent ce: return new CompositionChangeEvent(observer, ce.Observer.FileSystem, ce.EventTime, ce.Path);
-                case FileSystemRenameEvent re: return new CompositionRenameEvent(observer, re.Observer.FileSystem, re.EventTime, re.OldPath, re.NewPath);
-                case FileSystemErrorEvent ee: return new CompositionErrorEvent(observer, ee.Observer.FileSystem, ee.EventTime, ee.Error);
-                default: return e;
-            }
-        }
-
-        class CompositionCreateEvent : FileSystemCreateEvent, IFileSystemCompositionEvent
-        {
-            /// <summary>
-            /// Sending file-system.
-            /// </summary>
-            public IFileSystem OriginalFileSystem { get; protected set; }
-
-            /// <inheritdoc/>
-            public CompositionCreateEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
-        }
-
-        class CompositionDeleteEvent : FileSystemDeleteEvent, IFileSystemCompositionEvent
-        {
-            /// <summary>
-            /// Sending file-system.
-            /// </summary>
-            public IFileSystem OriginalFileSystem { get; protected set; }
-
-            /// <inheritdoc/>
-            public CompositionDeleteEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
-        }
-
-        class CompositionChangeEvent : FileSystemChangeEvent, IFileSystemCompositionEvent
-        {
-            /// <summary>
-            /// Sending file-system.
-            /// </summary>
-            public IFileSystem OriginalFileSystem { get; protected set; }
-
-            /// <inheritdoc/>
-            public CompositionChangeEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string path) : base(observer, eventTime, path) { OriginalFileSystem = originalFileSystem; }
-        }
-
-        class CompositionRenameEvent : FileSystemRenameEvent, IFileSystemCompositionEvent
-        {
-            /// <summary>
-            /// Sending file-system.
-            /// </summary>
-            public IFileSystem OriginalFileSystem { get; protected set; }
-
-            /// <inheritdoc/>
-            public CompositionRenameEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath, newPath) { OriginalFileSystem = originalFileSystem; }
-        }
-
-        class CompositionErrorEvent : FileSystemErrorEvent, IFileSystemCompositionEvent
-        {
-            /// <summary>
-            /// Sending file-system.
-            /// </summary>
-            public IFileSystem OriginalFileSystem { get; protected set; }
-
-            /// <inheritdoc/>
-            public CompositionErrorEvent(IFileSystemObserveHandle observer, IFileSystem originalFileSystem, DateTimeOffset eventTime, Exception error) : base(observer, eventTime, error, null) { OriginalFileSystem = originalFileSystem; }
         }
 
         /// <summary>

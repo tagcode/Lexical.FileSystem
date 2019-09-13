@@ -460,7 +460,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserveHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
+        public IFileSystemObserverHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
         {
             // Parse filter
             GlobPatternInfo info = new GlobPatternInfo(filter);
@@ -493,7 +493,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Single file observer.
         /// </summary>
-        protected internal class FileObserver : FileSystemObserver
+        protected internal class FileObserver : FileSystemObserverHandle
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -557,7 +557,7 @@ namespace Lexical.FileSystem
                 if (_fileSystem == null) return;
 
                 // Forward error as event object.
-                Observer.OnNext(new FileSystemErrorEvent(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath));
+                Observer.OnNext(new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath));
                 // Forward exception
                 //observer.OnError(e.GetException());
             }
@@ -583,9 +583,9 @@ namespace Lexical.FileSystem
                 // Event type
                 WatcherChangeTypes type = e.ChangeType;
                 // HasFlag has been optimized since .Net core 2.1 and does not box any more
-                if (type.HasFlag(WatcherChangeTypes.Created) && path != null) _observer.OnNext(new FileSystemCreateEvent(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null) _observer.OnNext(new FileSystemChangeEvent(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null) _observer.OnNext(new FileSystemDeleteEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null) _observer.OnNext(new FileSystemEventCreate(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null) _observer.OnNext(new FileSystemEventChange(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null) _observer.OnNext(new FileSystemEventDelete(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re)
                 {
                     string oldPath = ConvertPath(re.OldFullPath);
@@ -593,7 +593,7 @@ namespace Lexical.FileSystem
                     if (oldPath != null || path != null)
                     {
                         // Send event
-                        _observer.OnNext(new FileSystemRenameEvent(this, time, oldPath, path));
+                        _observer.OnNext(new FileSystemEventRename(this, time, oldPath, path));
                     }
                 }
             }
@@ -649,7 +649,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Watches a group of files using a pattern.
         /// </summary>
-        protected internal class PatternObserver : FileSystemObserver
+        protected internal class PatternObserver : FileSystemObserverHandle
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -745,7 +745,7 @@ namespace Lexical.FileSystem
                 if (_fileSystem == null) return;
 
                 // Forward error as event object.
-                Observer.OnNext(new FileSystemErrorEvent(this, DateTimeOffset.UtcNow, e.GetException(), null));
+                Observer.OnNext(new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), null));
                 // Forward exception
                 //observer.OnError(e.GetException());
             }
@@ -771,9 +771,9 @@ namespace Lexical.FileSystem
                 // Event type
                 WatcherChangeTypes type = e.ChangeType;
                 // HasFlag has been optimized since .Net core 2.1
-                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))) _observer.OnNext(new FileSystemCreateEvent(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) _observer.OnNext(new FileSystemChangeEvent(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) _observer.OnNext(new FileSystemDeleteEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))) _observer.OnNext(new FileSystemEventCreate(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) _observer.OnNext(new FileSystemEventChange(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) _observer.OnNext(new FileSystemEventDelete(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re) 
                 {
                     string oldPath = ConvertPath(re.OldFullPath);
@@ -781,7 +781,7 @@ namespace Lexical.FileSystem
                     if ((oldPath != null && (Pattern.IsMatch(oldPath)||Pattern.IsMatch("/"+oldPath))) || (path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))))
                     {
                         // Send event
-                        _observer.OnNext(new FileSystemRenameEvent(this, time, oldPath, path));
+                        _observer.OnNext(new FileSystemEventRename(this, time, oldPath, path));
                     }
                 }
             }

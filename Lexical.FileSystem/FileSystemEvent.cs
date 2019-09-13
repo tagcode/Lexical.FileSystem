@@ -9,23 +9,32 @@ namespace Lexical.FileSystem
 {
     /// <summary>
     /// File entry event.
+    /// 
+    /// See sub-classes:
+    /// <list type="bullet">
+    ///     <item><see cref="FileSystemEventRename"/></item>
+    ///     <item><see cref="FileSystemEventCreate"/></item>
+    ///     <item><see cref="FileSystemEventChange"/></item>
+    ///     <item><see cref="FileSystemEventDelete"/></item>
+    ///     <item><see cref="FileSystemEventError"/></item>
+    /// </list>
     /// </summary>
     public abstract class FileSystemEvent : IFileSystemEvent
     {
         /// <summary>
         /// The file-system observer that sent the event.
         /// </summary>
-        public IFileSystemObserveHandle Observer { get; protected set; }
+        public virtual IFileSystemObserver Observer { get; protected set; }
 
         /// <summary>
         /// The time the event occured, or approximation if not exactly known.
         /// </summary>
-        public DateTimeOffset EventTime { get; protected set; }
+        public virtual DateTimeOffset EventTime { get; protected set; }
 
         /// <summary>
         /// (optional) Affected entry if applicable.
         /// </summary>
-        public string Path { get; protected set; }
+        public virtual string Path { get; protected set; }
 
         /// <summary>
         /// Create event.
@@ -33,17 +42,15 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        protected FileSystemEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string path)
+        protected FileSystemEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path)
         {
             Observer = observer;
             EventTime = eventTime;
             Path = path;
         }
 
-        /// <summary>
-        /// Print info
-        /// </summary>
-        /// <returns></returns>
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
         public override string ToString()
             => Path == null ? $"{GetType().Name}({Observer}, {EventTime})" : $"{GetType().Name}({Observer}, {EventTime}, {Path})";
     }
@@ -51,7 +58,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File renamed event.
     /// </summary>
-    public class FileSystemRenameEvent : FileSystemEvent, IFileSystemRenameEvent
+    public class FileSystemEventRename : FileSystemEvent, IFileSystemEventRename
     {
         /// <summary>
         /// The affected file or directory.
@@ -62,12 +69,12 @@ namespace Lexical.FileSystem
         /// 
         /// Example: "dir/file.ext"
         /// </summary>
-        public String OldPath => base.Path;
+        public virtual String OldPath => base.Path;
 
         /// <summary>
         /// The new file or directory path.
         /// </summary>
-        public String NewPath { get; protected set; }
+        public virtual String NewPath { get; protected set; }
 
         /// <summary>
         /// Create rename event.
@@ -76,39 +83,42 @@ namespace Lexical.FileSystem
         /// <param name="eventTime"></param>
         /// <param name="oldPath"></param>
         /// <param name="newPath"></param>
-        public FileSystemRenameEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath)
+        public FileSystemEventRename(IFileSystemObserver observer, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath)
         {
             NewPath = newPath;
         }
 
-        /// <summary>
-        /// Print info
-        /// </summary>
-        /// <returns></returns>
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
         public override string ToString()
-            => $"{GetType().Name}({Observer}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
+            => $"Rename({Observer}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
     }
 
     /// <summary>
     /// File created event
     /// </summary>
-    public class FileSystemCreateEvent : FileSystemEvent, IFileSystemCreateEvent
+    public class FileSystemEventCreate : FileSystemEvent, IFileSystemEventCreate
     {
         /// <summary>
-        /// Create rename event.
+        /// Create create event.
         /// </summary>
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemCreateEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public FileSystemEventCreate(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
+
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
+        public override string ToString()
+            => Path == null ? $"Create({Observer}, {EventTime})" : $"Create({Observer}, {EventTime}, {Path})";
     }
 
     /// <summary>
     /// File contents changed event
     /// </summary>
-    public class FileSystemChangeEvent : FileSystemEvent, IFileSystemChangeEvent
+    public class FileSystemEventChange : FileSystemEvent, IFileSystemEventChange
     {
         /// <summary>
         /// Create file contents changed event.
@@ -116,15 +126,20 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemChangeEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public FileSystemEventChange(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
+
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
+        public override string ToString()
+            => Path == null ? $"Change({Observer}, {EventTime})" : $"Change({Observer}, {EventTime}, {Path})";
     }
 
     /// <summary>
     /// File deleted event
     /// </summary>
-    public class FileSystemDeleteEvent : FileSystemEvent, IFileSystemDeleteEvent
+    public class FileSystemEventDelete : FileSystemEvent, IFileSystemEventDelete
     {
         /// <summary>
         /// Create file deleted event.
@@ -132,20 +147,25 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemDeleteEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public FileSystemEventDelete(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
+
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
+        public override string ToString()
+            => Path == null ? $"Delete({Observer}, {EventTime})" : $"Delete({Observer}, {EventTime}, {Path})";
     }
 
     /// <summary>
     /// File-system error event
     /// </summary>
-    public class FileSystemErrorEvent : FileSystemEvent, IFileSystemErrorEvent
+    public class FileSystemEventError : FileSystemEvent, IFileSystemEventError
     {
         /// <summary>
         /// Error
         /// </summary>
-        public Exception Error { get; protected set; }
+        public virtual Exception Error { get; protected set; }
 
         /// <summary>
         /// Create Error event.
@@ -154,17 +174,15 @@ namespace Lexical.FileSystem
         /// <param name="eventTime"></param>
         /// <param name="error"></param>
         /// <param name="path">(optional)</param>
-        public FileSystemErrorEvent(IFileSystemObserveHandle observer, DateTimeOffset eventTime, Exception error, string path) : base(observer, eventTime, path)
+        public FileSystemEventError(IFileSystemObserver observer, DateTimeOffset eventTime, Exception error, string path) : base(observer, eventTime, path)
         {
             this.Error = error;
         }
 
-        /// <summary>
-        /// Print info
-        /// </summary>
-        /// <returns></returns>
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"{GetType().Name}({Observer}, {EventTime}, {Error})" : $"{GetType().Name}({Observer}, {EventTime}, {Error}, {Path})";
+            => Path == null ? $"Error({Observer}, {EventTime})" : $"Error({Observer}, {EventTime}, {Path})";
     }
 
 }

@@ -12,7 +12,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Base implementation file-system observer
     /// </summary>
-    public abstract class FileSystemObserver : IFileSystemObserveHandle
+    public abstract class FileSystemObserverHandle : IFileSystemObserverHandle
     {
         /// <summary>
         /// The file system where the observer was attached.
@@ -51,7 +51,7 @@ namespace Lexical.FileSystem
         /// <param name="filter"></param>
         /// <param name="observer"></param>
         /// <param name="state"></param>
-        protected FileSystemObserver(IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state)
+        protected FileSystemObserverHandle(IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state)
         {
             this.FileSystem = fileSystem;
             Filter = filter;
@@ -113,5 +113,64 @@ namespace Lexical.FileSystem
         /// <param name="errors">errors can be placed here</param>
         /// <exception cref="Exception">any exception is captured</exception>
         public virtual void InnerDispose(ref StructList2<Exception> errors) { }
+    }
+
+    /// <summary>
+    /// Base class for observer handle decoration.
+    /// </summary>
+    public class FileSystemObserverHandleDecoration : IFileSystemObserverHandle
+    {
+        /// <summary>
+        /// Decorate FileSystem value.
+        /// </summary>
+        /// <param name="original"></param>
+        /// <param name="newFileSystem"></param>
+        /// <returns>decoration</returns>
+        public static IFileSystemObserverHandle DecorateFileSystem(IFileSystemObserverHandle original, IFileSystem newFileSystem)
+            => new FileSystemObserverHandleDecoration.NewFileSystem(original, newFileSystem);
+
+        /// <inheritdoc/>
+        public virtual IFileSystem FileSystem => original.FileSystem;
+        /// <inheritdoc/>
+        public virtual string Filter => original.Filter;
+        /// <inheritdoc/>
+        public virtual IObserver<IFileSystemEvent> Observer => original.Observer;
+        /// <inheritdoc/>
+        public virtual object State => original.State;
+        /// <summary>
+        /// Original observer handle
+        /// </summary>
+        protected IFileSystemObserverHandle original;
+
+        /// <summary>
+        /// Create filesystem observer handle decoration.
+        /// </summary>
+        /// <param name="original"></param>
+        public FileSystemObserverHandleDecoration(IFileSystemObserverHandle original)
+        {
+            this.original = original ?? throw new ArgumentNullException(nameof(original));
+        }
+
+        /// <inheritdoc/>
+        public virtual void Dispose()
+            => original.Dispose();
+
+        /// <summary>Class with overridden filesystem.</summary>
+        public class NewFileSystem : FileSystemObserverHandleDecoration
+        {
+            /// <summary>Overriding filesystem.</summary>
+            protected IFileSystem newFilesystem;
+            /// <summary>Return overridden filesystem.</summary>
+            public override IFileSystem FileSystem => newFilesystem;
+            /// <summary>
+            /// Create decoration with new filesystem.
+            /// </summary>
+            /// <param name="original"></param>
+            /// <param name="newFilesystem"></param>
+            public NewFileSystem(IFileSystemObserverHandle original, IFileSystem newFilesystem) : base(original)
+            {
+                this.newFilesystem = newFilesystem;
+            }
+        }
     }
 }
