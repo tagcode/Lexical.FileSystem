@@ -19,7 +19,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemDelete"/></item>
     ///     <item><see cref="IFileSystemMove"/></item>
     ///     <item><see cref="IFileSystemObserve"/></item>
-    ///     <item><see cref="IFileSystemReference"/></item>
+    ///     <item><see cref="IFileSystemDisposable"/></item>
     /// </list>
     /// </summary>
     public interface IFileSystem
@@ -67,7 +67,7 @@ namespace Lexical.FileSystem
     /// 
     /// Used when returning file-system from methods to signal disposability.
     /// </summary>
-    public interface IDisposableFileSystem : IFileSystem, IDisposable { }
+    public interface IFileSystemDisposable : IFileSystem, IDisposable { }
     // </doc>
 
 }
