@@ -40,7 +40,7 @@ namespace Lexical.FileSystem
         /// Directory separator is "/". Root path doesn't use separator.
         /// Example: "dir/file.ext"
         /// 
-        /// If event is rename, refers to old path.
+        /// If event is <see cref="IFileSystemEventRename"/> the value is same as <see cref="IFileSystemEventRename.OldPath"/>.
         /// </summary>
         String Path { get; }
     }
@@ -58,6 +58,8 @@ namespace Lexical.FileSystem
         /// Directory separator is "/". Root path doesn't use separator.
         /// 
         /// Example: "dir/file.ext"
+        /// 
+        /// This value is same as inherited <see cref="IFileSystemEvent.Path"/>.
         /// </summary>
         String OldPath { get; }
 
