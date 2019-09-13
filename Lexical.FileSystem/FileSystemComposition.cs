@@ -16,7 +16,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.
     /// </summary>
-    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemReference
+    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory
     {
         /// <summary>
         /// File system components.
@@ -63,10 +63,6 @@ namespace Lexical.FileSystem
         public virtual bool CanMove { get; protected set; }
         /// <inheritdoc/>
         public virtual bool CanCreateDirectory { get; protected set; }
-        /// <inheritdoc/>
-        public virtual bool CanReference { get; protected set; }
-        /// <inheritdoc/>
-        public string Reference => throw new NotSupportedException();
 
         /// <summary>
         /// Create composition of file systems
@@ -75,7 +71,6 @@ namespace Lexical.FileSystem
         public FileSystemComposition(params IFileSystem[] fileSystems)
         {
             this.fileSystems = fileSystems;
-            CanReference = true;
             foreach (IFileSystem fs in fileSystems)
             {
                 features |= fs.Features;
@@ -89,9 +84,7 @@ namespace Lexical.FileSystem
                 CanDelete |= fs.CanDelete();
                 CanMove |= fs.CanMove();
                 CanCreateDirectory |= fs.CanCreateDirectory();
-                CanReference &= fs.CanReference();
             }
-            CanReference = false; // Not implemented
         }
 
         /// <summary>

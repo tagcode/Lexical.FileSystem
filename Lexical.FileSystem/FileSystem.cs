@@ -22,7 +22,7 @@ namespace Lexical.FileSystem
     /// If file watchers have been created, and file system is disposed, then watchers will be disposed also. 
     /// <see cref="IObserver{T}.OnCompleted"/> event is forwarded to watchers.
     /// </summary>
-    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemReference
+    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve
     {
         /// <summary>
         /// Regex pattern that extracts features and classifies paths.
@@ -69,11 +69,6 @@ namespace Lexical.FileSystem
         /// </summary>
         public readonly bool FileSystemRoot;
 
-        /// <summary>
-        /// Reference to file-system.
-        /// </summary>
-        public String Reference { get; protected set; }
-
         /// <inheritdoc/>
         public virtual bool CanBrowse => true;
         /// <inheritdoc/>
@@ -94,8 +89,6 @@ namespace Lexical.FileSystem
         public virtual bool CanMove => true;
         /// <inheritdoc/>
         public virtual bool CanCreateDirectory => true;
-        /// <inheritdoc/>
-        public virtual bool CanReference => true;
 
         /// <summary>
         /// Create an access to local file-system.
@@ -114,8 +107,6 @@ namespace Lexical.FileSystem
             // Canonized relative path uses "/" as separator. Ends with "/".
             string canonizedRelativePath = FileSystemRoot ? "" : osSeparator == "/" ? rootPath : rootPath.Replace(osSeparator, " / ");
             if (!canonizedRelativePath.EndsWith("/")) canonizedRelativePath += "/";
-            // "file://canonized/path/"
-            Reference = $"file://{canonizedRelativePath}";
 
             if (isWindows) this.Features |= FileSystemFeatures.CaseInsensitive;
             if (isLinux || isOsx) this.Features |= FileSystemFeatures.CaseSensitive;

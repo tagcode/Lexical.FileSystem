@@ -61,6 +61,7 @@ namespace Lexical.FileSystem
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
         Reserved7 = 1UL << 63
     }
+    // </doc>
 
     /// <summary>
     /// Signals that the file-system is also disposable.
@@ -68,6 +69,5 @@ namespace Lexical.FileSystem
     /// Used when returning file-system from methods to signal disposability.
     /// </summary>
     public interface IFileSystemDisposable : IFileSystem, IDisposable { }
-    // </doc>
 
 }
