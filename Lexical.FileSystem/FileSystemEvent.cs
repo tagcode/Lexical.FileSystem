@@ -8,7 +8,7 @@ using System;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// File entry event.
+    /// Base implementation to <see cref="IFileSystemEvent"/> classes.
     /// 
     /// See sub-classes:
     /// <list type="bullet">
@@ -19,7 +19,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="FileSystemEventError"/></item>
     /// </list>
     /// </summary>
-    public abstract class FileSystemEvent : IFileSystemEvent
+    public abstract class FileSystemEventBase : IFileSystemEvent
     {
         /// <summary>
         /// The file-system observer that sent the event.
@@ -42,7 +42,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        protected FileSystemEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path)
+        protected FileSystemEventBase(IFileSystemObserver observer, DateTimeOffset eventTime, string path)
         {
             Observer = observer;
             EventTime = eventTime;
@@ -58,7 +58,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File renamed event.
     /// </summary>
-    public class FileSystemEventRename : FileSystemEvent, IFileSystemEventRename
+    public class FileSystemEventRename : FileSystemEventBase, IFileSystemEventRename
     {
         /// <summary>
         /// The affected file or directory.
@@ -97,7 +97,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File created event
     /// </summary>
-    public class FileSystemEventCreate : FileSystemEvent, IFileSystemEventCreate
+    public class FileSystemEventCreate : FileSystemEventBase, IFileSystemEventCreate
     {
         /// <summary>
         /// Create create event.
@@ -118,7 +118,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File contents changed event
     /// </summary>
-    public class FileSystemEventChange : FileSystemEvent, IFileSystemEventChange
+    public class FileSystemEventChange : FileSystemEventBase, IFileSystemEventChange
     {
         /// <summary>
         /// Create file contents changed event.
@@ -139,7 +139,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File deleted event
     /// </summary>
-    public class FileSystemEventDelete : FileSystemEvent, IFileSystemEventDelete
+    public class FileSystemEventDelete : FileSystemEventBase, IFileSystemEventDelete
     {
         /// <summary>
         /// Create file deleted event.
@@ -160,7 +160,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File-system error event
     /// </summary>
-    public class FileSystemEventError : FileSystemEvent, IFileSystemEventError
+    public class FileSystemEventError : FileSystemEventBase, IFileSystemEventError
     {
         /// <summary>
         /// Error

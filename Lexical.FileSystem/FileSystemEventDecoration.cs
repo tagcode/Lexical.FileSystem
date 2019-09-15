@@ -27,6 +27,7 @@ namespace Lexical.FileSystem
         /// <param name="event"></param>
         /// <param name="newObserver">overriding observer</param>
         /// <returns></returns>
+        /// <exception cref="NotSupportedException">If the interface of <paramref name="event"/> is not supported.</exception>
         public static IFileSystemEvent DecorateObserver(IFileSystemEvent @event, IFileSystemObserver newObserver)
         {
             switch (@event)
@@ -36,7 +37,7 @@ namespace Lexical.FileSystem
                 case IFileSystemEventChange cc: return new FileSystemEventDecorationChange.NewObserver(@event, newObserver);
                 case IFileSystemEventRename re: return new FileSystemEventDecorationRename.NewObserver(@event, newObserver);
                 case IFileSystemEventError  ee: return new FileSystemEventDecorationError.NewObserver(@event, newObserver);
-                default: return new FileSystemEventDecoration.NewObserver(@event, newObserver);
+                default: throw new NotSupportedException(@event.GetType().FullName);
             }
         }
 

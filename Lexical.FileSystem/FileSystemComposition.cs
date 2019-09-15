@@ -403,14 +403,44 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposable"></param>
         /// <returns>filesystem</returns>
-        public FileSystemComposition AddDisposable(object disposable) => AddDisposableBase(disposable) as FileSystemComposition;
+        public FileSystemComposition AddDisposable(object disposable)
+        {
+            base.AddDisposableBase(disposable);
+            return this;
+        }
 
         /// <summary>
-        /// Remove disposable from dispose list.
+        /// Add <paramref name="disposables"/> to list of objects to be disposed along with the system.
+        /// </summary>
+        /// <param name="disposables"></param>
+        /// <returns>filesystem</returns>
+        public FileSystemComposition AddDisposables(IEnumerable<object> disposables)
+        {
+            base.AddDisposablesBase(disposables);
+            return this;
+        }
+
+        /// <summary>
+        /// Remove <paramref name="disposable"/> from dispose list.
         /// </summary>
         /// <param name="disposable"></param>
         /// <returns></returns>
-        public FileSystemComposition RemoveDisposable(object disposable) => RemoveDisposableBase(disposable) as FileSystemComposition;
+        public FileSystemComposition RemoveDisposable(object disposable)
+        {
+            base.RemoveDisposableBase(disposable);
+            return this;
+        }
+
+        /// <summary>
+        /// Remove <paramref name="disposables"/> from dispose list.
+        /// </summary>
+        /// <param name="disposables"></param>
+        /// <returns></returns>
+        public FileSystemComposition RemoveDisposables(IEnumerable<object> disposables)
+        {
+            base.RemoveDisposablesBase(disposables);
+            return this;
+        }
 
         /// <summary>
         /// Get file systems

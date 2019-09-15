@@ -25,12 +25,12 @@ namespace Lexical.FileSystem.Internal
     ///     <item>"//" -> ["", "", ""]</item>
     /// </list>
     /// </summary>
-    public struct PathEnumerable : IEnumerable<StringSpan>
+    public struct PathEnumerable : IEnumerable<StringSegment>
     {
         /// <summary>
         /// Path string.
         /// </summary>
-        public readonly StringSpan Path;
+        public readonly StringSegment Path;
 
         /// <summary>
         /// Create path string separator.
@@ -38,14 +38,14 @@ namespace Lexical.FileSystem.Internal
         /// <param name="path"></param>
         public PathEnumerable(string path)
         {
-            Path = new StringSpan(path ?? throw new ArgumentNullException(nameof(path)));
+            Path = new StringSegment(path ?? throw new ArgumentNullException(nameof(path)));
         }
 
         /// <summary>
         /// Create path string separator.
         /// </summary>
         /// <param name="path"></param>
-        public PathEnumerable(StringSpan path)
+        public PathEnumerable(StringSegment path)
         {
             Path = path;
         }
@@ -58,19 +58,19 @@ namespace Lexical.FileSystem.Internal
             => new PathEnumerator(Path);
         IEnumerator IEnumerable.GetEnumerator()
             => new PathEnumerator(Path);
-        IEnumerator<StringSpan> IEnumerable<StringSpan>.GetEnumerator()
+        IEnumerator<StringSegment> IEnumerable<StringSegment>.GetEnumerator()
             => new PathEnumerator(Path);
     }
 
     /// <summary>
     /// Enumerator of <see cref="PathEnumerable"/>.
     /// </summary>
-    public struct PathEnumerator : IEnumerator<StringSpan>
+    public struct PathEnumerator : IEnumerator<StringSegment>
     {
         /// <summary>
         /// Path string.
         /// </summary>
-        public readonly StringSpan Path;
+        public readonly StringSegment Path;
 
         /// <summary>
         /// End index.
@@ -88,7 +88,7 @@ namespace Lexical.FileSystem.Internal
         /// <param name="path"></param>
         public PathEnumerator(String path)
         {
-            Path = new StringSpan(path ?? throw new ArgumentNullException(nameof(path)));
+            Path = new StringSegment(path ?? throw new ArgumentNullException(nameof(path)));
             endIx = -1;
             startIx = -1;
         }
@@ -97,7 +97,7 @@ namespace Lexical.FileSystem.Internal
         /// Create path string separator.
         /// </summary>
         /// <param name="path"></param>
-        public PathEnumerator(StringSpan path)
+        public PathEnumerator(StringSegment path)
         {
             Path = path;
             endIx = -1;
@@ -105,16 +105,16 @@ namespace Lexical.FileSystem.Internal
         }
 
         /// <inheritdoc/>
-        public StringSpan Current
+        public StringSegment Current
             => startIx < Path.Start || endIx < Path.Start || startIx > Path.Start+Path.Length || endIx > Path.Start + Path.Length  ?
-               new StringSpan(Path.String, Path.Start, 0) :
-               new StringSpan(Path.String, Path.Start + startIx, endIx - startIx);
+               new StringSegment(Path.String, Path.Start, 0) :
+               new StringSegment(Path.String, Path.Start + startIx, endIx - startIx);
 
         /// <inheritdoc/>
         object IEnumerator.Current
             => startIx < Path.Start || endIx < Path.Start || startIx > Path.Start + Path.Length || endIx > Path.Start + Path.Length ?
-               new StringSpan(Path.String, Path.Start, 0) :
-               new StringSpan(Path.String, Path.Start + startIx, endIx - startIx);
+               new StringSegment(Path.String, Path.Start, 0) :
+               new StringSegment(Path.String, Path.Start + startIx, endIx - startIx);
 
         /// <inheritdoc/>
         public void Reset()

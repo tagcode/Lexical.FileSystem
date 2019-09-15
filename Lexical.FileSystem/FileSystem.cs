@@ -484,7 +484,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Single file observer.
         /// </summary>
-        protected internal class FileObserver : FileSystemObserverHandle
+        protected internal class FileObserver : FileSystemObserverHandleBase
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -618,8 +618,9 @@ namespace Lexical.FileSystem
             /// Dispose observer
             /// </summary>
             /// <exception cref="AggregateException"></exception>
-            public override void InnerDispose(ref StructList2<Exception> errors)
+            protected override void InnerDispose(ref StructList4<Exception> errors)
             {
+                base.InnerDispose(ref errors);
                 var _watcher = watcher;
                 if (_watcher != null)
                 {
@@ -640,7 +641,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Watches a group of files using a pattern.
         /// </summary>
-        protected internal class PatternObserver : FileSystemObserverHandle
+        protected internal class PatternObserver : FileSystemObserverHandleBase
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -805,8 +806,9 @@ namespace Lexical.FileSystem
             /// Dispose observer
             /// </summary>
             /// <exception cref="AggregateException"></exception>
-            public override void InnerDispose(ref StructList2<Exception> errors)
+            protected override void InnerDispose(ref StructList4<Exception> errors)
             {
+                base.InnerDispose(ref errors);
                 var _watcher = watcher;
                 if (_watcher != null)
                 {
@@ -828,14 +830,44 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposable"></param>
         /// <returns>filesystem</returns>
-        public FileSystem AddDisposable(object disposable) => AddDisposableBase(disposable) as FileSystem;
+        public FileSystem AddDisposable(object disposable)
+        {
+            base.AddDisposableBase(disposable);
+            return this;
+        }
 
         /// <summary>
-        /// Remove disposable from dispose list.
+        /// Add <paramref name="disposables"/> to list of objects to be disposed along with the system.
+        /// </summary>
+        /// <param name="disposables"></param>
+        /// <returns>filesystem</returns>
+        public FileSystem AddDisposables(IEnumerable<object> disposables)
+        {
+            base.AddDisposablesBase(disposables);
+            return this;
+        }
+
+        /// <summary>
+        /// Remove <paramref name="disposable"/> from dispose list.
         /// </summary>
         /// <param name="disposable"></param>
         /// <returns></returns>
-        public FileSystem RemoveDisposable(object disposable) => RemoveDisposableBase(disposable) as FileSystem;
+        public FileSystem RemoveDisposable(object disposable)
+        {
+            base.RemoveDisposableBase(disposable);
+            return this;
+        }
+
+        /// <summary>
+        /// Remove <paramref name="disposables"/> from dispose list.
+        /// </summary>
+        /// <param name="disposables"></param>
+        /// <returns></returns>
+        public FileSystem RemoveDisposables(IEnumerable<object> disposables)
+        {
+            base.RemoveDisposablesBase(disposables);
+            return this;
+        }
 
         /// <summary>
         /// Print info

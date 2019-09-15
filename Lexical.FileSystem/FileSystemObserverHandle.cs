@@ -4,15 +4,15 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
+using Lexical.FileSystem.Utils;
 using System;
-using System.Threading;
 
 namespace Lexical.FileSystem
 {
     /// <summary>
     /// Base implementation file-system observer
     /// </summary>
-    public abstract class FileSystemObserverHandle : IFileSystemObserverHandle
+    public abstract class FileSystemObserverHandleBase : DisposeList, IFileSystemObserverHandle
     {
         /// <summary>
         /// The file system where the observer was attached.
@@ -35,23 +35,13 @@ namespace Lexical.FileSystem
         public object State { get; protected set; }
 
         /// <summary>
-        /// Tests if is disposed
-        /// </summary>
-        protected bool isDisposed;
-
-        /// <summary>
-        /// Tests if is disposed
-        /// </summary>
-        protected bool IsDisposing;
-
-        /// <summary>
         /// Create observer.
         /// </summary>
         /// <param name="fileSystem"></param>
         /// <param name="filter"></param>
         /// <param name="observer"></param>
         /// <param name="state"></param>
-        protected FileSystemObserverHandle(IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state)
+        protected FileSystemObserverHandleBase(IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state)
         {
             this.FileSystem = fileSystem;
             Filter = filter;
@@ -65,17 +55,14 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Dispose observer
         /// </summary>
-        /// <exception cref="AggregateException"></exception>
-        public virtual void Dispose()
+        /// <param name="disposeErrors"></param>
+        protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
         {
-            IsDisposing = true;
             var _observer = Observer;
 
             // Remove watcher from dispose list.
             IFileSystem _fileSystem = FileSystem;
-            if (_fileSystem is FileSystemBase __fileSystem) __fileSystem.RemoveDisposableBase(this);
-
-            StructList2<Exception> errors = new StructList2<Exception>();
+            if (_fileSystem is IDisposeList _disposelist) _disposelist.RemoveDisposable(this);
 
             // Call OnCompleted
             if (_observer != null)
@@ -87,32 +74,10 @@ namespace Lexical.FileSystem
                 }
                 catch (Exception e)
                 {
-                    errors.Add(e);
+                    disposeErrors.Add(e);
                 }
             }
-
-            // Do other disposes
-            try
-            {
-                InnerDispose(ref errors);
-            }
-            catch (Exception e)
-            {
-                errors.Add(e);
-            }
-
-            isDisposed = true;
-
-            // Throw exceptions
-            if (errors.Count > 0) throw new AggregateException(errors);
         }
-
-        /// <summary>
-        /// Handle inner dispose
-        /// </summary>
-        /// <param name="errors">errors can be placed here</param>
-        /// <exception cref="Exception">any exception is captured</exception>
-        public virtual void InnerDispose(ref StructList2<Exception> errors) { }
     }
 
     /// <summary>

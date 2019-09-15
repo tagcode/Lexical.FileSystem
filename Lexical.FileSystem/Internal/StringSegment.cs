@@ -13,8 +13,13 @@ namespace Lexical.FileSystem.Internal
     /// 
     /// Used as workaround for missing Span class in .NET Standard.
     /// </summary>
-    public struct StringSpan
+    public struct StringSegment
     {
+        /// <summary>
+        /// Emptry string "".
+        /// </summary>
+        public static StringSegment Empty = new StringSegment("");
+
         /// <summary>
         /// Start index
         /// </summary>
@@ -39,14 +44,14 @@ namespace Lexical.FileSystem.Internal
         /// Implicit converter
         /// </summary>
         /// <param name="str"></param>
-        public static implicit operator string(StringSpan str)
+        public static implicit operator string(StringSegment str)
             => str.ToString();
 
         /// <summary>
         /// Create span of characters.
         /// </summary>
         /// <param name="str"></param>
-        public StringSpan(string str)
+        public StringSegment(string str)
         {
             this.String = str ?? throw new ArgumentNullException(nameof(str));
             this.Start = 0;
@@ -69,7 +74,7 @@ namespace Lexical.FileSystem.Internal
         /// <param name="str"></param>
         /// <param name="start"></param>
         /// <param name="length"></param>
-        public StringSpan(string str, int start, int length)
+        public StringSegment(string str, int start, int length)
         {
             this.String = str ?? throw new ArgumentNullException(nameof(str));
             if (start < 0 || start > str.Length) throw new ArgumentOutOfRangeException(nameof(start));
@@ -90,7 +95,7 @@ namespace Lexical.FileSystem.Internal
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj is StringSpan ss)
+            if (obj is StringSegment ss)
             {
                 if (ss.hashcode == hashcode && ss.String == String && ss.Start == Start && ss.Length == Length) return true;
                 if (ss.Length != Length) return false;
@@ -115,7 +120,7 @@ namespace Lexical.FileSystem.Internal
         /// <summary>
         /// EqualityComparer
         /// </summary>
-        public class Comparer : IEqualityComparer<StringSpan>
+        public class Comparer : IEqualityComparer<StringSegment>
         {
             private static Comparer instance => new Comparer();
 
@@ -130,7 +135,7 @@ namespace Lexical.FileSystem.Internal
             /// <param name="x"></param>
             /// <param name="y"></param>
             /// <returns></returns>
-            public bool Equals(StringSpan x, StringSpan y)
+            public bool Equals(StringSegment x, StringSegment y)
             {
                 if (x.hashcode == y.hashcode && x.String == y.String && x.Start == y.Start && x.Length == y.Length) return true;
                 if (x.Length != y.Length) return false;
@@ -147,7 +152,7 @@ namespace Lexical.FileSystem.Internal
             /// </summary>
             /// <param name="obj"></param>
             /// <returns></returns>
-            public int GetHashCode(StringSpan obj)
+            public int GetHashCode(StringSegment obj)
                 => obj.hashcode;
         }
     }

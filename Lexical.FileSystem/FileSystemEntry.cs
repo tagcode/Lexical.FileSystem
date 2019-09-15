@@ -8,8 +8,7 @@ using System;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// File-system entry.
-    /// Entry is a snapshot at the time of creationg.
+    /// Base implementation for <see cref="IFileSystemEvent"/> classes. Entry is a snapshot at the time of creation.
     /// 
     /// See sub-classes:
     /// <list type="bullet">
@@ -20,7 +19,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="FileSystemEntryDecoration"/></item>
     /// </list>
     /// </summary>
-    public abstract class FileSystemEntry : IFileSystemEntry
+    public abstract class FileSystemEntryBase : IFileSystemEntry
     {
         /// <summary>
         /// (optional) Associated file system.
@@ -50,7 +49,7 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
-        public FileSystemEntry(IFileSystem fileSystem, string path, string name, DateTimeOffset lastModified)
+        public FileSystemEntryBase(IFileSystem fileSystem, string path, string name, DateTimeOffset lastModified)
         {
             FileSystem = fileSystem;
             Path = path;
@@ -69,7 +68,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File entry.
     /// </summary>
-    public class FileSystemEntryFile : FileSystemEntry, IFileSystemEntryFile
+    public class FileSystemEntryFile : FileSystemEntryBase, IFileSystemEntryFile
     {
         /// <summary>
         /// Tests if entry represents a file.
@@ -98,7 +97,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Directory entry.
     /// </summary>
-    public class FileSystemEntryDirectory : FileSystemEntry, IFileSystemEntryDirectory
+    public class FileSystemEntryDirectory : FileSystemEntryBase, IFileSystemEntryDirectory
     {
         /// <summary>
         /// Tests if entry represents a directory.
@@ -120,7 +119,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Drive entry.
     /// </summary>
-    public class FileSystemEntryDrive : FileSystemEntry, IFileSystemEntryDrive
+    public class FileSystemEntryDrive : FileSystemEntryBase, IFileSystemEntryDrive
     {
         /// <summary>
         /// Tests if entry represents a drive.
