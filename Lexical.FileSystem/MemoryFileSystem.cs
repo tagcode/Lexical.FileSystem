@@ -234,7 +234,7 @@ namespace Lexical.FileSystem
                     else
                     {
                         // Parent is a file and cannot contain futher subnodes.
-                        throw new InvalidOperationException("Cannot create file under a file ("+node.Path+")");
+                        throw new IOException("Cannot create file under a file ("+node.Path+")");
                     }
                 }
             }
@@ -282,7 +282,7 @@ namespace Lexical.FileSystem
                 // Not found
                 if (node == null) throw new FileNotFoundException(path);
                 // Assert not root
-                if (node.path == "") throw new InvalidOperationException("Cannot delete root.");
+                if (node.path == "") throw new IOException("Cannot delete root.");
                 // Get parent
                 Directory parent = node.parent;
                 // Parent not found?
@@ -305,7 +305,7 @@ namespace Lexical.FileSystem
                 else if (node is Directory dir)
                 {
                     // Assert recursive is 'true'.
-                    if (!recursive) throw new InvalidOperationException("Cannot delete non-empty directory (" + path + ")");
+                    if (!recursive) throw new IOException("Cannot delete non-empty directory (" + path + ")");
                     // Update parent datetime
                     parent.lastModified = time;
                     // Visit whole tree and delete everything
@@ -368,7 +368,7 @@ namespace Lexical.FileSystem
                 // Not found
                 if (oldNode == null) throw new FileNotFoundException(oldPath);
                 // Assert not root
-                if (oldNode.path == "") throw new InvalidOperationException("Cannot move root.");
+                if (oldNode.path == "") throw new IOException("Cannot move root.");
                 // Target file already exists
                 if (newNode != null) throw new InvalidOperationException(newPath + " already exists");
                 // Get parents
@@ -410,21 +410,39 @@ namespace Lexical.FileSystem
 
                 // Rename
                 oldNode.name = newName;
-                // Move folder
-                if (oldNode.parent != newParent) oldNode.parent = newParent;
-                // Visit tree
-                foreach (Node c in oldNode.VisitTree())
+                // Single file or empty dir
+                if (oldNode is File || (oldNode is Directory dir_ && dir_.contents.Count == 0))
                 {
-                    // Reset cache
-                    c.path = null;
-                    // Create event
-                    /*
+                    // prev path
+                    string c_oldPath = oldNode.Path;
+                    // Move folder to new parent
+                    if (oldNode.parent != newParent) oldNode.parent = newParent;
+                    // Flush cached path
+                    oldNode.path = null;
+                    // new path
+                    string c_newPath = oldNode.Path;
                     if (observers != null)
                         foreach (ObserverHandle observer in observers)
-                            if (observer.Qualify(n.path))
-                                events.Add(new FileSystemEventRename(observer, time, n.path));
-                                */
-
+                            if (observer.Qualify(c_oldPath) || observer.Qualify(c_newPath))
+                                events.Add(new FileSystemEventRename(observer, time, c_oldPath, c_newPath));
+                }
+                else {
+                    // Nodes and old paths
+                    StructList12<(Node, string)> list = new StructList12<(Node, string)>();
+                    // Visit tree
+                    foreach (Node c in oldNode.VisitTree())
+                        list.Add((c, c.Path));
+                    // Move folder to new parent
+                    if (oldNode.parent != newParent) oldNode.parent = newParent;
+                    foreach ((Node c, string c_oldPath) in list)
+                    {
+                        c.path = null;
+                        string c_newPath = c.Path;
+                        if (observers != null)
+                            foreach (ObserverHandle observer in observers)
+                                if (observer.Qualify(c_oldPath) || observer.Qualify(c_newPath))
+                                    events.Add(new FileSystemEventRename(observer, time, c_oldPath, c_newPath));
+                    }
                 }
                 // Change directory times
                 oldParent.lastModified = time;
