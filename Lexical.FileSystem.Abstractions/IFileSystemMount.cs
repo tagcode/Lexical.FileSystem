@@ -22,13 +22,13 @@ namespace Lexical.FileSystem
         /// <param name="parentPath">Path in parent <see cref="IFileSystemMount"/> to mount</param>
         /// <param name="fileSystem">Mounted filesystem</param>
         /// <param name="subpath">(optional) subpath in <paramref name="fileSystem"/></param>
-        /// <returns>handle that can be disposed to unmount</returns>
+        /// <returns>handle for unmounting</returns>
         /// <exception cref="NotSupportedException">If mount is not supported</exception>
         IFileSystemMountHandle Mount(string parentPath, IFileSystem fileSystem, string subpath = null);
     }
 
     /// <summary>
-    /// Handle for a mount.
+    /// Handle for a unmounting. Dispose the handle to unmount.
     /// </summary>
     public interface IFileSystemMountHandle : IDisposable
     {

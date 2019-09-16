@@ -15,36 +15,36 @@ namespace Lexical.FileSystem.Utils
     public interface IDisposeList : IDisposable
     {
         /// <summary>
-        /// Add <paramref name="disposable"/> that is to be disposed along with the called object.
+        /// Add <paramref name="disposableObject"/> that is to be disposed along with the called object.
         /// 
-        /// If the implementing object has already been disposed, this method immediately disposes the <paramref name="disposable"/>.
+        /// If the implementing object has already been disposed, this method immediately disposes the <paramref name="disposableObject"/>.
         /// </summary>
-        /// <param name="disposable"></param>
+        /// <param name="disposableObject"></param>
         /// <returns>true if was added to list, false if wasn't but was disposed immediately</returns>
-        bool AddDisposable(object disposable);
+        bool AddDisposable(object disposableObject);
 
         /// <summary>
-        /// Add <paramref name="disposables"/> that are going to be disposed along with the called object.
+        /// Add <paramref name="disposableObjects"/> that are going to be disposed along with the called object.
         /// 
-        /// If the implementing object has already been disposed, this method immediately disposes the <paramref name="disposables"/>.
+        /// If the implementing object has already been disposed, this method immediately disposes the <paramref name="disposableObjects"/>.
         /// </summary>
-        /// <param name="disposables"></param>
+        /// <param name="disposableObjects"></param>
         /// <returns>true if were added to list, false if were disposed immediately</returns>
-        bool AddDisposables(IEnumerable<object> disposables);
+        bool AddDisposables(IEnumerable<object> disposableObjects);
 
         /// <summary>
-        /// Remove <paramref name="disposable"/> from the list. 
+        /// Remove <paramref name="disposableObject"/> from the list. 
         /// </summary>
-        /// <param name="disposable"></param>
+        /// <param name="disposableObject"></param>
         /// <returns>true if was removed, false if it wasn't in the list.</returns>
-        bool RemoveDisposable(object disposable);
+        bool RemoveDisposable(object disposableObject);
 
         /// <summary>
-        /// Remove <paramref name="disposables"/> from the list. 
+        /// Remove <paramref name="disposableObjects"/> from the list. 
         /// </summary>
-        /// <param name="disposables"></param>
+        /// <param name="disposableObjects"></param>
         /// <returns>true if was removed, false if it wasn't in the list.</returns>
-        bool RemoveDisposables(IEnumerable<object> disposables);
+        bool RemoveDisposables(IEnumerable<object> disposableObjects);
     }
 
 }

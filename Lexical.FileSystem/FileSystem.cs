@@ -49,7 +49,9 @@ namespace Lexical.FileSystem
         public static FileSystem ApplicationRoot => applicationRoot.Value;
 
         /// <summary>
-        /// File system system that reads from operating system root.
+        /// File system system that represents the filesystem of the running operating system.
+        /// 
+        /// For instance allows drives on windows "C://Windows" and slashed root on linux "/mnt".
         /// </summary>
         public static FileSystem OS => os;
 
@@ -67,7 +69,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Constructed to file-system root.
         /// </summary>
-        public readonly bool FileSystemRoot;
+        public readonly bool IsOsRoot;
 
         /// <inheritdoc/>
         public virtual bool CanBrowse => true;
@@ -103,9 +105,9 @@ namespace Lexical.FileSystem
         {
             RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
             AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(rootPath);
-            FileSystemRoot = rootPath == "";
+            IsOsRoot = rootPath == "";
             // Canonized relative path uses "/" as separator. Ends with "/".
-            string canonizedRelativePath = FileSystemRoot ? "" : osSeparator == "/" ? rootPath : rootPath.Replace(osSeparator, " / ");
+            string canonizedRelativePath = IsOsRoot ? "" : osSeparator == "/" ? rootPath : rootPath.Replace(osSeparator, " / ");
             if (!canonizedRelativePath.EndsWith("/")) canonizedRelativePath += "/";
 
             if (isWindows) this.Features |= FileSystemFeatures.CaseInsensitive;
@@ -199,7 +201,7 @@ namespace Lexical.FileSystem
             else if (isLinux || isOsx || osSeparator == "/")
             {
                 // Constructed to OS-Root
-                if (FileSystemRoot)
+                if (IsOsRoot)
                 {
                     // Requests root files
                     if (path == "" || path == "/")
@@ -275,7 +277,7 @@ namespace Lexical.FileSystem
             if (dir.Exists)
             {
                 string prefix = path.Length > 0 ? (path.EndsWith("/", StringComparison.InvariantCulture) ? path : path + "/") : null;
-                if (FileSystemRoot && path == "" || path == "/") prefix = "/";
+                if (IsOsRoot && path == "" || path == "/") prefix = "/";
                 StructList24<IFileSystemEntry> list = new StructList24<IFileSystemEntry>();
                 foreach (DirectoryInfo di in dir.GetDirectories())
                 {
