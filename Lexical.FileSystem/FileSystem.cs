@@ -834,7 +834,7 @@ namespace Lexical.FileSystem
         /// <returns>filesystem</returns>
         public FileSystem AddDisposable(object disposable)
         {
-            base.AddDisposableBase(disposable);
+            ((IDisposeList)this).AddDisposable(disposable);
             return this;
         }
 
@@ -845,7 +845,7 @@ namespace Lexical.FileSystem
         /// <returns>filesystem</returns>
         public FileSystem AddDisposables(IEnumerable<object> disposables)
         {
-            base.AddDisposablesBase(disposables);
+            ((IDisposeList)this).AddDisposables(disposables);
             return this;
         }
 
@@ -856,7 +856,7 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public FileSystem RemoveDisposable(object disposable)
         {
-            base.RemoveDisposableBase(disposable);
+            ((IDisposeList)this).RemoveDisposable(disposable);
             return this;
         }
 
@@ -867,7 +867,7 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public FileSystem RemoveDisposables(IEnumerable<object> disposables)
         {
-            base.RemoveDisposablesBase(disposables);
+            ((IDisposeList)this).RemoveDisposables(disposables);
             return this;
         }
 

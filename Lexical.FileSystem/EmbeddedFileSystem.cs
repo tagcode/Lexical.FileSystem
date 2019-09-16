@@ -3,6 +3,7 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -156,7 +157,7 @@ namespace Lexical.FileSystem
         /// <returns>filesystem</returns>
         public EmbeddedFileSystem AddDisposable(object disposable)
         {
-            base.AddDisposableBase(disposable);
+            ((IDisposeList)this).AddDisposable(disposable);
             return this;
         }
 
@@ -167,7 +168,7 @@ namespace Lexical.FileSystem
         /// <returns>filesystem</returns>
         public EmbeddedFileSystem AddDisposables(IEnumerable<object> disposables)
         {
-            base.AddDisposablesBase(disposables);
+            ((IDisposeList)this).AddDisposables(disposables);
             return this;
         }
 
@@ -178,7 +179,7 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public EmbeddedFileSystem RemoveDisposable(object disposable)
         {
-            base.RemoveDisposableBase(disposable);
+            ((IDisposeList)this).RemoveDisposable(disposable);
             return this;
         }
 
@@ -189,7 +190,7 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public EmbeddedFileSystem RemoveDisposables(IEnumerable<object> disposables)
         {
-            base.RemoveDisposablesBase(disposables);
+            ((IDisposeList)this).RemoveDisposables(disposables);
             return this;
         }
 

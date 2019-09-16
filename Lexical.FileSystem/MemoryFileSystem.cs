@@ -581,7 +581,7 @@ namespace Lexical.FileSystem
         /// <returns>filesystem</returns>
         public MemoryFileSystem AddDisposable(object disposable)
         {
-            base.AddDisposableBase(disposable);
+            ((IDisposeList)this).AddDisposable(disposable);
             return this;
         }
 
@@ -592,7 +592,7 @@ namespace Lexical.FileSystem
         /// <returns>filesystem</returns>
         public MemoryFileSystem AddDisposables(IEnumerable<object> disposables)
         {
-            base.AddDisposablesBase(disposables);
+            ((IDisposeList)this).AddDisposables(disposables);
             return this;
         }
 
@@ -603,7 +603,7 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public MemoryFileSystem RemoveDisposable(object disposable)
         {
-            base.RemoveDisposableBase(disposable);
+            ((IDisposeList)this).RemoveDisposable(disposable);
             return this;
         }
 
@@ -614,7 +614,7 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public MemoryFileSystem RemoveDisposables(IEnumerable<object> disposables)
         {
-            base.RemoveDisposablesBase(disposables);
+            ((IDisposeList)this).RemoveDisposables(disposables);
             return this;
         }
 
@@ -646,7 +646,7 @@ namespace Lexical.FileSystem
             /// <param name="path"></param>
             /// <returns></returns>
             public bool Qualify(string path)
-                => filterPattern.IsMatch(path) || /*workaround*/filterPattern.IsMatch("/" + path);
+                => filterPattern.IsMatch(path);
 
             /// <summary>
             /// Remove this handle from collection of observers.

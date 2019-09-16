@@ -100,7 +100,7 @@ namespace Lexical.FileSystem.Utils
         /// </summary>
         /// <param name="disposableObject"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        protected internal bool AddDisposableBase(Object disposableObject)
+        bool IDisposeList.AddDisposable(Object disposableObject)
         {
             // Argument error
             if (disposableObject == null) throw new ArgumentNullException(nameof(disposableObject));
@@ -129,7 +129,7 @@ namespace Lexical.FileSystem.Utils
         /// </summary>
         /// <param name="disposableObjects"></param>
         /// <returns></returns>
-        protected internal bool AddDisposablesBase(IEnumerable<Object> disposableObjects)
+        bool IDisposeList.AddDisposables(IEnumerable<Object> disposableObjects)
         {
             // Argument error
             if (disposableObjects == null) throw new ArgumentNullException(nameof(disposableObjects));
@@ -175,7 +175,7 @@ namespace Lexical.FileSystem.Utils
         /// </summary>
         /// <param name="disposableObject"></param>
         /// <returns>true if an item of <paramref name="disposableObject"/> was removed, false if it wasn't there</returns>
-        protected internal bool RemoveDisposableBase(object disposableObject)
+        bool IDisposeList.RemoveDisposable(object disposableObject)
         {
             // Argument error
             if (disposableObject == null) throw new ArgumentNullException(nameof(disposableObject));
@@ -195,7 +195,7 @@ namespace Lexical.FileSystem.Utils
         /// </summary>
         /// <param name="disposableObjects"></param>
         /// <returns>true if was removed, false if it wasn't in the list.</returns>
-        protected internal bool RemoveDisposablesBase(IEnumerable<object> disposableObjects)
+        bool IDisposeList.RemoveDisposables(IEnumerable<object> disposableObjects)
         {
             // Argument error
             if (disposableObjects == null) throw new ArgumentNullException(nameof(disposableObjects));
@@ -242,17 +242,5 @@ namespace Lexical.FileSystem.Utils
                 }
             }
         }
-
-        bool IDisposeList.AddDisposable(object disposable)
-            => AddDisposableBase(disposable);
-
-        bool IDisposeList.AddDisposables(IEnumerable<object> disposables)
-            => AddDisposablesBase(disposables);
-
-        bool IDisposeList.RemoveDisposable(object disposable)
-            => RemoveDisposableBase(disposable);
-
-        bool IDisposeList.RemoveDisposables(IEnumerable<object> disposables)
-            => RemoveDisposablesBase(disposables);
     }
 }

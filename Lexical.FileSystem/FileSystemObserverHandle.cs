@@ -49,7 +49,7 @@ namespace Lexical.FileSystem
             State = state;
 
             // Catch dispose of parent file-system
-            if (fileSystem is FileSystemBase __fileSystem) __fileSystem.AddDisposableBase(this);
+            if (fileSystem is IDisposeList disposeList) disposeList.AddDisposable(this);
         }
 
         /// <summary>
