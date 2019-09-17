@@ -12,7 +12,12 @@ namespace Lexical.FileSystem.Utils
 {
     /// <summary>
     /// A disposable that manages a list of disposable objects.
-    /// It will dispose them all at Dispose().
+    /// 
+    /// All attached disposables are disposed at <see cref="Dispose"/>.
+    /// 
+    /// Subclasses that inherit <see cref="DisposeList"/> can put their own dispose
+    /// behaviour into <see cref="InnerDispose(ref StructList4{Exception})"/>.
+    /// InnerDispose will be called only once. 
     /// </summary>
     public class DisposeList : IDisposeList
     {
@@ -30,22 +35,28 @@ namespace Lexical.FileSystem.Utils
         /// State that is set when disposing starts and finalizes.
         /// Is changed with Interlocked. 
         ///  0 - not disposed
-        ///  1 - disposing
-        ///  2 - disposed
+        ///  1 - dispose started but is belated
+        ///  2 - disposing
+        ///  3 - disposed
         ///  
         /// When disposing starts, new objects cannot be added to the object, instead they are disposed right at away.
         /// </summary>
         protected long disposing;
 
         /// <summary>
-        /// Property that checks thread-synchronously whether disposing has started or completed.
+        /// Has disposing has start requested but is post-poned for now.
         /// </summary>
-        public bool IsDisposing => Interlocked.Read(ref disposing) >= 1L;
+        public bool IsDisposeBelated => Interlocked.Read(ref disposing) == 1L;
 
         /// <summary>
-        /// Property that checks thread-synchronously whether disposing has started.
+        /// Has disposing has started or completed.
         /// </summary>
-        public bool IsDisposed => Interlocked.Read(ref disposing) == 2L;
+        public bool IsDisposing => Interlocked.Read(ref disposing) >= 2L;
+
+        /// <summary>
+        /// Is disposing completed
+        /// </summary>
+        public bool IsDisposed => Interlocked.Read(ref disposing) == 3L;
 
         /// <summary>
         /// Dispose all attached diposables and call <see cref="InnerDispose(ref StructList4{Exception})"/>.
@@ -54,7 +65,7 @@ namespace Lexical.FileSystem.Utils
         public virtual void Dispose()
         {
             // Is disposing
-            Interlocked.CompareExchange(ref disposing, 1L, 0L);
+            Interlocked.CompareExchange(ref disposing, 2L, 0L);
 
             // Extract snapshot, clear array
             IDisposable[] toDispose = null;
@@ -78,7 +89,8 @@ namespace Lexical.FileSystem.Utils
             }
 
             // Is disposed
-            Interlocked.CompareExchange(ref disposing, 2L, 1L);
+            Interlocked.CompareExchange(ref disposing, 3L, 1L);
+            Interlocked.CompareExchange(ref disposing, 3L, 2L);
 
             // Throw captured errors
             if (disposeErrors.Count>0) throw new AggregateException(disposeErrors);

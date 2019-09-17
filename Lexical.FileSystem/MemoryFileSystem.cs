@@ -299,7 +299,7 @@ namespace Lexical.FileSystem
                         foreach (ObserverHandle observer in observers)
                             if (observer.Qualify(node.path)) events.Add(new FileSystemEventDelete(observer, time, node.path));
                     // Mark file/dir deleted
-                    node.isDeleted = true;
+                    node.Dispose();
                 }
                 // Non-empty directory
                 else if (node is Directory dir)
@@ -316,7 +316,7 @@ namespace Lexical.FileSystem
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(n.path)) events.Add(new FileSystemEventDelete(observer, time, n.path));
                         // Mark deleted
-                        n.isDeleted = true;
+                        n.Dispose();
                     }
                     // Wipe parent
                     parent.contents.Clear();
@@ -429,13 +429,14 @@ namespace Lexical.FileSystem
                 else {
                     // Nodes and old paths
                     StructList12<(Node, string)> list = new StructList12<(Node, string)>();
-                    // Visit tree
-                    foreach (Node c in oldNode.VisitTree())
-                        list.Add((c, c.Path));
+                    // Visit tree and capture old path
+                    foreach (Node c in oldNode.VisitTree()) list.Add((c, c.Path));
                     // Move folder to new parent
                     if (oldNode.parent != newParent) oldNode.parent = newParent;
-                    foreach ((Node c, string c_oldPath) in list)
+                    // Visit list again
+                    for (int i=0; i<list.Count; i++)
                     {
+                        (Node c, string c_oldPath) = list[i];
                         c.path = null;
                         string c_newPath = c.Path;
                         if (observers != null)
@@ -462,7 +463,48 @@ namespace Lexical.FileSystem
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
-            throw new NotImplementedException();
+            // Read lock
+            m_lock.EnterUpgradeableReadLock();
+            try
+            {
+                // Find entry
+                Node node = GetNode(path);
+                // Is directory
+                if (node is Directory) throw new IOException(path + " is directory");
+                // Create new file, throw if found
+                if (fileMode == FileMode.CreateNew)
+                {
+                    if (node != null) throw new IOException(path + " file already exists.");
+
+                    // Create file
+                    m_lock.EnterWriteLock();
+                    try
+                    {
+
+                    }
+                    finally
+                    {
+                        m_lock.ExitWriteLock();
+                    }
+                }
+                else if (fileMode == FileMode.Create)
+                {
+
+                } else if (fileMode == FileMode.Open)
+                {
+
+                }
+                else if (fileMode == FileMode.OpenOrCreate)
+                {
+
+                }
+
+                return null;
+            }
+            finally
+            {
+                m_lock.ExitUpgradeableReadLock();
+            }
         }
 
         /// <inheritdoc/>
@@ -514,6 +556,8 @@ namespace Lexical.FileSystem
         /// <param name="events"></param>
         void SendEvents(ref StructList12<IFileSystemEvent> events)
         {
+            // Don't send events anymore
+            if (IsDisposing) return;
             // Nothing to do
             if (events.Count == 0) return;
             // Get taskfactory
@@ -680,7 +724,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Parent type for <see cref="Directory"/> and <see cref="MemoryFile"/>.
         /// </summary>
-        abstract class Node
+        abstract class Node : IDisposable
         {
             /// <summary>
             /// Cached path. 
@@ -750,6 +794,14 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <returns></returns>
             public abstract IEnumerable<Node> VisitTree();
+
+            /// <summary>
+            /// Delete node
+            /// </summary>
+            public virtual void Dispose()
+            {
+                this.isDeleted = true;
+            }
         }
 
         /// <summary>
@@ -802,12 +854,12 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Memory file
         /// </summary>
-        class File : Node
+        class File : Node, IObserver<MemoryFile.ModifiedEvent>
         {
             /// <summary>
             /// Memory file
             /// </summary>
-            protected internal MemoryFile memoryFile = new MemoryFile();
+            protected internal MemoryFile memoryFile;
 
             /// <summary>
             /// Create file entry.
@@ -818,6 +870,8 @@ namespace Lexical.FileSystem
             /// <param name="lastModified"></param>
             public File(MemoryFileSystem filesystem, Directory parent, string name, DateTimeOffset lastModified) : base(filesystem, parent, name, lastModified)
             {
+                memoryFile = new MemoryFile();
+                memoryFile.Subscribe(this);
             }
 
             /// <summary>
@@ -830,6 +884,33 @@ namespace Lexical.FileSystem
                 return new FileSystemEntryFile(filesystem, Path, name, memoryFile.LastModified, memoryFile.Length);
             }
 
+            void IObserver<MemoryFile.ModifiedEvent>.OnCompleted() { }
+            void IObserver<MemoryFile.ModifiedEvent>.OnError(Exception error) { }
+
+            /// <summary>
+            /// File was modified
+            /// </summary>
+            /// <param name="value"></param>
+            void IObserver<MemoryFile.ModifiedEvent>.OnNext(MemoryFile.ModifiedEvent value)
+            {
+                // Update time
+                if (value.Time > this.lastModified) this.lastModified = value.Time;
+                // Notify subscribers of filesystem change
+                ObserverHandle[] observers = filesystem.Observers;
+                if (observers.Length>0)
+                {
+                    // Queue of events
+                    StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+                    foreach (ObserverHandle observer in observers)
+                    {
+                        // Add event
+                        if (observer.Qualify(Path)) events.Add(new FileSystemEventChange(observer, value.Time, Path));
+                    }
+                    // Send events
+                    if (events.Count > 0) filesystem.SendEvents(ref events);
+                }
+            }
+
             /// <summary>
             /// Open a new stream to the file memory
             /// </summary>
@@ -839,7 +920,12 @@ namespace Lexical.FileSystem
             /// <returns></returns>
             public Stream Open(FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
             {
-                throw new NotImplementedException();
+                // Get a reference
+                var _memoryFile = memoryFile;
+                // Test object is not deleted
+                if (_memoryFile == null || isDeleted) throw new FileNotFoundException(Path);
+                // Open stream
+                return _memoryFile.Open(fileMode, fileAccess, fileShare);
             }
 
             /// <summary>
@@ -850,13 +936,24 @@ namespace Lexical.FileSystem
             {
                 yield return this;
             }
+
+            /// <summary>
+            /// Delete file
+            /// </summary>
+            public override void Dispose()
+            {
+                base.Dispose();
+                memoryFile.Dispose();
+                memoryFile = null;
+            }
+
         }
     }
 
     /// <summary>
     /// Memory file where multiple streams can be opened.
     /// </summary>
-    public class MemoryFile
+    public class MemoryFile : IObservable<MemoryFile.ModifiedEvent>, IDisposable
     {
         /// <summary>
         /// Data
@@ -866,13 +963,32 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Lock object for modifying <see cref="data"/>.
         /// </summary>
-        protected object m_lock = new object();
+        protected ReaderWriterLock m_lock = new ReaderWriterLock();
 
         /// <summary>
-        /// Open streams. Constructed lazily. Modified under m_lock.
+        /// Observers
         /// </summary>
-        protected internal List<Stream> streams;
+        CopyOnWriteList<IObserver<ModifiedEvent>> observers = new CopyOnWriteList<IObserver<ModifiedEvent>>();
 
+        /// <summary>
+        /// Open streams
+        /// </summary>
+        CopyOnWriteList<MemoryFile.Stream> streams = new CopyOnWriteList<MemoryFile.Stream>();
+
+        /// <summary>
+        /// Last time change event was sent.
+        /// </summary>
+        protected DateTimeOffset lastChangeEvent = DateTimeOffset.MinValue;
+
+        /// <summary>
+        /// Time to wait between forwarding change events to observers.
+        /// </summary>
+        static public TimeSpan ChangeEventTolerance = TimeSpan.FromMilliseconds(500);
+
+        /// <summary>
+        /// Is object disposed.
+        /// </summary>
+        protected bool isDisposed;
 
         /// <summary>
         /// File length
@@ -896,9 +1012,117 @@ namespace Lexical.FileSystem
         public MemoryFile() 
         {
         }
-            
+
         /// <summary>
-        /// Open a new stream to the file memory
+        /// Event that notifies about modifying the file.
+        /// </summary>
+        public struct ModifiedEvent
+        {
+            /// <summary>
+            /// The file that was modified
+            /// </summary>
+            public readonly MemoryFile File;
+
+            /// <summary>
+            /// Time of event
+            /// </summary>
+            public readonly DateTimeOffset Time;
+
+            /// <summary>
+            /// Create event
+            /// </summary>
+            /// <param name="file"></param>
+            /// <param name="time"></param>
+            public ModifiedEvent(MemoryFile file, DateTimeOffset time)
+            {
+                File = file;
+                Time = time;
+            }
+        }
+
+        /// <summary>
+        /// Subscribe to memory file.
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <returns></returns>
+        public IDisposable Subscribe(IObserver<ModifiedEvent> observer)
+        {
+            if (isDisposed) throw new ObjectDisposedException(GetType().FullName);
+            observers.Add(observer);
+            return new ObserverHandle(observer, observers);
+        }
+
+        /// <summary>
+        /// Handle that removes <see cref="observer"/> from <see cref="observers"/> when disposed.
+        /// </summary>
+        class ObserverHandle : IDisposable
+        {
+            IObserver<ModifiedEvent> observer;
+            CopyOnWriteList<IObserver<ModifiedEvent>> observers;
+
+            public ObserverHandle(IObserver<ModifiedEvent> observer, CopyOnWriteList<IObserver<ModifiedEvent>> observers)
+            {
+                this.observer = observer ?? throw new ArgumentNullException(nameof(observer));
+                this.observers = observers ?? throw new ArgumentNullException(nameof(observers));
+            }
+
+            public void Dispose()
+            {
+                observers.Remove(observer);
+                observer.OnCompleted();
+            }
+        }
+
+        /// <summary>
+        /// Dispose memory file.
+        /// </summary>
+        public void Dispose()
+        {
+            // Mark disposed
+            isDisposed = true;
+
+            // Remove observers
+            while (observers.Count>0)
+            {
+                var array = observers.Array;
+                foreach(var observer in array)
+                {
+                    observer.OnCompleted();
+                    observers.Remove(observer);
+                }
+            }
+
+            // Dispose lock.
+            //m_lock.Dispose();
+        }
+
+        /// <summary>
+        /// Send change event, if needed.
+        /// </summary>
+        protected void SendChangeEvent()
+        {
+            // Don't send if disposed
+            if (isDisposed) return;
+            // Take snapshot of observers
+            IObserver<ModifiedEvent>[] _observers = observers.Array;
+            // No observers
+            if (_observers.Length == 0) return;
+            // Current time
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            // Did we already send a notification less than 500ms ago?
+            if (now - lastChangeEvent < ChangeEventTolerance) return;
+            // Update the time event was notified
+            lastChangeEvent = now;
+            // Send event.
+            foreach (IObserver<ModifiedEvent> observer in observers)
+            {
+                // Add event
+                observer.OnNext(new ModifiedEvent(this, now));
+            }
+        }
+
+        /// <summary>
+        /// Open a new stream to memory file.
         /// </summary>
         /// <param name="fileMode"></param>
         /// <param name="fileAccess"></param>
@@ -906,6 +1130,7 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public Stream Open(FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
+            // Todo test file share, file mode, etc
             throw new NotImplementedException();
         }
 
@@ -920,14 +1145,14 @@ namespace Lexical.FileSystem
             protected MemoryFile parent;
 
             /// <summary>
-            /// Data
+            /// Bytes
             /// </summary>
             protected List<byte> data;
 
             /// <summary>
             /// Lock object for modifying <see cref="data"/>.
             /// </summary>
-            protected object m_lock;
+            protected ReaderWriterLock m_lock;
 
             /// <summary>
             /// File access
@@ -985,7 +1210,7 @@ namespace Lexical.FileSystem
             /// <param name="m_lock"></param>
             /// <param name="fileAccess"></param>
             /// <param name="fileShare"></param>
-            public Stream(MemoryFile parent, List<byte> data, object m_lock, FileAccess fileAccess, FileShare fileShare)
+            public Stream(MemoryFile parent, List<byte> data, ReaderWriterLock m_lock, FileAccess fileAccess, FileShare fileShare)
             {
                 this.parent = parent;
                 this.data = data;
