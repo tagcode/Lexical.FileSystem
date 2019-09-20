@@ -8,6 +8,7 @@ using Lexical.FileSystem.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -16,7 +17,9 @@ using System.Threading.Tasks;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// In-memory filesystem
+    /// In-memory filesystem.
+    /// 
+    /// MemoryFileSystem is limited to 2GB files.
     /// </summary>
     public class MemoryFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable
     {
@@ -26,9 +29,9 @@ namespace Lexical.FileSystem
         Directory root;
 
         /// <summary>
-        /// Reader writer lock.
+        /// Reader writer lock for modifying directory structure. 
         /// </summary>
-        ReaderWriterLockSlim m_lock = new ReaderWriterLockSlim();
+        ReaderWriterLock m_lock = new ReaderWriterLock();
 
         /// <summary>
         /// List of observers.
@@ -45,6 +48,13 @@ namespace Lexical.FileSystem
         /// If factory is set to null, then events are processed in the current thread.
         /// </summary>
         TaskFactory taskFactory;
+
+        /// <summary>
+        /// Policy of whether trailing slash is ignored from paths.
+        /// For example, if true "/mnt/dir/" refers to directory ["mnt", "dir"].
+        /// If false "/mnt/dir/2 refers to directory ["mnt", "dir", ""].
+        /// </summary>
+        protected bool ignoreTrailingSlash;
 
         /// <inheritdoc/>
         public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive;
@@ -82,6 +92,22 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Create new in-memory filesystem.
+        /// </summary>
+        /// <param name="ignoreTrailingSlash">
+        /// Policy of whether trailing slash is ignored from paths.
+        /// For example, if true "/mnt/dir/" refers to directory ["mnt", "dir"].
+        /// If false "/mnt/dir/2 refers to directory ["mnt", "dir", ""].
+        /// </param>
+        public MemoryFileSystem(bool ignoreTrailingSlash)
+        {
+            root = new Directory(this, null, "", DateTimeOffset.UtcNow);
+            this.taskFactory = Task.Factory;
+            this.processEventsAction = processEvents;
+            this.ignoreTrailingSlash = ignoreTrailingSlash;
+        }
+        
+        /// <summary>
         /// Set <paramref name="taskFactory"/> to be used for handling observer events.
         /// 
         /// If <paramref name="taskFactory"/> is null, then events are processed in the threads
@@ -113,7 +139,7 @@ namespace Lexical.FileSystem
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Read lock
-            m_lock.EnterReadLock();
+            m_lock.AcquireReaderLock(int.MaxValue);
             try
             {
                 // Find entry
@@ -140,7 +166,7 @@ namespace Lexical.FileSystem
             }
             finally
             {
-                m_lock.ExitReadLock();
+                m_lock.ReleaseReaderLock();
             }
         }
 
@@ -161,7 +187,7 @@ namespace Lexical.FileSystem
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Read lock
-            m_lock.EnterReadLock();
+            m_lock.AcquireReaderLock(int.MaxValue);
             try
             {
                 // Find entry
@@ -173,7 +199,7 @@ namespace Lexical.FileSystem
             }
             finally
             {
-                m_lock.ExitReadLock();
+                m_lock.ReleaseReaderLock();
             }
         }
 
@@ -203,11 +229,11 @@ namespace Lexical.FileSystem
             // Take snapshot of observers
             ObserverHandle[] observers = this.Observers;
             // Write lock
-            m_lock.EnterWriteLock();
+            m_lock.AcquireWriterLock(int.MaxValue);
             try
             {
                 Node node = root;
-                PathEnumerator enumr = new PathEnumerator(path);
+                PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash);
                 while (enumr.MoveNext())
                 {
                     // Get entry under lock.
@@ -240,7 +266,7 @@ namespace Lexical.FileSystem
             }
             finally
             {
-                m_lock.ExitWriteLock();
+                m_lock.ReleaseWriterLock();
             }
 
             // Send events
@@ -274,7 +300,7 @@ namespace Lexical.FileSystem
             // Take snapshot of observers
             ObserverHandle[] observers = this.Observers;
             // Write lock
-            m_lock.EnterWriteLock();
+            m_lock.AcquireWriterLock(int.MaxValue);
             try
             {
                 // Find file or directory
@@ -329,7 +355,7 @@ namespace Lexical.FileSystem
             }
             finally
             {
-                m_lock.ExitWriteLock();
+                m_lock.ReleaseWriterLock();
             }
 
             // Send events
@@ -355,12 +381,12 @@ namespace Lexical.FileSystem
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
             DateTimeOffset time = DateTimeOffset.UtcNow;
-            // Queue of events
+            // Events
             StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
             // Take snapshot of observers
             ObserverHandle[] observers = this.Observers;
             // Write lock
-            m_lock.EnterWriteLock();
+            m_lock.AcquireWriterLock(int.MaxValue);
             try
             {
                 // Find paths
@@ -380,7 +406,7 @@ namespace Lexical.FileSystem
                 Directory dir = root, newParent = null;
                 string newName = null;
                 // Path '/' splitter, enumerates name strings from root towards tail
-                PathEnumerator enumr = new PathEnumerator(newPath);
+                PathEnumerator enumr = new PathEnumerator(newPath, ignoreTrailingSlash);
                 // Get next name from the path
                 while (enumr.MoveNext())
                 {
@@ -451,60 +477,205 @@ namespace Lexical.FileSystem
             }
             finally
             {
-                m_lock.ExitWriteLock();
+                m_lock.ReleaseWriterLock();
             }
 
             // Send events
             if (events.Count > 0) SendEvents(ref events);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="FileMode.Create"/> or <see cref="FileMode.CreateNew"/>.
+        /// </summary>
+        /// <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
+        /// <param name="fileMode">determines whether to open or to create the file</param>
+        /// <param name="fileAccess">how to access the file, read, write or read and write</param>
+        /// <param name="fileShare">how the file will be shared by processes</param>
+        /// <returns>open file stream</returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support opening files</exception>
+        /// <exception cref="FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
+        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
+        /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
+        /// <exception cref="FileSystemExceptionDirectoryExists">Directory already exists</exception>
+        /// <exception cref="FileSystemExceptionFileExists">File already exists</exception>
         public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+            // Datetime
+            DateTimeOffset time = DateTimeOffset.UtcNow;
+            // Events
+            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            // Take snapshot of observers
+            ObserverHandle[] observers = this.Observers;
+            // result stream.
+            Stream stream = null;
             // Read lock
-            m_lock.EnterUpgradeableReadLock();
+            m_lock.AcquireReaderLock(int.MaxValue);
             try
             {
                 // Find entry
                 Node node = GetNode(path);
                 // Is directory
-                if (node is Directory) throw new IOException(path + " is directory");
+                if (node is Directory) throw new FileSystemExceptionDirectoryExists(this, path);
                 // Create new file, throw if found
                 if (fileMode == FileMode.CreateNew)
                 {
-                    if (node != null) throw new IOException(path + " file already exists.");
+                    // Cannot create, file already exists
+                    if (node != null) throw new FileSystemExceptionFileExists(this, path);
 
                     // Create file
-                    m_lock.EnterWriteLock();
+                    LockCookie coockie = m_lock.UpgradeToWriterLock(int.MaxValue);
                     try
                     {
+                        // Find entry again under write lock.
+                        node = GetNode(path);
+                        // Is directory
+                        if (node is Directory) throw new FileSystemExceptionDirectoryExists(this, path);
+                        // Cannot create, file already exists
+                        if (node != null) throw new FileSystemExceptionFileExists(this, path);
 
+                        // Split path to parent and filename parts, also search for parent directory
+                        StringSegment parentPath, name;
+                        Directory parent;
+                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new IOException(path);
+
+                        // Create file.
+                        File f = new File(this, parent, name, time);
+                        // Open stream
+                        stream = f.Open(fileAccess, fileShare);
+                        // Attach to parent
+                        parent.contents[name] = f;
+                        // Create event
+                        if (observers != null)
+                            foreach (ObserverHandle observer in observers)
+                                if (observer.Qualify(path))
+                                    events.Add(new FileSystemEventCreate(observer, time, path));
+                        // Return stream
+                        return stream;
                     }
                     finally
                     {
-                        m_lock.ExitWriteLock();
+                        m_lock.DowngradeFromWriterLock(ref coockie);
                     }
                 }
                 else if (fileMode == FileMode.Create)
                 {
+                    // Create file
+                    LockCookie coockie = m_lock.UpgradeToWriterLock(int.MaxValue);
+                    try
+                    {
+                        // Find entry again under write lock.
+                        node = GetNode(path);
+                        // Split path to parent and filename parts, also search for parent directory
+                        StringSegment parentPath, name;
+                        Directory parent;
+                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new IOException(path);
+                        // Is directory
+                        if (node is Directory) throw new FileSystemExceptionDirectoryExists(this, parentPath);
 
-                } else if (fileMode == FileMode.Open)
+                        // Previous file is unlinked
+                        if (node is File && parent.contents.Remove(name))
+                        {
+                            // Create event
+                            if (observers != null)
+                                foreach (ObserverHandle observer in observers)
+                                    if (observer.Qualify(path))
+                                        events.Add(new FileSystemEventDelete(observer, time, path));
+                        }
+
+                        // Create file.
+                        File f = new File(this, parent, name, time);
+                        // Open stream
+                        stream = f.Open(fileAccess, fileShare);
+                        // Attach to parent
+                        parent.contents[name] = f;
+                        // Create event
+                        if (observers != null)
+                            foreach (ObserverHandle observer in observers)
+                                if (observer.Qualify(path))
+                                    events.Add(new FileSystemEventCreate(observer, time, path));
+                        // Return stream
+                        return stream;
+                    }
+                    finally
+                    {
+                        m_lock.DowngradeFromWriterLock(ref coockie);
+                    }
+                }
+                else if (fileMode == FileMode.Open)
                 {
-
+                    // Is directory
+                    if (node is Directory)
+                    {
+                        // Split path to parent and filename parts, also search for parent directory
+                        StringSegment parentPath, name;
+                        Directory parent;
+                        GetParentAndName(path, out parentPath, out name, out parent);
+                        throw new FileSystemExceptionDirectoryExists(this, parentPath);
+                    }
+                    // Open file
+                    if (node is File f) return f.Open(fileAccess, fileShare);
+                    // File not found
+                    throw new FileNotFoundException(path);
                 }
                 else if (fileMode == FileMode.OpenOrCreate)
                 {
+                    // Is directory
+                    if (node is Directory)
+                    {
+                        // Split path to parent and filename parts, also search for parent directory
+                        StringSegment parentPath, name;
+                        Directory parent;
+                        GetParentAndName(path, out parentPath, out name, out parent);
+                        throw new FileSystemExceptionDirectoryExists(this, parentPath);
+                    }
+                    // Open file
+                    if (node is File existingFile) return existingFile.Open(fileAccess, fileShare);
 
+                    // Create file
+                    {
+                        // Split path to parent and filename parts, also search for parent directory
+                        StringSegment parentPath, name;
+                        Directory parent;
+                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new IOException(path);
+
+                        // Create file
+                        File f = new File(this, parent, name, time);
+                        // Open stream
+                        stream = f.Open(fileAccess, fileShare);
+                        // Attach to parent
+                        parent.contents[name] = f;
+                        // Create event
+                        if (observers != null)
+                            foreach (ObserverHandle observer in observers)
+                                if (observer.Qualify(path))
+                                    events.Add(new FileSystemEventCreate(observer, time, path));
+                        // Return stream
+                        return stream;
+                    }
                 }
 
-                return null;
+                throw new ArgumentException(nameof(fileMode));
             }
             finally
             {
-                m_lock.ExitUpgradeableReadLock();
+                m_lock.ReleaseReaderLock();
+
+                // Send events
+                if (events.Count > 0) SendEvents(ref events);
             }
+
         }
 
         /// <inheritdoc/>
@@ -527,7 +698,7 @@ namespace Lexical.FileSystem
         {
             Node node = root;
             // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator enumr = new PathEnumerator(path);
+            PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash);
             // Get next name from the path
             while (enumr.MoveNext())
             {
@@ -547,6 +718,50 @@ namespace Lexical.FileSystem
                 }
             }
             return node;
+        }
+
+        /// <summary>
+        /// Split <paramref name="path"/> into <paramref name="parentPath"/> and <paramref name="name"/>.
+        /// 
+        /// Also searches for <paramref name="parent"/> directory node.
+        /// </summary>
+        /// <param name="path">path to parse</param>
+        /// <param name="parentPath">path to parent</param>
+        /// <param name="name"></param>
+        /// <param name="parent">(optional) parent object</param>
+        /// <returns>true parent was successfully found</returns>
+        bool GetParentAndName(string path, out StringSegment parentPath, out StringSegment name, out Directory parent)
+        {
+            Node node = root;
+            // Path '/' splitter, enumerates name strings from root towards tail
+            PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash);
+            // Path's name parts
+            StructList12<StringSegment> names = new StructList12<StringSegment>();
+            // Split path into names
+            while (enumr.MoveNext()) names.Add(enumr.Current);
+            // Unexpected error
+            if (names.Count == 0) { name = StringSegment.Empty; parentPath = StringSegment.Empty; parent = null; return false; }
+            // Separate to parentPath and name
+            if (names.Count == 1) { name = names[0]; parentPath = StringSegment.Empty; }
+            else { name = names[names.Count - 1]; parentPath = new StringSegment(path, names[0].Start, names[names.Count - 2].Start + names[names.Count - 2].Length); }
+            // Search parent directory
+            for (int i=0; i<names.Count-2; i++)
+            {
+                // Get entry under lock.
+                if (node is Directory dir)
+                {
+                    // Failed to find child entry
+                    if (!dir.contents.TryGetValue(enumr.Current, out node)) { parent = null; return false; }
+                }
+                else
+                {
+                    // Parent is a file and cannot contain further subentries.
+                    parent = null; return false;
+                }
+            }
+            name = names[names.Count - 1];
+            parent = node as Directory;
+            return node is Directory;
         }
 
         /// <summary>
@@ -633,7 +848,6 @@ namespace Lexical.FileSystem
         /// <param name="disposeErrors"></param>
         protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
         {
-            m_lock.Dispose();
         }
 
         /// <summary>
@@ -691,6 +905,11 @@ namespace Lexical.FileSystem
             Regex filterPattern;
 
             /// <summary>
+            /// Accept all pattern "**".
+            /// </summary>
+            bool acceptAll;
+
+            /// <summary>
             /// Create new observer.
             /// </summary>
             /// <param name="fileSystem"></param>
@@ -699,7 +918,8 @@ namespace Lexical.FileSystem
             /// <param name="state"></param>
             public ObserverHandle(MemoryFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(fileSystem, filter, observer, state)
             {
-                this.filterPattern = GlobPatternFactory.Slash.CreateRegex(filter);
+                if (filter == "**") acceptAll = true;
+                else this.filterPattern = GlobPatternFactory.Slash.CreateRegex(filter);
             }
 
             /// <summary>
@@ -708,7 +928,7 @@ namespace Lexical.FileSystem
             /// <param name="path"></param>
             /// <returns></returns>
             public bool Qualify(string path)
-                => filterPattern.IsMatch(path);
+                => acceptAll || filterPattern.IsMatch(path);
 
             /// <summary>
             /// Remove this handle from collection of observers.
@@ -914,18 +1134,19 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Open a new stream to the file memory
             /// </summary>
-            /// <param name="fileMode"></param>
             /// <param name="fileAccess"></param>
             /// <param name="fileShare"></param>
             /// <returns></returns>
-            public Stream Open(FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
+            /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
+            /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
+            public Stream Open(FileAccess fileAccess, FileShare fileShare)
             {
                 // Get a reference
                 var _memoryFile = memoryFile;
                 // Test object is not deleted
                 if (_memoryFile == null || isDeleted) throw new FileNotFoundException(Path);
                 // Open stream
-                return _memoryFile.Open(fileMode, fileAccess, fileShare);
+                return _memoryFile.Open(fileAccess, fileShare);
             }
 
             /// <summary>
@@ -952,6 +1173,8 @@ namespace Lexical.FileSystem
 
     /// <summary>
     /// Memory file where multiple streams can be opened.
+    /// 
+    /// MemoryFile is limited to 2GB files.
     /// </summary>
     public class MemoryFile : IObservable<MemoryFile.ModifiedEvent>, IDisposable
     {
@@ -961,9 +1184,14 @@ namespace Lexical.FileSystem
         protected internal List<byte> data = new List<byte>();
 
         /// <summary>
-        /// Lock object for modifying <see cref="data"/>.
+        /// Lock for modifying <see cref="data"/>.
         /// </summary>
-        protected ReaderWriterLock m_lock = new ReaderWriterLock();
+        protected ReaderWriterLock dataLock = new ReaderWriterLock();
+
+        /// <summary>
+        /// Critical section lock for acquiring read/write permission, and modifying <see cref="streams"/>.
+        /// </summary>
+        protected object m_lock = new object();
 
         /// <summary>
         /// Observers
@@ -973,7 +1201,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Open streams
         /// </summary>
-        CopyOnWriteList<MemoryFile.Stream> streams = new CopyOnWriteList<MemoryFile.Stream>();
+        List<MemoryFile.Stream> streams = new List<MemoryFile.Stream>();
 
         /// <summary>
         /// Last time change event was sent.
@@ -997,7 +1225,7 @@ namespace Lexical.FileSystem
         {
             get
             {
-                lock (m_lock) return data.Count;
+                lock (dataLock) return data.Count;
             }
         }
 
@@ -1124,14 +1352,31 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Open a new stream to memory file.
         /// </summary>
-        /// <param name="fileMode"></param>
         /// <param name="fileAccess"></param>
         /// <param name="fileShare"></param>
         /// <returns></returns>
-        public Stream Open(FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
-        {
-            // Todo test file share, file mode, etc
-            throw new NotImplementedException();
+        /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
+        /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
+        public Stream Open(FileAccess fileAccess, FileShare fileShare)
+        {            
+            lock(m_lock)
+            {
+                bool readAllowed = true, writeAllowed = true;
+                foreach (var s in streams)
+                {
+                    readAllowed &= (s.FileShare & FileShare.Read) == FileShare.Read;
+                    writeAllowed &= (s.FileShare & FileShare.Write) == FileShare.Write;
+                }
+                // Read is not allowed
+                if (fileAccess.HasFlag(FileAccess.Read) && !readAllowed) throw new FileSystemExceptionNoReadAccess();
+                // Write is not allowed
+                if (fileAccess.HasFlag(FileAccess.Write) && !writeAllowed) throw new FileSystemExceptionNoWriteAccess();
+
+                // Create stream
+                Stream stream = new Stream(this, data, dataLock, fileAccess, fileShare);
+                streams.Add(stream);
+                return stream;
+            }
         }
 
         /// <summary>
@@ -1152,36 +1397,55 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Lock object for modifying <see cref="data"/>.
             /// </summary>
-            protected ReaderWriterLock m_lock;
+            protected ReaderWriterLock dataLock;
 
             /// <summary>
             /// File access
             /// </summary>
-            protected FileAccess fileAccess;
+            public readonly FileAccess FileAccess;
 
             /// <summary>
             /// Share
             /// </summary>
-            protected FileShare fileShare;
+            public readonly FileShare FileShare;
 
             /// <summary>
             /// Stream position.
             /// </summary>
             protected long position;
 
+            /// <summary>
+            /// Permissions
+            /// </summary>
+            bool canRead, canWrite;
+
+            /// <summary>
+            /// Disposed status
+            /// 
+            /// 0L - not disposed
+            /// 1L - dispose started
+            /// 2L - disposed
+            /// </summary>
+            protected long dispose;
+
+            /// <summary>
+            /// Test if stream is disposed
+            /// </summary>
+            public bool IsDisposed => Interlocked.Read(ref dispose) >= 1L;
+
             /// <inheritdoc/>
-            public override bool CanRead => (fileAccess & FileAccess.Read) == FileAccess.Read;
+            public override bool CanRead => canRead;
             /// <inheritdoc/>
             public override bool CanSeek => true;
             /// <inheritdoc/>
-            public override bool CanWrite => (fileAccess & FileAccess.Write) == FileAccess.Write;
+            public override bool CanWrite => canWrite;
 
             /// <summary>File length</summary>
             public override long Length
             {
                 get
                 {
-                    lock (m_lock) return data.Count;
+                    lock (dataLock) return data.Count;
                 }
             }
 
@@ -1194,7 +1458,7 @@ namespace Lexical.FileSystem
                 set
                 {
                     if (value < 0) throw new IOException("position");
-                    lock (m_lock)
+                    lock (dataLock)
                     {
                         if (value > Length) throw new IOException("position");
                         position = value;
@@ -1214,12 +1478,14 @@ namespace Lexical.FileSystem
             {
                 this.parent = parent;
                 this.data = data;
-                this.m_lock = m_lock;
-                this.fileAccess = fileAccess;
-                this.fileShare = fileShare;
+                this.dataLock = m_lock;
+                this.FileAccess = fileAccess;
+                this.FileShare = fileShare;
+                this.canRead = (FileAccess & FileAccess.Read) == FileAccess.Read;
+                this.canWrite = (FileAccess & FileAccess.Write) == FileAccess.Write;
             }
 
-            /// <inheritdoc/>
+            /// <summary>No action</summary>
             public override void Flush() { }
 
             /// <summary>
@@ -1236,9 +1502,27 @@ namespace Lexical.FileSystem
             /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
             public override int Read(byte[] buffer, int offset, int count)
             {
-                lock (m_lock)
+                // Assert not disposed
+                if (IsDisposed) throw new ObjectDisposedException(nameof(MemoryFile));
+                // Assert has read access
+                if (!canRead) throw new FileSystemExceptionNoReadAccess();
+                // Assert args
+                if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+                if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
+                if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+
+                // Read
+                dataLock.AcquireReaderLock(int.MaxValue);
+                try {
+                    // Assert arguments
+                    if (position < 0L || position > data.Count) throw new ArgumentOutOfRangeException(nameof(Position));
+                    int c = Math.Min(/*bytes available*/data.Count-(int)position, /*requested count*/count);
+                    data.CopyTo((int)position, buffer, offset, c);
+                    position += c;
+                    return c;
+                } finally
                 {
-                    return 0;
+                    dataLock.ReleaseReaderLock();
                 }
             }
 
@@ -1249,7 +1533,22 @@ namespace Lexical.FileSystem
             /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
             public override int ReadByte()
             {
-                return base.ReadByte();
+                // Assert not disposed
+                if (IsDisposed) throw new ObjectDisposedException(nameof(MemoryFile));
+                // Assert has read access
+                if (!canRead) throw new FileSystemExceptionNoReadAccess();
+
+                // Read
+                dataLock.AcquireReaderLock(int.MaxValue);
+                try
+                {
+                    if (position < 0 || position >= data.Count) return -1;
+                    return data[(int)(position++)];
+                }
+                finally
+                {
+                    dataLock.ReleaseReaderLock();
+                }
             }
 
             /// <summary>
@@ -1262,23 +1561,59 @@ namespace Lexical.FileSystem
             /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
             public override long Seek(long offset, SeekOrigin origin)
             {
-                lock (m_lock)
+                // Assert not disposed
+                if (IsDisposed) throw new ObjectDisposedException(nameof(MemoryFile));
+
+                dataLock.AcquireReaderLock(int.MaxValue);
+                try
                 {
+                    if (origin == SeekOrigin.Begin) return position = offset;
+                    if (origin == SeekOrigin.Current) return position += offset;
+                    if (origin == SeekOrigin.End) return (position = data.Count - offset);
                     return 0L;
+                }
+                finally
+                {
+                    dataLock.ReleaseReaderLock();
                 }
             }
 
             /// <summary>
             /// Sets the length of the current stream.
             /// </summary>
-            /// <param name="value">The desired length of the current stream in bytes.</param>
+            /// <param name="newLength">The desired length of the current stream in bytes.</param>
             /// <exception cref="IOException">An I/O error occurs</exception>
             /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
-            public override void SetLength(long value)
+            public override void SetLength(long newLength)
             {
-                lock (m_lock)
-                {
+                // Assert not disposed
+                if (IsDisposed) throw new ObjectDisposedException(nameof(MemoryFile));
+                // Assert has write access
+                if (!canWrite) throw new FileSystemExceptionNoWriteAccess();
+                // Assert args
+                if (newLength < 0 || newLength>Int32.MaxValue) throw new ArgumentOutOfRangeException(nameof(newLength));
 
+                // Write
+                dataLock.AcquireWriterLock(int.MaxValue);
+                try
+                {
+                    // new length
+                    int c = (int)newLength;
+                    // Shorten
+                    if (data.Count > c)
+                    {
+                        data.RemoveRange(c, data.Count - c);
+                        if (position > newLength) position = newLength;
+                    } else 
+                    // Grow
+                    if (data.Count < c)
+                    {
+                        while (data.Count < c) data.Add(0);
+                    }
+                }
+                finally
+                {
+                    dataLock.ReleaseWriterLock();
                 }
             }
 
@@ -1295,9 +1630,54 @@ namespace Lexical.FileSystem
             /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
             public override void Write(byte[] buffer, int offset, int count)
             {
-                lock (m_lock)
-                {
+                // Assert not disposed
+                if (IsDisposed) throw new ObjectDisposedException(nameof(MemoryFile));
+                // Assert has write access
+                if (!canWrite) throw new FileSystemExceptionNoWriteAccess();
+                // Assert args
+                if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+                if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
+                if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+                if (offset+count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(count));
 
+                // Write
+                dataLock.AcquireWriterLock(int.MaxValue);
+                try
+                {
+                    // Assert
+                    if (position < 0L || position > data.Count) throw new ArgumentOutOfRangeException(nameof(Position));
+
+                    // Position (int)
+                    int p = (int)position;
+
+                    // Overwrite
+                    if (p < data.Count)
+                    {
+                        // Bytes to overwrite
+                        int c = Math.Min(/*Bytes until end*/data.Count - p, /*Writes that need writing*/count);
+                        // Write
+                        for (int i = 0; i < c; i++) data[p++] = buffer[offset++];
+                        count -= c;
+                        offset += c;
+                    }
+
+                    // Append
+                    if (p>=data.Count)
+                    {
+                        // Append byte
+                        while (count-- > 0)
+                        {
+                            data.Add(buffer[offset++]);
+                            p++;
+                        }                        
+                    }
+
+                    // Update position
+                    position = p;
+                }
+                finally
+                {
+                    dataLock.ReleaseWriterLock();
                 }
             }
 
@@ -1309,7 +1689,34 @@ namespace Lexical.FileSystem
             /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
             public override void WriteByte(byte value)
             {
-                base.WriteByte(value);
+                // Assert not disposed
+                if (IsDisposed) throw new ObjectDisposedException(nameof(MemoryFile));
+                // Assert has write access
+                if (!canWrite) throw new FileSystemExceptionNoWriteAccess();
+
+                // Write
+                dataLock.AcquireWriterLock(int.MaxValue);
+                try
+                {
+                    // Assert
+                    if (position < 0L || position > data.Count) throw new ArgumentOutOfRangeException(nameof(Position));
+                    // Position (int)
+                    int p = (int)position;
+                    // Overwrite
+                    if (position < data.Count) data[p++] = value;
+                    // Append
+                    else if (position == data.Count) 
+                    {
+                        data.Add(value);
+                        p++;
+                    }
+                    // Update position
+                    position = p;
+                }
+                finally
+                {
+                    dataLock.ReleaseWriterLock();
+                }
             }
 
             /// <summary>
@@ -1318,7 +1725,14 @@ namespace Lexical.FileSystem
             /// <param name="disposing"></param>
             protected override void Dispose(bool disposing)
             {
+                // Start dispose
+                Interlocked.CompareExchange(ref dispose, 1L, 0L);
+                // Remove self from parent
+                lock(parent.m_lock) parent.streams.Remove(this);                
+                // Dispose stream
                 base.Dispose(disposing);
+                // End dispose
+                Interlocked.CompareExchange(ref dispose, 2L, 1L);
             }
         }
     }

@@ -44,6 +44,8 @@ namespace Lexical.FileSystem
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
+        /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
+        /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare);
     }
     // </doc>
@@ -100,6 +102,8 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
+        /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
+        /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         public static void CreateFile(this IFileSystem fileSystem, string path)
         {
             if (fileSystem is IFileSystemOpen opener) opener.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite).Dispose();
@@ -127,6 +131,8 @@ namespace Lexical.FileSystem
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
+        /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
+        /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         public static Stream Open(this IFileSystem fileSystem, string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
             if (fileSystem is IFileSystemOpen opener) return opener.Open(path, fileMode, fileAccess, fileShare);

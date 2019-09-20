@@ -36,9 +36,18 @@ namespace Lexical.FileSystem.Internal
         /// Create path string separator.
         /// </summary>
         /// <param name="path"></param>
-        public PathEnumerable(string path)
+        /// <param name="ignoreTrailingSlash">If set, trailing slash of <paramref name="path"/> is ignored. for example "/mnt/dir/" registers as "/mnt/dir"</param>
+        public PathEnumerable(string path, bool ignoreTrailingSlash = false)
         {
-            Path = new StringSegment(path ?? throw new ArgumentNullException(nameof(path)));
+            if (path == null) Path = new StringSegment("", 0, 0);
+            else if (ignoreTrailingSlash && path.Length>0 && path[path.Length-1] == '/')
+            {                
+                Path = new StringSegment(path, 0, path.Length-1);
+            }
+            else
+            {
+                Path = new StringSegment(path);
+            }
         }
 
         /// <summary>
@@ -86,9 +95,18 @@ namespace Lexical.FileSystem.Internal
         /// Create path string separator.
         /// </summary>
         /// <param name="path"></param>
-        public PathEnumerator(String path)
+        /// <param name="ignoreTrailingSlash">If set, trailing slash of <paramref name="path"/> is ignored. for example "/mnt/dir/" registers as "/mnt/dir"</param>
+        public PathEnumerator(string path, bool ignoreTrailingSlash = false)
         {
-            Path = new StringSegment(path ?? throw new ArgumentNullException(nameof(path)));
+            if (path == null) Path = new StringSegment("", 0, 0);
+            else if (ignoreTrailingSlash && path.Length > 0 && path[path.Length - 1] == '/')
+            {
+                Path = new StringSegment(path, 0, path.Length - 1);
+            }
+            else
+            {
+                Path = new StringSegment(path);
+            }
             endIx = -1;
             startIx = -1;
         }
