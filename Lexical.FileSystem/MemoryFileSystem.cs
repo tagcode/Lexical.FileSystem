@@ -86,7 +86,7 @@ namespace Lexical.FileSystem
         /// </summary>
         public MemoryFileSystem()
         {
-            root = new Directory(this, null, "", DateTimeOffset.UtcNow);
+            this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
             this.taskFactory = Task.Factory;
             this.processEventsAction = processEvents;
         }
@@ -101,7 +101,7 @@ namespace Lexical.FileSystem
         /// </param>
         public MemoryFileSystem(bool ignoreTrailingSlash)
         {
-            root = new Directory(this, null, "", DateTimeOffset.UtcNow);
+            this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
             this.taskFactory = Task.Factory;
             this.processEventsAction = processEvents;
             this.ignoreTrailingSlash = ignoreTrailingSlash;
@@ -244,17 +244,19 @@ namespace Lexical.FileSystem
                         {
                             string name = enumr.Current;
                             // Create child directory
-                            Directory child = new Directory(this, dir, name, DateTimeOffset.UtcNow);
+                            Directory newDirectory = new Directory(this, dir, name, DateTimeOffset.UtcNow);
                             // Add event about parent modified and child created
                             if (observers != null)
                                 foreach (ObserverHandle observer in observers)
                                 {                                    
-                                    if (observer.Qualify(child.Path)) events.Add(new FileSystemEventCreate(observer, time, child.Path));
+                                    if (observer.Qualify(newDirectory.Path)) events.Add(new FileSystemEventCreate(observer, time, newDirectory.Path));
                                 }
                             // Update time of parent
-                            node.lastModified = time;
+                            dir.lastModified = time;
                             // Add child to parent
-                            ((Directory)node).contents[enumr.Current] = child;
+                            dir.contents[enumr.Current] = newDirectory;
+                            // Recurse into child
+                            node = newDirectory;
                         }
                     }
                     else
@@ -732,7 +734,6 @@ namespace Lexical.FileSystem
         /// <returns>true parent was successfully found</returns>
         bool GetParentAndName(string path, out StringSegment parentPath, out StringSegment name, out Directory parent)
         {
-            Node node = root;
             // Path '/' splitter, enumerates name strings from root towards tail
             PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash);
             // Path's name parts
@@ -745,13 +746,14 @@ namespace Lexical.FileSystem
             if (names.Count == 1) { name = names[0]; parentPath = StringSegment.Empty; }
             else { name = names[names.Count - 1]; parentPath = new StringSegment(path, names[0].Start, names[names.Count - 2].Start + names[names.Count - 2].Length); }
             // Search parent directory
-            for (int i=0; i<names.Count-2; i++)
+            Node node = root;
+            for (int i=0; i<names.Count-1; i++)
             {
                 // Get entry under lock.
                 if (node is Directory dir)
                 {
                     // Failed to find child entry
-                    if (!dir.contents.TryGetValue(enumr.Current, out node)) { parent = null; return false; }
+                    if (!dir.contents.TryGetValue(names[i], out node)) { parent = null; return false; }
                 }
                 else
                 {
@@ -759,7 +761,6 @@ namespace Lexical.FileSystem
                     parent = null; return false;
                 }
             }
-            name = names[names.Count - 1];
             parent = node as Directory;
             return node is Directory;
         }
@@ -998,7 +999,7 @@ namespace Lexical.FileSystem
             protected Node(MemoryFileSystem filesystem, Directory parent, string name, DateTimeOffset lastModified)
             {
                 this.filesystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
-                this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+                this.parent = parent;
                 this.name = name ?? throw new ArgumentNullException(nameof(name));
                 this.lastModified = lastModified;
             }
@@ -1022,6 +1023,12 @@ namespace Lexical.FileSystem
             {
                 this.isDeleted = true;
             }
+
+            /// <summary>
+            /// Print info
+            /// </summary>
+            /// <returns></returns>
+            public override string ToString() => Path;
         }
 
         /// <summary>
