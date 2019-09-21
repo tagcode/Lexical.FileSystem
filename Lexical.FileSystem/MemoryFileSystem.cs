@@ -136,6 +136,8 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public IFileSystemEntry[] Browse(string path)
         {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Read lock
@@ -143,7 +145,7 @@ namespace Lexical.FileSystem
             try
             {
                 // Find entry
-                Node node = GetNode(path);
+                Node node = path == "" ? root : GetNode(path);
                 // Directory
                 if (node is Directory dir_)
                 {
@@ -220,6 +222,10 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public void CreateDirectory(string path)
         {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Special case "" reserved for root.
+            if (path == "") throw new ArgumentException("Please create \"\" named directory with slash separator \"/\".");
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
@@ -293,8 +299,12 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public void Delete(string path, bool recursive = false)
         {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+            // 
+            if (path == "") throw new ArgumentException("Deleting root is not allowed.");
             // Datetime
             DateTimeOffset time = DateTimeOffset.UtcNow;
             // Queue of events
@@ -379,6 +389,11 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public void Move(string oldPath, string newPath)
         {
+            // Assert arguments
+            if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
+            if (newPath == null) throw new ArgumentNullException(nameof(newPath));
+            if (oldPath == "") throw new IOException("Cannot move root \"\".");
+            if (newPath == "") throw new IOException("Cannot move over root \"\".");
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
@@ -395,8 +410,6 @@ namespace Lexical.FileSystem
                 Node oldNode = GetNode(oldPath), newNode = GetNode(newPath);
                 // Not found
                 if (oldNode == null) throw new FileNotFoundException(oldPath);
-                // Assert not root
-                if (oldNode.path == "") throw new IOException("Cannot move root.");
                 // Target file already exists
                 if (newNode != null) throw new InvalidOperationException(newPath + " already exists");
                 // Get parents
@@ -512,6 +525,10 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionFileExists">File already exists</exception>
         public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert argument
+            if (path == "") throw new IOException("Cannot open root directory.");
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
@@ -698,6 +715,7 @@ namespace Lexical.FileSystem
         /// <returns>node or null</returns>
         Node GetNode(string path)
         {
+            //
             Node node = root;
             // Path '/' splitter, enumerates name strings from root towards tail
             PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash);
