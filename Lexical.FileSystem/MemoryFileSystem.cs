@@ -19,7 +19,8 @@ namespace Lexical.FileSystem
     /// <summary>
     /// In-memory filesystem.
     /// 
-    /// MemoryFileSystem is limited to 2GB files.
+    /// Maximum file length is <see cref="int.MaxValue"/>*<see cref="BlockSize"/>.
+    /// The default blocksize is 1024 which allows 2TB - 1024b files.
     /// </summary>
     public class MemoryFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable
     {
@@ -67,11 +68,28 @@ namespace Lexical.FileSystem
         public virtual bool CanCreateFile => true;
 
         /// <summary>
+        /// Block size
+        /// </summary>
+        public readonly long BlockSize;
+
+        /// <summary>
         /// Create new in-memory filesystem.
         /// </summary>
         public MemoryFileSystem() : base()
         {
             this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
+            this.BlockSize = 1024L;
+        }
+
+        /// <summary>
+        /// Create new in-memory filesystem with <paramref name="blockSize"/> block size.
+        /// </summary>
+        /// <param name="blockSize"></param>
+        public MemoryFileSystem(long blockSize) : base()
+        {
+            this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
+            if (blockSize < 16L) throw new ArgumentOutOfRangeException(nameof(blockSize));
+            this.BlockSize = blockSize;
         }
 
         /// <summary>
@@ -1081,7 +1099,7 @@ namespace Lexical.FileSystem
             /// <param name="lastModified"></param>
             public File(MemoryFileSystem filesystem, Directory parent, string name, DateTimeOffset lastModified) : base(filesystem, parent, name, lastModified)
             {
-                memoryFile = new MemoryFile();
+                memoryFile = new MemoryFile(filesystem.BlockSize);
                 memoryFile.Subscribe(this);
             }
 
@@ -1165,24 +1183,24 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Memory file where multiple streams can be opened.
     /// 
-    /// MemoryFile is limited to 2GB files.
+    /// Maximum size is <see cref="int.MaxValue"/>*<see cref="BlockSize"/>.
     /// </summary>
     public class MemoryFile : IObservable<MemoryFile.ModifiedEvent>, IDisposable
     {
         /// <summary>
         /// Data
         /// </summary>
-        protected internal List<byte> data = new List<byte>();
+        protected internal List<byte[]> blocks = new List<byte[]>();
 
         /// <summary>
-        /// Lock for modifying <see cref="data"/>.
+        /// Lock for modifying <see cref="blocks"/>.
         /// </summary>
-        protected ReaderWriterLock dataLock = new ReaderWriterLock();
+        protected ReaderWriterLock m_lock = new ReaderWriterLock();
 
         /// <summary>
-        /// Critical section lock for acquiring read/write permission, and modifying <see cref="streams"/>.
+        /// Critical section lock for opening streams, checks read/write permission.
         /// </summary>
-        protected object m_lock = new object();
+        protected object m_stream_lock = new object();
 
         /// <summary>
         /// Observers
@@ -1210,15 +1228,14 @@ namespace Lexical.FileSystem
         protected bool isDisposed;
 
         /// <summary>
+        /// Total length.
+        /// </summary>
+        protected internal long length;
+
+        /// <summary>
         /// File length
         /// </summary>
-        public long Length
-        {
-            get
-            {
-                lock (dataLock) return data.Count;
-            }
-        }
+        public long Length => length;
 
         /// <summary>
         /// Datetime when file was last modified
@@ -1226,10 +1243,26 @@ namespace Lexical.FileSystem
         public DateTimeOffset LastModified { get; set; } = DateTimeOffset.UtcNow;
 
         /// <summary>
+        /// Block size
+        /// </summary>
+        public readonly long BlockSize;
+
+        /// <summary>
         /// Create memory based file.
         /// </summary>
-        public MemoryFile() 
+        public MemoryFile()
         {
+            this.BlockSize = 1024;
+        }
+
+        /// <summary>
+        /// Create memory based file.
+        /// </summary>
+        /// <param name="blockSize"></param>
+        public MemoryFile(long blockSize)
+        {
+            if (blockSize < 16) throw new ArgumentOutOfRangeException(nameof(blockSize));
+            this.BlockSize = blockSize;
         }
 
         /// <summary>
@@ -1310,9 +1343,6 @@ namespace Lexical.FileSystem
                     observers.Remove(observer);
                 }
             }
-
-            // Dispose lock.
-            //m_lock.Dispose();
         }
 
         /// <summary>
@@ -1333,7 +1363,7 @@ namespace Lexical.FileSystem
             // Update the time event was notified
             lastChangeEvent = now;
             // Send event.
-            foreach (IObserver<ModifiedEvent> observer in observers)
+            foreach (IObserver<ModifiedEvent> observer in _observers)
             {
                 // Add event
                 observer.OnNext(new ModifiedEvent(this, now));
@@ -1350,7 +1380,7 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         public Stream Open(FileAccess fileAccess, FileShare fileShare)
         {            
-            lock(m_lock)
+            lock(m_stream_lock)
             {
                 bool readAllowed = true, writeAllowed = true;
                 foreach (var s in streams)
@@ -1364,7 +1394,7 @@ namespace Lexical.FileSystem
                 if (fileAccess.HasFlag(FileAccess.Write) && !writeAllowed) throw new FileSystemExceptionNoWriteAccess();
 
                 // Create stream
-                Stream stream = new Stream(this, data, dataLock, fileAccess, fileShare);
+                Stream stream = new Stream(this, blocks, m_lock, fileAccess, fileShare);
                 streams.Add(stream);
                 return stream;
             }
@@ -1383,12 +1413,12 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Bytes
             /// </summary>
-            protected List<byte> data;
+            protected List<byte[]> blocks;
 
             /// <summary>
-            /// Lock object for modifying <see cref="data"/>.
+            /// Lock object for modifying <see cref="blocks"/>.
             /// </summary>
-            protected ReaderWriterLock dataLock;
+            protected ReaderWriterLock m_lock;
 
             /// <summary>
             /// File access
@@ -1432,13 +1462,7 @@ namespace Lexical.FileSystem
             public override bool CanWrite => canWrite;
 
             /// <summary>File length</summary>
-            public override long Length
-            {
-                get
-                {
-                    lock (dataLock) return data.Count;
-                }
-            }
+            public override long Length => parent.Length;
 
             /// <summary>
             /// Position of the stream.
@@ -1448,12 +1472,8 @@ namespace Lexical.FileSystem
                 get => position;
                 set
                 {
-                    if (value < 0) throw new IOException("position");
-                    lock (dataLock)
-                    {
-                        if (value > Length) throw new IOException("position");
-                        position = value;
-                    }
+                    if (value < 0) throw new ArgumentOutOfRangeException("position");
+                    position = value;
                 }
             }
 
@@ -1461,15 +1481,15 @@ namespace Lexical.FileSystem
             /// Create stream.
             /// </summary>
             /// <param name="parent"></param>
-            /// <param name="data"></param>
+            /// <param name="blocks"></param>
             /// <param name="m_lock"></param>
             /// <param name="fileAccess"></param>
             /// <param name="fileShare"></param>
-            public Stream(MemoryFile parent, List<byte> data, ReaderWriterLock m_lock, FileAccess fileAccess, FileShare fileShare)
+            public Stream(MemoryFile parent, List<byte[]> blocks, ReaderWriterLock m_lock, FileAccess fileAccess, FileShare fileShare)
             {
                 this.parent = parent;
-                this.data = data;
-                this.dataLock = m_lock;
+                this.blocks = blocks;
+                this.m_lock = m_lock;
                 this.FileAccess = fileAccess;
                 this.FileShare = fileShare;
                 this.canRead = (FileAccess & FileAccess.Read) == FileAccess.Read;
@@ -1503,17 +1523,35 @@ namespace Lexical.FileSystem
                 if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
 
                 // Read
-                dataLock.AcquireReaderLock(int.MaxValue);
+                m_lock.AcquireReaderLock(int.MaxValue);
                 try {
+                    // Position for this thread.
+                    long _position = position;
                     // Assert arguments
-                    if (position < 0L || position > data.Count) throw new ArgumentOutOfRangeException(nameof(Position));
-                    int c = Math.Min(/*bytes available*/data.Count-(int)position, /*requested count*/count);
-                    data.CopyTo((int)position, buffer, offset, c);
-                    position += c;
-                    return c;
+                    if (_position < 0L || _position > parent.length) throw new ArgumentOutOfRangeException(nameof(Position));
+                    // Number of bytes to read
+                    int bytesToRead = (int) Math.Min(/*bytes available*/parent.length- _position, /*requested count*/count);
+                    // Bytes to go
+                    count = bytesToRead;
+                    // Read until c is 0
+                    while (count>0)
+                    {
+                        int blockIndex = (int) (_position / parent.BlockSize);
+                        int blockPosition = (int) (_position % parent.BlockSize);
+                        byte[] block = blocks[blockIndex];
+                        int bytesToReadFromBlock = (int) Math.Min(/*Bytes remaining in block*/parent.BlockSize - blockPosition, /*bytes to read*/count);
+                        Array.Copy(block, blockPosition, buffer, offset, bytesToReadFromBlock);
+                        offset += bytesToReadFromBlock;
+                        count -= bytesToReadFromBlock;
+                        _position += bytesToReadFromBlock;
+                    }
+                    // Set stream position
+                    position = _position;
+                    // How many bytes were read
+                    return bytesToRead;
                 } finally
                 {
-                    dataLock.ReleaseReaderLock();
+                    m_lock.ReleaseReaderLock();
                 }
             }
 
@@ -1530,15 +1568,24 @@ namespace Lexical.FileSystem
                 if (!canRead) throw new FileSystemExceptionNoReadAccess();
 
                 // Read
-                dataLock.AcquireReaderLock(int.MaxValue);
+                m_lock.AcquireReaderLock(int.MaxValue);
                 try
                 {
-                    if (position < 0 || position >= data.Count) return -1;
-                    return data[(int)(position++)];
+                    // Position for this thread.
+                    long _position = position;
+                    // Asserts
+                    if (position < 0 || position >= parent.Length) return -1;
+                    //
+                    int blockIndex = (int)(_position / parent.BlockSize);
+                    int blockPosition = (int)(_position % parent.BlockSize);
+                    byte[] block = blocks[blockIndex];
+                    // Update position
+                    position = _position + 1L;
+                    return block[blockPosition];
                 }
                 finally
                 {
-                    dataLock.ReleaseReaderLock();
+                    m_lock.ReleaseReaderLock();
                 }
             }
 
@@ -1555,17 +1602,17 @@ namespace Lexical.FileSystem
                 // Assert not disposed
                 if (IsDisposed) throw new ObjectDisposedException(nameof(MemoryFile));
 
-                dataLock.AcquireReaderLock(int.MaxValue);
+                m_lock.AcquireReaderLock(int.MaxValue);
                 try
                 {
                     if (origin == SeekOrigin.Begin) return position = offset;
                     if (origin == SeekOrigin.Current) return position += offset;
-                    if (origin == SeekOrigin.End) return (position = data.Count - offset);
+                    if (origin == SeekOrigin.End) return (position = blocks.Count - offset);
                     return 0L;
                 }
                 finally
                 {
-                    dataLock.ReleaseReaderLock();
+                    m_lock.ReleaseReaderLock();
                 }
             }
 
@@ -1585,26 +1632,35 @@ namespace Lexical.FileSystem
                 if (newLength < 0 || newLength>Int32.MaxValue) throw new ArgumentOutOfRangeException(nameof(newLength));
 
                 // Write
-                dataLock.AcquireWriterLock(int.MaxValue);
+                m_lock.AcquireWriterLock(int.MaxValue);
                 try
                 {
-                    // new length
-                    int c = (int)newLength;
-                    // Shorten
-                    if (data.Count > c)
+                    // Nothing to do
+                    if (newLength == parent.length) return;
+                    // Clear
+                    if (newLength == 0L)
                     {
-                        data.RemoveRange(c, data.Count - c);
-                        if (position > newLength) position = newLength;
-                    } else 
-                    // Grow
-                    if (data.Count < c)
-                    {
-                        while (data.Count < c) data.Add(0);
+                        blocks.Clear();
+                        parent.length = 0L;
+                        return;
                     }
+                    // Count
+                    int newBlockCount = (int)( (newLength + parent.BlockSize - 1) / parent.BlockSize );
+                    // Shorten
+                    if (newBlockCount<blocks.Count)
+                    {
+                        while (blocks.Count > newBlockCount) blocks.RemoveAt(blocks.Count - 1);
+                    }
+                    else if (newBlockCount>blocks.Count)
+                    {
+                        while (blocks.Count < newBlockCount) blocks.Add(new byte[parent.BlockSize]);
+                    }
+                    // Set new length
+                    parent.length = newLength;
                 }
                 finally
                 {
-                    dataLock.ReleaseWriterLock();
+                    m_lock.ReleaseWriterLock();
                 }
             }
 
@@ -1632,43 +1688,59 @@ namespace Lexical.FileSystem
                 if (offset+count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(count));
 
                 // Write
-                dataLock.AcquireWriterLock(int.MaxValue);
+                m_lock.AcquireWriterLock(int.MaxValue);
                 try
                 {
                     // Assert
-                    if (position < 0L || position > data.Count) throw new ArgumentOutOfRangeException(nameof(Position));
+                    if (position < 0L || position > parent.length) throw new ArgumentOutOfRangeException(nameof(Position));
 
-                    // Position (int)
-                    int p = (int)position;
+                    // Position of this stream
+                    long _position = position;
 
-                    // Overwrite
-                    if (p < data.Count)
+                    // Overwrite to existing blocks
+                    long maxLength = blocks.Count * parent.BlockSize;
+                    if (_position < maxLength)
                     {
                         // Bytes to overwrite
-                        int c = Math.Min(/*Bytes until end*/data.Count - p, /*Writes that need writing*/count);
+                        long bytesToOverwrite = Math.Min(/*Bytes until end*/maxLength - _position, /*Writes that need writing*/count);
                         // Write
-                        for (int i = 0; i < c; i++) data[p++] = buffer[offset++];
-                        count -= c;
-                        offset += c;
+                        while (bytesToOverwrite>0L)
+                        {
+                            int blockIndex = (int)(_position / parent.BlockSize);
+                            int blockPosition = (int)(_position % parent.BlockSize);
+                            int bytesToWriteToThisBlock = (int)Math.Min(/*bytes remaining in block*/parent.BlockSize-blockPosition, /*bytes to write*/bytesToOverwrite);
+                            byte[] block = blocks[blockIndex];
+                            Array.Copy(buffer, offset, block, blockPosition, bytesToWriteToThisBlock);
+                            offset += bytesToWriteToThisBlock;
+                            _position += bytesToWriteToThisBlock;
+                            bytesToOverwrite -= bytesToWriteToThisBlock;
+                            count -= bytesToWriteToThisBlock;
+                            if (parent.length < _position) parent.length = _position;
+                        }
                     }
 
-                    // Append
-                    if (p>=data.Count)
+                    // Append to new blocks
+                    if (_position>=parent.length)
                     {
-                        // Append byte
-                        while (count-- > 0)
+                        while (count > 0)
                         {
-                            data.Add(buffer[offset++]);
-                            p++;
-                        }                        
+                            byte[] block = new byte[parent.BlockSize];
+                            blocks.Add(block);
+                            int bytesToWriteToThisBlock = (int)Math.Min(/*bytes remaining in block*/block.Length, /*bytes to write*/count);
+                            Array.Copy(buffer, offset, block, 0, bytesToWriteToThisBlock);
+                            offset += bytesToWriteToThisBlock;
+                            _position += bytesToWriteToThisBlock;
+                            count -= bytesToWriteToThisBlock;
+                            if (parent.length < _position) parent.length = _position;
+                        }
                     }
 
                     // Update position
-                    position = p;
+                    position = _position;
                 }
                 finally
                 {
-                    dataLock.ReleaseWriterLock();
+                    m_lock.ReleaseWriterLock();
                 }
             }
 
@@ -1686,27 +1758,44 @@ namespace Lexical.FileSystem
                 if (!canWrite) throw new FileSystemExceptionNoWriteAccess();
 
                 // Write
-                dataLock.AcquireWriterLock(int.MaxValue);
+                m_lock.AcquireWriterLock(int.MaxValue);
                 try
                 {
                     // Assert
-                    if (position < 0L || position > data.Count) throw new ArgumentOutOfRangeException(nameof(Position));
-                    // Position (int)
-                    int p = (int)position;
-                    // Overwrite
-                    if (position < data.Count) data[p++] = value;
-                    // Append
-                    else if (position == data.Count) 
+                    if (position < 0L || position >= parent.length) throw new ArgumentOutOfRangeException(nameof(Position));
+                    // Position of this thread
+                    long _position = position;
+                    // Write in existing block
+                    long maxLength = blocks.Count * parent.BlockSize;
+                    if (_position<maxLength)
                     {
-                        data.Add(value);
-                        p++;
+                        int blockIndex = (int)(_position / parent.BlockSize);
+                        int blockPosition = (int)(_position % parent.BlockSize);
+                        byte[] block = blocks[blockIndex];
+                        block[blockPosition] = value;
+                        _position++;
+                        position = _position;
+                        if (parent.length < _position) parent.length = _position;
                     }
-                    // Update position
-                    position = p;
+                    else
+                    // Append block
+                    {
+                        byte[] block = null;
+                        while (_position < blocks.Count * parent.BlockSize)
+                        {
+                            block = new byte[parent.BlockSize];
+                            blocks.Add(block);
+                        }
+                        int blockPosition = (int)(_position % parent.BlockSize);                        
+                        block[blockPosition] = value;
+                        _position++;
+                        position = _position;
+                        if (parent.length < _position) parent.length = _position;
+                    }
                 }
                 finally
                 {
-                    dataLock.ReleaseWriterLock();
+                    m_lock.ReleaseWriterLock();
                 }
             }
 
@@ -1719,7 +1808,7 @@ namespace Lexical.FileSystem
                 // Start dispose
                 Interlocked.CompareExchange(ref dispose, 1L, 0L);
                 // Remove self from parent
-                lock(parent.m_lock) parent.streams.Remove(this);                
+                lock(parent.m_stream_lock) parent.streams.Remove(this);                
                 // Dispose stream
                 base.Dispose(disposing);
                 // End dispose
