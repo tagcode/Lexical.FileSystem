@@ -19,7 +19,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemDelete"/></item>
     ///     <item><see cref="IFileSystemMove"/></item>
     ///     <item><see cref="IFileSystemObserve"/></item>
-    ///     <item><see cref="IFileSystemEventDispatcher"/></item>
+    ///     <item><see cref="IFileSystemEventDispatch"/></item>
     ///     <item><see cref="IFileSystemDisposable"/></item>
     /// </list>
     /// </summary>

@@ -83,7 +83,7 @@ namespace Lexical.FileSystem
         /// <returns>memory filesystem</returns>
         public MemoryFileSystem SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemEventDispatcher)this).SetEventDispatcher(eventHandler);
+            ((IFileSystemEventDispatch)this).SetEventDispatcher(eventHandler);
             return this;
         }
 

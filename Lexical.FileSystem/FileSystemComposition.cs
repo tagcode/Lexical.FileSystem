@@ -18,7 +18,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.
     /// </summary>
-    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemEventDispatcher
+    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemEventDispatch
     {
         /// <summary>
         /// File system components.
@@ -100,7 +100,7 @@ namespace Lexical.FileSystem
         /// <returns>memory filesystem</returns>
         public FileSystemComposition SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemEventDispatcher)this).SetEventDispatcher(eventHandler);
+            ((IFileSystemEventDispatch)this).SetEventDispatcher(eventHandler);
             return this;
         }
 

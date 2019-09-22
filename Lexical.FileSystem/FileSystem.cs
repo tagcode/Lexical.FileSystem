@@ -124,7 +124,7 @@ namespace Lexical.FileSystem
         /// <returns>memory filesystem</returns>
         public FileSystem SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemEventDispatcher)this).SetEventDispatcher(eventHandler);
+            ((IFileSystemEventDispatch)this).SetEventDispatcher(eventHandler);
             return this;
         }
 
