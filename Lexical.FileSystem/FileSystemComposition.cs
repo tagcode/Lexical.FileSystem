@@ -11,13 +11,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security;
+using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.
     /// </summary>
-    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory
+    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserveHandler
     {
         /// <summary>
         /// File system components.
@@ -78,6 +79,7 @@ namespace Lexical.FileSystem
                 CanBrowse |= fs.CanBrowse();
                 CanGetEntry |= fs.CanGetEntry();
                 CanObserve |= fs.CanObserve();
+                CanSetEventHandler |= fs.CanSetEventHandler();
                 CanOpen |= fs.CanOpen();
                 CanRead |= fs.CanRead();
                 CanWrite |= fs.CanWrite();
@@ -86,6 +88,20 @@ namespace Lexical.FileSystem
                 CanMove |= fs.CanMove();
                 CanCreateDirectory |= fs.CanCreateDirectory();
             }
+        }
+
+        /// <summary>
+        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
+        /// 
+        /// If <paramref name="eventHandler"/> is null, then events are processed in the threads
+        /// that make modifications to filesystem.
+        /// </summary>
+        /// <param name="eventHandler">(optional) factory that handles observer events</param>
+        /// <returns>memory filesystem</returns>
+        public FileSystemComposition SetEventHandler(TaskFactory eventHandler)
+        {
+            ((IFileSystemObserveHandler)this).SetEventHandler(eventHandler);
+            return this;
         }
 
         /// <summary>
@@ -374,7 +390,7 @@ namespace Lexical.FileSystem
                 => Observer.OnError(error);
 
             public void OnNext(IFileSystemEvent @event)
-                => Observer.OnNext(FileSystemEventDecoration.DecorateObserver(@event, this));
+                => ((FileSystemBase)this.FileSystem).SendEvent(FileSystemEventDecoration.DecorateObserver(@event, this));
 
             public void Dispose()
             {

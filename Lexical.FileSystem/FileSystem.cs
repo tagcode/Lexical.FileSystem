@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
@@ -112,6 +113,19 @@ namespace Lexical.FileSystem
 
             if (isWindows) this.Features |= FileSystemFeatures.CaseInsensitive;
             if (isLinux || isOsx) this.Features |= FileSystemFeatures.CaseSensitive;
+        }
+
+        /// <summary>
+        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
+        /// 
+        /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
+        /// </summary>
+        /// <param name="eventHandler">(optional) factory that handles observer events</param>
+        /// <returns>memory filesystem</returns>
+        public FileSystem SetEventHandler(TaskFactory eventHandler)
+        {
+            ((IFileSystemObserveHandler)this).SetEventHandler(eventHandler);
+            return this;
         }
 
         /// <summary>
@@ -549,10 +563,10 @@ namespace Lexical.FileSystem
                 IFileSystem _fileSystem = FileSystem;
                 if (_fileSystem == null) return;
 
+                // Create event
+                IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath);
                 // Forward error as event object.
-                Observer.OnNext(new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath));
-                // Forward exception
-                //observer.OnError(e.GetException());
+                ((FileSystemBase)this.FileSystem).SendEvent(@event);
             }
 
             /// <summary>
@@ -575,10 +589,11 @@ namespace Lexical.FileSystem
 
                 // Event type
                 WatcherChangeTypes type = e.ChangeType;
+                StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
                 // HasFlag has been optimized since .Net core 2.1 and does not box any more
-                if (type.HasFlag(WatcherChangeTypes.Created) && path != null) _observer.OnNext(new FileSystemEventCreate(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null) _observer.OnNext(new FileSystemEventChange(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null) _observer.OnNext(new FileSystemEventDelete(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null) events.Add(new FileSystemEventCreate(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null) events.Add(new FileSystemEventChange(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null) events.Add(new FileSystemEventDelete(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re)
                 {
                     string oldPath = ConvertPath(re.OldFullPath);
@@ -586,9 +601,12 @@ namespace Lexical.FileSystem
                     if (oldPath != null || path != null)
                     {
                         // Send event
-                        _observer.OnNext(new FileSystemEventRename(this, time, oldPath, path));
+                        events.Add(new FileSystemEventRename(this, time, oldPath, path));
                     }
                 }
+
+                // Dispatch events.
+                ((FileSystemBase)this.FileSystem).SendEvents(ref events);
             }
 
             /// <summary>
@@ -739,9 +757,9 @@ namespace Lexical.FileSystem
                 if (_fileSystem == null) return;
 
                 // Forward error as event object.
-                Observer.OnNext(new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), null));
-                // Forward exception
-                //observer.OnError(e.GetException());
+                IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), null);
+                // Forward error as event object.
+                ((FileSystemBase)this.FileSystem).SendEvent(@event);
             }
 
             /// <summary>
@@ -765,9 +783,10 @@ namespace Lexical.FileSystem
                 // Event type
                 WatcherChangeTypes type = e.ChangeType;
                 // HasFlag has been optimized since .Net core 2.1
-                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))) _observer.OnNext(new FileSystemEventCreate(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) _observer.OnNext(new FileSystemEventChange(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) _observer.OnNext(new FileSystemEventDelete(this, time, path));
+                StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))) events.Add(new FileSystemEventCreate(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) events.Add(new FileSystemEventChange(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) events.Add(new FileSystemEventDelete(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re) 
                 {
                     string oldPath = ConvertPath(re.OldFullPath);
@@ -775,9 +794,11 @@ namespace Lexical.FileSystem
                     if ((oldPath != null && (Pattern.IsMatch(oldPath)||Pattern.IsMatch("/"+oldPath))) || (path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))))
                     {
                         // Send event
-                        _observer.OnNext(new FileSystemEventRename(this, time, oldPath, path));
+                        events.Add(new FileSystemEventRename(this, time, oldPath, path));
                     }
                 }
+                // Dispatch events.
+                ((FileSystemBase)this.FileSystem).SendEvents(ref events);
             }
 
             /// <summary>

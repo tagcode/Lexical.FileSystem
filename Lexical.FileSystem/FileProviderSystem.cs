@@ -14,6 +14,7 @@ using System.IO;
 using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
@@ -69,6 +70,19 @@ namespace Lexical.FileSystem
             this.CanBrowse = this.CanGetEntry = canBrowse;
             this.CanObserve = canObserve;
             this.CanOpen = this.CanRead = canOpen;
+        }
+
+        /// <summary>
+        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
+        /// 
+        /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
+        /// </summary>
+        /// <param name="eventHandler">(optional) factory that handles observer events</param>
+        /// <returns>memory filesystem</returns>
+        public FileProviderSystem SetEventHandler(TaskFactory eventHandler)
+        {
+            ((IFileSystemObserveHandler)this).SetEventHandler(eventHandler);
+            return this;
         }
 
         /// <summary>
@@ -333,7 +347,7 @@ namespace Lexical.FileSystem
                 previousEntry = currentEntry;
 
                 // Send event
-                if (_event != null) _observer.OnNext(_event);
+                if (_event != null) ((FileSystemBase)this.FileSystem).SendEvent(_event);
 
                 // Start watching again
                 if (!IsDisposing) this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
@@ -443,8 +457,11 @@ namespace Lexical.FileSystem
                 DateTimeOffset time = DateTimeOffset.UtcNow;
                 Dictionary<string, IFileSystemEntry> newSnapshot = ReadSnapshot();
 
+                // List of events
+                StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+
                 // Find adds
-                foreach(KeyValuePair<string, IFileSystemEntry> newEntry in newSnapshot)
+                foreach (KeyValuePair<string, IFileSystemEntry> newEntry in newSnapshot)
                 {
                     string path = newEntry.Key;
                     // Find matching previous entry
@@ -453,24 +470,26 @@ namespace Lexical.FileSystem
                     {
                         // Send change event
                         if (!FileSystemEntryComparer.Instance.Equals(newEntry.Value, prevEntry))
-                            _observer.OnNext(new FileSystemEventChange(this, time, path));
+                            events.Add(new FileSystemEventChange(this, time, path));
                     }
                     // Send create event
-                    else _observer.OnNext(new FileSystemEventCreate(this, time, path));
+                    else events.Add(new FileSystemEventCreate(this, time, path));
                 }
                 // Find Deletes
                 foreach (KeyValuePair<string, IFileSystemEntry> oldEntry in previousSnapshot)
                 {
                     string path = oldEntry.Key;
-                    if (!newSnapshot.ContainsKey(path)) _observer.OnNext(new FileSystemEventDelete(this, time, path));
+                    if (!newSnapshot.ContainsKey(path)) events.Add(new FileSystemEventDelete(this, time, path));
                 }
 
                 // Replace entires
                 previousSnapshot = newSnapshot;
 
+                // Dispatch events
+                if (events.Count > 0) ((FileSystemBase)this.FileSystem).SendEvents(ref events);
+
                 // Start watching again
                 if (!IsDisposing) this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
-
             }
 
             /// <summary>

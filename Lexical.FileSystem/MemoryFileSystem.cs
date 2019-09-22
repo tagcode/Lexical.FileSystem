@@ -43,12 +43,6 @@ namespace Lexical.FileSystem
         /// </summary>
         ObserverHandle[] Observers => observers.Array;
 
-        /// <summary>
-        /// Task-factory that is used for sending events.
-        /// If factory is set to null, then events are processed in the current thread.
-        /// </summary>
-        TaskFactory taskFactory;
-
         /// <inheritdoc/>
         public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive;
         /// <inheritdoc/>
@@ -71,30 +65,25 @@ namespace Lexical.FileSystem
         public virtual bool CanWrite => true;
         /// <inheritdoc/>
         public virtual bool CanCreateFile => true;
-        /// <summary>Delegate that processes events</summary>
-        Action<object> processEventsAction;
 
         /// <summary>
         /// Create new in-memory filesystem.
         /// </summary>
-        public MemoryFileSystem()
+        public MemoryFileSystem() : base()
         {
             this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
-            this.taskFactory = Task.Factory;
-            this.processEventsAction = processEvents;
         }
 
         /// <summary>
-        /// Set <paramref name="taskFactory"/> to be used for handling observer events.
+        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
         /// 
-        /// If <paramref name="taskFactory"/> is null, then events are processed in the threads
-        /// that make modifications to memory filesytem.
+        /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
         /// </summary>
-        /// <param name="taskFactory">(optional) factory that handles observer events</param>
+        /// <param name="eventHandler">(optional) factory that handles observer events</param>
         /// <returns>memory filesystem</returns>
-        public MemoryFileSystem SetTaskFactory(TaskFactory taskFactory)
+        public MemoryFileSystem SetEventHandler(TaskFactory eventHandler)
         {
-            this.taskFactory = taskFactory;
+            ((IFileSystemObserveHandler)this).SetEventHandler(eventHandler);
             return this;
         }
 
@@ -820,83 +809,6 @@ namespace Lexical.FileSystem
             return cursor is Directory;
         }
 
-        /// <summary>
-        /// Send <paramref name="events"/> to observers with <see cref="taskFactory"/>.
-        /// If <see cref="taskFactory"/> is null, then sends events in the running thread.
-        /// </summary>
-        /// <param name="events"></param>
-        void SendEvents(ref StructList12<IFileSystemEvent> events)
-        {
-            // Don't send events anymore
-            if (IsDisposing) return;
-            // Nothing to do
-            if (events.Count == 0) return;
-            // Get taskfactory
-            TaskFactory _taskFactory = taskFactory;
-            // Send events in this thread
-            if (_taskFactory == null)
-            {
-                // Errors
-                StructList4<Exception> errors = new StructList4<Exception>();
-                foreach (IFileSystemEvent e in events)
-                {
-                    try
-                    {
-                        e.Observer.Observer.OnNext(e);
-                    }
-                    catch (Exception error)
-                    {
-                        // Bumerang error
-                        try
-                        {
-                            e.Observer.Observer.OnError(error);
-                        }
-                        catch (Exception error2)
-                        {
-                            // 
-                            errors.Add(error2);
-                        }
-                    }
-                }
-                if (errors.Count > 0) throw new AggregateException(errors.ToArray());
-            }
-            else
-            // Create task that processes events.
-            {
-                _taskFactory.StartNew(processEventsAction, events.ToArray());
-            }
-        }
-
-        /// <summary>
-        /// Forward events to observers in the running thread.
-        /// </summary>
-        /// <param name="events">IFileSystemEvent[]</param>
-        static void processEvents(object events)
-        {
-            // Errors
-            StructList4<Exception> errors = new StructList4<Exception>();
-            foreach (IFileSystemEvent e in (IFileSystemEvent[])events)
-            {
-                try
-                {
-                    e.Observer.Observer.OnNext(e);
-                }
-                catch (Exception error)
-                {
-                    // Bumerang error
-                    try
-                    {
-                        e.Observer.Observer.OnError(error);
-                    }
-                    catch (Exception error2)
-                    {
-                        // 
-                        errors.Add(error2);
-                    }
-                }
-            }
-            if (errors.Count > 0) throw new AggregateException(errors.ToArray());
-        }
 
         /// <summary>
         /// Handle dispose
