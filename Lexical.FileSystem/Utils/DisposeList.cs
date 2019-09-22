@@ -19,24 +19,24 @@ namespace Lexical.FileSystem.Utils
     /// behaviour into <see cref="InnerDispose(ref StructList4{Exception})"/>.
     /// InnerDispose will be called only once. 
     /// </summary>
-    public class DisposeList : IDisposeList
+    public class DisposeList : IDisposeList, IBelatableDispose
     {
         /// <summary>
-        /// Lock for modifying dispose list.
+        /// Lock for modifying <see cref="DisposeList"/>.
         /// </summary>
         protected object m_disposelist_lock = new object();
 
         /// <summary>
         /// List of disposables that has been attached with this object.
         /// </summary>
-        protected StructList4<IDisposable> disposeList = new StructList4<IDisposable>();
+        protected StructList2<IDisposable> disposeList = new StructList2<IDisposable>();
 
         /// <summary>
         /// State that is set when disposing starts and finalizes.
         /// Is changed with Interlocked. 
         ///  0 - not disposed
-        ///  1 - dispose started but is belated
-        ///  2 - disposing
+        ///  1 - dispose called, but not started
+        ///  2 - disposing started
         ///  3 - disposed
         ///  
         /// When disposing starts, new objects cannot be added to the object, instead they are disposed right at away.
@@ -46,7 +46,7 @@ namespace Lexical.FileSystem.Utils
         /// <summary>
         /// Has disposing has start requested but is post-poned for now.
         /// </summary>
-        public bool IsDisposeBelated => Interlocked.Read(ref disposing) == 1L;
+        public bool IsDisposeCalled => Interlocked.Read(ref disposing) == 1L;
 
         /// <summary>
         /// Has disposing has started or completed.
@@ -59,13 +59,98 @@ namespace Lexical.FileSystem.Utils
         public bool IsDisposed => Interlocked.Read(ref disposing) == 3L;
 
         /// <summary>
+        /// Number of belate handles
+        /// </summary>
+        protected int belateHandleCount;
+
+        /// <summary>
+        /// Delay dispose until belate handle is disposed.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ObjectDisposedException">Thrown if object has already been disposed.</exception>
+        public IDisposable Belate()
+        {
+            // Create handle
+            BelateHandle handle = new BelateHandle(this);
+            lock (m_disposelist_lock)
+            {
+                // Dispose has already been started
+                if (IsDisposing) throw new ObjectDisposedException(GetType().FullName);
+                // Add counter
+                belateHandleCount++;
+            }
+            // Return handle
+            return handle;
+        }
+
+        /// <summary>
+        /// A handle that postpones dispose of the <see cref="DisposeList"/> object.
+        /// </summary>
+        class BelateHandle : IDisposable
+        {
+            DisposeList parent;
+
+            public BelateHandle(DisposeList parent)
+            {
+                this.parent = parent;
+            }
+
+            public void Dispose()
+            {
+                // Only one thread can dispose
+                DisposeList _parent = Interlocked.CompareExchange(ref parent, null, parent);
+                // Handle has already been disposed
+                if (_parent == null) return;
+                // Should dispose be started
+                bool processDispose = false;
+                // Decrement handle count
+                lock (_parent.m_disposelist_lock)
+                {
+                    int newCount = --_parent.belateHandleCount;
+                    // Is not the handle.
+                    if (newCount > 0) return;
+                    // Send state from 1 to 2
+                    processDispose = Interlocked.CompareExchange(ref _parent.disposing, 2L, 1L) == 1L;
+                }
+                // Start dispose
+                if (processDispose) _parent.ProcessDispose();
+            }
+        }
+
+        /// <summary>
         /// Dispose all attached diposables and call <see cref="InnerDispose(ref StructList4{Exception})"/>.
         /// </summary>
         /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
         public virtual void Dispose()
         {
-            // Is disposing
-            Interlocked.CompareExchange(ref disposing, 2L, 0L);
+            // Set object state to have dispose started
+            Interlocked.CompareExchange(ref disposing, 1L, 0L);
+
+            // Should dispose be started
+            bool processDispose = false;
+
+            lock (m_disposelist_lock)
+            {
+                // Post-pone if there are belate handles
+                if (belateHandleCount > 0) return;
+                // Set state to dispose called
+                processDispose = Interlocked.CompareExchange(ref disposing, 2L, 1L) == 1L;
+            }
+
+            // Start dispose
+            if (processDispose) ProcessDispose();
+        }
+
+        /// <summary>
+        /// Dispose all attached diposables and call <see cref="InnerDispose(ref StructList4{Exception})"/>.
+        /// </summary>
+        /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
+        protected virtual void ProcessDispose()
+        {
+            // Dispose called
+            Interlocked.CompareExchange(ref disposing, 1L, 0L);
+            // Dispose started, only one thread processes the dispose.
+            if (Interlocked.CompareExchange(ref disposing, 2L, 1L) != 2L) return;
 
             // Extract snapshot, clear array
             IDisposable[] toDispose = null;
@@ -116,24 +201,59 @@ namespace Lexical.FileSystem.Utils
         {
             // Argument error
             if (disposableObject == null) throw new ArgumentNullException(nameof(disposableObject));
-
             // Cast to IDisposable
             IDisposable disposable = disposableObject as IDisposable;
-
             // Was not disposable, was not added to list
-            if (disposable == null) return false;
-            
+            if (disposable == null) return false;            
             // Parent is disposed/ing
             if (IsDisposing) { disposable.Dispose(); return false; }
-
             // Add to list
             lock (m_disposelist_lock) disposeList.Add(disposable);
-
             // Check parent again
             if (IsDisposing) { lock (m_disposelist_lock) disposeList.Remove(disposable); disposable.Dispose(); return false; }
-
             // OK
             return true;
+        }
+
+        /// <summary>
+        /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
+        /// 
+        /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
+        /// </summary>
+        /// <param name="disposeAction"></param>
+        /// <returns>true if was added to list, false if was disposed right away</returns>
+        protected bool AddDisposeAction(Action disposeAction)
+        {
+            // Argument error
+            if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));
+            // Parent is disposed/ing
+            if (IsDisposing) { disposeAction.Invoke(); return false; }
+            // Adapt to IDisposable
+            IDisposable disposable = new DisposeAction(disposeAction);
+            // Add to list
+            lock (m_disposelist_lock) disposeList.Add( disposable );
+            // Check parent again
+            if (IsDisposing) { lock (m_disposelist_lock) disposeList.Remove(disposable); disposable.Dispose(); return false; }
+            // OK
+            return true;
+        }
+
+        /// <summary>
+        /// Adapts <see cref="Action"/> into <see cref="IDisposable"/>.
+        /// </summary>
+        class DisposeAction : IDisposable
+        {
+            Action a;
+
+            public DisposeAction(Action a)
+            {
+                this.a = a ?? throw new ArgumentNullException(nameof(a));
+            }
+
+            public void Dispose()
+            {
+                a.Invoke();
+            }
         }
 
         /// <summary>
@@ -145,7 +265,6 @@ namespace Lexical.FileSystem.Utils
         {
             // Argument error
             if (disposableObjects == null) throw new ArgumentNullException(nameof(disposableObjects));
-
             // Parent is disposed/ing
             if (IsDisposing)
             {

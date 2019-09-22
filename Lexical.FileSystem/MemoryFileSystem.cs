@@ -870,6 +870,19 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
+        /// 
+        /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
+        /// </summary>
+        /// <param name="disposeAction"></param>
+        /// <returns>true if was added to list, false if was disposed right away</returns>
+        public MemoryFileSystem AddDisposableAction(Action disposeAction)
+        {
+            base.AddDisposeAction(disposeAction);
+            return this;
+        }
+
+        /// <summary>
         /// Add <paramref name="disposable"/> to list of objects to be disposed along with the system.
         /// </summary>
         /// <param name="disposable"></param>
