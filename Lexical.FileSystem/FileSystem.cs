@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// File system based <see cref="IFileSystem"/> that loads local file-system files.
+    /// Operating System based <see cref="IFileSystem"/> implementation that uses normal files and directories.
     /// 
     /// If file watchers have been created, and file system is disposed, then watchers will be disposed also. 
     /// <see cref="IObserver{T}.OnCompleted"/> event is forwarded to watchers.

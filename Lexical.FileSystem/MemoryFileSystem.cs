@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     /// In-memory filesystem.
     /// 
     /// Maximum file length is <see cref="int.MaxValue"/>*<see cref="BlockSize"/>.
-    /// The default blocksize is 1024 which allows 2TB - 1024b files.
+    /// The default blocksize is 1024 which allows 2TB - 1KB files.
     /// </summary>
     public class MemoryFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable
     {
@@ -224,7 +224,9 @@ namespace Lexical.FileSystem
             m_lock.AcquireWriterLock(int.MaxValue);
             try
             {
+                // Cursor starts at root
                 Node cursor = root;
+                // Split path at '/' slashes
                 PathEnumerator enumr = new PathEnumerator(path);
                 while (enumr.MoveNext())
                 {
@@ -245,13 +247,12 @@ namespace Lexical.FileSystem
                             // Next path segment
                             continue;
                         }
-                        // No child by name
-                        if (!directory.contents.TryGetValue(enumr.Current, out cursor))
+                        // No child was found by name
+                        if (!directory.contents.TryGetValue(name, out cursor))
                         {
-                            string dirName = enumr.Current;
                             // Create child directory
-                            Directory newDirectory = new Directory(this, directory, dirName, DateTimeOffset.UtcNow);
-                            // Add event about parent modified and child created
+                            Directory newDirectory = new Directory(this, directory, name, DateTimeOffset.UtcNow);
+                            // Add event about child being created
                             if (observers != null)
                                 foreach (ObserverHandle observer in observers)
                                 {                                    
@@ -472,11 +473,13 @@ namespace Lexical.FileSystem
                     oldNode.name = newName;
                     // Move folder to new parent
                     oldNode.parent = newParent;
+                    // Connect to new parent
                     newParent.contents[new StringSegment(newName)] = oldNode;
                     // Flush cached path
                     oldNode.path = null;
                     // new path
                     string c_newPath = oldNode.Path;
+                    // Create event
                     if (observers != null)
                         foreach (ObserverHandle observer in observers)
                             if (observer.Qualify(c_oldPath) || observer.Qualify(c_newPath))
@@ -493,6 +496,7 @@ namespace Lexical.FileSystem
                     oldNode.name = newName;
                     // Move folder to new parent
                     oldNode.parent = newParent;
+                    // Connect to new parent
                     newParent.contents[new StringSegment(newName)] = oldNode;
                     // Visit list again
                     for (int i=0; i<list.Count; i++)
@@ -1394,7 +1398,7 @@ namespace Lexical.FileSystem
                 if (fileAccess.HasFlag(FileAccess.Write) && !writeAllowed) throw new FileSystemExceptionNoWriteAccess();
 
                 // Create stream
-                Stream stream = new Stream(this, blocks, m_lock, fileAccess, fileShare);
+                Stream stream = new Stream(this, fileAccess, fileShare);
                 streams.Add(stream);
                 return stream;
             }
@@ -1419,6 +1423,11 @@ namespace Lexical.FileSystem
             /// Lock object for modifying <see cref="blocks"/>.
             /// </summary>
             protected ReaderWriterLock m_lock;
+
+            /// <summary>
+            /// Block size
+            /// </summary>
+            protected long blockSize;
 
             /// <summary>
             /// File access
@@ -1481,15 +1490,14 @@ namespace Lexical.FileSystem
             /// Create stream.
             /// </summary>
             /// <param name="parent"></param>
-            /// <param name="blocks"></param>
-            /// <param name="m_lock"></param>
             /// <param name="fileAccess"></param>
             /// <param name="fileShare"></param>
-            public Stream(MemoryFile parent, List<byte[]> blocks, ReaderWriterLock m_lock, FileAccess fileAccess, FileShare fileShare)
+            public Stream(MemoryFile parent, FileAccess fileAccess, FileShare fileShare)
             {
                 this.parent = parent;
-                this.blocks = blocks;
-                this.m_lock = m_lock;
+                this.blocks = parent.blocks;
+                this.m_lock = parent.m_lock;
+                this.blockSize = parent.BlockSize;
                 this.FileAccess = fileAccess;
                 this.FileShare = fileShare;
                 this.canRead = (FileAccess & FileAccess.Read) == FileAccess.Read;
@@ -1536,10 +1544,10 @@ namespace Lexical.FileSystem
                     // Read until c is 0
                     while (count>0)
                     {
-                        int blockIndex = (int) (_position / parent.BlockSize);
-                        int blockPosition = (int) (_position % parent.BlockSize);
+                        int blockIndex = (int) (_position / blockSize);
+                        int blockPosition = (int) (_position % blockSize);
                         byte[] block = blocks[blockIndex];
-                        int bytesToReadFromBlock = (int) Math.Min(/*Bytes remaining in block*/parent.BlockSize - blockPosition, /*bytes to read*/count);
+                        int bytesToReadFromBlock = (int) Math.Min(/*Bytes remaining in block*/blockSize - blockPosition, /*bytes to read*/count);
                         Array.Copy(block, blockPosition, buffer, offset, bytesToReadFromBlock);
                         offset += bytesToReadFromBlock;
                         count -= bytesToReadFromBlock;
@@ -1576,8 +1584,8 @@ namespace Lexical.FileSystem
                     // Asserts
                     if (position < 0 || position >= parent.Length) return -1;
                     //
-                    int blockIndex = (int)(_position / parent.BlockSize);
-                    int blockPosition = (int)(_position % parent.BlockSize);
+                    int blockIndex = (int)(_position / blockSize);
+                    int blockPosition = (int)(_position % blockSize);
                     byte[] block = blocks[blockIndex];
                     // Update position
                     position = _position + 1L;
@@ -1645,7 +1653,7 @@ namespace Lexical.FileSystem
                         return;
                     }
                     // Count
-                    int newBlockCount = (int)( (newLength + parent.BlockSize - 1) / parent.BlockSize );
+                    int newBlockCount = (int)( (newLength + blockSize - 1) / blockSize );
                     // Shorten
                     if (newBlockCount<blocks.Count)
                     {
@@ -1653,7 +1661,7 @@ namespace Lexical.FileSystem
                     }
                     else if (newBlockCount>blocks.Count)
                     {
-                        while (blocks.Count < newBlockCount) blocks.Add(new byte[parent.BlockSize]);
+                        while (blocks.Count < newBlockCount) blocks.Add(new byte[blockSize]);
                     }
                     // Set new length
                     parent.length = newLength;
@@ -1698,7 +1706,7 @@ namespace Lexical.FileSystem
                     long _position = position;
 
                     // Overwrite to existing blocks
-                    long maxLength = blocks.Count * parent.BlockSize;
+                    long maxLength = blocks.Count * blockSize;
                     if (_position < maxLength)
                     {
                         // Bytes to overwrite
@@ -1706,9 +1714,9 @@ namespace Lexical.FileSystem
                         // Write
                         while (bytesToOverwrite>0L)
                         {
-                            int blockIndex = (int)(_position / parent.BlockSize);
-                            int blockPosition = (int)(_position % parent.BlockSize);
-                            int bytesToWriteToThisBlock = (int)Math.Min(/*bytes remaining in block*/parent.BlockSize-blockPosition, /*bytes to write*/bytesToOverwrite);
+                            int blockIndex = (int)(_position / blockSize);
+                            int blockPosition = (int)(_position % blockSize);
+                            int bytesToWriteToThisBlock = (int)Math.Min(/*bytes remaining in block*/blockSize-blockPosition, /*bytes to write*/bytesToOverwrite);
                             byte[] block = blocks[blockIndex];
                             Array.Copy(buffer, offset, block, blockPosition, bytesToWriteToThisBlock);
                             offset += bytesToWriteToThisBlock;
@@ -1724,7 +1732,7 @@ namespace Lexical.FileSystem
                     {
                         while (count > 0)
                         {
-                            byte[] block = new byte[parent.BlockSize];
+                            byte[] block = new byte[blockSize];
                             blocks.Add(block);
                             int bytesToWriteToThisBlock = (int)Math.Min(/*bytes remaining in block*/block.Length, /*bytes to write*/count);
                             Array.Copy(buffer, offset, block, 0, bytesToWriteToThisBlock);
@@ -1766,11 +1774,11 @@ namespace Lexical.FileSystem
                     // Position of this thread
                     long _position = position;
                     // Write in existing block
-                    long maxLength = blocks.Count * parent.BlockSize;
+                    long maxLength = blocks.Count * blockSize;
                     if (_position<maxLength)
                     {
-                        int blockIndex = (int)(_position / parent.BlockSize);
-                        int blockPosition = (int)(_position % parent.BlockSize);
+                        int blockIndex = (int)(_position / blockSize);
+                        int blockPosition = (int)(_position % blockSize);
                         byte[] block = blocks[blockIndex];
                         block[blockPosition] = value;
                         _position++;
@@ -1781,12 +1789,12 @@ namespace Lexical.FileSystem
                     // Append block
                     {
                         byte[] block = null;
-                        while (_position < blocks.Count * parent.BlockSize)
+                        while (_position < blocks.Count * blockSize)
                         {
-                            block = new byte[parent.BlockSize];
+                            block = new byte[blockSize];
                             blocks.Add(block);
                         }
-                        int blockPosition = (int)(_position % parent.BlockSize);                        
+                        int blockPosition = (int)(_position % blockSize);                        
                         block[blockPosition] = value;
                         _position++;
                         position = _position;
