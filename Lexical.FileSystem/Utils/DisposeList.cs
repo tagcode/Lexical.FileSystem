@@ -68,7 +68,7 @@ namespace Lexical.FileSystem.Utils
         /// </summary>
         /// <returns></returns>
         /// <exception cref="ObjectDisposedException">Thrown if object has already been disposed.</exception>
-        public IDisposable Belate()
+        public IDisposable BelateDispose()
         {
             // Create handle
             BelateHandle handle = new BelateHandle(this);

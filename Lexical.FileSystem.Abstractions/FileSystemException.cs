@@ -106,6 +106,22 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>
+    /// Invalid name for file or directory
+    /// </summary>
+    public class FileSystemExceptionInvalidName : FileSystemException
+    {
+        /// <summary>
+        /// Create exception
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path"></param>
+        public FileSystemExceptionInvalidName(IFileSystem filesystem = null, string path = null) : base(filesystem, path, path == null ? "File exists" : $"File exists '{path}'") { }
+
+        /// <inheritdoc/>
+        protected FileSystemExceptionInvalidName(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+    /// <summary>
     /// Directory exists when not expected
     /// </summary>
     public class FileSystemExceptionDirectoryExists : FileSystemException

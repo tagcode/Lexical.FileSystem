@@ -13,9 +13,12 @@ namespace Lexical.FileSystem.Utils
     public interface IBelatableDispose : IDisposable
     {
         /// <summary>
-        /// Create a handle that postpones the dispose of the object until all the belate handles have been disposed.
+        /// Post-pone dispose. 
+        /// 
+        /// Creates a handle that postpones the dispose of the object until all the belate-handles have been disposed.
         /// </summary>
         /// <returns>belating handle that must be diposed</returns>
-        IDisposable Belate();
+        /// <exception cref="ObjectDisposedException">thrown if object has already been disposed</exception>
+        IDisposable BelateDispose();
     }
 }

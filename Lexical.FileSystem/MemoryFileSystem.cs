@@ -49,13 +49,6 @@ namespace Lexical.FileSystem
         /// </summary>
         TaskFactory taskFactory;
 
-        /// <summary>
-        /// Policy of whether trailing slash is ignored from paths.
-        /// For example, if true "/mnt/dir/" refers to directory ["mnt", "dir"].
-        /// If false "/mnt/dir/2 refers to directory ["mnt", "dir", ""].
-        /// </summary>
-        protected bool ignoreTrailingSlash;
-
         /// <inheritdoc/>
         public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive;
         /// <inheritdoc/>
@@ -91,22 +84,6 @@ namespace Lexical.FileSystem
             this.processEventsAction = processEvents;
         }
 
-        /// <summary>
-        /// Create new in-memory filesystem.
-        /// </summary>
-        /// <param name="ignoreTrailingSlash">
-        /// Policy of whether trailing slash is ignored from paths.
-        /// For example, if true "/mnt/dir/" refers to directory ["mnt", "dir"].
-        /// If false "/mnt/dir/2 refers to directory ["mnt", "dir", ""].
-        /// </param>
-        public MemoryFileSystem(bool ignoreTrailingSlash)
-        {
-            this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
-            this.taskFactory = Task.Factory;
-            this.processEventsAction = processEvents;
-            this.ignoreTrailingSlash = ignoreTrailingSlash;
-        }
-        
         /// <summary>
         /// Set <paramref name="taskFactory"/> to be used for handling observer events.
         /// 
@@ -192,10 +169,12 @@ namespace Lexical.FileSystem
             m_lock.AcquireReaderLock(int.MaxValue);
             try
             {
+                // Root entry
+                if (path == "") return root.CreateEntry();
                 // Find entry
                 Node node = GetNode(path);
                 // Not found
-                if (node == null) throw new FileNotFoundException(path);
+                if (node == null) return null;
                 // IFileSystemEntry
                 return node.CreateEntry();
             }
@@ -238,19 +217,33 @@ namespace Lexical.FileSystem
             m_lock.AcquireWriterLock(int.MaxValue);
             try
             {
-                Node node = root;
-                PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash);
+                Node cursor = root;
+                PathEnumerator enumr = new PathEnumerator(path);
                 while (enumr.MoveNext())
                 {
+                    // Name
+                    StringSegment name = enumr.Current;
                     // Get entry under lock.
-                    if (node is Directory dir)
+                    if (cursor is Directory directory)
                     {
-                        // No child by name
-                        if (!dir.contents.TryGetValue(enumr.Current, out node))
+                        // "."
+                        if (name.Equals(StringSegment.Dot)) continue;
+                        // ".."
+                        if (name.Equals(StringSegment.DotDot))
                         {
-                            string name = enumr.Current;
+                            // ".." -> exception
+                            if (directory.parent == null) throw new DirectoryNotFoundException(path);
+                            // Go towards parent.
+                            cursor = directory.parent;
+                            // Next path segment
+                            continue;
+                        }
+                        // No child by name
+                        if (!directory.contents.TryGetValue(enumr.Current, out cursor))
+                        {
+                            string dirName = enumr.Current;
                             // Create child directory
-                            Directory newDirectory = new Directory(this, dir, name, DateTimeOffset.UtcNow);
+                            Directory newDirectory = new Directory(this, directory, dirName, DateTimeOffset.UtcNow);
                             // Add event about parent modified and child created
                             if (observers != null)
                                 foreach (ObserverHandle observer in observers)
@@ -258,17 +251,17 @@ namespace Lexical.FileSystem
                                     if (observer.Qualify(newDirectory.Path)) events.Add(new FileSystemEventCreate(observer, time, newDirectory.Path));
                                 }
                             // Update time of parent
-                            dir.lastModified = time;
+                            directory.lastModified = time;
                             // Add child to parent
-                            dir.contents[enumr.Current] = newDirectory;
+                            directory.contents[enumr.Current] = newDirectory;
                             // Recurse into child
-                            node = newDirectory;
+                            cursor = newDirectory;
                         }
                     }
                     else
                     {
                         // Parent is a file and cannot contain futher subnodes.
-                        throw new IOException("Cannot create file under a file ("+node.Path+")");
+                        throw new IOException("Cannot create file under a file ("+cursor.Path+")");
                     }
                 }
             }
@@ -320,7 +313,7 @@ namespace Lexical.FileSystem
                 // Not found
                 if (node == null) throw new FileNotFoundException(path);
                 // Assert not root
-                if (node.path == "") throw new IOException("Cannot delete root.");
+                if (node.Path == "") throw new IOException("Cannot delete root.");
                 // Get parent
                 Directory parent = node.parent;
                 // Parent not found?
@@ -335,7 +328,7 @@ namespace Lexical.FileSystem
                     // Create delete event
                     if (observers != null)
                         foreach (ObserverHandle observer in observers)
-                            if (observer.Qualify(node.path)) events.Add(new FileSystemEventDelete(observer, time, node.path));
+                            if (observer.Qualify(node.Path)) events.Add(new FileSystemEventDelete(observer, time, node.Path));
                     // Mark file/dir deleted
                     node.Dispose();
                 }
@@ -352,7 +345,7 @@ namespace Lexical.FileSystem
                         // Create delete event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
-                                if (observer.Qualify(n.path)) events.Add(new FileSystemEventDelete(observer, time, n.path));
+                                if (observer.Qualify(n.Path)) events.Add(new FileSystemEventDelete(observer, time, n.Path));
                         // Mark deleted
                         n.Dispose();
                     }
@@ -411,36 +404,48 @@ namespace Lexical.FileSystem
                 // Not found
                 if (oldNode == null) throw new FileNotFoundException(oldPath);
                 // Target file already exists
-                if (newNode != null) throw new InvalidOperationException(newPath + " already exists");
+                if (newNode != null) throw new FileSystemExceptionFileExists(this, newPath);
                 // Get parents
                 Directory oldParent = oldNode.parent;
                 // Parent not found
                 if (oldParent == null) throw new FileNotFoundException(oldPath);
 
                 // Split newPath into parent directory and name.
-                Directory dir = root, newParent = null;
+                Directory cursor = root, newParent = null;
                 string newName = null;
                 // Path '/' splitter, enumerates name strings from root towards tail
-                PathEnumerator enumr = new PathEnumerator(newPath, ignoreTrailingSlash);
+                PathEnumerator enumr = new PathEnumerator(newPath);
                 // Get next name from the path
                 while (enumr.MoveNext())
                 {
+                    // Name
+                    StringSegment name = enumr.Current;
+                    // "."
+                    if (name.Equals(StringSegment.Dot)) continue;
+                    // ".."
+                    if (name.Equals(StringSegment.DotDot))
+                    {
+                        // No parent to go to
+                        if (cursor.parent == null) throw new DirectoryNotFoundException(newPath);
+                        // Go towards parent
+                        cursor = cursor.parent;
+                        continue;
+                    }
                     // Find child
                     Node child;
-                    if (dir.contents.TryGetValue(enumr.Current, out child))
-                    // Name matched an entry
+                    if (cursor.contents.TryGetValue(name, out child))
                     {
                         newParent = null;
                         newName = null;
                         // Entry is directory
-                        if (child is Directory d) dir = d;
+                        if (child is Directory directory) cursor = directory;
                         // Entry is file
-                        else throw new InvalidOperationException("Cannot move over existing file "+child.Path);
+                        else throw new FileSystemExceptionFileExists(this, child.Path);
                     } else
                     // name did not match anything in the directory
                     {
                         newName = enumr.Current;
-                        newParent = dir;
+                        newParent = cursor;
                     }
                 }
                 // Unexpected error
@@ -449,15 +454,18 @@ namespace Lexical.FileSystem
                 // Nothing to do (check this after proper asserts)
                 if (oldPath == newPath) return;
 
-                // Rename
-                oldNode.name = newName;
                 // Single file or empty dir
                 if (oldNode is File || (oldNode is Directory dir_ && dir_.contents.Count == 0))
                 {
                     // prev path
                     string c_oldPath = oldNode.Path;
+                    // Disconnect from previous parent
+                    oldNode.parent.contents.Remove(new StringSegment(oldNode.name));
+                    // Rename
+                    oldNode.name = newName;
                     // Move folder to new parent
-                    if (oldNode.parent != newParent) oldNode.parent = newParent;
+                    oldNode.parent = newParent;
+                    newParent.contents[new StringSegment(newName)] = oldNode;
                     // Flush cached path
                     oldNode.path = null;
                     // new path
@@ -472,8 +480,13 @@ namespace Lexical.FileSystem
                     StructList12<(Node, string)> list = new StructList12<(Node, string)>();
                     // Visit tree and capture old path
                     foreach (Node c in oldNode.VisitTree()) list.Add((c, c.Path));
+                    // Disconnect from previous parent
+                    oldNode.parent.contents.Remove(new StringSegment(oldNode.name));
+                    // Rename
+                    oldNode.name = newName;
                     // Move folder to new parent
-                    if (oldNode.parent != newParent) oldNode.parent = newParent;
+                    oldNode.parent = newParent;
+                    newParent.contents[new StringSegment(newName)] = oldNode;
                     // Visit list again
                     for (int i=0; i<list.Count; i++)
                     {
@@ -567,8 +580,9 @@ namespace Lexical.FileSystem
                         // Split path to parent and filename parts, also search for parent directory
                         StringSegment parentPath, name;
                         Directory parent;
-                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new IOException(path);
-
+                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new DirectoryNotFoundException(parentPath);
+                        // Invalid name
+                        if (name == StringSegment.Dot || name == StringSegment.DotDot) throw new FileSystemExceptionInvalidName(this, path);
                         // Create file.
                         File f = new File(this, parent, name, time);
                         // Open stream
@@ -599,7 +613,9 @@ namespace Lexical.FileSystem
                         // Split path to parent and filename parts, also search for parent directory
                         StringSegment parentPath, name;
                         Directory parent;
-                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new IOException(path);
+                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new DirectoryNotFoundException(parentPath);
+                        // Invalid name
+                        if (name == StringSegment.Dot || name == StringSegment.DotDot) throw new FileSystemExceptionInvalidName(this, path);
                         // Is directory
                         if (node is Directory) throw new FileSystemExceptionDirectoryExists(this, parentPath);
 
@@ -640,7 +656,7 @@ namespace Lexical.FileSystem
                         // Split path to parent and filename parts, also search for parent directory
                         StringSegment parentPath, name;
                         Directory parent;
-                        GetParentAndName(path, out parentPath, out name, out parent);
+                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new DirectoryNotFoundException(parentPath);
                         throw new FileSystemExceptionDirectoryExists(this, parentPath);
                     }
                     // Open file
@@ -667,7 +683,9 @@ namespace Lexical.FileSystem
                         // Split path to parent and filename parts, also search for parent directory
                         StringSegment parentPath, name;
                         Directory parent;
-                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new IOException(path);
+                        if (!GetParentAndName(path, out parentPath, out name, out parent)) throw new DirectoryNotFoundException(parentPath);
+                        // Invalid name
+                        if (name == StringSegment.Dot || name == StringSegment.DotDot) throw new FileSystemExceptionInvalidName(this, path);
 
                         // Create file
                         File f = new File(this, parent, name, time);
@@ -715,21 +733,29 @@ namespace Lexical.FileSystem
         /// <returns>node or null</returns>
         Node GetNode(string path)
         {
-            //
-            Node node = root;
+            // Node cursor
+            Node cursor = root;
             // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash);
+            PathEnumerator enumr = new PathEnumerator(path);
             // Get next name from the path
             while (enumr.MoveNext())
             {
-                // "" Represents current dir
-                //if (StringSegment.Comparer.Instance.Equals(enumr.Current, StringSegment.Empty)) continue;
-
+                // Name
+                StringSegment name = enumr.Current;
                 // Get entry under lock.
-                if (node is Directory dir)
+                if (cursor is Directory directory)
                 {
+                    // "."
+                    if (name.Equals(StringSegment.Dot)) continue;
+                    // ".."
+                    if (name.Equals(StringSegment.DotDot))
+                    {
+                        if (directory.parent == null) return null;
+                        cursor = directory.parent;
+                        continue;
+                    }
                     // Failed to find child entry
-                    if (!dir.contents.TryGetValue(enumr.Current, out node)) return null;
+                    if (!directory.contents.TryGetValue(name, out cursor)) return null;
                 }
                 else
                 {
@@ -737,7 +763,7 @@ namespace Lexical.FileSystem
                     return null;
                 }
             }
-            return node;
+            return cursor;
         }
 
         /// <summary>
@@ -753,7 +779,7 @@ namespace Lexical.FileSystem
         bool GetParentAndName(string path, out StringSegment parentPath, out StringSegment name, out Directory parent)
         {
             // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash);
+            PathEnumerator enumr = new PathEnumerator(path);
             // Path's name parts
             StructList12<StringSegment> names = new StructList12<StringSegment>();
             // Split path into names
@@ -764,14 +790,25 @@ namespace Lexical.FileSystem
             if (names.Count == 1) { name = names[0]; parentPath = StringSegment.Empty; }
             else { name = names[names.Count - 1]; parentPath = new StringSegment(path, names[0].Start, names[names.Count - 2].Start + names[names.Count - 2].Length); }
             // Search parent directory
-            Node node = root;
+            Node cursor = root;
             for (int i=0; i<names.Count-1; i++)
             {
+                // Name
+                StringSegment cursorName = names[i];
                 // Get entry under lock.
-                if (node is Directory dir)
+                if (cursor is Directory directory)
                 {
+                    // "."
+                    if (cursorName.Equals(StringSegment.Dot)) continue;
+                    // ".."
+                    if (cursorName.Equals(StringSegment.DotDot))
+                    {
+                        if (directory.parent == null) { parent = null; return false; }
+                        cursor = directory.parent;
+                        continue;
+                    }
                     // Failed to find child entry
-                    if (!dir.contents.TryGetValue(names[i], out node)) { parent = null; return false; }
+                    if (!directory.contents.TryGetValue(cursorName, out cursor)) { parent = null; return false; }
                 }
                 else
                 {
@@ -779,8 +816,8 @@ namespace Lexical.FileSystem
                     parent = null; return false;
                 }
             }
-            parent = node as Directory;
-            return node is Directory;
+            parent = cursor as Directory;
+            return cursor is Directory;
         }
 
         /// <summary>
@@ -1015,8 +1052,12 @@ namespace Lexical.FileSystem
             {
                 get
                 {
+                    string _path = path;
+                    if (_path != null) return _path;
                     Directory _parent = parent;
-                    return path ?? (path = _parent == filesystem.root ? name : _parent.Path + "/" + name);
+                    if (_parent == null) return path = "";
+                    if (_parent == filesystem.root) return path = name;
+                    return path = _parent.Path + "/" + name;
                 }
             }
 

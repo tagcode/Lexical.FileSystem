@@ -13,12 +13,22 @@ namespace Lexical.FileSystem.Internal
     /// 
     /// Used as workaround for missing Span class in .NET Standard.
     /// </summary>
-    public struct StringSegment
+    public struct StringSegment : IEquatable<StringSegment>
     {
         /// <summary>
-        /// Emptry string "".
+        /// Empty string "".
         /// </summary>
         public static StringSegment Empty = new StringSegment("");
+
+        /// <summary>
+        /// String ".".
+        /// </summary>
+        public static StringSegment Dot = new StringSegment(".");
+
+        /// <summary>
+        /// String "..".
+        /// </summary>
+        public static StringSegment DotDot = new StringSegment("..");
 
         /// <summary>
         /// Start index
@@ -116,6 +126,10 @@ namespace Lexical.FileSystem.Internal
         /// <inheritdoc/>
         public override string ToString()
             => String.Substring(Start, Length);
+
+        /// <inheritdoc/>
+        public bool Equals(StringSegment other)
+            => Comparer.Instance.Equals(this, other);
 
         /// <summary>
         /// EqualityComparer
