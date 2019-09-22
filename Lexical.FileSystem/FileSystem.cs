@@ -122,9 +122,9 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="eventHandler">(optional) factory that handles observer events</param>
         /// <returns>memory filesystem</returns>
-        public FileSystem SetEventHandler(TaskFactory eventHandler)
+        public FileSystem SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemObserveHandler)this).SetEventHandler(eventHandler);
+            ((IFileSystemEventDispatcher)this).SetEventDispatcher(eventHandler);
             return this;
         }
 

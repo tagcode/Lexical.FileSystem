@@ -18,7 +18,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.
     /// </summary>
-    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserveHandler
+    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemEventDispatcher
     {
         /// <summary>
         /// File system components.
@@ -79,7 +79,7 @@ namespace Lexical.FileSystem
                 CanBrowse |= fs.CanBrowse();
                 CanGetEntry |= fs.CanGetEntry();
                 CanObserve |= fs.CanObserve();
-                CanSetEventHandler |= fs.CanSetEventHandler();
+                CanSetEventDispatcher |= fs.CanSetEventDispatcher();
                 CanOpen |= fs.CanOpen();
                 CanRead |= fs.CanRead();
                 CanWrite |= fs.CanWrite();
@@ -98,9 +98,9 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="eventHandler">(optional) factory that handles observer events</param>
         /// <returns>memory filesystem</returns>
-        public FileSystemComposition SetEventHandler(TaskFactory eventHandler)
+        public FileSystemComposition SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemObserveHandler)this).SetEventHandler(eventHandler);
+            ((IFileSystemEventDispatcher)this).SetEventDispatcher(eventHandler);
             return this;
         }
 
