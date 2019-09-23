@@ -6,7 +6,7 @@
 using System;
 using System.Text.RegularExpressions;
 
-namespace Lexical.FileSystem.Utility
+namespace Lexical.FileSystem.Internal
 {
     /// <summary>
     /// Glob pattern uses the following notation:

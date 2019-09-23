@@ -4,11 +4,12 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
+using Lexical.FileSystem.Utility;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace Lexical.FileSystem.Utility
+namespace Lexical.FileSystem.Internal
 {
     /// <summary>
     /// A disposable that manages a list of disposable objects.

@@ -8,7 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Lexical.FileSystem.Utility
+namespace Lexical.FileSystem.Internal
 {
     /// <summary>
     /// Alpha numeric string comparer. 

@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Lexical.FileSystem.Utility
+namespace Lexical.FileSystem.Internal
 {
     /// <summary>
     /// A builder where multiple patterns are added and then united into one unifying pattern.
