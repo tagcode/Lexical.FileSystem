@@ -771,7 +771,8 @@ namespace Lexical.FileSystem
                         continue;
                     }
                     // Failed to find child entry
-                    if (!directory.contents.TryGetValue(name, out cursor)) return null;
+                    if (!directory.contents.TryGetValue(name, out cursor))
+                        return null;
                 }
                 else
                 {

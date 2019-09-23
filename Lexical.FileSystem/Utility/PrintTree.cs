@@ -86,7 +86,7 @@ namespace Lexical.FileSystem
         /// Any thrown exceptions are printed into the line that produced the error.
         /// </summary>
         /// <param name="fileSystem"></param>
-        /// <param name="output">output such as <see cref="Console.Out"/></param>
+        /// <param name="output">output</param>
         /// <param name="startPath"></param>
         /// <param name="maxLevel"></param>
         public static void PrintTree(this IFileSystem fileSystem, StringBuilder output, string startPath = "", int maxLevel = Int32.MaxValue)
@@ -141,7 +141,11 @@ namespace Lexical.FileSystem
         public static String PrintTreeToString(this IFileSystem fileSystem, string startPath = "", int maxLevel = Int32.MaxValue)
         {
             StringBuilder sb = new StringBuilder();
-            PrintTree(fileSystem, sb, startPath, maxLevel);
+            foreach (Line line in fileSystem.VisitTree(startPath, maxLevel))
+            {
+                line.AppendTo(sb);
+                sb.AppendLine();
+            }
             return sb.ToString();
         }
 
@@ -171,33 +175,39 @@ namespace Lexical.FileSystem
         /// <param name="maxLevel"></param>
         public static IEnumerable<Line> VisitTree(this IFileSystem fileSystem, string startPath = "", int maxLevel = Int32.MaxValue)
         {
-            LinkedList<Line> queue = new LinkedList<Line>();
-            queue.AddLast( new Line(fileSystem.GetEntry(startPath), 0, 0UL) );
+            List<Line> queue = new List<Line>();
+            queue.Add( new Line(fileSystem.GetEntry(startPath), 0, 0UL) );
             while (queue.Count > 0)
             {
                 // Next entry
-                Line line = queue.Last.Value;
-                queue.RemoveLast();
+                int lastIx = queue.Count - 1;
+                Line line = queue[lastIx];
+                queue.RemoveAt(lastIx);
 
-                // Browse
+                // Children
                 if (line.Entry.IsDirectory() && line.Level < maxLevel)
                 {
                     try
                     {
+                        // Browse children
                         IFileSystemEntry[] entries = fileSystem.Browse(line.Entry.Path);
                         // Sort
                         Array.Sort(entries, FileSystemEntryComparer.Instance);
-                        // Queue
+                        // Mask for entries that are not last in the array
+                        ulong levelContinuesBitMask = line.LevelContinuesBitMask;
+                        if (line.Level<=64) levelContinuesBitMask |= 1UL << (line.Level - 1);
+                        // Add children
                         for (int i = entries.Length - 1; i >= 0; i--)
                         {
-                            int newLevel = line.Level + 1;
-                            ulong newLevelContinuesBitMask = line.LevelContinuesBitMask;
-                            if (i < entries.Length - 1) newLevelContinuesBitMask |= 1UL << (line.Level - 1);
-                            queue.AddLast(new Line(entries[i], newLevel, newLevelContinuesBitMask));
+                            // Choose which mask to use
+                            ulong bitmask = i < entries.Length - 1 ? /*not last entry*/ levelContinuesBitMask : /*last entry*/ line.LevelContinuesBitMask;
+                            // Queue
+                            queue.Add(new Line(entries[i], line.Level+1, bitmask));
                         }
                     }
                     catch (Exception e)
                     {
+                        // Store error
                         line.Error = e;
                     }
                 }
@@ -253,13 +263,15 @@ namespace Lexical.FileSystem
             /// <param name="level"></param>
             /// <returns></returns>
             public bool LevelContinues(int level) 
-                => level >= 64 ? false : (LevelContinuesBitMask & 1UL << (level - 1)) != 0UL;
+                => level >= 64 ? 
+                   /*Not supported after 64 levels*/ false : 
+                   /*Read bit*/ (LevelContinuesBitMask & 1UL << (level - 1)) != 0UL;
 
             /// <summary>
             /// Write to <see cref="StringBuilder"/> <paramref name="output"/>.
             /// </summary>
             /// <param name="output"></param>
-            public void PrintTo(StringBuilder output)
+            public void AppendTo(StringBuilder output)
             {
                 // Print indents
                 for (int l = 0; l < Level - 1; l++) output.Append(LevelContinues(l) ? "│  " : "   ");
@@ -286,7 +298,7 @@ namespace Lexical.FileSystem
             public override string ToString()
             {
                 StringBuilder sb = new StringBuilder();
-                PrintTo(sb);
+                AppendTo(sb);
                 return sb.ToString();
             }
         }
