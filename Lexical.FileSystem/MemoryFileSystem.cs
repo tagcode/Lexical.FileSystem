@@ -1610,18 +1610,10 @@ namespace Lexical.FileSystem
                 // Assert not disposed
                 if (IsDisposed) throw new ObjectDisposedException(nameof(MemoryFile));
 
-                m_lock.AcquireReaderLock(int.MaxValue);
-                try
-                {
-                    if (origin == SeekOrigin.Begin) return position = offset;
-                    if (origin == SeekOrigin.Current) return position += offset;
-                    if (origin == SeekOrigin.End) return (position = blocks.Count - offset);
-                    return 0L;
-                }
-                finally
-                {
-                    m_lock.ReleaseReaderLock();
-                }
+                if (origin == SeekOrigin.Begin) return position = offset;
+                if (origin == SeekOrigin.Current) return position += offset;
+                if (origin == SeekOrigin.End) return (position = blocks.Count - offset);
+                throw new ArgumentException(nameof(origin));
             }
 
             /// <summary>
@@ -1644,32 +1636,50 @@ namespace Lexical.FileSystem
                 try
                 {
                     // Nothing to do
-                    if (newLength == parent.length) return;
+                    if (newLength == parent.length) { }
                     // Clear
-                    if (newLength == 0L)
+                    else if (newLength == 0L)
                     {
                         blocks.Clear();
                         parent.length = 0L;
-                        return;
                     }
-                    // Count
-                    int newBlockCount = (int)( (newLength + blockSize - 1) / blockSize );
-                    // Shorten
-                    if (newBlockCount<blocks.Count)
+                    else
                     {
-                        while (blocks.Count > newBlockCount) blocks.RemoveAt(blocks.Count - 1);
-                    }
-                    else if (newBlockCount>blocks.Count)
-                    {
-                        while (blocks.Count < newBlockCount) blocks.Add(new byte[blockSize]);
+                        // Count
+                        int newBlockCount = (int)((newLength + blockSize - 1) / blockSize);
+                        // Shorten
+                        if (newLength < parent.Length)
+                        {
+                            // Remove blocks
+                            while (newBlockCount < blocks.Count) blocks.RemoveAt(blocks.Count - 1);
+                        }
+                        else
+                        // Grow
+                        if (newLength > parent.Length)
+                        {
+                            // Zero last bytes of last block
+                            if (blocks.Count > 0)
+                            {
+                                byte[] block = blocks[blocks.Count - 1];
+                                int lastByteInLastBlock = (int)(parent.Length % blockSize);
+                                int lastByteInLastBlockInNewLength = newLength > blocks.Count * blockSize ? (int)blockSize : (int)(newLength % blockSize);
+                                for (int i = lastByteInLastBlock; i < lastByteInLastBlockInNewLength; i++) block[i] = 0;
+                            }
+                            // Add blocks
+                            while (newBlockCount > blocks.Count) blocks.Add(new byte[blockSize]);
+                        }
                     }
                     // Set new length
                     parent.length = newLength;
+                    if (position > newLength) position = newLength;
                 }
                 finally
                 {
                     m_lock.ReleaseWriterLock();
                 }
+
+                // Send event
+                parent.SendChangeEvent();
             }
 
             /// <summary>
@@ -1694,13 +1704,15 @@ namespace Lexical.FileSystem
                 if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
                 if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
                 if (offset+count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(count));
+                // Nothing to do
+                if (count == 0) return;
 
                 // Write
                 m_lock.AcquireWriterLock(int.MaxValue);
                 try
                 {
                     // Assert
-                    if (position < 0L || position > parent.length) throw new ArgumentOutOfRangeException(nameof(Position));
+                    if (position < 0L) throw new ArgumentOutOfRangeException(nameof(Position));
 
                     // Position of this stream
                     long _position = position;
@@ -1750,6 +1762,9 @@ namespace Lexical.FileSystem
                 {
                     m_lock.ReleaseWriterLock();
                 }
+
+                // Send event
+                parent.SendChangeEvent();
             }
 
             /// <summary>
@@ -1770,7 +1785,7 @@ namespace Lexical.FileSystem
                 try
                 {
                     // Assert
-                    if (position < 0L || position >= parent.length) throw new ArgumentOutOfRangeException(nameof(Position));
+                    if (position < 0L) throw new ArgumentOutOfRangeException(nameof(Position));
                     // Position of this thread
                     long _position = position;
                     // Write in existing block
@@ -1789,7 +1804,7 @@ namespace Lexical.FileSystem
                     // Append block
                     {
                         byte[] block = null;
-                        while (_position < blocks.Count * blockSize)
+                        while (_position >= blocks.Count * blockSize)
                         {
                             block = new byte[blockSize];
                             blocks.Add(block);
@@ -1805,6 +1820,9 @@ namespace Lexical.FileSystem
                 {
                     m_lock.ReleaseWriterLock();
                 }
+
+                // Send event
+                parent.SendChangeEvent();
             }
 
             /// <summary>
