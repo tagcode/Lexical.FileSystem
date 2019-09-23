@@ -4,8 +4,6 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
-using System.IO;
-using System.Security;
 using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
@@ -44,7 +42,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has Observe capability</returns>
         public static bool CanSetEventDispatcher(this IFileSystem fileSystem)
-            => fileSystem is IFileSystemEventDispatch observer ? observer.CanSetEventDispatcher : false;
+            => fileSystem is IFileSystemEventDispatch eventDispatchHandler ? eventDispatchHandler.CanSetEventDispatcher : false;
 
         /// <summary>
         /// Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.
@@ -55,7 +53,7 @@ namespace Lexical.FileSystem
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
         public static IFileSystem SetEventDispatcher(IFileSystem fileSystem, TaskFactory eventHandler)
         {
-            if (fileSystem is IFileSystemEventDispatch _observer) return _observer.SetEventDispatcher(eventHandler);
+            if (fileSystem is IFileSystemEventDispatch eventDispatchHandler) return eventDispatchHandler.SetEventDispatcher(eventHandler);
             else throw new NotSupportedException(nameof(SetEventDispatcher));
         }
     }

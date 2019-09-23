@@ -92,6 +92,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="fileSystem"></param>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/file"</param>
+        /// <param name="initialData">(optional) initial data to write</param>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
@@ -104,9 +105,15 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
-        public static void CreateFile(this IFileSystem fileSystem, string path)
+        public static void CreateFile(this IFileSystem fileSystem, string path, byte[] initialData = null)
         {
-            if (fileSystem is IFileSystemOpen opener) opener.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite).Dispose();
+            if (fileSystem is IFileSystemOpen opener)
+            {
+                using (Stream s = opener.Open(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite))
+                {
+                    if (initialData != null) s.Write(initialData, 0, initialData.Length);
+                }
+            }
             else throw new NotSupportedException(nameof(CreateDirectory));
         }
 

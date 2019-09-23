@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Lexical.FileSystem.Utils
+namespace Lexical.FileSystem.Utilities
 {
     /// <summary>
     /// This class scans directories and searches for files that match a wildcard and regex patterns.

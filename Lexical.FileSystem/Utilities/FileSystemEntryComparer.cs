@@ -5,12 +5,14 @@
 // --------------------------------------------------------
 using System.Collections.Generic;
 
-namespace Lexical.FileSystem.Utils
+namespace Lexical.FileSystem.Utilities
 {
     /// <summary>
-    /// Compares <see cref="IFileSystemEntry"/> for Path, Date, Length and FileSystem equality.
+    /// Equality comparer compares <see cref="IFileSystemEntry"/> for Path, Date, Length and FileSystem equality.
+    /// 
+    /// Order comparer compares by type, then by name. 
     /// </summary>
-    public class FileSystemEntryComparer : IEqualityComparer<IFileSystemEntry>
+    public class FileSystemEntryComparer : IEqualityComparer<IFileSystemEntry>, IComparer<IFileSystemEntry>
     {
         /// <summary>
         /// Singleton instance.
@@ -72,5 +74,33 @@ namespace Lexical.FileSystem.Utils
 
             return hash;
         }
+
+        /// <summary>
+        /// Sort by type, then name, using AlphaNumericComparer
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        public int Compare(IFileSystemEntry x, IFileSystemEntry y)
+        {
+            if (x == null && y == null) return 0;
+            if (x == null) return -1;
+            if (y == null) return 1;
+
+            // Order by type
+            int x_score = 0, y_score = 0;
+            if (x is IFileSystemEntryDrive) x_score += 4;
+            if (x is IFileSystemEntryDirectory) x_score += 2;
+            if (x is IFileSystemEntryFile) x_score += 1;
+            if (y is IFileSystemEntryDrive) y_score += 4;
+            if (y is IFileSystemEntryDirectory) y_score += 2;
+            if (y is IFileSystemEntryFile) y_score += 1;
+            int d = x_score - y_score;
+            if (d != 0) return d;
+
+            // Order by name
+            return AlphaNumericComparer.Default.Compare(x.Name, y.Name);
+        }
+
     }
 }

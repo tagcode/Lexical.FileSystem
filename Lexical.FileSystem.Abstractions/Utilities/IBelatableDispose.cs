@@ -5,7 +5,7 @@
 // --------------------------------------------------------
 using System;
 
-namespace Lexical.FileSystem.Utils
+namespace Lexical.FileSystem.Utilities
 {
     /// <summary>
     /// Interface for objects whose dispose can be belated. 

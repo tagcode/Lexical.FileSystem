@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace Lexical.FileSystem.Utils
+namespace Lexical.FileSystem.Utilities
 {
     /// <summary>
     /// A disposable that manages a list of disposable objects.

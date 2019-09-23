@@ -4,7 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
-using Lexical.FileSystem.Utils;
+using Lexical.FileSystem.Utilities;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
