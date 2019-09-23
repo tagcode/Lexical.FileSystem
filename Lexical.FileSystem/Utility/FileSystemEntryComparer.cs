@@ -5,7 +5,7 @@
 // --------------------------------------------------------
 using System.Collections.Generic;
 
-namespace Lexical.FileSystem.Utilities
+namespace Lexical.FileSystem.Utility
 {
     /// <summary>
     /// Equality comparer compares <see cref="IFileSystemEntry"/> for Path, Date, Length and FileSystem equality.
@@ -89,12 +89,12 @@ namespace Lexical.FileSystem.Utilities
 
             // Order by type
             int x_score = 0, y_score = 0;
-            if (x is IFileSystemEntryDrive) x_score += 4;
-            if (x is IFileSystemEntryDirectory) x_score += 2;
-            if (x is IFileSystemEntryFile) x_score += 1;
-            if (y is IFileSystemEntryDrive) y_score += 4;
-            if (y is IFileSystemEntryDirectory) y_score += 2;
-            if (y is IFileSystemEntryFile) y_score += 1;
+            if (x.IsDrive()) x_score += 4;
+            if (x.IsDirectory()) x_score += 2;
+            if (x.IsFile()) x_score += 1;
+            if (y.IsDrive()) y_score += 4;
+            if (y.IsDirectory()) y_score += 2;
+            if (y.IsFile()) y_score += 1;
             int d = x_score - y_score;
             if (d != 0) return d;
 

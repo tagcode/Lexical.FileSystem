@@ -3,8 +3,9 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Decoration;
 using Lexical.FileSystem.Internal;
-using Lexical.FileSystem.Utilities;
+using Lexical.FileSystem.Utility;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 
-namespace Lexical.FileSystem
+namespace Lexical.FileSystem.Adapter
 {
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.

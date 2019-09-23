@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
-namespace Lexical.FileSystem
+namespace Lexical.FileSystem.Adapter
 {
     /// <summary>
     /// Adapts <see cref="IFileSystem"/> into <see cref="IFileProvider"/>.

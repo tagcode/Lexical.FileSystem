@@ -5,7 +5,7 @@
 // --------------------------------------------------------
 using System;
 
-namespace Lexical.FileSystem.Utilities
+namespace Lexical.FileSystem.Utility
 {
     /// <summary>
     /// Extracts information about glob pattern string.

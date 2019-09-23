@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Lexical.FileSystem.Utilities
+namespace Lexical.FileSystem.Utility
 {
     /// <summary>
     /// Dummy observer that returns no events.

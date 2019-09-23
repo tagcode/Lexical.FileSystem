@@ -4,19 +4,16 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
-using Lexical.FileSystem.Utilities;
+using Lexical.FileSystem.Utility;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Security;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 
-namespace Lexical.FileSystem
+namespace Lexical.FileSystem.Adapter
 {
     /// <summary>
     /// File system that reads, observes and browses files from <see cref="IFileProvider"/> source.
@@ -161,7 +158,7 @@ namespace Lexical.FileSystem
                 {
                     string entryPath = concatenatedPath.Length > 0 ? concatenatedPath + "/" + _fi.Name : _fi.Name;
                     IFileSystemEntry e =
-                        _fi.IsDirectory ? 
+                        _fi.IsDirectory ?
                         (IFileSystemEntry)new FileSystemEntryDirectory(this, entryPath, _fi.Name, _fi.LastModified) :
                         (IFileSystemEntry)new FileSystemEntryFile(this, entryPath, _fi.Name, _fi.LastModified, _fi.Length);
                     list.Add(e);
@@ -207,8 +204,8 @@ namespace Lexical.FileSystem
             IFileInfo fi = fp.GetFileInfo(concatenatedPath);
             if (fi.Exists)
                 return fi.IsDirectory ?
-                    new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified):
-                    (IFileSystemEntry) new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, fi.Length);
+                    new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified) :
+                    (IFileSystemEntry)new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, fi.Length);
 
             // Directory
             IDirectoryContents contents = fp.GetDirectoryContents(concatenatedPath);

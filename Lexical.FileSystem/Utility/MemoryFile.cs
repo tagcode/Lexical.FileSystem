@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 
-namespace Lexical.FileSystem.Utilities
+namespace Lexical.FileSystem.Utility
 {
     /// <summary>
     /// Memory based file. File is based on blocks (1024 bytes with default settings).

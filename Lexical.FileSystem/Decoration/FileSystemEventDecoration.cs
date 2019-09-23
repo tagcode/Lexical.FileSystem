@@ -5,7 +5,7 @@
 // --------------------------------------------------------
 using System;
 
-namespace Lexical.FileSystem
+namespace Lexical.FileSystem.Decoration
 {
     /// <summary>
     /// Abstract base class for decorated events.

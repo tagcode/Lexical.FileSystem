@@ -4,7 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
-using Lexical.FileSystem.Utilities;
+using Lexical.FileSystem.Utility;
 using System;
 
 namespace Lexical.FileSystem

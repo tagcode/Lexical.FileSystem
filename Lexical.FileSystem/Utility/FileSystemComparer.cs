@@ -3,13 +3,14 @@
 // Date:           6.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Adapter;
 using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Lexical.FileSystem.Utilities
+namespace Lexical.FileSystem.Utility
 {
     /// <summary>
     /// Comparer that compares known file-systems for equality of referred system.

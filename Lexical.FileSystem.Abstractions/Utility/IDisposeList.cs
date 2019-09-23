@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Lexical.FileSystem.Utilities
+namespace Lexical.FileSystem.Utility
 {
     /// <summary>
     /// Object that can be attached with <see cref="IDisposable"/>.
