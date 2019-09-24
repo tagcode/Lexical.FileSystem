@@ -22,7 +22,6 @@ namespace Lexical.FileSystem
         /// Starts at <paramref name="startPath"/> if provided, otherwise starts at root "".
         /// <paramref name="maxLevel"/> sets maximum visit depths.
         /// 
-        /// 
         /// ""
         /// ├──""
         /// │  ├──"mnt"

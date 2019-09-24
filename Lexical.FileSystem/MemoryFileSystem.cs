@@ -44,7 +44,7 @@ namespace Lexical.FileSystem
         ObserverHandle[] Observers => observers.Array;
 
         /// <inheritdoc/>
-        public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive;
+        public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive | FileSystemFeatures.EmptyDirectoryName;
         /// <inheritdoc/>
         public virtual bool CanBrowse => true;
         /// <inheritdoc/>
@@ -579,7 +579,7 @@ namespace Lexical.FileSystem
                     if (node != null) throw new FileSystemExceptionFileExists(this, path);
 
                     // Create file
-                    LockCookie coockie = m_lock.UpgradeToWriterLock(int.MaxValue);
+                    LockCookie cookie = m_lock.UpgradeToWriterLock(int.MaxValue);
                     try
                     {
                         // Find entry again under write lock.
@@ -611,13 +611,13 @@ namespace Lexical.FileSystem
                     }
                     finally
                     {
-                        m_lock.DowngradeFromWriterLock(ref coockie);
+                        m_lock.DowngradeFromWriterLock(ref cookie);
                     }
                 }
                 else if (fileMode == FileMode.Create)
                 {
                     // Create file
-                    LockCookie coockie = m_lock.UpgradeToWriterLock(int.MaxValue);
+                    LockCookie cookie = m_lock.UpgradeToWriterLock(int.MaxValue);
                     try
                     {
                         // Find entry again under write lock.
@@ -657,7 +657,7 @@ namespace Lexical.FileSystem
                     }
                     finally
                     {
-                        m_lock.DowngradeFromWriterLock(ref coockie);
+                        m_lock.DowngradeFromWriterLock(ref cookie);
                     }
                 }
                 else if (fileMode == FileMode.Open)
@@ -691,6 +691,8 @@ namespace Lexical.FileSystem
                     if (node is File existingFile) return existingFile.Open(fileAccess, fileShare);
 
                     // Create file
+                    LockCookie cookie = m_lock.UpgradeToWriterLock(int.MaxValue);
+                    try
                     {
                         // Split path to parent and filename parts, also search for parent directory
                         StringSegment parentPath, name;
@@ -713,6 +715,10 @@ namespace Lexical.FileSystem
                         // Return stream
                         return stream;
                     }
+                    finally
+                    {
+                        m_lock.DowngradeFromWriterLock(ref cookie);
+                    }
                 }
 
                 throw new ArgumentException(nameof(fileMode));
@@ -725,16 +731,6 @@ namespace Lexical.FileSystem
                 if (events.Count > 0) SendEvents(ref events);
             }
 
-        }
-
-        /// <inheritdoc/>
-        public IFileSystemObserverHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
-        {
-            // Assert not disposed
-            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
-            ObserverHandle handle = new ObserverHandle(this, filter, observer, state);
-            observers.Add(handle);
-            return handle;
         }
 
         /// <summary>
@@ -901,6 +897,16 @@ namespace Lexical.FileSystem
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;
+        }
+
+        /// <inheritdoc/>
+        public IFileSystemObserverHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        {
+            // Assert not disposed
+            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+            ObserverHandle handle = new ObserverHandle(this, filter, observer, state);
+            observers.Add(handle);
+            return handle;
         }
 
         /// <summary>

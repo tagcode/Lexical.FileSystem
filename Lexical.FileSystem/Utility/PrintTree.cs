@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
         public enum Format
         {
             /// <summary>
-            /// Print format is entry name.
+            /// Print format of entry name.
             /// 
             /// ""
             /// ├──""
@@ -36,7 +36,7 @@ namespace Lexical.FileSystem
             Name,
 
             /// <summary>
-            /// Print format is entry path.
+            /// Print format of entry path.
             /// 
             /// ├──/
             /// │  ├──/mnt
