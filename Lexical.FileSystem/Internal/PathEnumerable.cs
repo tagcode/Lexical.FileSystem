@@ -173,6 +173,17 @@ namespace Lexical.FileSystem.Internal
     /// Enumerator of <see cref="PathEnumerable"/> with special case handling.
     /// 
     /// Special case handling: Two of first "", "" are considered one "".
+    /// 
+    /// Examples:
+    /// <list type="bullet">
+    ///     <item>"dir/dir/file" -> ["dir", "dir", "file"]</item>
+    ///     <item>"dir/dir/path/" -> ["dir", "dir", "path", ""]</item>
+    ///     <item>"/mnt/shared/" -> ["", "mnt", "shared", ""]</item>
+    ///     <item>"/" -> [""]</item>
+    ///     <item>"//" -> ["", ""]</item>
+    ///     <item>"/mnt" -> ["", "mnt"]</item>
+    ///     <item>"/mnt/" -> ["", "mnt", ""]</item>
+    /// </list>
     /// </summary>
     public struct PathEnumerator2 : IEnumerator<StringSegment>
     {

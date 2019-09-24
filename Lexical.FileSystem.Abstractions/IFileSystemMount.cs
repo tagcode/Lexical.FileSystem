@@ -5,6 +5,7 @@
 // --------------------------------------------------------
 
 using System;
+using System.IO;
 
 namespace Lexical.FileSystem
 {
@@ -15,48 +16,46 @@ namespace Lexical.FileSystem
     public interface IFileSystemMount : IFileSystem
     {
         /// <summary>
-        /// Mount another filesystem.
+        /// Create a mount point where other file systems can be mounted.
         /// 
-        /// Returns a handle. If handle is disposed the mount is unmounted.
+        /// If mount point already exists, returns another handle to same mount point. Both handles must be disposed separately.
         /// </summary>
-        /// <param name="parentPath">Path in parent <see cref="IFileSystemMount"/> to mount</param>
-        /// <param name="fileSystem">Mounted filesystem</param>
-        /// <param name="subpath">(optional) subpath in <paramref name="fileSystem"/></param>
-        /// <param name="mountHandle">handle for the mount</param>
-        /// <returns>original filesystem</returns>
-        /// <exception cref="NotSupportedException">If mount is not supported</exception>
-        IFileSystem Mount(string parentPath, IFileSystem fileSystem, string subpath, out IFileSystemMountHandle mountHandle);
+        /// <param name="path">path to the mount point</param>
+        /// <returns>a handle to mount point</returns>
+        /// <exception cref="NotSupportedException">If mount point creation is not supported</exception>
+        /// <exception cref="IOException">If creation failed.</exception>
+        IFileSystemMountPoint CreateMountPoint(string path);
     }
 
     /// <summary>
-    /// Handle for mounting. Dispose the handle to unmount.
+    /// Mount point
+    /// </summary>
+    public interface IFileSystemMountPoint : IDisposable
+    {
+        /// <summary>
+        /// The file system this mountpoint is part of.
+        /// </summary>
+        IFileSystem FileSystem { get; }
+
+        /// <summary>
+        /// Mount point path in <see cref="FileSystem"/>.
+        /// </summary>
+        String Path { get; }
+
+        /// <summary>
+        /// Mount <paramref name="fileSystem"/> at <paramref name="subpath"/> to the mountpoint.
+        /// </summary>
+        /// <param name="fileSystem"></param>
+        /// <param name="subpath"></param>
+        /// <returns></returns>
+        IFileSystemMountHandle Mount(IFileSystem fileSystem, string subpath);
+    }
+
+    /// <summary>
+    /// Mount handle. Dispose the handle to unmount.
     /// </summary>
     public interface IFileSystemMountHandle : IDisposable
     {
-        /// <summary>
-        /// Parent filesystem
-        /// </summary>
-        IFileSystem ParentFileSystem { get; }
-
-        /// <summary>
-        /// Path in <see cref="ParentFileSystem"/>.
-        /// </summary>
-        String Mountpoint { get; }
-
-        /// <summary>
-        /// Mounted filesystem.
-        /// </summary>
-        IFileSystem MountedFileSystem { get; }
-
-        /// <summary>
-        /// Path in the mounted filesystem.
-        /// </summary>
-        String MountedFileSystemPath { get; }
-
-        /// <summary>
-        /// Replace <see cref="MountedFileSystem"/> 
-        /// </summary>
-        void Replace(IFileSystem newFileSystem, string path);
     }
     // </doc>
 
@@ -66,36 +65,20 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Mount another filesystem.
+        /// Create a mount point where other file systems can be mounted.
+        /// 
+        /// If mount point already exists, returns another handle to same mount point. Both handles must be disposed separately.
         /// </summary>
-        /// <param name="parentFileSystem"></param>
-        /// <param name="parentPath">Path in parent <see cref="IFileSystemMount"/> to mount</param>
-        /// <param name="fileSystem">Mounted filesystem</param>
-        /// <param name="subpath">(optional) subpath in <paramref name="fileSystem"/></param>
-        /// <returns>handle that can be disposed to unmount</returns>
-        /// <exception cref="NotSupportedException">If mount is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string parentPath, IFileSystem fileSystem, string subpath)
+        /// <param name="fileSystem"></param>
+        /// <param name="path">path to the mount point</param>
+        /// <returns>a handle to mount point</returns>
+        /// <exception cref="NotSupportedException">If mount point creation is not supported</exception>
+        /// <exception cref="IOException">If creation failed.</exception>
+        public static IFileSystemMountPoint CreateMountPoint(this IFileSystem fileSystem, string path)
         {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(parentPath, fileSystem, subpath);
+            if (fileSystem is IFileSystemMount mountable) return mountable.CreateMountPoint(path);
             throw new NotSupportedException();
         }
-
-        /// <summary>
-        /// Mount another filesystem.
-        /// </summary>
-        /// <param name="parentFileSystem"></param>
-        /// <param name="parentPath">Path in parent <see cref="IFileSystemMount"/> to mount</param>
-        /// <param name="fileSystem">Mounted filesystem</param>
-        /// <param name="subpath">(optional) subpath in <paramref name="fileSystem"/></param>
-        /// <param name="mountHandle">handle for the mount</param>
-        /// <returns>handle that can be disposed to unmount</returns>
-        /// <exception cref="NotSupportedException">If mount is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string parentPath, IFileSystem fileSystem, string subpath, out IFileSystemMountHandle mountHandle)
-        {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(parentPath, fileSystem, subpath, out mountHandle);
-            throw new NotSupportedException();
-        }
-
     }
 
 }

@@ -4,9 +4,11 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
+using Lexical.FileSystem.Utility;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -16,7 +18,7 @@ namespace Lexical.FileSystem.Adapter
     /// <summary>
     /// Adapts <see cref="IFileSystem"/> into <see cref="IFileProvider"/>.
     /// </summary>
-    public class FileSystemProvider : IFileProvider
+    public class FileSystemProvider : DisposeList, IFileProvider
     {
         /// <summary>
         /// Source filesystem
@@ -24,20 +26,10 @@ namespace Lexical.FileSystem.Adapter
         public IFileSystem FileSystem { get; protected set; }
 
         /// <summary>
-        /// Lock for modifying dispose list.
-        /// </summary>
-        protected object m_lock = new object();
-
-        /// <summary>
-        /// Attached disposables.
-        /// </summary>
-        protected List<IDisposable> disposeList;
-
-        /// <summary>
         /// Create adapter that adapts <paramref name="filesystem"/> into <see cref="IFileProvider"/>.
         /// </summary>
         /// <param name="filesystem"></param>
-        public FileSystemProvider(IFileSystem filesystem)
+        public FileSystemProvider(IFileSystem filesystem) : base()
         {
             FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
         }
@@ -49,7 +41,24 @@ namespace Lexical.FileSystem.Adapter
         /// <returns></returns>
         public IDirectoryContents GetDirectoryContents(string subpath)
         {
+            IFileSystemEntry[] entries = FileSystem.Browse(subpath);
+            
             throw new NotImplementedException();
+        }
+
+        class DirectoryContents : IDirectoryContents
+        {
+            public bool Exists => throw new NotImplementedException();
+
+            public IEnumerator<IFileInfo> GetEnumerator()
+            {
+                throw new NotImplementedException();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                throw new NotImplementedException();
+            }
         }
 
         /// <summary>
@@ -73,65 +82,67 @@ namespace Lexical.FileSystem.Adapter
         }
 
         /// <summary>
+        /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
+        /// 
+        /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
+        /// </summary>
+        /// <param name="disposeAction"></param>
+        /// <returns>true if was added to list, false if was disposed right away</returns>
+        public new FileSystemProvider AddDisposeAction(Action disposeAction)
+        {
+            base.AddDisposeAction(disposeAction);
+            return this;
+        }
+
+        /// <summary>
         /// Add <paramref name="disposable"/> to list of objects to be disposed along with the system.
         /// </summary>
         /// <param name="disposable"></param>
         /// <returns>filesystem</returns>
         public FileSystemProvider AddDisposable(object disposable)
         {
-            if (disposable is IDisposable disp)
-            {
-                lock (m_lock)
-                {
-                    if (this.disposeList == null) this.disposeList = new List<IDisposable>();
-                    this.disposeList.Add(disp);
-                }
-            }
+            ((IDisposeList)this).AddDisposable(disposable);
             return this;
         }
 
         /// <summary>
-        /// Remove disposable from dispose list.
+        /// Add <paramref name="disposables"/> to list of objects to be disposed along with the system.
+        /// </summary>
+        /// <param name="disposables"></param>
+        /// <returns>filesystem</returns>
+        public FileSystemProvider AddDisposables(IEnumerable<object> disposables)
+        {
+            ((IDisposeList)this).AddDisposables(disposables);
+            return this;
+        }
+
+        /// <summary>
+        /// Remove <paramref name="disposable"/> from dispose list.
         /// </summary>
         /// <param name="disposable"></param>
         /// <returns></returns>
         public FileSystemProvider RemoveDisposable(object disposable)
         {
-            if (disposable is IDisposable disp)
-            {
-                lock (m_lock)
-                {
-                    if (this.disposeList != null) this.disposeList.Remove(disp);
-                }
-            }
+            ((IDisposeList)this).RemoveDisposable(disposable);
             return this;
         }
 
         /// <summary>
-        /// Dispose attached disposables.
+        /// Remove <paramref name="disposables"/> from dispose list.
         /// </summary>
-        /// <exception cref="AggregateException">If dispose exception occurs</exception>
-        public void Dispose()
+        /// <param name="disposables"></param>
+        /// <returns></returns>
+        public FileSystemProvider RemoveDisposables(IEnumerable<object> disposables)
         {
-            // Get and clear
-            List<IDisposable> list = Interlocked.Exchange(ref this.disposeList, null);
-            // Nothing to dispose
-            if (list == null) return;
-
-            StructList4<Exception> errors = new StructList4<Exception>();
-            foreach (IDisposable d in list)
-            {
-                try
-                {
-                    d.Dispose();
-                }
-                catch (Exception e)
-                {
-                    errors.Add(e);
-                }
-            }
-
-            if (errors.Count > 0) throw new AggregateException(errors);
+            ((IDisposeList)this).RemoveDisposables(disposables);
+            return this;
         }
+
+        /// <summary>
+        /// Print info
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+            => FileSystem.ToString();
     }
 }

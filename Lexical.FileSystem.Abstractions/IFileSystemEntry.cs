@@ -99,9 +99,9 @@ namespace Lexical.FileSystem
         bool IsMountPoint { get; }
 
         /// <summary>
-        /// Features of the file-system in this directory and under it.
+        /// (Optional) The mounted file system.
         /// </summary>
-        FileSystemFeatures Features { get; }
+        IFileSystem MountedFileSystem { get; }
     }
     // </doc>
 
@@ -161,13 +161,13 @@ namespace Lexical.FileSystem
             => entry is IFileSystemEntryMountPoint mountPoint ? mountPoint.IsMountPoint : false;
 
         /// <summary>
-        /// Get supported features of the mount point
+        /// (Optional) Get the mounted file system.
         /// </summary>
         /// <param name="entry"></param>
         /// <returns>features of the mount point</returns>
         /// <exception cref="NotSupportedException">If is not mount point</exception>
-        public static FileSystemFeatures Features(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryMountPoint mountPoint ? mountPoint.Features : throw new NotSupportedException(nameof(Features));
+        public static IFileSystem MountedFileSystem(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryMountPoint mountPoint ? mountPoint.MountedFileSystem : throw new NotSupportedException(nameof(MountedFileSystem));
 
     }
 
