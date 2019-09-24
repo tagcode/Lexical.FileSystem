@@ -44,6 +44,8 @@ namespace Lexical.FileSystem
         CaseSensitive = 1UL << 48,
         /// <summary>Some or all files use case-insensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
         CaseInsensitive = 1UL << 49,
+        /// <summary>Flag describes that filesystem allows empty string "" directory names</summary>
+        EmptyDirectoryName = 1UL << 50,
 
         /// <summary>Reserved for implementing classes to use for any purpose.</summary>
         Reserved0 = 1UL << 56,

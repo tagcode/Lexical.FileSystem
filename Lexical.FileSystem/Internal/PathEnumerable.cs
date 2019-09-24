@@ -168,4 +168,123 @@ namespace Lexical.FileSystem.Internal
             }
         }
     }
+
+    /// <summary>
+    /// Enumerator of <see cref="PathEnumerable"/> with special case handling.
+    /// 
+    /// Special case handling: Two of first "", "" are considered one "".
+    /// </summary>
+    public struct PathEnumerator2 : IEnumerator<StringSegment>
+    {
+        /// <summary>
+        /// Path string.
+        /// </summary>
+        public readonly StringSegment Path;
+
+        /// <summary>
+        /// End index.
+        /// </summary>
+        int endIx;
+
+        /// <summary>
+        /// Start index.
+        /// </summary>
+        int startIx;
+
+        /// <summary>
+        /// Name index
+        /// </summary>
+        int nameIndex;
+
+        /// <summary>
+        /// Current name
+        /// </summary>
+        StringSegment name;
+
+        /// <summary>
+        /// Create path string separator.
+        /// </summary>
+        /// <param name="path"></param>
+        public PathEnumerator2(String path)
+        {
+            Path = new StringSegment(path);
+            endIx = -1;
+            startIx = -1;
+            nameIndex = -1;
+            name = StringSegment.Empty;
+        }
+
+        /// <summary>
+        /// Create path string separator.
+        /// </summary>
+        /// <param name="path"></param>
+        public PathEnumerator2(StringSegment path)
+        {
+            Path = path;
+            endIx = -1;
+            startIx = -1;
+            nameIndex = -1;
+            name = StringSegment.Empty;
+        }
+
+        /// <inheritdoc/>
+        public StringSegment Current
+            => name;
+
+        /// <inheritdoc/>
+        object IEnumerator.Current
+            => name;
+
+        /// <inheritdoc/>
+        public void Reset()
+        {
+            endIx = -1;
+            startIx = -1;
+            nameIndex = -1;
+            name = StringSegment.Empty;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+        }
+
+        /// <inheritdoc/>
+        public bool MoveNext()
+        {
+            int eol = Path.Start + Path.Length;
+
+            // Move start index
+            startIx = endIx;
+            // First Move
+            startIx++;
+
+            // Move end index
+            while (true)
+            {
+                endIx++;
+                // End
+                if (endIx > eol) return false;
+                // End of line
+                if ((endIx == eol) || /*Break at '/'*/(endIx < eol && Path.String[endIx] == '/'))
+                {
+                    StringSegment previousName = name;
+                    name = startIx < Path.Start || endIx < Path.Start || startIx > Path.Start + Path.Length || endIx > Path.Start + Path.Length ?
+                           new StringSegment(Path.String, Path.Start, 0) :
+                           new StringSegment(Path.String, Path.Start + startIx, endIx - startIx);
+                    nameIndex++;
+
+                    // Special case handling: Two of first "", "" are considered one "".
+                    if (nameIndex == 1 && name.Equals(StringSegment.Empty) && previousName.Equals(StringSegment.Empty))
+                    {
+                        startIx = endIx+1;
+                        continue;
+                    }
+
+                    return true;
+                }
+            }
+        }
+    }
+
 }

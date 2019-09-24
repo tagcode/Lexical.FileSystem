@@ -13,46 +13,50 @@ namespace Lexical.FileSystem.Utility
     /// 
     /// Order comparer compares by type, then by name. 
     /// </summary>
-    public class FileSystemEntryComparer : IEqualityComparer<IFileSystemEntry>, IComparer<IFileSystemEntry>
+    public class FileSystemEntryComparer
     {
-        /// <summary>
-        /// Singleton instance.
-        /// </summary>
-        private static FileSystemEntryComparer instance = new FileSystemEntryComparer();
+        /// <summary>Equality comparer for: Path, Date, Length, Type</summary>
+        private static IEqualityComparer<IFileSystemEntry> pathDateLengthTypeEqualityComparer = new _PathDateLengthTypeEqualityComparer();
+        /// <summary>Comparer that sorts by: Type, Name.</summary>
+        private static IComparer<IFileSystemEntry> typeNameComparer = new _TypeNameComparer();
 
-        /// <summary>
-        /// Singleton instance.
-        /// </summary>
-        public static FileSystemEntryComparer Instance => instance;
+        /// <summary>Equality comparer for: Path, Date, Length, Type</summary>
+        public static IEqualityComparer<IFileSystemEntry> PathDateLengthTypeEqualityComparer => pathDateLengthTypeEqualityComparer;
+        /// <summary>Comparer that sorts by: Type, Name.</summary>
+        public static IComparer<IFileSystemEntry> TypeNameComparer => typeNameComparer;
 
-        /// <summary>
-        /// Compare entries.
-        /// 
-        /// Two nulls are considered equal.
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns></returns>
-        public bool Equals(IFileSystemEntry x, IFileSystemEntry y)
+        /// <summary>Equality comparer for: Path, Date, Length, Type</summary>
+        class _PathDateLengthTypeEqualityComparer : IEqualityComparer<IFileSystemEntry>
         {
-            if (x == null && y == null) return true;
-            if (x == null || y == null) return false;
+            /// <summary>
+            /// Compare entries.
+            /// 
+            /// Two nulls are considered equal.
+            /// </summary>
+            /// <param name="x"></param>
+            /// <param name="y"></param>
+            /// <returns></returns>
+            public bool Equals(IFileSystemEntry x, IFileSystemEntry y)
+            {
+                if (x == null && y == null) return true;
+                if (x == null || y == null) return false;
 
-            IFileSystemEntryFile xfile = x as IFileSystemEntryFile, yfile = y as IFileSystemEntryFile;
-            IFileSystemEntryDirectory xdir = x as IFileSystemEntryDirectory, ydir = y as IFileSystemEntryDirectory;
-            IFileSystemEntryDrive xdrive = x as IFileSystemEntryDrive, ydrive = y as IFileSystemEntryDrive;
+                bool xfile = x.IsFile(), yfile = y.IsFile();
+                bool xdir = x.IsDirectory(), ydir = y.IsDirectory();
+                bool xdrive = x.IsDrive(), ydrive = y.IsDrive();
+                //bool xmountpoint = x.IsMountPoint(), ymountpoint = y.IsMountPoint();
 
-            if ((xfile != null) != (yfile != null)) return false;
-            if ((xdir != null) != (ydir != null)) return false;
-            if ((xdrive != null) != (ydrive != null)) return false;
+                if (xfile != yfile) return false;
+                if (xdir != ydir) return false;
+                if (xdrive != ydrive) return false;
 
-            if (x.FileSystem != y.FileSystem) return false;
-            if (x.Path != y.Path) return false;
-            if (x.LastModified != y.LastModified) return false;
-            if ((xfile != null) && (yfile != null) && xfile.Length != yfile.Length) return false;
+                if (x.FileSystem != y.FileSystem) return false;
+                if (x.Path != y.Path) return false;
+                if (x.LastModified != y.LastModified) return false;
+                if (xfile && yfile && x.Length() != y.Length()) return false;
 
-            return true;
-        }
+                return true;
+            }
 
         /// <summary>
         /// Calculate hash
@@ -75,32 +79,40 @@ namespace Lexical.FileSystem.Utility
 
             return hash;
         }
+        }
 
-        /// <summary>
-        /// Sort by type, then name, using AlphaNumericComparer
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns></returns>
-        public int Compare(IFileSystemEntry x, IFileSystemEntry y)
+        /// <summary>Comparer that sorts by: Type, Name.</summary>
+        class _TypeNameComparer : IComparer<IFileSystemEntry>
         {
-            if (x == null && y == null) return 0;
-            if (x == null) return -1;
-            if (y == null) return 1;
+            /// <summary>
+            /// Sort by type, then name, using AlphaNumericComparer
+            /// </summary>
+            /// <param name="x"></param>
+            /// <param name="y"></param>
+            /// <returns></returns>
+            public int Compare(IFileSystemEntry x, IFileSystemEntry y)
+            {
+                if (x == null && y == null) return 0;
+                if (x == null) return -1;
+                if (y == null) return 1;
 
-            // Order by type
-            int x_score = 0, y_score = 0;
-            if (x.IsDrive()) x_score += 4;
-            if (x.IsDirectory()) x_score += 2;
-            if (x.IsFile()) x_score += 1;
-            if (y.IsDrive()) y_score += 4;
-            if (y.IsDirectory()) y_score += 2;
-            if (y.IsFile()) y_score += 1;
-            int d = x_score - y_score;
-            if (d != 0) return d;
+                // Order by type
+                int x_score = 0;
+                if (x.IsDrive()) x_score += 4;
+                if (x.IsDirectory()) x_score += 2;
+                if (x.IsFile()) x_score += 1;
 
-            // Order by name
-            return AlphaNumericComparer.Default.Compare(x.Name, y.Name);
+                int y_score = 0;
+                if (y.IsDrive()) y_score += 4;
+                if (y.IsDirectory()) y_score += 2;
+                if (y.IsFile()) y_score += 1;
+
+                int d = x_score - y_score;
+                if (d != 0) return d;
+
+                // Order by name
+                return AlphaNumericComparer.Default.Compare(x.Name, y.Name);
+            }
         }
 
     }

@@ -226,11 +226,9 @@ namespace Lexical.FileSystem
                 // Cursor starts at root
                 Node cursor = root;
                 // Split path at '/' slashes
-                PathEnumerator enumr = new PathEnumerator(path, path == "/");
-                int level = 0;
+                PathEnumerator2 enumr = new PathEnumerator2(path);
                 while (enumr.MoveNext())
                 {
-                    level++;
                     // Name
                     StringSegment name = enumr.Current;
                     // Get entry under lock.
@@ -423,7 +421,7 @@ namespace Lexical.FileSystem
                 Directory cursor = root, newParent = null;
                 string newName = null;
                 // Path '/' splitter, enumerates name strings from root towards tail
-                PathEnumerator enumr = new PathEnumerator(newPath, newPath == "/");
+                PathEnumerator2 enumr = new PathEnumerator2(newPath);
                 // Get next name from the path
                 while (enumr.MoveNext())
                 {
@@ -752,7 +750,7 @@ namespace Lexical.FileSystem
             // Node cursor
             Node cursor = root;
             // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator enumr = new PathEnumerator(path, path == "/");
+            PathEnumerator2 enumr = new PathEnumerator2(path);
             // Get next name from the path
             while (enumr.MoveNext())
             {
@@ -795,8 +793,10 @@ namespace Lexical.FileSystem
         /// <returns>true parent was successfully found</returns>
         bool GetParentAndName(string path, out StringSegment parentPath, out StringSegment name, out Directory parent)
         {
+            // Special case for root
+            if (path == "") { parentPath = StringSegment.Empty; name = StringSegment.Empty; parent = root; return false; }
             // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator enumr = new PathEnumerator(path, path == "/");
+            PathEnumerator2 enumr = new PathEnumerator2(path);
             // Path's name parts
             StructList12<StringSegment> names = new StructList12<StringSegment>();
             // Split path into names
@@ -853,7 +853,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposeAction"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        public MemoryFileSystem AddDisposableAction(Action disposeAction)
+        public new MemoryFileSystem AddDisposeAction(Action disposeAction)
         {
             base.AddDisposeAction(disposeAction);
             return this;
@@ -992,13 +992,18 @@ namespace Lexical.FileSystem
             {
                 get
                 {
+                    // Get reference of previous cached value
                     string _path = path;
+                    // Return previous cached value
                     if (_path != null) return _path;
+                    // Get reference of parent
                     Directory _parent = parent;
+                    // Case for root
                     if (_parent == null) return path = "";
-                    if (_parent == filesystem.root && name != "") return path = name;
-                    if (_parent != null && _parent.parent == filesystem.root && _parent.name == "" && name != "") return "/" + name;
-                    return path = _parent.Path + "/" + name;
+                    // Case for first level paths
+                    if (_parent == filesystem.root) return path = (name == "" ? "/" : name);
+                    // 2nd+ level paths
+                    return path = _parent.Path == "/" && name != "" ? _parent.Path + name : _parent.Path + "/" + name;
                 }
             }
 

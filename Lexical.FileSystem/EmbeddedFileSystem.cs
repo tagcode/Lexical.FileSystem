@@ -157,7 +157,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposeAction"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        public EmbeddedFileSystem AddDisposableAction(Action disposeAction)
+        public EmbeddedFileSystem AddDisposeAction(Action disposeAction)
         {
             base.AddDisposeAction(disposeAction);
             return this;

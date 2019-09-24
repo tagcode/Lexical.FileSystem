@@ -466,7 +466,7 @@ namespace Lexical.FileSystem.Adapter
                     if (previousSnapshot.TryGetValue(path, out prevEntry))
                     {
                         // Send change event
-                        if (!FileSystemEntryComparer.Instance.Equals(newEntry.Value, prevEntry))
+                        if (!FileSystemEntryComparer.PathDateLengthTypeEqualityComparer.Equals(newEntry.Value, prevEntry))
                             events.Add(new FileSystemEventChange(this, time, path));
                     }
                     // Send create event
@@ -519,7 +519,7 @@ namespace Lexical.FileSystem.Adapter
         /// </summary>
         /// <param name="disposeAction"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        public FileProviderSystem AddDisposableAction(Action disposeAction)
+        public new FileProviderSystem AddDisposeAction(Action disposeAction)
         {
             base.AddDisposeAction(disposeAction);
             return this;

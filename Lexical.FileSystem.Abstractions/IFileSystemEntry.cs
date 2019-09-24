@@ -18,6 +18,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemEntryFile"/></item>
     ///     <item><see cref="IFileSystemEntryDirectory"/></item>
     ///     <item><see cref="IFileSystemEntryDrive"/></item>
+    ///     <item><see cref="IFileSystemEntryMountPoint"/></item>
     /// </list>    
     /// </summary>
     public interface IFileSystemEntry
@@ -29,12 +30,15 @@ namespace Lexical.FileSystem
 
         /// <summary>
         /// Path that is relative to the <see cref="IFileSystem"/>.
-        /// Separator is "/".
+        /// 
+        /// Separator is forward slash "/".
         /// </summary>
         string Path { get; }
 
         /// <summary>
         /// Entry name in its parent context.
+        /// 
+        /// All characters are legal, including control characters, except forward slash '/'. 
         /// </summary>
         string Name { get; }
 
@@ -70,7 +74,6 @@ namespace Lexical.FileSystem
         /// </summary>
         bool IsDirectory { get; }
     }
-    // </doc>
 
     /// <summary>
     /// Drive entry. 
@@ -84,6 +87,23 @@ namespace Lexical.FileSystem
         /// </summary>
         bool IsDrive { get; }
     }
+
+    /// <summary>
+    /// Entry represents a mount point. 
+    /// </summary>
+    public interface IFileSystemEntryMountPoint : IFileSystemEntry
+    {
+        /// <summary>
+        /// Tests if entry represents a mount point.
+        /// </summary>
+        bool IsMountPoint { get; }
+
+        /// <summary>
+        /// Features of the file-system in this directory and under it.
+        /// </summary>
+        FileSystemFeatures Features { get; }
+    }
+    // </doc>
 
     /// <summary>
     /// Entry that is actually a decoration.
@@ -102,10 +122,9 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemEntryExtensions
     {
         /// <summary>
-        /// Get file legnth
+        /// File length. -1 if is length is unknown.
         /// </summary>
-        /// <param name="entry"></param>
-        /// <returns></returns>
+        /// <returns>File length. -1 if is length is unknown.</returns>
         public static long Length(this IFileSystemEntry entry)
             => entry is IFileSystemEntryFile file ? file.Length : -1L;
 
@@ -132,6 +151,24 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public static bool IsDrive(this IFileSystemEntry entry)
             => entry is IFileSystemEntryDrive drive ? drive.IsDrive : false;
+
+        /// <summary>
+        /// Tests if <paramref name="entry"/> represents a mount point.
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns></returns>
+        public static bool IsMountPoint(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryMountPoint mountPoint ? mountPoint.IsMountPoint : false;
+
+        /// <summary>
+        /// Get supported features of the mount point
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns>features of the mount point</returns>
+        /// <exception cref="NotSupportedException">If is not mount point</exception>
+        public static FileSystemFeatures Features(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryMountPoint mountPoint ? mountPoint.Features : throw new NotSupportedException(nameof(Features));
+
     }
 
 }
