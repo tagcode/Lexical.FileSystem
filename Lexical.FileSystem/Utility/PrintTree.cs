@@ -12,10 +12,47 @@ using System.Text;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// <see cref="IFileSystem"/> tree visitor extension methods.
+    /// Visit and print extension methods for <see cref="IFileSystem"/>.
     /// </summary>
-    public static class FileSystemPrintTree
+    public static class PrintTree
     {
+        /// <summary>
+        /// Print format
+        /// </summary>
+        public enum Format
+        {
+            /// <summary>
+            /// Print format is entry name.
+            /// 
+            /// ""
+            /// ├──""
+            /// │  ├──"mnt"
+            /// │  ├──"tmp"
+            /// │  │  └──"helloworld.txt"
+            /// │  └──"usr"
+            /// │     └──"lex"
+            /// └──"c:"
+            ///    └──"dir"
+            ///       └──"dir"
+            /// </summary>
+            Name,
+
+            /// <summary>
+            /// Print format is entry path.
+            /// 
+            /// ├──/
+            /// │  ├──/mnt
+            /// │  ├──/tmp
+            /// │  │  └──/tmp/helloworld.txt
+            /// │  └──/usr
+            /// │     └──/usr/lex
+            /// └──c:
+            ///    └──c:/dir
+            ///       └──c:/dir/dir
+            /// </summary>
+            Path
+        }
+
         /// <summary>
         /// Print tree structure of the whole filesystem. 
         /// 
@@ -40,7 +77,8 @@ namespace Lexical.FileSystem
         /// <param name="output">output such as <see cref="Console.Out"/></param>
         /// <param name="startPath"></param>
         /// <param name="maxLevel"></param>
-        public static void PrintNameTree(this IFileSystem fileSystem, TextWriter output, string startPath = "", int maxLevel = Int32.MaxValue)
+        /// <param name="printFormat">print format</param>
+        public static void PrintTreeTo(this IFileSystem fileSystem, TextWriter output, string startPath = "", int maxLevel = Int32.MaxValue, Format printFormat = Format.Name)
         {
             foreach(Line line in fileSystem.VisitTree(startPath, maxLevel))
             {
@@ -49,56 +87,15 @@ namespace Lexical.FileSystem
                 // Print last indent
                 if (line.Level >= 1) output.Write(line.LevelContinues(line.Level - 1) ? "├──" : "└──");
                 // Print name
-                output.Write("\"");
-                output.Write(line.Entry.Name);
-                output.Write("\"");
-                // Print error
-                if (line.Error != null)
+                if (printFormat == Format.Name)
                 {
-                    output.Write(" ");
-                    output.Write(line.Error.GetType().Name);
-                    output.Write(": ");
-                    output.Write(line.Error.Message);
+                    output.Write("\"");
+                    output.Write(line.Entry.Name);
+                    output.Write("\"");
+                } else if (printFormat == Format.Path)
+                {
+                    output.Write(line.Entry.Path);
                 }
-                // Print line-feed
-                output.WriteLine();
-            }
-        }
-
-        /// <summary>
-        /// Print tree structure of the whole filesystem. 
-        /// 
-        /// Starts at <paramref name="startPath"/> if provided, otherwise starts at root "".
-        /// <paramref name="maxLevel"/> sets maximum visit depths.
-        /// 
-        /// 
-        /// ├──/
-        /// │  ├──/mnt
-        /// │  ├──/tmp
-        /// │  │  └──/tmp/helloworld.txt
-        /// │  └──/usr
-        /// │     └──/usr/lex
-        /// └──c:
-        ///    └──c:/dir
-        ///       └──c:/dir/dir
-        /// 
-        /// 
-        /// Any thrown exceptions are printed into the line that produced the error.
-        /// </summary>
-        /// <param name="fileSystem"></param>
-        /// <param name="output">output such as <see cref="Console.Out"/></param>
-        /// <param name="startPath"></param>
-        /// <param name="maxLevel"></param>
-        public static void PrintPathTree(this IFileSystem fileSystem, TextWriter output, string startPath = "", int maxLevel = Int32.MaxValue)
-        {
-            foreach (Line line in fileSystem.VisitTree(startPath, maxLevel))
-            {
-                // Print indents
-                for (int l = 0; l < line.Level - 1; l++) output.Write(line.LevelContinues(l) ? "│  " : "   ");
-                // Print last indent
-                if (line.Level >= 1) output.Write(line.LevelContinues(line.Level - 1) ? "├──" : "└──");
-                // Print name
-                output.Write(line.Entry.Path);
                 // Print error
                 if (line.Error != null)
                 {
@@ -136,54 +133,8 @@ namespace Lexical.FileSystem
         /// <param name="output">output</param>
         /// <param name="startPath"></param>
         /// <param name="maxLevel"></param>
-        public static void AppendNameTree(this IFileSystem fileSystem, StringBuilder output, string startPath = "", int maxLevel = Int32.MaxValue)
-        {
-            foreach (Line line in fileSystem.VisitTree(startPath, maxLevel))
-            {
-                // Print indents
-                for (int l = 0; l < line.Level - 1; l++) output.Append(line.LevelContinues(l) ? "│  " : "   ");
-                // Print last indent
-                if (line.Level >= 1) output.Append(line.LevelContinues(line.Level - 1) ? "├──" : "└──");
-                // Print name
-                output.Append("\"");
-                output.Append(line.Entry.Name);
-                output.Append("\"");
-                // Print error
-                if (line.Error != null)
-                {
-                    output.Append(" ");
-                    output.Append(line.Error.GetType().Name);
-                    output.Append(": ");
-                    output.Append(line.Error.Message);
-                }
-                // Print line-feed
-                output.AppendLine();
-            }
-        }
-
-        /// <summary>
-        /// Print tree structure of the whole filesystem. 
-        /// 
-        /// Starts at <paramref name="startPath"/> if provided, otherwise starts at root "".
-        /// <paramref name="maxLevel"/> sets maximum visit depths.
-        /// 
-        /// ├──/
-        /// │  ├──/mnt
-        /// │  ├──/tmp
-        /// │  │  └──/tmp/helloworld.txt
-        /// │  └──/usr
-        /// │     └──/usr/lex
-        /// └──c:
-        ///    └──c:/dir
-        ///       └──c:/dir/dir
-        /// 
-        /// Any thrown exceptions are printed into the line that produced the error.
-        /// </summary>
-        /// <param name="fileSystem"></param>
-        /// <param name="output">output</param>
-        /// <param name="startPath"></param>
-        /// <param name="maxLevel"></param>
-        public static void AppendPathTree(this IFileSystem fileSystem, StringBuilder output, string startPath = "", int maxLevel = Int32.MaxValue)
+        /// <param name="printFormat">print format</param>
+        public static void AppendTreeTo(this IFileSystem fileSystem, StringBuilder output, string startPath = "", int maxLevel = Int32.MaxValue, Format printFormat = Format.Name)
         {
             foreach (Line line in fileSystem.VisitTree(startPath, maxLevel))
             {
@@ -231,47 +182,14 @@ namespace Lexical.FileSystem
         /// <param name="fileSystem"></param>
         /// <param name="startPath"></param>
         /// <param name="maxLevel"></param>
+        /// <param name="printFormat">print format</param>
         /// <returns>Tree as string</returns>
-        public static String PrintNameTreeToString(this IFileSystem fileSystem, string startPath = "", int maxLevel = Int32.MaxValue)
+        public static String PrintTreeText(this IFileSystem fileSystem, string startPath = "", int maxLevel = Int32.MaxValue, Format printFormat = Format.Name)
         {
             StringBuilder sb = new StringBuilder();
             foreach (Line line in fileSystem.VisitTree(startPath, maxLevel))
             {
-                line.AppendNameTo(sb);
-                sb.AppendLine();
-            }
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// Print tree structure of the whole filesystem. 
-        /// 
-        /// Starts at <paramref name="startPath"/> if provided, otherwise starts at root "".
-        /// <paramref name="maxLevel"/> sets maximum visit depths.
-        /// 
-        /// ├──/
-        /// │  ├──/mnt
-        /// │  ├──/tmp
-        /// │  │  └──/tmp/helloworld.txt
-        /// │  └──/usr
-        /// │     └──/usr/lex
-        /// └──c:
-        ///    └──c:/dir
-        ///       └──c:/dir/dir
-        /// 
-        /// 
-        /// Any thrown exceptions are printed into the line that produced the error.
-        /// </summary>
-        /// <param name="fileSystem"></param>
-        /// <param name="startPath"></param>
-        /// <param name="maxLevel"></param>
-        /// <returns>Tree as string</returns>
-        public static String PrintPathTreeToString(this IFileSystem fileSystem, string startPath = "", int maxLevel = Int32.MaxValue)
-        {
-            StringBuilder sb = new StringBuilder();
-            foreach (Line line in fileSystem.VisitTree(startPath, maxLevel))
-            {
-                line.AppendPathTo(sb);
+                line.AppendTo(sb, printFormat);
                 sb.AppendLine();
             }
             return sb.ToString();
@@ -403,16 +321,24 @@ namespace Lexical.FileSystem
             /// Write to <see cref="StringBuilder"/> <paramref name="output"/>.
             /// </summary>
             /// <param name="output"></param>
-            public void AppendNameTo(StringBuilder output)
+            /// <param name="printFormat">print format</param>
+            public void AppendTo(StringBuilder output, Format printFormat = Format.Name)
             {
                 // Print indents
                 for (int l = 0; l < Level - 1; l++) output.Append(LevelContinues(l) ? "│  " : "   ");
                 // Print last indent
                 if (Level >= 1) output.Append(LevelContinues(Level - 1) ? "├──" : "└──");
                 // Print name
-                output.Append("\"");
-                output.Append(Entry.Name);
-                output.Append("\"");
+                if (printFormat == Format.Name)
+                {
+                    output.Append("\"");
+                    output.Append(Entry.Name);
+                    output.Append("\"");
+                }
+                else if (printFormat == Format.Path)
+                {
+                    output.Append(Entry.Path);
+                }
                 // Print error
                 if (Error != null)
                 {
@@ -422,29 +348,6 @@ namespace Lexical.FileSystem
                     output.Append(Error.Message);
                 }
             }
-
-            /// <summary>
-            /// Write to <see cref="StringBuilder"/> <paramref name="output"/>.
-            /// </summary>
-            /// <param name="output"></param>
-            public void AppendPathTo(StringBuilder output)
-            {
-                // Print indents
-                for (int l = 0; l < Level - 1; l++) output.Append(LevelContinues(l) ? "│  " : "   ");
-                // Print last indent
-                if (Level >= 1) output.Append(LevelContinues(Level - 1) ? "├──" : "└──");
-                // Print name
-                output.Append(Entry.Path);
-                // Print error
-                if (Error != null)
-                {
-                    output.Append(" ");
-                    output.Append(Error.GetType().Name);
-                    output.Append(": ");
-                    output.Append(Error.Message);
-                }
-            }
-
 
             /// <summary>
             /// Print line info.
@@ -453,7 +356,7 @@ namespace Lexical.FileSystem
             public override string ToString()
             {
                 StringBuilder sb = new StringBuilder();
-                AppendPathTo(sb);
+                AppendTo(sb);
                 return sb.ToString();
             }
         }
