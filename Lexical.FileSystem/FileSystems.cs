@@ -75,7 +75,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Extension methods for <see cref="IFileProvider"/>.
     /// </summary>
-    public static partial class FileSystemExtensions
+    public static partial class FileProviderExtensions
     {
         /// <summary>
         /// Adapt <paramref name="fileProvider"/> to <see cref="IFileSystem"/>.

@@ -17,6 +17,9 @@ namespace Lexical.FileSystem.Adapter
 {
     /// <summary>
     /// Adapts <see cref="IFileSystem"/> into <see cref="IFileProvider"/>.
+    /// 
+    /// The recommended way to create <see cref="FileSystemProvider"/> is to use
+    /// the extension method in <see cref="FileProviderExtensions.ToFileProvider(IFileSystem)"/>.
     /// </summary>
     public class FileSystemProvider : DisposeList, IFileProvider
     {

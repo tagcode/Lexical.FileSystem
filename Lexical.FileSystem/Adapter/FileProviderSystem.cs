@@ -18,6 +18,9 @@ namespace Lexical.FileSystem.Adapter
     /// <summary>
     /// File system that reads, observes and browses files from <see cref="IFileProvider"/> source.
     /// 
+    /// The recommended way to create <see cref="FileSystemProvider"/> is to use
+    /// the extension method in <see cref="FileProviderExtensions.ToFileSystem(IFileProvider, string, bool, bool, bool)"/>.
+    /// 
     /// WARNING: The Observe implementation browses the subtree of the watched directory path in order to create delta of changes.
     /// </summary>
     public class FileProviderSystem : FileSystemBase, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen
