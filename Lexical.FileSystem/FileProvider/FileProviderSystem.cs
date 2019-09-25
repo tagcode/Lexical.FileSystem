@@ -13,7 +13,7 @@ using System.IO;
 using System.Security;
 using System.Threading.Tasks;
 
-namespace Lexical.FileSystem.Adapter
+namespace Lexical.FileSystem.FileProvider
 {
     /// <summary>
     /// File system that reads, observes and browses files from <see cref="IFileProvider"/> source.

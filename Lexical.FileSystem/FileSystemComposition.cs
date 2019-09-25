@@ -14,7 +14,7 @@ using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 
-namespace Lexical.FileSystem.Adapter
+namespace Lexical.FileSystem
 {
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.

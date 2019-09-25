@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 
-namespace Lexical.FileSystem.Adapter
+namespace Lexical.FileSystem.FileProvider
 {
     /// <summary>
     /// Adapts <see cref="IFileSystem"/> into <see cref="IFileProvider"/>.
