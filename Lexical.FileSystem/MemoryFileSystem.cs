@@ -130,22 +130,9 @@ namespace Lexical.FileSystem
                 // Find entry
                 Node node = path == "" ? root : GetNode(path);
                 // Directory
-                if (node is Directory dir_)
-                {
-                    // List entries
-                    int c = dir_.contents.Count;
-                    IFileSystemEntry[] array = new IFileSystemEntry[c];
-                    int i = 0;
-                    foreach (Node e in dir_.contents.Values) array[i++] = e.CreateEntry();
-                    return array;
-                }
-                else
+                if (node is Directory dir_) return dir_.ChildEntries;
                 // File
-                if (node is File)
-                {
-                    return new IFileSystemEntry[] { node.CreateEntry() };
-                }
-
+                if (node is File) return new IFileSystemEntry[] { node.Entry };
                 // Entry was not found, was not dir or file
                 throw new DirectoryNotFoundException(path);
             }
@@ -175,14 +162,12 @@ namespace Lexical.FileSystem
             m_lock.AcquireReaderLock(int.MaxValue);
             try
             {
-                // Root entry
-                if (path == "") return root.CreateEntry();
                 // Find entry
-                Node node = GetNode(path);
+                Node node = path == "" ? root : GetNode(path);
                 // Not found
                 if (node == null) return null;
                 // IFileSystemEntry
-                return node.CreateEntry();
+                return node.Entry;
             }
             finally
             {
@@ -261,6 +246,9 @@ namespace Lexical.FileSystem
                             directory.lastModified = time;
                             // Add child to parent
                             directory.contents[enumr.Current] = newDirectory;
+                            // Flush caches
+                            directory.FlushChildEntries();
+                            directory.FlushEntry();
                             // Recurse into child
                             cursor = newDirectory;
                         }
@@ -336,6 +324,9 @@ namespace Lexical.FileSystem
                     if (observers != null)
                         foreach (ObserverHandle observer in observers)
                             if (observer.Qualify(node.Path)) events.Add(new FileSystemEventDelete(observer, time, node.Path));
+                    // Flush caches
+                    parent.FlushChildEntries();
+                    parent.FlushEntry();
                     // Mark file/dir deleted
                     node.Dispose();
                 }
@@ -344,8 +335,6 @@ namespace Lexical.FileSystem
                 {
                     // Assert recursive is 'true'.
                     if (!recursive) throw new IOException("Cannot delete non-empty directory (" + path + ")");
-                    // Update parent datetime
-                    parent.lastModified = time;
                     // Visit whole tree and delete everything
                     foreach (Node n in dir.VisitTree())
                     {
@@ -355,9 +344,15 @@ namespace Lexical.FileSystem
                                 if (observer.Qualify(n.Path)) events.Add(new FileSystemEventDelete(observer, time, n.Path));
                         // Mark deleted
                         n.Dispose();
+                        n.FlushEntry();
                     }
-                    // Wipe parent
-                    parent.contents.Clear();
+                    // Remove from parent
+                    parent.contents.Remove(new StringSegment(node.name));
+                    // Update parent datetime
+                    parent.lastModified = time;
+                    // Flush caches
+                    parent.FlushChildEntries();
+                    parent.FlushEntry();
                 }
                 else
                 {
@@ -486,6 +481,7 @@ namespace Lexical.FileSystem
                                 events.Add(new FileSystemEventRename(observer, time, c_oldPath, c_newPath));
                 }
                 else
+                // Non-empty directory
                 {
                     // Nodes and old paths
                     StructList12<(Node, string)> list = new StructList12<(Node, string)>();
@@ -509,11 +505,17 @@ namespace Lexical.FileSystem
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(c_oldPath) || observer.Qualify(c_newPath))
                                     events.Add(new FileSystemEventRename(observer, time, c_oldPath, c_newPath));
+                        c.FlushEntry();
                     }
                 }
                 // Change directory times
                 oldParent.lastModified = time;
                 newParent.lastModified = time;
+                // Flush caches
+                oldParent.FlushChildEntries();
+                newParent.FlushChildEntries();
+                oldParent.FlushEntry();
+                newParent.FlushEntry();
             }
             finally
             {
@@ -601,6 +603,9 @@ namespace Lexical.FileSystem
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
                         parent.contents[name] = f;
+                        parent.lastModified = time;
+                        parent.FlushEntry();
+                        parent.FlushChildEntries();
                         // Create event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
@@ -647,6 +652,9 @@ namespace Lexical.FileSystem
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
                         parent.contents[name] = f;
+                        parent.lastModified = time;
+                        parent.FlushEntry();
+                        parent.FlushChildEntries();
                         // Create event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
@@ -707,6 +715,9 @@ namespace Lexical.FileSystem
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
                         parent.contents[name] = f;
+                        parent.lastModified = time;
+                        parent.FlushEntry();
+                        parent.FlushChildEntries();
                         // Create event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
@@ -958,6 +969,8 @@ namespace Lexical.FileSystem
 
         /// <summary>
         /// Parent type for <see cref="Directory"/> and <see cref="MemoryFile"/>.
+        /// 
+        /// Node class must be accessed only under reader or writer lock.
         /// </summary>
         abstract class Node : IDisposable
         {
@@ -990,6 +1003,16 @@ namespace Lexical.FileSystem
             /// Parent directory.
             /// </summary>
             protected internal Directory parent;
+
+            /// <summary>
+            /// Cached entry
+            /// </summary>
+            protected IFileSystemEntry entry;
+
+            /// <summary>
+            /// Get or create entry.
+            /// </summary>
+            public IFileSystemEntry Entry => entry ?? (entry = CreateEntry());
 
             /// <summary>
             /// Path to the entry.
@@ -1041,6 +1064,28 @@ namespace Lexical.FileSystem
             public abstract IEnumerable<Node> VisitTree();
 
             /// <summary>
+            /// Flush cached path info
+            /// </summary>
+            public void FlushPath()
+            {
+                path = null;
+                entry = null;
+            }
+
+            /// <summary>
+            /// Flush cached entry info.
+            /// </summary>
+            public void FlushEntry()
+            {
+                entry = null;
+            }
+
+            /// <summary>
+            /// Flush child entries
+            /// </summary>
+            public virtual void FlushChildEntries() { }
+
+            /// <summary>
             /// Delete node
             /// </summary>
             public virtual void Dispose()
@@ -1066,6 +1111,27 @@ namespace Lexical.FileSystem
             protected internal Dictionary<StringSegment, Node> contents = new Dictionary<StringSegment, Node>();
 
             /// <summary>
+            /// Cached child entries
+            /// </summary>
+            protected IFileSystemEntry[] childEntries;
+
+            /// <summary>
+            /// Get or create child entries.
+            /// </summary>
+            public IFileSystemEntry[] ChildEntries
+            {
+                get
+                {
+                    if (childEntries != null) return childEntries;
+                    int c = contents.Count;
+                    IFileSystemEntry[] array = new IFileSystemEntry[c];
+                    int i = 0;
+                    foreach (Node e in contents.Values) array[i++] = e.Entry;
+                    return childEntries = array;
+                }
+            }
+
+            /// <summary>
             /// Create directory entry
             /// </summary>
             /// <param name="filesystem"></param>
@@ -1082,6 +1148,14 @@ namespace Lexical.FileSystem
             /// <returns></returns>
             public override IFileSystemEntry CreateEntry()
                 => new FileSystemEntryDirectory(filesystem, Path, name, lastModified);
+
+            /// <summary>
+            /// Flush cached array of child entries.
+            /// </summary>
+            public override void FlushChildEntries()
+            {
+                childEntries = null;
+            }
 
             /// <summary>
             /// Enumerate self and subtree.

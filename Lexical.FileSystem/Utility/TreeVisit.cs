@@ -59,24 +59,20 @@ namespace Lexical.FileSystem
                     {
                         // Browse children
                         IFileSystemEntry[] children = fileSystem.Browse(line.Entry.Path);
-                        // Assert children don't refer beyond parent
-                        for (int i = children.Length - 1; i >= 0; i--)
-                        {
-                            IFileSystemEntry child = children[i];
-                            if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
-                        }
+                        // Assert children don't refer to the parent of the parent
+                        foreach (IFileSystemEntry child in children) if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
                         // Bitmask when this level continues
                         ulong levelContinuesBitMask = line.LevelContinuesBitMask | (line.Level < 64 ? 1UL << line.Level : 0UL);
-                        // Add children
-                        for (int i = children.Length - 1; i >= 0; i--) queue.Add(new Line(children[i], line.Level + 1, levelContinuesBitMask));
+                        // Add children                        
+                        foreach (IFileSystemEntry child in children) queue.Add(new Line(child, line.Level + 1, levelContinuesBitMask));
                         // Sort
                         if (children.Length>1) sorter.QuickSortInverse(ref queue, startIndex, queue.Count - 1);
-                        // Last element doesn't continue
+                        // Last entry doesn't continue on its level.
                         if (children.Length>=1) queue[startIndex] = queue[startIndex].NewLevelContinuesBitMask(line.LevelContinuesBitMask);
                     }
                     catch (Exception e)
                     {
-                        // Store error
+                        // Add error to be yielded along
                         line.Error = e;
                     }
                 }
