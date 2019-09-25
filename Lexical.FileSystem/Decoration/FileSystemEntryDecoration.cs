@@ -54,7 +54,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsMountPoint => Original.IsMountPoint();
         /// <inheritdoc/>
-        public virtual FileSystemFeatures Features => Original.Features();
+        public virtual IFileSystem MountedFileSystem => Original.MountedFileSystem();
 
         /// <summary>
         /// Create decorated entry.
