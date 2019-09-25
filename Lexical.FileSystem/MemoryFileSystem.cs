@@ -882,29 +882,30 @@ namespace Lexical.FileSystem
         }
 
         /// <inheritdoc/>
-        public IFileSystemObserverHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             ObserverHandle handle = new ObserverHandle(this, filter, observer, state);
             observers.Add(handle);
+            // Send IFileSystemEventStart
+            observer.OnNext(handle);            
             return handle;
         }
 
         /// <summary>
         /// Observer
         /// </summary>
-        class ObserverHandle : FileSystemObserverHandleBase
+        class ObserverHandle : FileSystemObserverHandleBase, IFileSystemEventStart
         {
-            /// <summary>
-            /// Filter pattern that is used for filtering events by path.
-            /// </summary>
+            /// <summary>Filter pattern that is used for filtering events by path.</summary>
             Regex filterPattern;
 
-            /// <summary>
-            /// Accept all pattern "**".
-            /// </summary>
+            /// <summary>Accept all pattern "**".</summary>
             bool acceptAll;
+
+            /// <summary>Time when observing started.</summary>
+            DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             /// <summary>
             /// Create new observer.
@@ -936,6 +937,10 @@ namespace Lexical.FileSystem
                 base.InnerDispose(ref errors);
                 (this.FileSystem as MemoryFileSystem).observers.Remove(this);
             }
+
+            IFileSystemObserver IFileSystemEvent.Observer => this;
+            DateTimeOffset IFileSystemEvent.EventTime => startTime;
+            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>

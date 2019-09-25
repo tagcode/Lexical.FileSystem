@@ -17,6 +17,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="FileSystemEventChange"/></item>
     ///     <item><see cref="FileSystemEventDelete"/></item>
     ///     <item><see cref="FileSystemEventError"/></item>
+    ///     <item><see cref="FileSystemEventStart"/></item>
     /// </list>
     /// </summary>
     public abstract class FileSystemEventBase : IFileSystemEvent
@@ -52,7 +53,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"{GetType().Name}({Observer}, {EventTime})" : $"{GetType().Name}({Observer}, {EventTime}, {Path})";
+            => Path == null ? $"{GetType().Name}({Observer?.FileSystem}, {EventTime})" : $"{GetType().Name}({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>
@@ -91,7 +92,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => $"Rename({Observer}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
+            => $"Rename({Observer?.FileSystem}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
     }
 
     /// <summary>
@@ -112,7 +113,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Create({Observer}, {EventTime})" : $"Create({Observer}, {EventTime}, {Path})";
+            => Path == null ? $"Create({Observer?.FileSystem}, {EventTime})" : $"Create({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>
@@ -133,7 +134,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Change({Observer}, {EventTime})" : $"Change({Observer}, {EventTime}, {Path})";
+            => Path == null ? $"Change({Observer?.FileSystem}, {EventTime})" : $"Change({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>
@@ -154,7 +155,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Delete({Observer}, {EventTime})" : $"Delete({Observer}, {EventTime}, {Path})";
+            => Path == null ? $"Delete({Observer?.FileSystem}, {EventTime})" : $"Delete({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>
@@ -182,7 +183,27 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Error({Observer}, {EventTime})" : $"Error({Observer}, {EventTime}, {Path})";
+            => Path == null ? $"Error({Observer?.FileSystem}, {EventTime})" : $"Error({Observer?.FileSystem}, {EventTime}, {Path})";
+    }
+
+    /// <summary>
+    /// File-system observe started event.
+    /// </summary>
+    public class FileSystemEventStart : FileSystemEventBase, IFileSystemEventStart
+    {
+        /// <summary>
+        /// Create Error event.
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <param name="eventTime"></param>
+        public FileSystemEventStart(IFileSystemObserver observer, DateTimeOffset eventTime) : base(observer, eventTime, null)
+        {
+        }
+
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
+        public override string ToString()
+            => $"Start({Observer?.FileSystem}, {EventTime})";
     }
 
 }

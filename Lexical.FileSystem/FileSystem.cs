@@ -293,15 +293,17 @@ namespace Lexical.FileSystem
                 string prefix = path.Length > 0 ? (path.EndsWith("/", StringComparison.InvariantCulture) ? path : path + "/") : null;
                 if (IsOsRoot && path == "" || path == "/") prefix = "/";
                 StructList24<IFileSystemEntry> list = new StructList24<IFileSystemEntry>();
-                foreach (DirectoryInfo di in dir.GetDirectories())
+                foreach (FileSystemInfo fsi in dir.EnumerateFileSystemInfos())
                 {
-                    IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(prefix) ? di.Name : prefix + di.Name, di.Name, di.LastWriteTimeUtc);
-                    list.Add(e);
-                }
-                foreach (FileInfo _fi in dir.GetFiles())
-                {
-                    IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtc, _fi.Length);
-                    list.Add(e);
+                    if (fsi is DirectoryInfo di)
+                    {
+                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(prefix) ? di.Name : prefix + di.Name, di.Name, di.LastWriteTimeUtc);
+                        list.Add(e);
+                    } else if (fsi is FileInfo _fi)
+                    {
+                        IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtc, _fi.Length);
+                        list.Add(e);
+                    }
                 }
                 return list.ToArray();
             }
@@ -467,7 +469,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserverHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
+        public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
         {
             // Parse filter
             GlobPatternInfo info = new GlobPatternInfo(filter);
@@ -480,7 +482,13 @@ namespace Lexical.FileSystem
 
                 string concatenatedPath, absolutePath;
                 string path = ConcatenateAndAssertPath(filter, out concatenatedPath, out absolutePath);
-                return new FileObserver(this, path, observer, state, AbsoluteRootPath, absolutePath);
+
+                // Create observer object
+                FileObserver handle = new FileObserver(this, path, observer, state, AbsoluteRootPath, absolutePath);
+                // Send IFileSystemEventStart
+                observer.OnNext(handle);
+                // Return handle
+                return handle;
             }
             else
             // Has wildcards, e.g. "**/file.txt"
@@ -490,7 +498,12 @@ namespace Lexical.FileSystem
 
                 string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(info.Prefix, out concatenatedPath, out absolutePathToPrefixPart);
 
-                return new PatternObserver(this, observer, state, filter, AbsoluteRootPath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, info.Suffix);
+                // Create observer object
+                PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsoluteRootPath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, info.Suffix);
+                // Send IFileSystemEventStart
+                observer.OnNext(handle);
+                // Return handle
+                return handle;
             }
             
             // TODO Add watcher that monitors changes to drive letters.
@@ -500,7 +513,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Single file observer.
         /// </summary>
-        protected internal class FileObserver : FileSystemObserverHandleBase
+        protected internal class FileObserver : FileSystemObserverHandleBase, IFileSystemEventStart
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -521,6 +534,9 @@ namespace Lexical.FileSystem
             /// Watcher
             /// </summary>
             protected FileSystemWatcher watcher;
+
+            /// <summary>Time when observing started.</summary>
+            protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             /// <summary>
             /// Create observer for one file.
@@ -655,13 +671,17 @@ namespace Lexical.FileSystem
                     }
                 }
             }
+
+            IFileSystemObserver IFileSystemEvent.Observer => this;
+            DateTimeOffset IFileSystemEvent.EventTime => startTime;
+            string IFileSystemEvent.Path => null;
         }
 
 
         /// <summary>
         /// Watches a group of files using a pattern.
         /// </summary>
-        protected internal class PatternObserver : FileSystemObserverHandleBase
+        protected internal class PatternObserver : FileSystemObserverHandleBase, IFileSystemEventStart
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -703,6 +723,9 @@ namespace Lexical.FileSystem
             /// Filter glob pattern
             /// </summary>
             public readonly Regex Pattern;
+
+            /// <summary>Time when observing started.</summary>
+            protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             /// <summary>
             /// Create observer for one file.
@@ -846,6 +869,10 @@ namespace Lexical.FileSystem
                     }
                 }
             }
+
+            IFileSystemObserver IFileSystemEvent.Observer => this;
+            DateTimeOffset IFileSystemEvent.EventTime => startTime;
+            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>

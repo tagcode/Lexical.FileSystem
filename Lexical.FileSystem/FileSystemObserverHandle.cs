@@ -12,7 +12,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Base implementation file-system observer
     /// </summary>
-    public abstract class FileSystemObserverHandleBase : DisposeList, IFileSystemObserverHandle
+    public abstract class FileSystemObserverHandleBase : DisposeList, IFileSystemObserver
     {
         /// <summary>
         /// The file system where the observer was attached.
@@ -83,7 +83,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Base class for observer handle decoration.
     /// </summary>
-    public class FileSystemObserverHandleDecoration : IFileSystemObserverHandle
+    public class FileSystemObserverHandleDecoration : IFileSystemObserver
     {
         /// <summary>
         /// Decorate FileSystem value.
@@ -91,7 +91,7 @@ namespace Lexical.FileSystem
         /// <param name="original"></param>
         /// <param name="newFileSystem"></param>
         /// <returns>decoration</returns>
-        public static IFileSystemObserverHandle DecorateFileSystem(IFileSystemObserverHandle original, IFileSystem newFileSystem)
+        public static IFileSystemObserver DecorateFileSystem(IFileSystemObserver original, IFileSystem newFileSystem)
             => new NewFileSystem(original, newFileSystem);
 
         /// <inheritdoc/>
@@ -105,13 +105,13 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Original observer handle
         /// </summary>
-        protected IFileSystemObserverHandle original;
+        protected IFileSystemObserver original;
 
         /// <summary>
         /// Create filesystem observer handle decoration.
         /// </summary>
         /// <param name="original"></param>
-        public FileSystemObserverHandleDecoration(IFileSystemObserverHandle original)
+        public FileSystemObserverHandleDecoration(IFileSystemObserver original)
         {
             this.original = original ?? throw new ArgumentNullException(nameof(original));
         }
@@ -132,7 +132,7 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <param name="original"></param>
             /// <param name="newFilesystem"></param>
-            public NewFileSystem(IFileSystemObserverHandle original, IFileSystem newFilesystem) : base(original)
+            public NewFileSystem(IFileSystemObserver original, IFileSystem newFilesystem) : base(original)
             {
                 this.newFilesystem = newFilesystem;
             }

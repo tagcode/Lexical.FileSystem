@@ -79,6 +79,8 @@ namespace Lexical.FileSystem
     {
         /// <summary>
         /// Adapt <paramref name="fileProvider"/> to <see cref="IFileSystem"/>.
+        /// 
+        /// WARNING: The Observe implementation browses the subtree of the watched directory path in order to create delta of changes.
         /// </summary>
         /// <param name="fileProvider"></param>
         /// <param name="subpath">(optional)</param>

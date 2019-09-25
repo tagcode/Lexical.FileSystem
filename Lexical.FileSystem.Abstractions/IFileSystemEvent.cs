@@ -19,6 +19,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemEventRename"/></item>
     ///     <item><see cref="IFileSystemEventError"/></item>
     ///     <item><see cref="IFileSystemEventDecoration"/></item>
+    ///     <item><see cref="IFileSystemEventStart"/></item>
     /// </list>
     /// </summary>
     public interface IFileSystemEvent
@@ -93,6 +94,13 @@ namespace Lexical.FileSystem
         /// Error as exception.
         /// </summary>
         Exception Error { get; }
+    }
+
+    /// <summary>
+    /// The very first event when <see cref="IFileSystemObserve.Observe(string, IObserver{IFileSystemEvent}, object)"/> is called.
+    /// </summary>
+    public interface IFileSystemEventStart : IFileSystemEvent
+    {
     }
     // </doc>
 

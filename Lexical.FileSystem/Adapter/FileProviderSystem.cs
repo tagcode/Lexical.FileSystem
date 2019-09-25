@@ -17,6 +17,8 @@ namespace Lexical.FileSystem.Adapter
 {
     /// <summary>
     /// File system that reads, observes and browses files from <see cref="IFileProvider"/> source.
+    /// 
+    /// WARNING: The Observe implementation browses the subtree of the watched directory path in order to create delta of changes.
     /// </summary>
     public class FileProviderSystem : FileSystemBase, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen
     {
@@ -218,6 +220,8 @@ namespace Lexical.FileSystem.Adapter
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a single file or directory. 
         /// Observing a directory will observe the whole subtree.
+        /// 
+        /// WARNING: The Observe implementation browses the subtree of the watched directory path in order to create delta of changes.
         /// </summary>
         /// <param name="filter">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
         /// <param name="observer"></param>
@@ -232,7 +236,7 @@ namespace Lexical.FileSystem.Adapter
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserverHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
             // Assert observe is enabled.
             if (!CanObserve) throw new NotSupportedException("Observe not supported.");
@@ -248,19 +252,28 @@ namespace Lexical.FileSystem.Adapter
                 if (filter.EndsWith("/")) return new DummyObserver(this, filter, observer, state);
 
                 // Create observer that watches one file
-                return new FileObserver(this, filter, observer, state);
+                FileObserver handle = new FileObserver(this, filter, observer, state);
+                // Send handle
+                observer.OnNext(handle);
+                // Return handle
+                return handle;
             }
             else
             // Has wildcards, e.g. "**/file.txt"
             {
-                return new PatternObserver(this, filterInfo, observer, state);
+                // Create handle
+                PatternObserver handle = new PatternObserver(this, filterInfo, observer, state);
+                // Send handle
+                observer.OnNext(handle);
+                // Return handle
+                return handle;
             }
         }
 
         /// <summary>
         /// Single file observer.
         /// </summary>
-        public class FileObserver : FileSystemObserverHandleBase
+        public class FileObserver : FileSystemObserverHandleBase, IFileSystemEventStart
         {
             /// <summary>
             /// File-system
@@ -281,6 +294,9 @@ namespace Lexical.FileSystem.Adapter
             /// Change token callback handle.
             /// </summary>
             protected IDisposable watcher;
+
+            /// <summary>Time when observing started.</summary>
+            protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             /// <summary>
             /// Print info
@@ -371,6 +387,10 @@ namespace Lexical.FileSystem.Adapter
                     }
                 }
             }
+
+            IFileSystemObserver IFileSystemEvent.Observer => this;
+            DateTimeOffset IFileSystemEvent.EventTime => startTime;
+            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>
@@ -380,7 +400,7 @@ namespace Lexical.FileSystem.Adapter
         /// this observer implementation reads a whole snapshot of the whole file provider, in 
         /// order to determine the changes.
         /// </summary>
-        public class PatternObserver : FileSystemObserverHandleBase
+        public class PatternObserver : FileSystemObserverHandleBase, IFileSystemEventStart
         {
             /// <summary>
             /// File-system
@@ -406,6 +426,9 @@ namespace Lexical.FileSystem.Adapter
             /// Previous snapshot of detected dirs and files
             /// </summary>
             protected Dictionary<string, IFileSystemEntry> previousSnapshot;
+
+            /// <summary>Time when observing started.</summary>
+            protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             /// <summary>
             /// Create observer for one file.
@@ -510,6 +533,10 @@ namespace Lexical.FileSystem.Adapter
                     }
                 }
             }
+
+            IFileSystemObserver IFileSystemEvent.Observer => this;
+            DateTimeOffset IFileSystemEvent.EventTime => startTime;
+            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>

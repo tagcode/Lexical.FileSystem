@@ -349,7 +349,7 @@ namespace Lexical.FileSystem.Adapter
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserverHandle Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
+        public IFileSystemObserver Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
         {
             StructList12<IDisposable> disposables = new StructList12<IDisposable>();
             ObserverAdapter adapter = new ObserverAdapter(this, path, observer, state);
@@ -365,16 +365,23 @@ namespace Lexical.FileSystem.Adapter
             }
             if (disposables.Count == 0) throw new NotSupportedException(nameof(Observe));
             adapter.disposables = disposables.ToArray();
+
+            // Send IFileSystemEventStart
+            observer.OnNext(adapter);
+
             return adapter;
         }
 
-        class ObserverAdapter : IFileSystemObserverHandle, IObserver<IFileSystemEvent>
+        class ObserverAdapter : IFileSystemObserver, IObserver<IFileSystemEvent>, IFileSystemEventStart
         {
             public IDisposable[] disposables;
             public IFileSystem FileSystem { get; protected set; }
             public string Filter { get; protected set; }
             public IObserver<IFileSystemEvent> Observer { get; protected set; }
             public object State { get; protected set; }
+
+            /// <summary>Time when observing started.</summary>
+            DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             public ObserverAdapter(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state)
             {
@@ -414,6 +421,10 @@ namespace Lexical.FileSystem.Adapter
 
                 if (errors.Count > 0) throw new AggregateException(errors);
             }
+
+            IFileSystemObserver IFileSystemEvent.Observer => this;
+            DateTimeOffset IFileSystemEvent.EventTime => startTime;
+            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>

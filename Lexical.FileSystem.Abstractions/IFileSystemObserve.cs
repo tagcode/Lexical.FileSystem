@@ -43,6 +43,8 @@ namespace Lexical.FileSystem
         ///   
         /// Note that observing a directory without a pattern observes nothing, for example "dir/" does not return any events.
         /// 
+        /// The very first event sent to <paramref name="observer"/> is an instance of <see cref="IFileSystemEventStart"/> that contains
+        /// the returned observer handle.
         /// </summary>
         /// <param name="filter">file filter as glob pattern. </param>
         /// <param name="observer"></param>
@@ -57,13 +59,13 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemObserverHandle Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
+        IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
     }
 
     /// <summary>
     /// Observer information.
     /// </summary>
-    public interface IFileSystemObserver
+    public interface IFileSystemObserver : IDisposable
     {
         /// <summary>
         /// The file system where the observer was attached.
@@ -85,13 +87,6 @@ namespace Lexical.FileSystem
         /// </summary>
         Object State { get; }
     }
-
-    /// <summary>
-    /// Observer object that must be disposed to end observing
-    /// </summary>
-    public interface IFileSystemObserverHandle : IFileSystemObserver, IDisposable
-    {
-    }
     // </doc>
 
     /// <summary>
@@ -109,6 +104,29 @@ namespace Lexical.FileSystem
 
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 
+        /// 
+        /// The <paramref name="filter"/> determines the file pattern to observe.
+        ///  "*" Matches to any sequence characters within one folder.
+        ///  "**" Matches to any sequence characters including directory levels '/'.
+        ///  "?" Matches to one and exactly one character.
+        /// 
+        /// Examples:
+        ///   <list type="bullet">
+        ///     <item>"**" is any file in any directory.</item>
+        ///     <item>"**/file.txt", to monitor "file.txt" in any subdirectory</item>
+        ///     <item>"*" is any set of characters file in one directory. For example "mydir/somefile*.txt"</item>
+        ///     <item>"", to monitor changes to the root directory itself, but not its files</item>
+        ///     <item>"dir", to monitor the dir itself, but not its files</item>
+        ///     <item>"dir/", to monitor the dir itself, but not its files</item>
+        ///     <item>"dir/file", to monitor one file "file"</item>
+        ///     <item>"dir/*", to monitor files in a dir but not subdirectories</item>
+        ///     <item>"dir/**", to monitor files in a dir and its subdirectories</item>
+        ///   </list>
+        ///   
+        /// Note that observing a directory without a pattern observes nothing, for example "dir/" does not return any events.
+        /// 
+        /// The very first event sent to <paramref name="observer"/> is an instance of <see cref="IFileSystemEventStart"/> that contains
+        /// the returned observer handle.
         /// </summary>
         /// <param name="fileSystem"></param>
         /// <param name="filter">glob pattern to filter events. "**" means any directory. For example "mydir/**/somefile.txt", or "**" for <paramref name="filter"/> and sub-directories</param>
@@ -124,7 +142,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemObserverHandle Observe(this IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public static IFileSystemObserver Observe(this IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
             if (fileSystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state);
             else throw new NotSupportedException(nameof(Observe));

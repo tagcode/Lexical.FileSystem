@@ -9,6 +9,305 @@ using System.Collections.Generic;
 namespace Lexical.FileSystem.Internal
 {
     /// <summary>
+    /// A list where the first 1 element(s) are stack allocated, and rest are allocated from heap when needed.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public struct StructList1<T> : IList<T>
+    {
+        /// <summary>
+        /// The number of elements that are stack allocated.
+        /// </summary>
+        const int StackCount = 1;
+
+        /// <summary>
+        /// Number of elements
+        /// </summary>
+        int count;
+
+        /// <summary>
+        /// First elements
+        /// </summary>
+        T _0;
+
+        /// <summary>
+        /// Elements after <see cref="StackCount"/>.
+        /// </summary>
+        List<T> rest;
+
+        /// <summary>
+        /// Element comparer
+        /// </summary>
+        IEqualityComparer<T> elementComparer;
+
+        /// <summary>
+        /// Construct lazy list.
+        /// </summary>
+        /// <param name="elementComparer"></param>
+        public StructList1(IEqualityComparer<T> elementComparer = default)
+        {
+            this.elementComparer = elementComparer;
+            count = 0;
+            _0 = default;
+            rest = null;
+        }
+
+        /// <summary>
+        /// Gets or sets the element at the specified index.
+        /// </summary>
+        /// <param name="index">The zero-based index of the element to get or set.</param>
+        /// <returns>The element at the specified index.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">index is not a valid index in the StructList1`1.</exception>
+        public T this[int index]
+        {
+            get
+            {
+                if (index < 0 || index >= count) throw new ArgumentOutOfRangeException();
+                switch (index)
+                {
+                    case 0: return _0;
+                    default: return rest[index - StackCount];
+                }
+            }
+            set
+            {
+                if (index < 0 || index >= count) throw new ArgumentOutOfRangeException();
+                switch (index)
+                {
+                    case 0: _0 = value; return;
+                    default: rest[index - StackCount] = value; return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Number of elements in the list
+        /// </summary>
+        public int Count => count;
+
+        /// <summary>
+        /// Is list readonly
+        /// </summary>
+        public bool IsReadOnly => false;
+
+        /// <summary>
+        /// Adds an item to the StructList1`1.
+        /// </summary>
+        /// <param name="item">The object to add to the StructList1`1.</param>
+        /// <exception cref="System.NotSupportedException">The StructList1`1 is read-only.</exception>
+        public void Add(T item)
+        {
+            switch (count)
+            {
+                case 0: _0 = item; count++; return;
+                default:
+                    if (rest == null) rest = new List<T>();
+                    rest.Add(item);
+                    count++;
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Adds an item to the StructList1`1, if the item isn't already in the list.
+        /// </summary>
+        /// <param name="item">The object to add to the StructList1`1.</param>
+        /// <exception cref="System.NotSupportedException">The StructList1`1 is read-only.</exception>
+        public void AddIfNew(T item)
+        {
+            if (Contains(item)) return;
+            switch (count)
+            {
+                case 0: _0 = item; count++; return;
+                default:
+                    if (rest == null) rest = new List<T>();
+                    rest.Add(item);
+                    count++;
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Removes the first occurrence of a specific object from the StructList1`1.
+        /// </summary>
+        /// <param name="item">The object to remove from the StructList1`1.</param>
+        /// <returns>true if item was successfully removed from the StructList1`1; otherwise, false. This method also returns false if item is not found in the original StructList1`1.</returns>
+        public bool Remove(T item)
+        {
+            IEqualityComparer<T> comparer = elementComparer ?? EqualityComparer<T>.Default;
+
+            if (count == 0) return false;
+            if (count >= 1 && comparer.Equals(_0, item)) { RemoveAt(0); return true; }
+
+            if (rest == null) return false;
+            bool removed = rest.Remove(item);
+            if (removed) count--;
+            return removed;
+        }
+
+        /// <summary>
+        /// Removes the StructList1`1 item at the specified index.
+        /// </summary>
+        /// <param name="index">The zero-based index of the item to remove.</param>
+        /// <exception cref="ArgumentOutOfRangeException">index is not a valid index in the StructList1`1.</exception>
+        public void RemoveAt(int index)
+        {
+            if (index < 0 || index >= count) throw new ArgumentOutOfRangeException();
+            if (index <= 0 && count > 1) { _0 = rest[0]; rest.RemoveAt(0); }
+            if (index >= StackCount) rest.RemoveAt(index - StackCount);
+            count--;
+        }
+
+        /// <summary>
+        /// Removes and returns the element at the end of the list.
+        /// </summary>
+        /// <returns>the last element</returns>
+        /// <exception cref="InvalidOperationException">If list is empty</exception>
+        public T Dequeue()
+        {
+            if (count == 0) throw new InvalidOperationException();
+            int ix = count - 1;
+            T result = this[ix];
+            RemoveAt(ix);
+            return result;
+        }
+
+        /// <summary>
+        /// Removes all items from the StructList1`1.
+        /// </summary>
+        /// <exception cref="System.NotSupportedException">The StructList1`1 is read-only.</exception>
+        public void Clear()
+        {
+            if (count >= 1) _0 = default;
+            if (rest != null) rest.Clear();
+            count = 0;
+        }
+
+        /// <summary>
+        /// Determines whether the StructList1`1 contains a specific value.
+        /// </summary>
+        /// <param name="item">The object to locate in the StructList1`1.</param>
+        /// <returns>true if item is found in the StructList1`1; otherwise, false.</returns>
+        public bool Contains(T item)
+        {
+            if (count == 0) return false;
+            IEqualityComparer<T> comparer = elementComparer ?? EqualityComparer<T>.Default;
+            if (count >= 1 && comparer.Equals(_0, item)) return true;
+            if (rest != null) return rest.Contains(item);
+            return false;
+        }
+
+        /// <summary>
+        /// Determines the index of a specific item in the StructList1`1.
+        /// </summary>
+        /// <param name="item">The object to locate in the StructList1`1.</param>
+        /// <returns>The index of item if found in the list; otherwise, -1.</returns>
+        public int IndexOf(T item)
+        {
+            IEqualityComparer<T> comparer = elementComparer ?? EqualityComparer<T>.Default;
+            if (count >= 1 && comparer.Equals(_0, item)) return 0;
+            if (rest != null) return rest.IndexOf(item) - StackCount;
+            return -1;
+        }
+
+        /// <summary>
+        /// Inserts an item to the StructList1`1 at the specified index.
+        /// </summary>
+        /// <param name="index">The zero-based index at which item should be inserted.</param>
+        /// <param name="item">The object to insert into the StructList1`1.</param>
+        /// <exception cref="ArgumentOutOfRangeException">index is not a valid index in the StructList1`1.</exception>
+        public void Insert(int index, T item)
+        {
+            if (index < 0 || index > count) throw new ArgumentOutOfRangeException();
+            if (index >= 1) { if (rest == null) rest = new List<T>(); rest.Insert(index - StackCount, item); }
+            if (index <= 0 && count >= 1) { if (rest == null) rest = new List<T>(); rest.Insert(0, _0); }
+
+            count++;
+            this[index] = item;
+        }
+
+        /// <summary>
+        /// Copies the elements of the StructList1`1 to an System.Array, starting at a particular System.Array index.
+        /// </summary>
+        /// <param name="array">The one-dimensional System.Array that is the destination of the elements copied from StructList1`1. The System.Array must have zero-based indexing.</param>
+        /// <param name="arrayIndex">The zero-based index in array at which copying begins.</param>
+        /// <exception cref="System.ArgumentNullException">array is null.</exception>
+        /// <exception cref="System.ArgumentOutOfRangeException">arrayIndex is less than 0.</exception>
+        /// <exception cref="System.ArgumentException">The number of elements in the source StructList1`1 is greater than the available space from arrayIndex to the end of the destination array.</exception>
+        public void CopyTo(T[] array, int arrayIndex)
+        {
+            if (array == null) throw new ArgumentNullException(nameof(array));
+            if (arrayIndex < 0) throw new ArgumentOutOfRangeException();
+            if (count > array.Length + arrayIndex) throw new ArgumentException();
+
+            if (count >= 1) array[arrayIndex++] = _0;
+            if (rest != null) rest.CopyTo(array, arrayIndex);
+        }
+
+        /// <summary>
+        /// Create array.
+        /// </summary>
+        /// <returns></returns>
+        public T[] ToArray()
+        {
+            T[] result = new T[count];
+            if (count >= 1) result[0] = _0;
+            if (count > 1)
+            {
+                for (int i = 1; i < count; i++)
+                    result[i] = rest[i - 1];
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Create array with elements reversed.
+        /// </summary>
+        /// <returns></returns>
+        public T[] ToReverseArray()
+        {
+            T[] result = new T[count];
+            if (count >= 1) result[count - 1] = _0;
+            if (count > 1)
+            {
+                for (int i = 1; i < count; i++)
+                    result[count - 1 - i] = rest[i - 1];
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection.
+        /// </summary>
+        /// <returns>An enumerator that can be used to iterate through the collection.</returns>
+        public IEnumerator<T> GetEnumerator()
+        {
+            if (count > 0) yield return _0;
+            if (rest != null)
+            {
+                IEnumerator<T> restEtor = rest.GetEnumerator();
+                while (restEtor.MoveNext())
+                    yield return restEtor.Current;
+            }
+        }
+
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection.
+        /// </summary>
+        /// <returns>An enumerator that can be used to iterate through the collection.</returns>
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            if (count > 0) yield return _0;
+            if (rest != null)
+            {
+                IEnumerator<T> restEtor = rest.GetEnumerator();
+                while (restEtor.MoveNext())
+                    yield return restEtor.Current;
+            }
+        }
+
+    }
+
+    /// <summary>
     /// A list where the first 2 element(s) are stack allocated, and rest are allocated from heap when needed.
     /// </summary>
     /// <typeparam name="T"></typeparam>
