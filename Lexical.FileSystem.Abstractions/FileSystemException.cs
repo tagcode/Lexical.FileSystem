@@ -38,6 +38,22 @@ namespace Lexical.FileSystem
         /// </summary>
         public virtual string Path => path;
 
+        /// <summary>Error message</summary>
+        public override string Message
+        {
+            get
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append(String.IsNullOrEmpty(base.Message) ? base.Message : GetType().Name);
+                if (Path != null)
+                {
+                    sb.Append(": ");
+                    sb.Append(Path);
+                }
+                return sb.ToString();
+            }
+        }
+
         /// <summary>
         /// Create filesystem exception.
         /// </summary>
@@ -67,14 +83,14 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
-        public FileSystemExceptionNoReadAccess(IFileSystem filesystem = null, string path = null) : base(filesystem, path, path == null ? "No read access" : $"No read access to '{path}'") { }
+        public FileSystemExceptionNoReadAccess(IFileSystem filesystem = null, string path = null) : base(filesystem, path, "No read access") { }
 
         /// <inheritdoc/>
         protected FileSystemExceptionNoReadAccess(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
     /// <summary>
-    /// No read access to a file.
+    /// No write access to a file.
     /// </summary>
     public class FileSystemExceptionNoWriteAccess : FileSystemException
     {
@@ -83,7 +99,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
-        public FileSystemExceptionNoWriteAccess(IFileSystem filesystem = null, string path = null) : base(filesystem, path, path == null ? "No write access" : $"No write access to '{path}'") { }
+        public FileSystemExceptionNoWriteAccess(IFileSystem filesystem = null, string path = null) : base(filesystem, path, "No write access") { }
 
         /// <inheritdoc/>
         protected FileSystemExceptionNoWriteAccess(SerializationInfo info, StreamingContext context) : base(info, context) { }
@@ -99,7 +115,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
-        public FileSystemExceptionFileExists(IFileSystem filesystem = null, string path = null) : base(filesystem, path, path == null ? "File exists" : $"File exists '{path}'") { }
+        public FileSystemExceptionFileExists(IFileSystem filesystem = null, string path = null) : base(filesystem, path, "File exists") { }
 
         /// <inheritdoc/>
         protected FileSystemExceptionFileExists(SerializationInfo info, StreamingContext context) : base(info, context) { }
@@ -115,7 +131,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
-        public FileSystemExceptionInvalidName(IFileSystem filesystem = null, string path = null) : base(filesystem, path, path == null ? "File exists" : $"File exists '{path}'") { }
+        public FileSystemExceptionInvalidName(IFileSystem filesystem = null, string path = null) : base(filesystem, path, "File exists") { }
 
         /// <inheritdoc/>
         protected FileSystemExceptionInvalidName(SerializationInfo info, StreamingContext context) : base(info, context) { }
@@ -131,7 +147,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
-        public FileSystemExceptionDirectoryExists(IFileSystem filesystem = null, string path = null) : base(filesystem, path, path == null ? "Directory exists" : $"Directory exists '{path}'") { }
+        public FileSystemExceptionDirectoryExists(IFileSystem filesystem = null, string path = null) : base(filesystem, path, "Directory exists") { }
 
         /// <inheritdoc/>
         protected FileSystemExceptionDirectoryExists(SerializationInfo info, StreamingContext context) : base(info, context) { }
@@ -151,7 +167,7 @@ namespace Lexical.FileSystem
         /// <param name="fileSystem"></param>
         /// <param name="path"></param>
         /// <returns>false</returns>
-        public static bool Set(FileSystemException exception, IFileSystem fileSystem, string path)
+        public static bool Set(this FileSystemException exception, IFileSystem fileSystem, string path)
         {
             exception.fileSystem = fileSystem;
             exception.path = path;

@@ -16,7 +16,10 @@ using System.Threading.Tasks;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// In-memory filesystem.
+    /// In memory filesystem with file and directory structure.
+    /// 
+    /// Directory separator character is forward slash '/'.  All characters exept '/' are valid file names. Directories can have empty name "". 
+    /// Names "." and ".." are reserved.
     /// 
     /// Maximum file length is <see cref="int.MaxValue"/>*<see cref="BlockSize"/>.
     /// The default blocksize is 1024 which allows 2TB - 1KB files.
@@ -278,13 +281,13 @@ namespace Lexical.FileSystem
         /// <param name="path">path to a file or directory</param>
         /// <param name="recursive">if path refers to directory, recurse into sub directories</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
-        /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false</exception>
+        /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
-        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support deleting files</exception>
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
+        /// <exception cref="FileSystemExceptionNoWriteAccess">When trying to delete root</exception>
         public void Delete(string path, bool recursive = false)
         {
             // Assert argument
@@ -292,7 +295,7 @@ namespace Lexical.FileSystem
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // 
-            if (path == "") throw new ArgumentException("Deleting root is not allowed.");
+            if (path == "") throw new FileSystemExceptionNoWriteAccess(this, path);
             // Datetime
             DateTimeOffset time = DateTimeOffset.UtcNow;
             // Queue of events
@@ -308,7 +311,7 @@ namespace Lexical.FileSystem
                 // Not found
                 if (node == null) throw new FileNotFoundException(path);
                 // Assert not root
-                if (node.Path == "") throw new IOException("Cannot delete root.");
+                if (node.Path == "") throw new FileSystemExceptionNoWriteAccess(this, path);
                 // Get parent
                 Directory parent = node.parent;
                 // Parent not found?
@@ -402,78 +405,46 @@ namespace Lexical.FileSystem
             try
             {
                 // Find paths
-                Node oldNode = GetNode(oldPath), newNode = GetNode(newPath);
+                Node node = GetNode(oldPath);
                 // Not found
-                if (oldNode == null) throw new FileNotFoundException(oldPath);
-                // Target file already exists
-                if (newNode != null) throw new FileSystemExceptionFileExists(this, newPath);
+                if (node == null) throw new FileNotFoundException(oldPath);
                 // Get parents
-                Directory oldParent = oldNode.parent;
+                Directory oldParent = node.parent;
                 // Parent not found
                 if (oldParent == null) throw new FileNotFoundException(oldPath);
 
-                // Split newPath into parent directory and name.
-                Directory cursor = root, newParent = null;
-                string newName = null;
-                // Path '/' splitter, enumerates name strings from root towards tail
-                PathEnumerator2 enumr = new PathEnumerator2(newPath);
-                // Get next name from the path
-                while (enumr.MoveNext())
-                {
-                    // Name
-                    StringSegment name = enumr.Current;
-                    // "."
-                    if (name.Equals(StringSegment.Dot)) continue;
-                    // ".."
-                    if (name.Equals(StringSegment.DotDot))
-                    {
-                        // No parent to go to
-                        if (cursor.parent == null) throw new DirectoryNotFoundException(newPath);
-                        // Go towards parent
-                        cursor = cursor.parent;
-                        continue;
-                    }
-                    // Find child
-                    Node child;
-                    if (cursor.contents.TryGetValue(name, out child))
-                    {
-                        newParent = null;
-                        newName = null;
-                        // Entry is directory
-                        if (child is Directory directory) cursor = directory;
-                        // Entry is file
-                        else throw new FileSystemExceptionFileExists(this, child.Path);
-                    }
-                    else
-                    // name did not match anything in the directory
-                    {
-                        newName = enumr.Current;
-                        newParent = cursor;
-                    }
-                }
-                // Unexpected error
-                if (newParent == null || newName == null) throw new InvalidOperationException(newPath);
-
+                // Search newPath parent directory and parse name.
+                StringSegment parentPath, newName;
+                Directory newParent;
+                if (!GetParentAndName(newPath, out parentPath, out newName, out newParent))
+                    /*New parent was not found*/ throw new DirectoryNotFoundException(parentPath);
                 // Nothing to do (check this after proper asserts)
-                if (oldPath == newPath) return;
+                if (oldParent == newParent && newName == node.name) return;
+                // Target file already exists
+                Node previouslyExistingNode;
+                if (newParent.contents.TryGetValue(newName, out previouslyExistingNode))
+                    throw previouslyExistingNode is File ? new FileSystemExceptionFileExists(this, newPath) : (Exception)new FileSystemExceptionDirectoryExists(this, newPath);
 
                 // Single file or empty dir
-                if (oldNode is File || (oldNode is Directory dir_ && dir_.contents.Count == 0))
+                if (node is File || (node is Directory dir_ && dir_.contents.Count == 0))
                 {
                     // prev path
-                    string c_oldPath = oldNode.Path;
+                    string c_oldPath = node.Path;
                     // Disconnect from previous parent
-                    oldNode.parent.contents.Remove(new StringSegment(oldNode.name));
+                    node.parent.contents.Remove(new StringSegment(node.name));
                     // Rename
-                    oldNode.name = newName;
+                    node.name = newName;
                     // Move folder to new parent
-                    oldNode.parent = newParent;
+                    node.parent = newParent;
                     // Connect to new parent
-                    newParent.contents[new StringSegment(newName)] = oldNode;
+                    newParent.contents[new StringSegment(newName)] = node;
                     // Flush cached path
-                    oldNode.path = null;
+                    node.path = null;
+                    node.FlushPath();
+                    node.FlushChildEntries();
+                    node.FlushEntry();
                     // new path
-                    string c_newPath = oldNode.Path;
+                    string c_newPath = node.Path;
                     // Create event
                     if (observers != null)
                         foreach (ObserverHandle observer in observers)
@@ -486,15 +457,15 @@ namespace Lexical.FileSystem
                     // Nodes and old paths
                     StructList12<(Node, string)> list = new StructList12<(Node, string)>();
                     // Visit tree and capture old path
-                    foreach (Node c in oldNode.VisitTree()) list.Add((c, c.Path));
+                    foreach (Node c in node.VisitTree()) list.Add((c, c.Path));
                     // Disconnect from previous parent
-                    oldNode.parent.contents.Remove(new StringSegment(oldNode.name));
+                    node.parent.contents.Remove(new StringSegment(node.name));
                     // Rename
-                    oldNode.name = newName;
+                    node.name = newName;
                     // Move folder to new parent
-                    oldNode.parent = newParent;
+                    node.parent = newParent;
                     // Connect to new parent
-                    newParent.contents[new StringSegment(newName)] = oldNode;
+                    newParent.contents[new StringSegment(newName)] = node;
                     // Visit list again
                     for (int i = 0; i < list.Count; i++)
                     {
@@ -1246,12 +1217,17 @@ namespace Lexical.FileSystem
             /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
             public Stream Open(FileAccess fileAccess, FileShare fileShare)
             {
-                // Get a reference
-                var _memoryFile = memoryFile;
-                // Test object is not deleted
-                if (_memoryFile == null || isDeleted) throw new FileNotFoundException(Path);
-                // Open stream
-                return _memoryFile.Open(fileAccess, fileShare);
+                try
+                {
+                    // Get a reference
+                    var _memoryFile = memoryFile;
+                    // Test object is not deleted
+                    if (_memoryFile == null || isDeleted) throw new FileNotFoundException(Path);
+                    // Open stream
+                    return _memoryFile.Open(fileAccess, fileShare);
+                }
+                catch (FileSystemException e) 
+                when ( /*Attach filesystem and path*/ e.Set(filesystem, Path)) { /*Never goes here*/ return null; }
             }
 
             /// <summary>
