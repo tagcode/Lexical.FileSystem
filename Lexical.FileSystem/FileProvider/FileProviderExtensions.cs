@@ -3,7 +3,7 @@
 // Date:           23.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Adapter;
+using Lexical.FileSystem.FileProvider;
 using Microsoft.Extensions.FileProviders;
 
 namespace Lexical.FileSystem

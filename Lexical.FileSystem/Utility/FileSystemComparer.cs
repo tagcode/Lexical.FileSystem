@@ -3,7 +3,7 @@
 // Date:           6.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Adapter;
+using Lexical.FileSystem.FileProvider;
 using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Concurrent;
@@ -28,6 +28,7 @@ namespace Lexical.FileSystem.Utility
         ///     <item><see cref="FileSystem"/></item>
         ///     <item><see cref="FileProviderSystem"/></item>
         ///     <item><see cref="FileSystemComposition"/></item>
+        ///     <item><see cref="MemoryFileSystem"/></item>
         /// </list>
         /// </summary>
         private static FileSystemComparerComposition instance = new FileSystemComparerComposition(
