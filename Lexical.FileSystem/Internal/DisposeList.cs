@@ -45,9 +45,9 @@ namespace Lexical.FileSystem.Internal
         protected long disposing;
 
         /// <summary>
-        /// Has disposing has start requested but is post-poned for now.
+        /// Has Dispose() been called.
         /// </summary>
-        public bool IsDisposeCalled => Interlocked.Read(ref disposing) == 1L;
+        public bool IsDisposeCalled => Interlocked.Read(ref disposing) >= 1L;
 
         /// <summary>
         /// Has disposing has started or completed.
