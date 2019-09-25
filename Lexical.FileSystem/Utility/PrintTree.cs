@@ -81,9 +81,9 @@ namespace Lexical.FileSystem
             foreach (TreeVisit.Line line in fileSystem.VisitTree(startPath, maxLevel))
             {
                 // Print indents
-                for (int l = 0; l < line.Level - 1; l++) output.Write(line.LevelContinues(l) ? "│  " : "   ");
+                for (int l = 1; l < line.Level; l++) output.Write(line.LevelContinues(l) ? "│  " : "   ");
                 // Print last indent
-                if (line.Level >= 1) output.Write(line.LevelContinues(line.Level - 1) ? "├──" : "└──");
+                if (line.Level >= 1) output.Write(line.LevelContinues(line.Level) ? "├──" : "└──");
                 // Print name
                 if (printFormat == Format.Name)
                 {
@@ -138,9 +138,9 @@ namespace Lexical.FileSystem
             foreach (TreeVisit.Line line in fileSystem.VisitTree(startPath, maxLevel))
             {
                 // Print indents
-                for (int l = 0; l < line.Level - 1; l++) output.Append(line.LevelContinues(l) ? "│  " : "   ");
+                for (int l = 1; l < line.Level; l++) output.Append(line.LevelContinues(l) ? "│  " : "   ");
                 // Print last indent
-                if (line.Level >= 1) output.Append(line.LevelContinues(line.Level - 1) ? "├──" : "└──");
+                if (line.Level >= 1) output.Append(line.LevelContinues(line.Level) ? "├──" : "└──");
                 // Print name
                 output.Append("\"");
                 output.Append(line.Entry.Name);

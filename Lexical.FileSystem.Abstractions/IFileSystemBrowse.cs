@@ -29,7 +29,10 @@ namespace Lexical.FileSystem
         /// Browse a directory for file and subdirectory entries.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
-        /// <returns>a new snapshot of file and directory entries</returns>
+        /// <returns>
+        ///     Returns a snapshot of file and directory entries.
+        ///     Note, that the returned array be internally cached by the implementation, and therefore the caller must not modify the array.
+        /// </returns>
         /// <exception cref="DirectoryNotFoundException"></exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -86,7 +89,10 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="fileSystem"></param>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
-        /// <returns>a new snapshot of file and directory entries</returns>
+        /// <returns>
+        ///     Returns a snapshot of file and directory entries.
+        ///     Note, that the returned array be internally cached by the implementation, and therefore the caller must not modify the array.
+        /// </returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>

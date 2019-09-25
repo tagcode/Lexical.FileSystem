@@ -3,6 +3,7 @@
 // Date:           23.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
 using System.Collections.Generic;
@@ -53,27 +54,25 @@ namespace Lexical.FileSystem
                 // Children
                 if (line.Entry.IsDirectory() && line.Level < maxLevel)
                 {
+                    int startIndex = queue.Count;
                     try
                     {
                         // Browse children
                         IFileSystemEntry[] children = fileSystem.Browse(line.Entry.Path);
-                        // Sort
-                        Array.Sort(children, FileSystemEntryComparer.TypeNameComparer);
-                        // Mask for entries that are not last in the array
-                        ulong levelContinuesBitMask = line.LevelContinuesBitMask;
-                        if (line.Level<=64) levelContinuesBitMask |= 1UL << (line.Level - 1);
-                        // Add children
+                        // Assert children don't refer beyond parent
                         for (int i = children.Length - 1; i >= 0; i--)
                         {
-                            // Child
                             IFileSystemEntry child = children[i];
-                            // Assert
                             if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
-                            // Choose which mask to use
-                            ulong bitmask = i < children.Length - 1 ? /*not last entry*/ levelContinuesBitMask : /*last entry*/ line.LevelContinuesBitMask;
-                            // Queue
-                            queue.Add(new Line(child, line.Level+1, bitmask));
                         }
+                        // Bitmask when this level continues
+                        ulong levelContinuesBitMask = line.LevelContinuesBitMask | (line.Level < 64 ? 1UL << line.Level : 0UL);
+                        // Add children
+                        for (int i = children.Length - 1; i >= 0; i--) queue.Add(new Line(children[i], line.Level + 1, levelContinuesBitMask));
+                        // Sort
+                        if (children.Length>1) sorter.QuickSortInverse(ref queue, startIndex, queue.Count - 1);
+                        // Last element doesn't continue
+                        if (children.Length>=1) queue[startIndex] = queue[startIndex].NewLevelContinuesBitMask(line.LevelContinuesBitMask);
                     }
                     catch (Exception e)
                     {
@@ -86,6 +85,9 @@ namespace Lexical.FileSystem
                 yield return line;
             }
         }
+
+        // Line sorter
+        static StructListSorter<List<Line>, Line> sorter = new StructListSorter<List<Line>, Line>(Line.Comparer.TypeNameComparer);
 
         /// <summary>
         /// Tree visitor line.
@@ -128,14 +130,27 @@ namespace Lexical.FileSystem
             }
 
             /// <summary>
+            /// Create line with new value to <see cref="LevelContinuesBitMask"/>.
+            /// </summary>
+            /// <param name="newLevelContinuesBitMask"></param>
+            /// <returns>line with new mask</returns>
+            public Line NewLevelContinuesBitMask(ulong newLevelContinuesBitMask)
+                => new Line(Entry, Level, newLevelContinuesBitMask, Error);
+
+            /// <summary>
             /// Tests whether there will be more entries to specific <paramref name="level"/>.
             /// </summary>
             /// <param name="level"></param>
             /// <returns></returns>
-            public bool LevelContinues(int level) 
-                => level >= 64 ? 
-                   /*Not supported after 64 levels*/ false : 
-                   /*Read bit*/ (LevelContinuesBitMask & 1UL << (level - 1)) != 0UL;
+            public bool LevelContinues(int level)
+            {
+                // Undefined
+                if (level == 0) return false;
+                // Not supported after 64 levels
+                if (level > 64) return false;
+                // Read the bit
+                return (LevelContinuesBitMask & 1UL << (level - 1)) != 0UL;
+            }
 
             /// <summary>
             /// Write to <see cref="StringBuilder"/> <paramref name="output"/>.
@@ -145,9 +160,9 @@ namespace Lexical.FileSystem
             public void AppendTo(StringBuilder output, PrintTree.Format printFormat = PrintTree.Format.Name)
             {
                 // Print indents
-                for (int l = 0; l < Level - 1; l++) output.Append(LevelContinues(l) ? "│  " : "   ");
+                for (int l = 1; l < Level; l++) output.Append(LevelContinues(l) ? "│  " : "   ");
                 // Print last indent
-                if (Level >= 1) output.Append(LevelContinues(Level - 1) ? "├──" : "└──");
+                if (Level >= 1) output.Append(LevelContinues(Level) ? "├──" : "└──");
                 // Print name
                 if (printFormat == PrintTree.Format.Name)
                 {
@@ -178,6 +193,36 @@ namespace Lexical.FileSystem
                 StringBuilder sb = new StringBuilder();
                 AppendTo(sb);
                 return sb.ToString();
+            }
+
+            /// <summary>Comparer that sorts by: Type, Name.</summary>
+            public class Comparer : IComparer<Line>
+            {
+                /// <summary>Comparer that sorts by: Type, Name.</summary>
+                private static IComparer<Line> typeNameComparer = new Comparer(FileSystemEntryComparer.TypeNameComparer);
+                /// <summary>Comparer that sorts by: Type, Name.</summary>
+                public static IComparer<Line> TypeNameComparer => typeNameComparer;
+
+                /// <summary>Entry comparer</summary>
+                IComparer<IFileSystemEntry> entryComparer;
+
+                /// <summary>
+                /// Sort by type, then name, using AlphaNumericComparer
+                /// </summary>
+                /// <param name="x"></param>
+                /// <param name="y"></param>
+                /// <returns></returns>
+                public int Compare(Line x, Line y)
+                    => entryComparer.Compare(x.Entry, y.Entry);
+
+                /// <summary>
+                /// Create comparer
+                /// </summary>
+                /// <param name="entryComparer"></param>
+                public Comparer(IComparer<IFileSystemEntry> entryComparer = null)
+                {
+                    this.entryComparer = entryComparer ?? throw new ArgumentException(nameof(entryComparer));
+                }
             }
         }
 
