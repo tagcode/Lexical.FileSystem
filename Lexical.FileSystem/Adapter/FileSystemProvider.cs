@@ -88,7 +88,7 @@ namespace Lexical.FileSystem.Adapter
         /// </summary>
         /// <param name="disposeAction"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        public new FileSystemProvider AddDisposeAction(Action disposeAction)
+        public new FileSystemProvider AddDisposeAction(Action<object> disposeAction)
         {
             base.AddDisposeAction(disposeAction);
             return this;

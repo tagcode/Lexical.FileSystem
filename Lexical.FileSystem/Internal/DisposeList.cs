@@ -223,14 +223,14 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <param name="disposeAction"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        protected bool AddDisposeAction(Action disposeAction)
+        protected bool AddDisposeAction(Action<object> disposeAction)
         {
             // Argument error
             if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));
             // Parent is disposed/ing
-            if (IsDisposing) { disposeAction.Invoke(); return false; }
+            if (IsDisposing) { disposeAction(this); return false; }
             // Adapt to IDisposable
-            IDisposable disposable = new DisposeAction(disposeAction);
+            IDisposable disposable = new DisposeAction(disposeAction, this);
             // Add to list
             lock (m_disposelist_lock) disposeList.Add( disposable );
             // Check parent again
@@ -244,17 +244,17 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         class DisposeAction : IDisposable
         {
-            Action a;
+            Action<object> action;
+            object disposeObject;
 
-            public DisposeAction(Action a)
+            public DisposeAction(Action<object> a, object disposeObject)
             {
-                this.a = a ?? throw new ArgumentNullException(nameof(a));
+                this.action = a ?? throw new ArgumentNullException(nameof(a));
+                this.disposeObject = disposeObject ?? throw new ArgumentNullException(nameof(disposeObject));
             }
 
-            public void Dispose()
-            {
-                a.Invoke();
-            }
+            public void Dispose() 
+                => action(disposeObject);
         }
 
         /// <summary>
