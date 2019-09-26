@@ -433,10 +433,34 @@ namespace Lexical.FileSystem
         /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
         /// </summary>
         /// <param name="disposeAction"></param>
-        /// <returns>true if was added to list, false if was disposed right away</returns>
-        public new FileSystemComposition AddDisposeAction(Action<object> disposeAction)
+        /// <returns>self</returns>
+        public FileSystemComposition AddDisposeAction(Action<FileSystemComposition> disposeAction)
         {
-            base.AddDisposeAction(disposeAction);
+            // Argument error
+            if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));
+            // Parent is disposed/ing
+            if (IsDisposing) { disposeAction(this); return this; }
+            // Adapt to IDisposable
+            IDisposable disposable = new DisposeAction<FileSystemComposition>(disposeAction, this);
+            // Add to list
+            lock (m_disposelist_lock) disposeList.Add(disposable);
+            // Check parent again
+            if (IsDisposing) { lock (m_disposelist_lock) disposeList.Remove(disposable); disposable.Dispose(); return this; }
+            // OK
+            return this;
+        }
+
+        /// <summary>
+        /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
+        /// 
+        /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
+        /// </summary>
+        /// <param name="disposeAction"></param>
+        /// <param name="state"></param>
+        /// <returns>self</returns>
+        public new FileSystemComposition AddDisposeAction(Action<object> disposeAction, object state)
+        {
+            base.AddDisposeAction(disposeAction, state);
             return this;
         }
 

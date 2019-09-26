@@ -19,18 +19,13 @@ namespace Lexical.FileSystem.FileProvider
     /// File system that reads, observes and browses files from <see cref="IFileProvider"/> source.
     /// 
     /// The recommended way to create <see cref="FileSystemProvider"/> is to use
-    /// the extension method in <see cref="FileProviderExtensions.ToFileSystem(IFileProvider, string, bool, bool, bool)"/>.
+    /// the extension method in <see cref="FileProviderExtensions.ToFileSystem(IFileProvider, bool, bool, bool)"/>.
     /// 
     /// WARNING: The Observe implementation browses the subtree of the watched directory path in order to create delta of changes.
     /// </summary>
     public class FileProviderSystem : FileSystemBase, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen
     {
         static IFileSystemEntry[] NO_ENTRIES = new IFileSystemEntry[0];
-
-        /// <summary>
-        /// Optional subpath within the source <see cref="fileProvider"/>.
-        /// </summary>
-        protected String SubPath;
 
         /// <summary>
         /// Source file provider. This value is nulled on dispose.
@@ -41,6 +36,11 @@ namespace Lexical.FileSystem.FileProvider
         /// Source file provider. This value is nulled on dispose.
         /// </summary>
         public IFileProvider FileProvider => fileProvider;
+
+        /// <summary>
+        /// Source file provider casted to <see cref="IDisposable"/>. Value is null if <see cref="FileProvider"/> doesn't implement <see cref="IDisposable"/>.
+        /// </summary>
+        public IDisposable FileProviderDisposable => fileProvider as IDisposable;
 
         /// <inheritdoc/>
         public virtual bool CanBrowse { get; protected set; }
@@ -58,20 +58,24 @@ namespace Lexical.FileSystem.FileProvider
         public virtual bool CanCreateFile => false;
 
         /// <summary>
+        /// <see cref="FileProvider"/> is physical fileprovider.
+        /// </summary>
+        protected bool isPhysicalFileProvider;
+
+        /// <summary>
         /// Create file provider based file system.
         /// </summary>
-        /// <param name="fileProvider"></param>
-        /// <param name="subpath">(optional) subpath within the file provider</param>
-        /// <param name="canBrowse"></param>
-        /// <param name="canObserve"></param>
-        /// <param name="canOpen"></param>
-        public FileProviderSystem(IFileProvider fileProvider, string subpath = null, bool canBrowse = true, bool canObserve = true, bool canOpen = true) : base()
+        /// <param name="sourceFileProvider"></param>
+        /// <param name="canBrowse">if true allows to forward Browse</param>
+        /// <param name="canObserve">if true allows to forward Observe</param>
+        /// <param name="canOpen">if true allows to forward Open</param>
+        public FileProviderSystem(IFileProvider sourceFileProvider, bool canBrowse = true, bool canObserve = true, bool canOpen = true) : base()
         {
-            this.fileProvider = fileProvider ?? throw new ArgumentNullException(nameof(subpath));
-            this.SubPath = subpath;
+            this.fileProvider = sourceFileProvider ?? throw new ArgumentNullException(nameof(sourceFileProvider));
             this.CanBrowse = this.CanGetEntry = canBrowse;
             this.CanObserve = canObserve;
             this.CanOpen = this.CanRead = canOpen;
+            this.isPhysicalFileProvider = sourceFileProvider.GetType().FullName == "Microsoft.Extensions.FileProviders.PhysicalFileProvider";
         }
 
         /// <summary>
@@ -115,12 +119,12 @@ namespace Lexical.FileSystem.FileProvider
             // Check access is for reading
             if (fileAccess != FileAccess.Read) throw new NotSupportedException("FileAccess = " + fileAccess + " is not supported");
             // Make path
-            string concatenatedPath = SubPath == null ? path : (SubPath.EndsWith("/") || SubPath.EndsWith("\\")) ? SubPath + path : SubPath + "/" + path;
+            if (isPhysicalFileProvider && path.Contains(@"\")) path = path.Replace(@"\", "/");
             // Is disposed?
             IFileProvider fp = fileProvider;
             if (fp == null) throw new ObjectDisposedException(nameof(FileProviderSystem));
             // Does file exist?
-            IFileInfo fi = fp.GetFileInfo(concatenatedPath);
+            IFileInfo fi = fp.GetFileInfo(path);
             if (!fi.Exists) throw new FileNotFoundException(path);
             // Read
             Stream s = fi.CreateReadStream();
@@ -149,19 +153,19 @@ namespace Lexical.FileSystem.FileProvider
             // Assert browse is enabled
             if (!CanBrowse) throw new NotSupportedException("Browse is not supported");
             // Make path
-            string concatenatedPath = SubPath == null ? path : (SubPath.EndsWith("/") || SubPath.EndsWith("\\")) ? SubPath + path : SubPath + "/" + path;
+            if (isPhysicalFileProvider && path.Contains(@"\")) path = path.Replace(@"\", "/");
             // Is disposed?
             IFileProvider fp = fileProvider;
             if (fp == null) throw new ObjectDisposedException(nameof(FileProviderSystem));
             // Browse
-            IDirectoryContents contents = fp.GetDirectoryContents(concatenatedPath);
+            IDirectoryContents contents = fp.GetDirectoryContents(path);
             if (contents.Exists)
             {
                 // Convert result
                 StructList24<IFileSystemEntry> list = new StructList24<IFileSystemEntry>();
                 foreach (IFileInfo _fi in contents)
                 {
-                    string entryPath = concatenatedPath.Length > 0 ? concatenatedPath + "/" + _fi.Name : _fi.Name;
+                    string entryPath = path.Length > 0 ? path + "/" + _fi.Name : _fi.Name;
                     IFileSystemEntry e =
                         _fi.IsDirectory ?
                         (IFileSystemEntry)new FileSystemEntryDirectory(this, entryPath, _fi.Name, _fi.LastModified) :
@@ -171,10 +175,10 @@ namespace Lexical.FileSystem.FileProvider
                 return list.ToArray();
             }
 
-            IFileInfo fi = fp.GetFileInfo(concatenatedPath);
+            IFileInfo fi = fp.GetFileInfo(path);
             if (fi.Exists)
             {
-                IFileSystemEntry e = new FileSystemEntryFile(this, concatenatedPath, fi.Name, fi.LastModified, fi.Length);
+                IFileSystemEntry e = new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, fi.Length);
                 return new IFileSystemEntry[] { e };
             }
 
@@ -198,22 +202,21 @@ namespace Lexical.FileSystem.FileProvider
         public IFileSystemEntry GetEntry(string path)
         {
             if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue);
-
             // Make path
-            string concatenatedPath = SubPath == null ? path : (SubPath.EndsWith("/") || SubPath.EndsWith("\\")) ? SubPath + path : SubPath + "/" + path;
+            if (isPhysicalFileProvider && path.Contains(@"\")) path = path.Replace(@"\", "/");
             // Is disposed?
             IFileProvider fp = fileProvider;
             if (fp == null) throw new ObjectDisposedException(nameof(FileProviderSystem));
 
             // File
-            IFileInfo fi = fp.GetFileInfo(concatenatedPath);
+            IFileInfo fi = fp.GetFileInfo(path);
             if (fi.Exists)
                 return fi.IsDirectory ?
                     new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified) :
                     (IFileSystemEntry)new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, fi.Length);
 
             // Directory
-            IDirectoryContents contents = fp.GetDirectoryContents(concatenatedPath);
+            IDirectoryContents contents = fp.GetDirectoryContents(path);
             if (contents.Exists) return new FileSystemEntryDirectory(this, path, Path.GetDirectoryName(path), DateTimeOffset.MinValue);
 
             // Nothing was found
@@ -548,10 +551,34 @@ namespace Lexical.FileSystem.FileProvider
         /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
         /// </summary>
         /// <param name="disposeAction"></param>
-        /// <returns>true if was added to list, false if was disposed right away</returns>
-        public new FileProviderSystem AddDisposeAction(Action<object> disposeAction)
+        /// <returns>filesystem</returns>
+        public FileProviderSystem AddDisposeAction(Action<FileProviderSystem> disposeAction)
         {
-            base.AddDisposeAction(disposeAction);
+            // Argument error
+            if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));
+            // Parent is disposed/ing
+            if (IsDisposing) { disposeAction(this); return this; }
+            // Adapt to IDisposable
+            IDisposable disposable = new DisposeAction<FileProviderSystem>(disposeAction, this);
+            // Add to list
+            lock (m_disposelist_lock) disposeList.Add(disposable);
+            // Check parent again
+            if (IsDisposing) { lock (m_disposelist_lock) disposeList.Remove(disposable); disposable.Dispose(); return this; }
+            // OK
+            return this;
+        }
+
+        /// <summary>
+        /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
+        /// 
+        /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
+        /// </summary>
+        /// <param name="disposeAction"></param>
+        /// <param name="state"></param>
+        /// <returns>self</returns>
+        public new FileProviderSystem AddDisposeAction(Action<object> disposeAction, object state)
+        {
+            base.AddDisposeAction(disposeAction, state);
             return this;
         }
 
@@ -581,7 +608,7 @@ namespace Lexical.FileSystem.FileProvider
         /// Remove <paramref name="disposable"/> from dispose list.
         /// </summary>
         /// <param name="disposable"></param>
-        /// <returns></returns>
+        /// <returns>filesystem</returns>
         public FileProviderSystem RemoveDisposable(object disposable)
         {
             ((IDisposeList)this).RemoveDisposable(disposable);
@@ -592,7 +619,7 @@ namespace Lexical.FileSystem.FileProvider
         /// Remove <paramref name="disposables"/> from dispose list.
         /// </summary>
         /// <param name="disposables"></param>
-        /// <returns></returns>
+        /// <returns>filesystem</returns>
         public FileProviderSystem RemoveDisposables(IEnumerable<object> disposables)
         {
             ((IDisposeList)this).RemoveDisposables(disposables);

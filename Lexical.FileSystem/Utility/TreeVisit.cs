@@ -111,6 +111,16 @@ namespace Lexical.FileSystem
             public Exception Error;
 
             /// <summary>
+            /// Entry path.
+            /// </summary>
+            public string Path => Entry.Path;
+
+            /// <summary>
+            /// Entry name.
+            /// </summary>
+            public string Name => Entry.Name;
+
+            /// <summary>
             /// Create line
             /// </summary>
             /// <param name="entry"></param>

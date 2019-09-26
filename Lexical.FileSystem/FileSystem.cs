@@ -105,7 +105,8 @@ namespace Lexical.FileSystem
         public FileSystem(string rootPath) : base()
         {
             RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
-            AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(rootPath);
+            AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(/*c: ?*/isWindows && rootPath.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/rootPath + osSeparator : /*c:\nn*/rootPath);
+
             IsOsRoot = rootPath == "";
             // Canonized relative path uses "/" as separator. Ends with "/".
             string canonizedRelativePath = IsOsRoot ? "" : osSeparator == "/" ? rootPath : rootPath.Replace(osSeparator, " / ");
@@ -206,7 +207,7 @@ namespace Lexical.FileSystem
                 // Concatenate root path from construction to argumen path
                 concatenatedPath = RootPath == "" ? path : (RootPath.EndsWith("/", StringComparison.InvariantCulture) || RootPath.EndsWith("\\", StringComparison.InvariantCulture) || RootPath.EndsWith(":", StringComparison.InvariantCulture)) ? RootPath + path : RootPath + "/" + path;
                 // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
-                absolutePath = Path.GetFullPath(isWindows && RootPath == "" && path.EndsWith(":", StringComparison.InvariantCulture) ? concatenatedPath + osSeparator : concatenatedPath);
+                absolutePath = Path.GetFullPath(/*c: ?*/isWindows && concatenatedPath.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/concatenatedPath + osSeparator : /*c:\nnn*/concatenatedPath);
                 // Assert that we are not browsing the parent of constructed path
                 if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
                 // Return path without trailing separator
@@ -881,10 +882,34 @@ namespace Lexical.FileSystem
         /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
         /// </summary>
         /// <param name="disposeAction"></param>
-        /// <returns>true if was added to list, false if was disposed right away</returns>
-        public new FileSystem AddDisposeAction(Action<object> disposeAction)
+        /// <returns>self</returns>
+        public FileSystem AddDisposeAction(Action<FileSystem> disposeAction)
         {
-            base.AddDisposeAction(disposeAction);
+            // Argument error
+            if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));
+            // Parent is disposed/ing
+            if (IsDisposing) { disposeAction(this); return this; }
+            // Adapt to IDisposable
+            IDisposable disposable = new DisposeAction<FileSystem>(disposeAction, this);
+            // Add to list
+            lock (m_disposelist_lock) disposeList.Add(disposable);
+            // Check parent again
+            if (IsDisposing) { lock (m_disposelist_lock) disposeList.Remove(disposable); disposable.Dispose(); return this; }
+            // OK
+            return this;
+        }
+
+        /// <summary>
+        /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
+        /// 
+        /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
+        /// </summary>
+        /// <param name="disposeAction"></param>
+        /// <param name="state"></param>
+        /// <returns>self</returns>
+        public new FileSystem AddDisposeAction(Action<object> disposeAction, object state)
+        {
+            base.AddDisposeAction(disposeAction, state);
             return this;
         }
 

@@ -19,20 +19,19 @@ namespace Lexical.FileSystem
         /// WARNING: The Observe implementation browses the subtree of the watched directory path in order to create delta of changes.
         /// </summary>
         /// <param name="fileProvider"></param>
-        /// <param name="subpath">(optional)</param>
         /// <param name="canBrowse"></param>
         /// <param name="canObserve"></param>
         /// <param name="canOpen"></param>
         /// <returns><see cref="IFileSystem"/></returns>
-        public static IFileSystem ToFileSystem(this IFileProvider fileProvider, string subpath = null, bool canBrowse = true, bool canObserve = true, bool canOpen = true)
-            => new FileProviderSystem(fileProvider, subpath, canBrowse, canObserve, canOpen);
+        public static FileProviderSystem ToFileSystem(this IFileProvider fileProvider, bool canBrowse = true, bool canObserve = true, bool canOpen = true)
+            => new FileProviderSystem(fileProvider, canBrowse, canObserve, canOpen);
 
         /// <summary>
         /// Adapt <paramref name="filesystem"/> to <see cref="IFileProvider"/>.
         /// </summary>
         /// <param name="filesystem"></param>
         /// <returns><see cref="IFileProvider"/></returns>
-        public static IFileProvider ToFileProvider(this IFileSystem filesystem)
+        public static FileSystemProvider ToFileProvider(this IFileSystem filesystem)
             => new FileSystemProvider(filesystem);
     }
 

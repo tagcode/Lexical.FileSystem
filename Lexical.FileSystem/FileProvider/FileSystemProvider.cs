@@ -21,7 +21,7 @@ namespace Lexical.FileSystem.FileProvider
     /// The recommended way to create <see cref="FileSystemProvider"/> is to use
     /// the extension method in <see cref="FileProviderExtensions.ToFileProvider(IFileSystem)"/>.
     /// </summary>
-    public class FileSystemProvider : DisposeList, IFileProvider
+    public class FileSystemProvider : DisposeList, IFileProviderDisposable
     {
         /// <summary>
         /// Source filesystem
@@ -29,12 +29,17 @@ namespace Lexical.FileSystem.FileProvider
         public IFileSystem FileSystem { get; protected set; }
 
         /// <summary>
-        /// Create adapter that adapts <paramref name="filesystem"/> into <see cref="IFileProvider"/>.
+        /// Source filesystem casted to <see cref="IDisposable"/>. Value is null if <see cref="FileSystem"/> doesn't implement <see cref="IDisposable"/>.
         /// </summary>
-        /// <param name="filesystem"></param>
-        public FileSystemProvider(IFileSystem filesystem) : base()
+        public IDisposable FileSystemDisposable => FileSystem as IDisposable;
+
+        /// <summary>
+        /// Create adapter that adapts <paramref name="sourceFilesystem"/> into <see cref="IFileProvider"/>.
+        /// </summary>
+        /// <param name="sourceFilesystem"></param>
+        public FileSystemProvider(IFileSystem sourceFilesystem) : base()
         {
-            FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
+            FileSystem = sourceFilesystem ?? throw new ArgumentNullException(nameof(sourceFilesystem));
         }
 
         /// <summary>
@@ -340,10 +345,34 @@ namespace Lexical.FileSystem.FileProvider
         /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
         /// </summary>
         /// <param name="disposeAction"></param>
-        /// <returns>true if was added to list, false if was disposed right away</returns>
-        public new FileSystemProvider AddDisposeAction(Action<object> disposeAction)
+        /// <returns>filesystem</returns>
+        public FileSystemProvider AddDisposeAction(Action<FileSystemProvider> disposeAction)
         {
-            base.AddDisposeAction(disposeAction);
+            // Argument error
+            if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));
+            // Parent is disposed/ing
+            if (IsDisposing) { disposeAction(this); return this; }
+            // Adapt to IDisposable
+            IDisposable disposable = new DisposeAction<FileSystemProvider>(disposeAction, this);
+            // Add to list
+            lock (m_disposelist_lock) disposeList.Add(disposable);
+            // Check parent again
+            if (IsDisposing) { lock (m_disposelist_lock) disposeList.Remove(disposable); disposable.Dispose(); return this; }
+            // OK
+            return this;
+        }
+
+        /// <summary>
+        /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
+        /// 
+        /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
+        /// </summary>
+        /// <param name="disposeAction"></param>
+        /// <param name="state"></param>
+        /// <returns>self</returns>
+        public new FileSystemProvider AddDisposeAction(Action<object> disposeAction, object state)
+        {
+            base.AddDisposeAction(disposeAction, state);
             return this;
         }
 
@@ -351,7 +380,7 @@ namespace Lexical.FileSystem.FileProvider
         /// Add <paramref name="disposable"/> to list of objects to be disposed along with the system.
         /// </summary>
         /// <param name="disposable"></param>
-        /// <returns>filesystem</returns>
+        /// <returns>self</returns>
         public FileSystemProvider AddDisposable(object disposable)
         {
             ((IDisposeList)this).AddDisposable(disposable);
@@ -362,7 +391,7 @@ namespace Lexical.FileSystem.FileProvider
         /// Add <paramref name="disposables"/> to list of objects to be disposed along with the system.
         /// </summary>
         /// <param name="disposables"></param>
-        /// <returns>filesystem</returns>
+        /// <returns>self</returns>
         public FileSystemProvider AddDisposables(IEnumerable<object> disposables)
         {
             ((IDisposeList)this).AddDisposables(disposables);

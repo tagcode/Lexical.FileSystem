@@ -222,15 +222,16 @@ namespace Lexical.FileSystem.Internal
         /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
         /// </summary>
         /// <param name="disposeAction"></param>
+        /// <param name="state"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        protected bool AddDisposeAction(Action<object> disposeAction)
+        protected bool AddDisposeAction(Action<object> disposeAction, object state)
         {
             // Argument error
             if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));
             // Parent is disposed/ing
             if (IsDisposing) { disposeAction(this); return false; }
             // Adapt to IDisposable
-            IDisposable disposable = new DisposeAction(disposeAction, this);
+            IDisposable disposable = new DisposeAction<object>(disposeAction, state);
             // Add to list
             lock (m_disposelist_lock) disposeList.Add( disposable );
             // Check parent again
@@ -242,17 +243,51 @@ namespace Lexical.FileSystem.Internal
         /// <summary>
         /// Adapts <see cref="Action"/> into <see cref="IDisposable"/>.
         /// </summary>
-        class DisposeAction : IDisposable
+        public class DisposeAction : IDisposable
         {
             Action<object> action;
-            object disposeObject;
+            object state;
 
-            public DisposeAction(Action<object> a, object disposeObject)
+            /// <summary>
+            /// Create dispose action.
+            /// </summary>
+            /// <param name="a"></param>
+            /// <param name="state"></param>
+            public DisposeAction(Action<object> a, object state)
             {
                 this.action = a ?? throw new ArgumentNullException(nameof(a));
-                this.disposeObject = disposeObject ?? throw new ArgumentNullException(nameof(disposeObject));
+                this.state = state;
             }
 
+            /// <summary>
+            /// Run delegate with the attached object.
+            /// </summary>
+            public void Dispose()
+                => action(state);
+        }
+
+        /// <summary>
+        /// Adapts <see cref="Action"/> into <see cref="IDisposable"/>.
+        /// </summary>
+        public class DisposeAction<T> : IDisposable
+        {
+            Action<T> action;
+            T disposeObject;
+
+            /// <summary>
+            /// Create dispose action.
+            /// </summary>
+            /// <param name="a"></param>
+            /// <param name="disposeObject"></param>
+            public DisposeAction(Action<T> a, T disposeObject)
+            {
+                this.action = a ?? throw new ArgumentNullException(nameof(a));
+                this.disposeObject = disposeObject;
+            }
+
+            /// <summary>
+            /// Run delegate with the attached object.
+            /// </summary>
             public void Dispose() 
                 => action(disposeObject);
         }
