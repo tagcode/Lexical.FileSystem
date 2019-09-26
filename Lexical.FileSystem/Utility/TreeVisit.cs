@@ -37,13 +37,13 @@ namespace Lexical.FileSystem
         /// 
         /// Any thrown exceptions are printed into the line that produced the error.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="startPath"></param>
         /// <param name="maxLevel"></param>
-        public static IEnumerable<Line> VisitTree(this IFileSystem fileSystem, string startPath = "", int maxLevel = Int32.MaxValue)
+        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string startPath = "", int maxLevel = Int32.MaxValue)
         {
             List<Line> queue = new List<Line>();
-            queue.Add( new Line(fileSystem.GetEntry(startPath), 0, 0UL) );
+            queue.Add( new Line(filesystem.GetEntry(startPath), 0, 0UL) );
             while (queue.Count > 0)
             {
                 // Next entry
@@ -58,7 +58,7 @@ namespace Lexical.FileSystem
                     try
                     {
                         // Browse children
-                        IFileSystemEntry[] children = fileSystem.Browse(line.Entry.Path);
+                        IFileSystemEntry[] children = filesystem.Browse(line.Entry.Path);
                         // Assert children don't refer to the parent of the parent
                         foreach (IFileSystemEntry child in children) if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
                         // Bitmask when this level continues

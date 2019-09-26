@@ -279,7 +279,7 @@ namespace Lexical.FileSystem.FileProvider
         public class FileObserver : FileSystemObserverHandleBase, IFileSystemEventStart
         {
             /// <summary>
-            /// File-system
+            /// Filesystem
             /// </summary>
             protected IFileProvider FileProvider => ((FileProviderSystem)this.FileSystem).FileProvider;
 
@@ -406,7 +406,7 @@ namespace Lexical.FileSystem.FileProvider
         public class PatternObserver : FileSystemObserverHandleBase, IFileSystemEventStart
         {
             /// <summary>
-            /// File-system
+            /// Filesystem
             /// </summary>
             protected IFileProvider FileProvider => ((FileProviderSystem)this.FileSystem).FileProvider;
 

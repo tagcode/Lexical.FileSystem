@@ -10,7 +10,7 @@ using System;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// Base implementation file-system observer
+    /// Base implementation filesystem observer
     /// </summary>
     public abstract class FileSystemObserverHandleBase : DisposeList, IFileSystemObserver
     {
@@ -37,19 +37,19 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Create observer.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="filter"></param>
         /// <param name="observer"></param>
         /// <param name="state"></param>
-        protected FileSystemObserverHandleBase(IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state)
+        protected FileSystemObserverHandleBase(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state)
         {
-            this.FileSystem = fileSystem;
+            this.FileSystem = filesystem;
             Filter = filter;
             Observer = observer;
             State = state;
 
-            // Catch dispose of parent file-system
-            if (fileSystem is IDisposeList disposeList) disposeList.AddDisposable(this);
+            // Catch dispose of parent filesystem
+            if (filesystem is IDisposeList disposeList) disposeList.AddDisposable(this);
         }
 
         /// <summary>
@@ -61,8 +61,8 @@ namespace Lexical.FileSystem
             var _observer = Observer;
 
             // Remove watcher from dispose list.
-            IFileSystem _fileSystem = FileSystem;
-            if (_fileSystem is IDisposeList _disposelist) _disposelist.RemoveDisposable(this);
+            IFileSystem _filesystem = FileSystem;
+            if (_filesystem is IDisposeList _disposelist) _disposelist.RemoveDisposable(this);
 
             // Call OnCompleted
             if (_observer != null)

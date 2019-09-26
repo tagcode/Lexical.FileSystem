@@ -25,7 +25,7 @@ namespace Lexical.FileSystem
     public interface IFileSystemEvent
     {
         /// <summary>
-        /// The observer object that monitors the file-system.
+        /// The observer object that monitors the filesystem.
         /// </summary>
         IFileSystemObserver Observer { get; }
 
@@ -37,7 +37,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// (optional) Affected file or directory entry if applicable. 
         /// 
-        /// Path is relative to the file-systems's root.
+        /// Path is relative to the filesystems's root.
         /// Directory separator is "/". Root path doesn't use separator.
         /// Example: "dir/file.ext"
         /// 

@@ -44,7 +44,7 @@ namespace Lexical.FileSystem.Utility
                 bool xfile = x.IsFile(), yfile = y.IsFile();
                 bool xdir = x.IsDirectory(), ydir = y.IsDirectory();
                 bool xdrive = x.IsDrive(), ydrive = y.IsDrive();
-                //bool xmountpoint = x.IsMountPoint(), ymountpoint = y.IsMountPoint();
+                //bool xmountpoint = x.IsMountpoint(), ymountpoint = y.IsMountpoint();
 
                 if (xfile != yfile) return false;
                 if (xdir != ydir) return false;

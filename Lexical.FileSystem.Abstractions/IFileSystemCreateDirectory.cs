@@ -47,19 +47,19 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="fileSystem"/> has CreateDirectory capability.
-        /// <param name="fileSystem"></param>
+        /// Test if <paramref name="filesystem"/> has CreateDirectory capability.
+        /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has CreateDirectory capability</returns>
-        public static bool CanCreateDirectory(this IFileSystem fileSystem)
-            => fileSystem is IFileSystemCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : false;
+        public static bool CanCreateDirectory(this IFileSystem filesystem)
+            => filesystem is IFileSystemCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : false;
 
         /// <summary>
         /// Create a directory, or multiple cascading directories.
         /// 
         /// If directory at <paramref name="path"/> already exists, then returns without exception.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
         /// <returns>true if directory exists after the method, false if directory doesn't exist</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -72,9 +72,9 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void CreateDirectory(this IFileSystem fileSystem, string path)
+        public static void CreateDirectory(this IFileSystem filesystem, string path)
         {
-            if (fileSystem is IFileSystemCreateDirectory directoryConstructor) directoryConstructor.CreateDirectory(path);
+            if (filesystem is IFileSystemCreateDirectory directoryConstructor) directoryConstructor.CreateDirectory(path);
             else throw new NotSupportedException(nameof(CreateDirectory));
         }
     }

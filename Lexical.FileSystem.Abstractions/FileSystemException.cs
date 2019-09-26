@@ -21,7 +21,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// (optional) Error related filesystem.
         /// </summary>
-        protected internal IFileSystem fileSystem;
+        protected internal IFileSystem filesystem;
 
         /// <summary>
         /// (optional) Error related file path.
@@ -31,7 +31,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// (optional) Error related filesystem.
         /// </summary>
-        public virtual IFileSystem FileSystem => fileSystem;
+        public virtual IFileSystem FileSystem => filesystem;
 
         /// <summary>
         /// (optional) Error related file path.
@@ -57,13 +57,13 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Create filesystem exception.
         /// </summary>
-        /// <param name="fileSystem">(optional) error related filesystem</param>
+        /// <param name="filesystem">(optional) error related filesystem</param>
         /// <param name="path">(optional) error related file path</param>
         /// <param name="message">Message</param>
         /// <param name="innerException">(optional) inner exception</param>
-        public FileSystemException(IFileSystem fileSystem = null, string path = null, string message = "", Exception innerException = null) : base(message, innerException)
+        public FileSystemException(IFileSystem filesystem = null, string path = null, string message = "", Exception innerException = null) : base(message, innerException)
         {
-            this.fileSystem = fileSystem;
+            this.filesystem = filesystem;
             this.path = path;
         }
 
@@ -164,12 +164,12 @@ namespace Lexical.FileSystem
         /// This allows filesystem implementations that compose other implementations to update references.
         /// </summary>
         /// <param name="exception"></param>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <returns>false</returns>
-        public static bool Set(this FileSystemException exception, IFileSystem fileSystem, string path)
+        public static bool Set(this FileSystemException exception, IFileSystem filesystem, string path)
         {
-            exception.fileSystem = fileSystem;
+            exception.filesystem = filesystem;
             exception.path = path;
             return false;
         }

@@ -68,7 +68,7 @@ namespace Lexical.FileSystem
         public readonly string AbsoluteRootPath;
 
         /// <summary>
-        /// Constructed to file-system root.
+        /// Constructed to filesystem root.
         /// </summary>
         public readonly bool IsOsRoot;
 
@@ -94,7 +94,7 @@ namespace Lexical.FileSystem
         public virtual bool CanCreateDirectory => true;
 
         /// <summary>
-        /// Create an access to local file-system.
+        /// Create an access to local filesystem.
         /// 
         /// If <paramref name="rootPath"/> is "", then FileSystem returns drive letters on Windows "C:" and "/" on Linux.
         /// 
@@ -541,16 +541,16 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Create observer for one file.
             /// </summary>
-            /// <param name="fileSystem">associated file system</param>
+            /// <param name="filesystem">associated file system</param>
             /// <param name="relativePath">path to file as <see cref="IFileSystem"/> path</param>
             /// <param name="observer">observer for callbacks</param>
             /// <param name="state"></param>
-            /// <param name="fileSystemRootAbsolutePath">Absolute path to filesystem root.</param>
+            /// <param name="filesystemRootAbsolutePath">Absolute path to filesystem root.</param>
             /// <param name="absolutePath">Absolute path to the file</param>
-            /// <exception cref="DirectoryNotFoundException">If directory in <paramref name="fileSystemRootAbsolutePath"/> is not found.</exception>
-            public FileObserver(IFileSystem fileSystem, string relativePath, IObserver<IFileSystemEvent> observer, object state, string fileSystemRootAbsolutePath, string absolutePath) : base(fileSystem, relativePath, observer, state)
+            /// <exception cref="DirectoryNotFoundException">If directory in <paramref name="filesystemRootAbsolutePath"/> is not found.</exception>
+            public FileObserver(IFileSystem filesystem, string relativePath, IObserver<IFileSystemEvent> observer, object state, string filesystemRootAbsolutePath, string absolutePath) : base(filesystem, relativePath, observer, state)
             {
-                this.FileSystemRootAbsolutePath = fileSystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(fileSystemRootAbsolutePath));
+                this.FileSystemRootAbsolutePath = filesystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(filesystemRootAbsolutePath));
                 this.AbsolutePath = absolutePath ?? throw new ArgumentNullException(nameof(absolutePath));
                 this.RelativePath = relativePath ?? throw new ArgumentNullException(nameof(relativePath));
                 FileInfo fi = new FileInfo(absolutePath);
@@ -576,8 +576,8 @@ namespace Lexical.FileSystem
                 if (_observer == null) return;
 
                 // Disposed
-                IFileSystem _fileSystem = FileSystem;
-                if (_fileSystem == null) return;
+                IFileSystem _filesystem = FileSystem;
+                if (_filesystem == null) return;
 
                 // Create event
                 IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath);
@@ -596,8 +596,8 @@ namespace Lexical.FileSystem
                 if (_observer == null) return;
 
                 // Disposed
-                IFileSystem _fileSystem = FileSystem;
-                if (_fileSystem == null) return;
+                IFileSystem _filesystem = FileSystem;
+                if (_filesystem == null) return;
 
                 // Forward event(s)
                 DateTimeOffset time = DateTimeOffset.UtcNow;
@@ -730,26 +730,26 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Create observer for one file.
             /// </summary>
-            /// <param name="fileSystem">associated file system</param>
+            /// <param name="filesystem">associated file system</param>
             /// <param name="observer">observer for callbacks</param>
             /// <param name="state"></param>
             /// <param name="filterString">original filter string</param>
-            /// <param name="fileSystemRootAbsolutePath">Absolute path to <see cref="FileSystem"/> root.</param>
+            /// <param name="filesystemRootAbsolutePath">Absolute path to <see cref="FileSystem"/> root.</param>
             /// <param name="relativePathToPrefixPartWithoutTrailingSeparator">prefix part of <paramref name="filterString"/>, for example "dir" if filter string is "dir/**"</param>
-            /// <param name="absolutePathToPrefixPart">absolute path to prefix part of <paramref name="filterString"/>, for example "C:\Temp\Dir", if filter string is "dir/**" and <paramref name="fileSystemRootAbsolutePath"/> is "C:\temp"</param>
+            /// <param name="absolutePathToPrefixPart">absolute path to prefix part of <paramref name="filterString"/>, for example "C:\Temp\Dir", if filter string is "dir/**" and <paramref name="filesystemRootAbsolutePath"/> is "C:\temp"</param>
             /// <param name="suffixPart">Suffix part of <paramref name="filterString"/>, for example "**" if filter string is "dir/**"</param>
             public PatternObserver(
-                IFileSystem fileSystem, 
+                IFileSystem filesystem, 
                 IObserver<IFileSystemEvent> observer, 
                 object state,
                 string filterString,
-                string fileSystemRootAbsolutePath, 
+                string filesystemRootAbsolutePath, 
                 string relativePathToPrefixPartWithoutTrailingSeparator,
                 string absolutePathToPrefixPart,
                 string suffixPart)
-            : base(fileSystem, filterString, observer, state)
+            : base(filesystem, filterString, observer, state)
             {
-                this.FileSystemRootAbsolutePath = fileSystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(fileSystemRootAbsolutePath));
+                this.FileSystemRootAbsolutePath = filesystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(filesystemRootAbsolutePath));
                 this.AbsolutePathToPrefixPart = absolutePathToPrefixPart ?? throw new ArgumentNullException(nameof(absolutePathToPrefixPart));
                 this.RelativePathToPrefixPartWithoutTrailingSeparatorRelativePath = relativePathToPrefixPartWithoutTrailingSeparator ?? throw new ArgumentNullException(nameof(relativePathToPrefixPartWithoutTrailingSeparator));
                 this.SuffixPart = suffixPart ?? throw new ArgumentNullException(nameof(suffixPart));
@@ -776,8 +776,8 @@ namespace Lexical.FileSystem
                 if (_observer == null) return;
 
                 // Disposed
-                IFileSystem _fileSystem = FileSystem;
-                if (_fileSystem == null) return;
+                IFileSystem _filesystem = FileSystem;
+                if (_filesystem == null) return;
 
                 // Forward error as event object.
                 IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), null);
@@ -796,8 +796,8 @@ namespace Lexical.FileSystem
                 if (_observer == null) return;
 
                 // Disposed
-                IFileSystem _fileSystem = FileSystem;
-                if (_fileSystem == null) return;
+                IFileSystem _filesystem = FileSystem;
+                if (_filesystem == null) return;
 
                 // Forward event(s)
                 DateTimeOffset time = DateTimeOffset.UtcNow;

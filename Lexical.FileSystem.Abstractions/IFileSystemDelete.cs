@@ -48,12 +48,12 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="fileSystem"/> has Delete capability.
-        /// <param name="fileSystem"></param>
+        /// Test if <paramref name="filesystem"/> has Delete capability.
+        /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Delete capability</returns>
-        public static bool CanDelete(this IFileSystem fileSystem)
-            => fileSystem is IFileSystemDelete deleter ? deleter.CanDelete : false;
+        public static bool CanDelete(this IFileSystem filesystem)
+            => filesystem is IFileSystemDelete deleter ? deleter.CanDelete : false;
 
         /// <summary>
         /// Delete a file or directory.
@@ -61,7 +61,7 @@ namespace Lexical.FileSystem
         /// If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="IOException"/> is thrown.
         /// If <paramref name="recursive"/> is true, then any file or directory in <paramref name="path"/> is deleted as well.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="path">path to a file or directory</param>
         /// <param name="recursive">if path refers to directory, recurse into sub directories</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
@@ -74,9 +74,9 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void Delete(this IFileSystem fileSystem, string path, bool recursive = false)
+        public static void Delete(this IFileSystem filesystem, string path, bool recursive = false)
         {
-            if (fileSystem is IFileSystemDelete deleter) deleter.Delete(path, recursive);
+            if (filesystem is IFileSystemDelete deleter) deleter.Delete(path, recursive);
             else throw new NotSupportedException(nameof(Delete));
         }
     }

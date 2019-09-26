@@ -9,7 +9,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>
-    /// Generic entry used by <see cref="IFileSystem"/>.
+    /// Entry that represents a node of a <see cref="IFileSystem"/>.
     /// 
     /// The entry represents the snapshot state at the time of creation.
     /// 
@@ -18,7 +18,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemEntryFile"/></item>
     ///     <item><see cref="IFileSystemEntryDirectory"/></item>
     ///     <item><see cref="IFileSystemEntryDrive"/></item>
-    ///     <item><see cref="IFileSystemEntryMountPoint"/></item>
+    ///     <item><see cref="IFileSystemEntryMountpoint"/></item>
     /// </list>    
     /// </summary>
     public interface IFileSystemEntry
@@ -89,19 +89,14 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>
-    /// Entry represents a mount point. 
+    /// Entry represents a mountpoint. 
     /// </summary>
-    public interface IFileSystemEntryMountPoint : IFileSystemEntry
+    public interface IFileSystemEntryMountpoint : IFileSystemEntry
     {
         /// <summary>
-        /// Tests if entry represents a mount point.
+        /// Tests if entry represents a mountpoint.
         /// </summary>
-        bool IsMountPoint { get; }
-
-        /// <summary>
-        /// (Optional) The mounted file system.
-        /// </summary>
-        IFileSystem MountedFileSystem { get; }
+        bool IsMountpoint { get; }
     }
     // </doc>
 
@@ -153,21 +148,12 @@ namespace Lexical.FileSystem
             => entry is IFileSystemEntryDrive drive ? drive.IsDrive : false;
 
         /// <summary>
-        /// Tests if <paramref name="entry"/> represents a mount point.
+        /// Tests if <paramref name="entry"/> represents a mountpoint.
         /// </summary>
         /// <param name="entry"></param>
         /// <returns></returns>
-        public static bool IsMountPoint(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryMountPoint mountPoint ? mountPoint.IsMountPoint : false;
-
-        /// <summary>
-        /// (Optional) Get the mounted file system.
-        /// </summary>
-        /// <param name="entry"></param>
-        /// <returns>features of the mount point</returns>
-        /// <exception cref="NotSupportedException">If is not mount point</exception>
-        public static IFileSystem MountedFileSystem(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryMountPoint mountPoint ? mountPoint.MountedFileSystem : throw new NotSupportedException(nameof(MountedFileSystem));
+        public static bool IsMountpoint(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryMountpoint mountPoint ? mountPoint.IsMountpoint : false;
 
     }
 

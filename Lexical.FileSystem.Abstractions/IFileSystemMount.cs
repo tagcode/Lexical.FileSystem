@@ -16,21 +16,50 @@ namespace Lexical.FileSystem
     public interface IFileSystemMount : IFileSystem
     {
         /// <summary>
-        /// Create a mount point where other file systems can be mounted.
-        /// 
-        /// If mount point already exists, returns another handle to same mount point. Both handles must be disposed separately.
+        /// Is filesystem capable of creating mountpoints.
         /// </summary>
-        /// <param name="path">path to the mount point</param>
-        /// <returns>a handle to mount point</returns>
-        /// <exception cref="NotSupportedException">If mount point creation is not supported</exception>
+        bool CanCreateMountpoint { get; }
+
+        /// <summary>
+        /// Is filesystem capable of listing mountpoints.
+        /// </summary>
+        bool CanListMountpoints { get; }
+
+        /// <summary>
+        /// Is filesystem capable of getting mountpoint entry.
+        /// </summary>
+        bool CanGetMountpoint { get; }
+
+        /// <summary>
+        /// Create a mountpoint where other file systems can be mounted.
+        /// 
+        /// If mountpoint already exists, returns another handle to same mountpoint. Both handles must be disposed separately.
+        /// </summary>
+        /// <param name="path">path to the mountpoint</param>
+        /// <returns>a handle to mountpoint</returns>
+        /// <exception cref="NotSupportedException">If mountpoint creation is not supported</exception>
         /// <exception cref="IOException">If creation failed.</exception>
-        IFileSystemMountPoint CreateMountPoint(string path);
+        IFileSystemMountpoint CreateMountpoint(string path);
+
+        /// <summary>
+        /// List all mountpoints.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException">If mountpoint creation is not supported</exception>
+        IFileSystemMountpoint[] ListMountpoints();
+
+        /// <summary>
+        /// Get handle mountpoint at <paramref name="path"/>.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>mountpoint or null if doesn't exist</returns>
+        IFileSystemMountpoint GetMountpoint(string path);
     }
 
     /// <summary>
     /// Mount point
     /// </summary>
-    public interface IFileSystemMountPoint : IDisposable
+    public interface IFileSystemMountpoint : IDisposable
     {
         /// <summary>
         /// The file system this mountpoint is part of.
@@ -43,12 +72,12 @@ namespace Lexical.FileSystem
         String Path { get; }
 
         /// <summary>
-        /// Mount <paramref name="fileSystem"/> at <paramref name="subpath"/> to the mountpoint.
+        /// Mount <paramref name="filesystem"/> at <paramref name="subpath"/> to the mountpoint.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="subpath"></param>
         /// <returns></returns>
-        IFileSystemMountHandle Mount(IFileSystem fileSystem, string subpath);
+        IFileSystemMountHandle Mount(IFileSystem filesystem, string subpath);
     }
 
     /// <summary>
@@ -65,18 +94,63 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Create a mount point where other file systems can be mounted.
-        /// 
-        /// If mount point already exists, returns another handle to same mount point. Both handles must be disposed separately.
+        /// Is filesystem capable of creating mountpoints.
         /// </summary>
-        /// <param name="fileSystem"></param>
-        /// <param name="path">path to the mount point</param>
-        /// <returns>a handle to mount point</returns>
-        /// <exception cref="NotSupportedException">If mount point creation is not supported</exception>
+        /// <returns></returns>
+        public static bool CanCreateMountpoint(this IFileSystem filesystem)
+            => filesystem is IFileSystemMount mountable ? mountable.CanCreateMountpoint : false;
+
+        /// <summary>
+        /// Is filesystem capable of listing mountpoints.
+        /// </summary>
+        /// <returns></returns>
+        public static bool CanListMountpoints(this IFileSystem filesystem)
+            => filesystem is IFileSystemMount mountable ? mountable.CanListMountpoints : false;
+
+        /// <summary>
+        /// Is filesystem capable of getting mountpoint entry.
+        /// </summary>
+        /// <returns></returns>
+        public static bool CanGetMountpoint(this IFileSystem filesystem)
+            => filesystem is IFileSystemMount mountable ? mountable.CanGetMountpoint : false;
+
+        /// <summary>
+        /// Create a mountpoint where other file systems can be mounted.
+        /// 
+        /// If mountpoint already exists, returns another handle to same mountpoint. Both handles must be disposed separately.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path">path to the mountpoint</param>
+        /// <returns>a handle to mountpoint</returns>
+        /// <exception cref="NotSupportedException">If mountpoint creation is not supported</exception>
         /// <exception cref="IOException">If creation failed.</exception>
-        public static IFileSystemMountPoint CreateMountPoint(this IFileSystem fileSystem, string path)
+        public static IFileSystemMountpoint CreateMountpoint(this IFileSystem filesystem, string path)
         {
-            if (fileSystem is IFileSystemMount mountable) return mountable.CreateMountPoint(path);
+            if (filesystem is IFileSystemMount mountable) return mountable.CreateMountpoint(path);
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// List all mountpoints.
+        /// </summary>
+        /// <returns></returns>
+        /// <param name="filesystem"></param>
+        /// <exception cref="NotSupportedException">If mountpoint creation is not supported</exception>
+        public static IFileSystemMountpoint[] ListMountpoints(this IFileSystem filesystem)
+        {
+            if (filesystem is IFileSystemMount mountable) return mountable.ListMountpoints();
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Get handle mountpoint at <paramref name="path"/>.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path"></param>
+        /// <returns>mountpoint or null if doesn't exist</returns>
+        public static IFileSystemMountpoint GetMountpoint(this IFileSystem filesystem, string path)
+        {
+            if (filesystem is IFileSystemMount mountable) return mountable.GetMountpoint(path);
             throw new NotSupportedException();
         }
     }

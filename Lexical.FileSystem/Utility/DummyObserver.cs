@@ -17,11 +17,11 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="filter"></param>
         /// <param name="observer"></param>
         /// <param name="state"></param>
-        public DummyObserver(IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(fileSystem, filter, observer, state)
+        public DummyObserver(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(filesystem, filter, observer, state)
         {
         }
     }

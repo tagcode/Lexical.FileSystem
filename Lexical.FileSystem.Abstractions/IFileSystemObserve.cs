@@ -95,12 +95,12 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="fileSystem"/> has Observe capability.
-        /// <param name="fileSystem"></param>
+        /// Test if <paramref name="filesystem"/> has Observe capability.
+        /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Observe capability</returns>
-        public static bool CanObserve(this IFileSystem fileSystem)
-            => fileSystem is IFileSystemObserve observer ? observer.CanObserve : false;
+        public static bool CanObserve(this IFileSystem filesystem)
+            => filesystem is IFileSystemObserve observer ? observer.CanObserve : false;
 
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 
@@ -128,7 +128,7 @@ namespace Lexical.FileSystem
         /// The very first event sent to <paramref name="observer"/> is an instance of <see cref="IFileSystemEventStart"/> that contains
         /// the returned observer handle.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="filter">glob pattern to filter events. "**" means any directory. For example "mydir/**/somefile.txt", or "**" for <paramref name="filter"/> and sub-directories</param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
@@ -142,9 +142,9 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemObserver Observe(this IFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public static IFileSystemObserver Observe(this IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
-            if (fileSystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state);
+            if (filesystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state);
             else throw new NotSupportedException(nameof(Observe));
         }
     }

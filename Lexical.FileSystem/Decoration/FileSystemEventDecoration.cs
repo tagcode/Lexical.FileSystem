@@ -54,7 +54,7 @@ namespace Lexical.FileSystem.Decoration
         public virtual IFileSystemEvent Original { get; protected set; }
 
         /// <summary>
-        /// The file-system observer that sent the event.
+        /// The filesystem observer that sent the event.
         /// </summary>
         public virtual IFileSystemObserver Observer => Original.Observer;
 

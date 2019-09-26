@@ -13,7 +13,7 @@ using System.Reflection;
 namespace Lexical.FileSystem.Utility
 {
     /// <summary>
-    /// Comparer that compares known file-systems for equality of referred system.
+    /// Comparer that compares known filesystems for equality of referred system.
     /// 
     /// For instance, two different instances of <see cref="EmbeddedFileSystem"/> that
     /// refer to same <see cref="Assembly"/> are considered hash-equal.
@@ -56,7 +56,7 @@ namespace Lexical.FileSystem.Utility
         Func<Type, IEqualityComparer<IFileSystem>> comparerFactory;
 
         /// <summary>
-        /// Construct file-system comparer.
+        /// Construct filesystem comparer.
         /// </summary>
         /// <param name="comparerTypes">supported comparer types that implement <see cref="IEqualityComparer{T}"/></param>
         public FileSystemComparerComposition(params Type[] comparerTypes)
@@ -85,7 +85,7 @@ namespace Lexical.FileSystem.Utility
         }
 
         /// <summary>
-        /// Compare two file-systems. 
+        /// Compare two filesystems. 
         /// </summary>
         /// <param name="x">(optional) </param>
         /// <param name="y">(optional) </param>
@@ -106,7 +106,7 @@ namespace Lexical.FileSystem.Utility
         }
 
         /// <summary>
-        /// Calculate file-system hashcode.
+        /// Calculate filesystem hashcode.
         /// </summary>
         /// <param name="filesystem"></param>
         /// <returns></returns>
@@ -146,16 +146,16 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Get hashcode
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <returns></returns>
-        public int GetHashCode(IFileSystem fileSystem)
+        public int GetHashCode(IFileSystem filesystem)
         {
             // Handle null
-            if (fileSystem == null) return 0;
+            if (filesystem == null) return 0;
             // Use Assembly as hashcode
-            if (fileSystem is EmbeddedFileSystem fs) return fs.Assembly.GetHashCode() ^ 0x234234;
+            if (filesystem is EmbeddedFileSystem fs) return fs.Assembly.GetHashCode() ^ 0x234234;
             // Did not apply
-            return fileSystem.GetHashCode();
+            return filesystem.GetHashCode();
         }
     }
 
@@ -184,16 +184,16 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Get hashcode
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <returns></returns>
-        public int GetHashCode(IFileSystem fileSystem)
+        public int GetHashCode(IFileSystem filesystem)
         {
             // Handle null
-            if (fileSystem == null) return 0;
+            if (filesystem == null) return 0;
             // Use Assembly as hashcode
-            if (fileSystem is FileSystem fs) return fs.RootPath.GetHashCode() ^ 0x234234;
+            if (filesystem is FileSystem fs) return fs.RootPath.GetHashCode() ^ 0x234234;
             // Did not apply
-            return fileSystem.GetHashCode();
+            return filesystem.GetHashCode();
         }
     }
 
@@ -231,14 +231,14 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Get hashcode
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <returns></returns>
-        public int GetHashCode(IFileSystem fileSystem)
+        public int GetHashCode(IFileSystem filesystem)
         {
             // Handle null
-            if (fileSystem == null) return 0;
+            if (filesystem == null) return 0;
             // Use Assembly as hashcode
-            if (fileSystem is FileProviderSystem fs)
+            if (filesystem is FileProviderSystem fs)
             {
                 // Get fileprovider
                 IFileProvider fp = fs.FileProvider;
@@ -248,7 +248,7 @@ namespace Lexical.FileSystem.Utility
                 return fp.GetHashCode();
             }
             // Did not apply
-            return fileSystem.GetHashCode();
+            return filesystem.GetHashCode();
         }
     }
 
@@ -305,14 +305,14 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Get hashcode
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <returns></returns>
-        public int GetHashCode(IFileSystem fileSystem)
+        public int GetHashCode(IFileSystem filesystem)
         {
             // Handle null
-            if (fileSystem == null) return 0;
+            if (filesystem == null) return 0;
             // Use Assembly as hashcode
-            if (fileSystem is FileSystemComposition fs)
+            if (filesystem is FileSystemComposition fs)
             {
                 int hash = unchecked((int)2166136261);
                 // Apply elements
@@ -324,7 +324,7 @@ namespace Lexical.FileSystem.Utility
                 return hash;
             }
             // Did not apply
-            return fileSystem.GetHashCode();
+            return filesystem.GetHashCode();
         }
     }
 

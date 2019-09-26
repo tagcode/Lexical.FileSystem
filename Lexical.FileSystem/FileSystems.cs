@@ -14,58 +14,58 @@ namespace Lexical.FileSystem
     public static partial class FileSystems
     {
         /// <summary>
-        /// Join <paramref name="fileSystem"/> and <paramref name="anotherFileSystem"/> into composition filesystem.
+        /// Join <paramref name="filesystem"/> and <paramref name="anotherFileSystem"/> into composition filesystem.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="anotherFileSystem"></param>
         /// <returns></returns>
-        public static IFileSystem Join(this IFileSystem fileSystem, IFileSystem anotherFileSystem)
+        public static IFileSystem Join(this IFileSystem filesystem, IFileSystem anotherFileSystem)
         {
-            StructList12<IFileSystem> fileSystems = new StructList12<IFileSystem>();
-            if (fileSystem is IEnumerable<IFileSystem> composition) foreach (IFileSystem fs in composition) fileSystems.AddIfNew(fs);
-            else if (fileSystem != null) fileSystems.AddIfNew(fileSystem);
+            StructList12<IFileSystem> filesystems = new StructList12<IFileSystem>();
+            if (filesystem is IEnumerable<IFileSystem> composition) foreach (IFileSystem fs in composition) filesystems.AddIfNew(fs);
+            else if (filesystem != null) filesystems.AddIfNew(filesystem);
 
-            if (anotherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) fileSystems.AddIfNew(fs);
-            else if (anotherFileSystem != null) fileSystems.AddIfNew(anotherFileSystem);
-            return new FileSystemComposition(fileSystems.ToArray());
+            if (anotherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) filesystems.AddIfNew(fs);
+            else if (anotherFileSystem != null) filesystems.AddIfNew(anotherFileSystem);
+            return new FileSystemComposition(filesystems.ToArray());
         }
 
         /// <summary>
-        /// Join <paramref name="fileSystem"/> and <paramref name="otherFileSystems"/> into composition filesystem.
+        /// Join <paramref name="filesystem"/> and <paramref name="otherFileSystems"/> into composition filesystem.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="otherFileSystems"></param>
         /// <returns></returns>
-        public static IFileSystem Join(this IFileSystem fileSystem, params IFileSystem[] otherFileSystems)
+        public static IFileSystem Join(this IFileSystem filesystem, params IFileSystem[] otherFileSystems)
         {
-            StructList12<IFileSystem> fileSystems = new StructList12<IFileSystem>();
-            if (fileSystem is IEnumerable<IFileSystem> composition) foreach (IFileSystem fs in composition) fileSystems.AddIfNew(fs);
-            else if (fileSystem != null) fileSystems.AddIfNew(fileSystem);
+            StructList12<IFileSystem> filesystems = new StructList12<IFileSystem>();
+            if (filesystem is IEnumerable<IFileSystem> composition) foreach (IFileSystem fs in composition) filesystems.AddIfNew(fs);
+            else if (filesystem != null) filesystems.AddIfNew(filesystem);
 
             foreach (IFileSystem otherFileSystem in otherFileSystems)
-                if (otherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) fileSystems.AddIfNew(fs);
-                else if (otherFileSystem != null) fileSystems.AddIfNew(otherFileSystem);
+                if (otherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) filesystems.AddIfNew(fs);
+                else if (otherFileSystem != null) filesystems.AddIfNew(otherFileSystem);
 
-            return new FileSystemComposition(fileSystems.ToArray());
+            return new FileSystemComposition(filesystems.ToArray());
         }
 
         /// <summary>
-        /// Join <paramref name="fileSystem"/> and <paramref name="otherFileSystems"/> into composition filesystem.
+        /// Join <paramref name="filesystem"/> and <paramref name="otherFileSystems"/> into composition filesystem.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="otherFileSystems"></param>
         /// <returns></returns>
-        public static IFileSystem Join(this IFileSystem fileSystem, IEnumerable<IFileSystem> otherFileSystems)
+        public static IFileSystem Join(this IFileSystem filesystem, IEnumerable<IFileSystem> otherFileSystems)
         {
-            StructList12<IFileSystem> fileSystems = new StructList12<IFileSystem>();
-            if (fileSystem is IEnumerable<IFileSystem> composition) foreach (IFileSystem fs in composition) fileSystems.AddIfNew(fs);
-            else if (fileSystem != null) fileSystems.AddIfNew(fileSystem);
+            StructList12<IFileSystem> filesystems = new StructList12<IFileSystem>();
+            if (filesystem is IEnumerable<IFileSystem> composition) foreach (IFileSystem fs in composition) filesystems.AddIfNew(fs);
+            else if (filesystem != null) filesystems.AddIfNew(filesystem);
 
             foreach (IFileSystem otherFileSystem in otherFileSystems)
-                if (otherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) fileSystems.AddIfNew(fs);
-                else if (otherFileSystem != null) fileSystems.AddIfNew(otherFileSystem);
+                if (otherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) filesystems.AddIfNew(fs);
+                else if (otherFileSystem != null) filesystems.AddIfNew(otherFileSystem);
 
-            return new FileSystemComposition(fileSystems.ToArray());
+            return new FileSystemComposition(filesystems.ToArray());
         }
 
     }

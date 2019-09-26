@@ -28,12 +28,12 @@ namespace Lexical.FileSystem
             => new FileProviderSystem(fileProvider, subpath, canBrowse, canObserve, canOpen);
 
         /// <summary>
-        /// Adapt <paramref name="fileSystem"/> to <see cref="IFileProvider"/>.
+        /// Adapt <paramref name="filesystem"/> to <see cref="IFileProvider"/>.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <returns><see cref="IFileProvider"/></returns>
-        public static IFileProvider ToFileProvider(this IFileSystem fileSystem)
-            => new FileSystemProvider(fileSystem);
+        public static IFileProvider ToFileProvider(this IFileSystem filesystem)
+            => new FileSystemProvider(filesystem);
     }
 
 }

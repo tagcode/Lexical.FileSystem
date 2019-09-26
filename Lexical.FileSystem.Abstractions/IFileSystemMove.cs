@@ -45,17 +45,17 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="fileSystem"/> has Move capability.
-        /// <param name="fileSystem"></param>
+        /// Test if <paramref name="filesystem"/> has Move capability.
+        /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Move capability</returns>
-        public static bool CanMove(this IFileSystem fileSystem)
-            => fileSystem is IFileSystemMove mover ? mover.CanMove : false;
+        public static bool CanMove(this IFileSystem filesystem)
+            => filesystem is IFileSystemMove mover ? mover.CanMove : false;
 
         /// <summary>
         /// Try to move/rename a file or directory.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="oldPath">old path of a file or directory</param>
         /// <param name="newPath">new path of a file or directory</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
@@ -69,9 +69,9 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void Move(this IFileSystem fileSystem, string oldPath, string newPath)
+        public static void Move(this IFileSystem filesystem, string oldPath, string newPath)
         {
-            if (fileSystem is IFileSystemMove mover) mover.Move(oldPath, newPath);
+            if (filesystem is IFileSystemMove mover) mover.Move(oldPath, newPath);
             else throw new NotSupportedException(nameof(Move));
         }
     }

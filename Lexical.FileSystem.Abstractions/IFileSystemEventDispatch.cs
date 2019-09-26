@@ -10,7 +10,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>
-    /// File-system that can be configured on how events are managed.
+    /// Filesystem that can be configured on how events are managed.
     /// 
     /// Extension to <see cref="IFileSystemObserve"/>.
     /// </summary>
@@ -37,23 +37,23 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="fileSystem"/> has Observe capability.
-        /// <param name="fileSystem"></param>
+        /// Test if <paramref name="filesystem"/> has Observe capability.
+        /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Observe capability</returns>
-        public static bool CanSetEventDispatcher(this IFileSystem fileSystem)
-            => fileSystem is IFileSystemEventDispatch eventDispatchHandler ? eventDispatchHandler.CanSetEventDispatcher : false;
+        public static bool CanSetEventDispatcher(this IFileSystem filesystem)
+            => filesystem is IFileSystemEventDispatch eventDispatchHandler ? eventDispatchHandler.CanSetEventDispatcher : false;
 
         /// <summary>
         /// Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.
         /// </summary>
-        /// <param name="fileSystem"></param>
+        /// <param name="filesystem"></param>
         /// <param name="eventHandler">(optional) Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.</param>
-        /// <returns><paramref name="fileSystem"/></returns>
+        /// <returns><paramref name="filesystem"/></returns>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
-        public static IFileSystem SetEventDispatcher(IFileSystem fileSystem, TaskFactory eventHandler)
+        public static IFileSystem SetEventDispatcher(IFileSystem filesystem, TaskFactory eventHandler)
         {
-            if (fileSystem is IFileSystemEventDispatch eventDispatchHandler) return eventDispatchHandler.SetEventDispatcher(eventHandler);
+            if (filesystem is IFileSystemEventDispatch eventDispatchHandler) return eventDispatchHandler.SetEventDispatcher(eventHandler);
             else throw new NotSupportedException(nameof(SetEventDispatcher));
         }
     }

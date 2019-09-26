@@ -24,12 +24,12 @@ namespace Lexical.FileSystem
         /// <summary>
         /// File system components.
         /// </summary>
-        protected IFileSystem[] fileSystems;
+        protected IFileSystem[] filesystems;
 
         /// <summary>
         /// Count 
         /// </summary>
-        public int Count => fileSystems.Length;
+        public int Count => filesystems.Length;
 
         /// <summary>
         /// Union of capabilities
@@ -44,7 +44,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// File system components.
         /// </summary>
-        public IFileSystem[] FileSystems => fileSystems;
+        public IFileSystem[] FileSystems => filesystems;
 
         /// <inheritdoc/>
         public virtual bool CanBrowse { get; protected set; }
@@ -70,11 +70,11 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Create composition of file systems
         /// </summary>
-        /// <param name="fileSystems"></param>
-        public FileSystemComposition(params IFileSystem[] fileSystems)
+        /// <param name="filesystems"></param>
+        public FileSystemComposition(params IFileSystem[] filesystems)
         {
-            this.fileSystems = fileSystems;
-            foreach (IFileSystem fs in fileSystems)
+            this.filesystems = filesystems;
+            foreach (IFileSystem fs in filesystems)
             {
                 features |= fs.Features;
                 CanBrowse |= fs.CanBrowse();
@@ -108,11 +108,11 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Create colletion of file systems
         /// </summary>
-        /// <param name="fileSystems"></param>
-        public FileSystemComposition(IEnumerable<IFileSystem> fileSystems)
+        /// <param name="filesystems"></param>
+        public FileSystemComposition(IEnumerable<IFileSystem> filesystems)
         {
-            this.fileSystems = fileSystems.ToArray();
-            foreach (IFileSystem fs in this.fileSystems) features |= fs.Features;
+            this.filesystems = filesystems.ToArray();
+            foreach (IFileSystem fs in this.filesystems) features |= fs.Features;
         }
 
         /// <summary>
@@ -134,7 +134,7 @@ namespace Lexical.FileSystem
         {
             StructList24<IFileSystemEntry> entries = new StructList24<IFileSystemEntry>();
             bool exists = false, supported = false;
-            foreach (var filesystem in fileSystems)
+            foreach (var filesystem in filesystems)
             {
                 if (!filesystem.CanBrowse()) continue;
                 try
@@ -171,7 +171,7 @@ namespace Lexical.FileSystem
         public IFileSystemEntry GetEntry(string path)
         {
             bool supported = false;
-            foreach (var filesystem in fileSystems)
+            foreach (var filesystem in filesystems)
             {
                 if (!filesystem.CanGetEntry()) continue;
                 try
@@ -210,7 +210,7 @@ namespace Lexical.FileSystem
         public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
             bool supported = false;
-            foreach (var filesystem in fileSystems)
+            foreach (var filesystem in filesystems)
             {
                 if (!filesystem.CanOpen()) continue;
                 try
@@ -246,7 +246,7 @@ namespace Lexical.FileSystem
         {
             bool supported = false;
             bool ok = false;
-            foreach (var filesystem in fileSystems)
+            foreach (var filesystem in filesystems)
             {
                 if (!filesystem.CanDelete()) continue;
                 try
@@ -281,7 +281,7 @@ namespace Lexical.FileSystem
         {
             bool supported = false;
             bool ok = false;
-            foreach (IFileSystem filesystem in fileSystems)
+            foreach (IFileSystem filesystem in filesystems)
             {
                 if (!filesystem.CanMove()) continue;
                 try
@@ -317,7 +317,7 @@ namespace Lexical.FileSystem
         {
             bool supported = false;
             bool ok = false;
-            foreach (IFileSystem filesystem in fileSystems)
+            foreach (IFileSystem filesystem in filesystems)
             {
                 if (!filesystem.CanCreateDirectory()) continue;
                 try
@@ -353,7 +353,7 @@ namespace Lexical.FileSystem
         {
             StructList12<IDisposable> disposables = new StructList12<IDisposable>();
             ObserverAdapter adapter = new ObserverAdapter(this, path, observer, state);
-            foreach (var filesystem in fileSystems)
+            foreach (var filesystem in filesystems)
             {
                 if (!filesystem.CanObserve()) continue;
                 try
@@ -489,17 +489,17 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns></returns>
         public IEnumerator<IFileSystem> GetEnumerator()
-            => ((IEnumerable<IFileSystem>)fileSystems).GetEnumerator();
+            => ((IEnumerable<IFileSystem>)filesystems).GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator()
-            => fileSystems.GetEnumerator();
+            => filesystems.GetEnumerator();
 
         /// <summary>
         /// Print info
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => String.Join<IFileSystem>(", ", fileSystems);
+            => String.Join<IFileSystem>(", ", filesystems);
 
     }
 

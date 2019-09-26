@@ -144,11 +144,11 @@ namespace Lexical.FileSystem.FileProvider
             /// <summary>
             /// Create <see cref="IFileInfo"/> from <paramref name="entry"/>.
             /// </summary>
-            /// <param name="fileSystem"></param>
+            /// <param name="filesystem"></param>
             /// <param name="entry"></param>
-            public FileInfo(IFileSystem fileSystem, IFileSystemEntry entry)
+            public FileInfo(IFileSystem filesystem, IFileSystemEntry entry)
             {
-                this.FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+                this.FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.Entry = entry ?? throw new ArgumentNullException(nameof(entry));
             }
 
@@ -268,7 +268,7 @@ namespace Lexical.FileSystem.FileProvider
             {
                 // Take reference to observer handle
                 if (observerHandle == null && value.Observer != null) observerHandle = value.Observer;
-                // File-system has changed
+                // Filesystem has changed
                 if (value is IFileSystemEventChange || value is IFileSystemEventCreate || value is IFileSystemEventDelete || value is IFileSystemEventRename)
                 {
                     // Mark changed

@@ -45,7 +45,7 @@ namespace Lexical.FileSystem
         protected Dictionary<string, IFileSystemEntry> EntryMap => entryMap ?? (Entries.ToDictionary(e => e.Path));
 
         /// <summary>
-        /// File-system features.
+        /// Filesystem features.
         /// </summary>
         public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive;
 

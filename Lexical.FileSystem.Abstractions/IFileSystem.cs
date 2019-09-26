@@ -26,7 +26,7 @@ namespace Lexical.FileSystem
     public interface IFileSystem
     {
         /// <summary>
-        /// Features of the file-system.
+        /// Features of the filesystem.
         /// </summary>
         FileSystemFeatures Features { get; }
     }
@@ -67,9 +67,9 @@ namespace Lexical.FileSystem
     // </doc>
 
     /// <summary>
-    /// Signals that the file-system is also disposable.
+    /// Signals that the filesystem is also disposable.
     /// 
-    /// Used when returning file-system from methods to signal disposability.
+    /// Used when returning filesystem from methods to signal disposability.
     /// </summary>
     public interface IFileSystemDisposable : IFileSystem, IDisposable { }
 

@@ -881,6 +881,13 @@ namespace Lexical.FileSystem
             return this;
         }
 
+        /// <summary>
+        /// Print info
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+            => GetType().Name;
+
         /// <inheritdoc/>
         public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
@@ -910,11 +917,11 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Create new observer.
             /// </summary>
-            /// <param name="fileSystem"></param>
+            /// <param name="filesystem"></param>
             /// <param name="filter">path filter as glob pattenrn. "*" any sequence of charaters within a directory, "**" any sequence of characters, "?" one character. E.g. "**/*.txt"</param>
             /// <param name="observer"></param>
             /// <param name="state"></param>
-            public ObserverHandle(MemoryFileSystem fileSystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(fileSystem, filter, observer, state)
+            public ObserverHandle(MemoryFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(filesystem, filter, observer, state)
             {
                 if (filter == "**") acceptAll = true;
                 else this.filterPattern = GlobPatternFactory.Slash.CreateRegex(filter);

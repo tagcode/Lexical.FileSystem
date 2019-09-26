@@ -23,7 +23,7 @@ namespace Lexical.FileSystem
     public abstract class FileSystemEventBase : IFileSystemEvent
     {
         /// <summary>
-        /// The file-system observer that sent the event.
+        /// The filesystem observer that sent the event.
         /// </summary>
         public virtual IFileSystemObserver Observer { get; protected set; }
 
@@ -159,7 +159,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>
-    /// File-system error event
+    /// Filesystem error event
     /// </summary>
     public class FileSystemEventError : FileSystemEventBase, IFileSystemEventError
     {
@@ -187,7 +187,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>
-    /// File-system observe started event.
+    /// Filesystem observe started event.
     /// </summary>
     public class FileSystemEventStart : FileSystemEventBase, IFileSystemEventStart
     {
