@@ -54,8 +54,8 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Print tree structure of the whole filesystem. 
         /// 
-        /// Starts at <paramref name="startPath"/> if provided, otherwise starts at root "".
-        /// <paramref name="maxLevel"/> sets maximum visit depths.
+        /// Starts at <paramref name="path"/> if provided, otherwise starts at root "".
+        /// <paramref name="depth"/> sets maximum visit depths.
         /// 
         /// ""
         /// ├──""
@@ -73,12 +73,12 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="output">output such as <see cref="Console.Out"/></param>
-        /// <param name="startPath"></param>
-        /// <param name="maxLevel"></param>
+        /// <param name="path"></param>
+        /// <param name="depth">maximum visit depth</param>
         /// <param name="printFormat">print format</param>
-        public static void PrintTreeTo(this IFileSystem filesystem, TextWriter output, string startPath = "", int maxLevel = Int32.MaxValue, Format printFormat = Format.Name)
+        public static void PrintTreeTo(this IFileSystem filesystem, TextWriter output, string path = "", int depth = Int32.MaxValue, Format printFormat = Format.Name)
         {
-            foreach (TreeVisit.Line line in filesystem.VisitTree(startPath, maxLevel))
+            foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
             {
                 // Print indents
                 for (int l = 1; l < line.Level; l++) output.Write(line.LevelContinues(l) ? "│  " : "   ");
@@ -111,8 +111,8 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Print tree structure of the whole filesystem. 
         /// 
-        /// Starts at <paramref name="startPath"/> if provided, otherwise starts at root "".
-        /// <paramref name="maxLevel"/> sets maximum visit depths.
+        /// Starts at <paramref name="path"/> if provided, otherwise starts at root "".
+        /// <paramref name="depth"/> sets maximum visit depths.
         /// 
         /// ""
         /// ├──""
@@ -130,12 +130,12 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="output">output</param>
-        /// <param name="startPath"></param>
-        /// <param name="maxLevel"></param>
+        /// <param name="path"></param>
+        /// <param name="depth">maximum visit depth</param>
         /// <param name="printFormat">print format</param>
-        public static void AppendTreeTo(this IFileSystem filesystem, StringBuilder output, string startPath = "", int maxLevel = Int32.MaxValue, Format printFormat = Format.Name)
+        public static void AppendTreeTo(this IFileSystem filesystem, StringBuilder output, string path = "", int depth = Int32.MaxValue, Format printFormat = Format.Name)
         {
-            foreach (TreeVisit.Line line in filesystem.VisitTree(startPath, maxLevel))
+            foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
             {
                 // Print indents
                 for (int l = 1; l < line.Level; l++) output.Append(line.LevelContinues(l) ? "│  " : "   ");
@@ -161,8 +161,8 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Print tree structure of the whole filesystem. 
         /// 
-        /// Starts at <paramref name="startPath"/> if provided, otherwise starts at root "".
-        /// <paramref name="maxLevel"/> sets maximum visit depths.
+        /// Starts at <paramref name="path"/> if provided, otherwise starts at root "".
+        /// <paramref name="depth"/> sets maximum visit depths.
         /// 
         /// ""
         /// ├──""
@@ -179,14 +179,14 @@ namespace Lexical.FileSystem
         /// Any thrown exceptions are printed into the line that produced the error.
         /// </summary>
         /// <param name="filesystem"></param>
-        /// <param name="startPath"></param>
-        /// <param name="maxLevel"></param>
+        /// <param name="path"></param>
+        /// <param name="depth">maximum visit depth</param>
         /// <param name="printFormat">print format</param>
         /// <returns>Tree as string</returns>
-        public static String PrintTreeText(this IFileSystem filesystem, string startPath = "", int maxLevel = Int32.MaxValue, Format printFormat = Format.Name)
+        public static String PrintTreeText(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format printFormat = Format.Name)
         {
             StringBuilder sb = new StringBuilder();
-            foreach (TreeVisit.Line line in filesystem.VisitTree(startPath, maxLevel))
+            foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
             {
                 line.AppendTo(sb, printFormat);
                 sb.AppendLine();

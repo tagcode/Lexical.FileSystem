@@ -108,20 +108,20 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Create an access to local filesystem.
         /// 
-        /// If <paramref name="rootPath"/> is "", then FileSystem returns drive letters on Windows "C:" and "/" on Linux.
+        /// If <paramref name="path"/> is "", then FileSystem returns drive letters on Windows "C:" and "/" on Linux.
         /// 
         /// If FileSystem is constructed with relative drive letter "C:", then the instance refers to the absolute path at time of the construction.
         /// If working directory is modified later on, the FileSystem instance is not affected.
         /// </summary>
-        /// <param name="rootPath">Path to root directory, or "" for OS root which returns drive letters.</param>
-        public FileSystem(string rootPath) : base()
+        /// <param name="path">Path to root directory, or "" for OS root which returns drive letters.</param>
+        public FileSystem(string path) : base()
         {
-            RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
-            AbsoluteRootPath = rootPath == "" ? "" : System.IO.Path.GetFullPath(/*c: ?*/isWindows && rootPath.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/rootPath + osSeparator : /*c:\nn*/rootPath);
+            RootPath = path ?? throw new ArgumentNullException(nameof(path));
+            AbsoluteRootPath = path == "" ? "" : System.IO.Path.GetFullPath(/*c: ?*/isWindows && path.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/path + osSeparator : /*c:\nn*/path);
 
-            IsOsRoot = rootPath == "";
+            IsOsRoot = path == "";
             // Canonized relative path uses "/" as separator. Ends with "/".
-            string canonizedRelativePath = IsOsRoot ? "" : osSeparator == "/" ? rootPath : rootPath.Replace(osSeparator, " / ");
+            string canonizedRelativePath = IsOsRoot ? "" : osSeparator == "/" ? path : path.Replace(osSeparator, " / ");
             if (!canonizedRelativePath.EndsWith("/")) canonizedRelativePath += "/";
 
             if (isWindows) this.Features |= FileSystemFeatures.CaseInsensitive;
@@ -135,8 +135,8 @@ namespace Lexical.FileSystem
         {
             /// <summary>
             /// Create an access to local filesystem.
-            /// <param name="rootPath">Path to root directory, or "" for OS root which returns drive letters.</param>
-            public NonDisposable(string rootPath) : base(rootPath)
+            /// <param name="path">Path to root directory, or "" for OS root which returns drive letters.</param>
+            public NonDisposable(string path) : base(path)
             {
                 SetToNonDisposable();
             }

@@ -20,8 +20,8 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Vists tree structure of filesystem. 
         /// 
-        /// Starts at <paramref name="startPath"/> if provided, otherwise starts at root "".
-        /// <paramref name="maxLevel"/> sets maximum visit depths.
+        /// Starts at <paramref name="path"/> if provided, otherwise starts at root "".
+        /// <paramref name="depth"/> sets maximum visit depths.
         /// 
         /// ""
         /// ├──""
@@ -38,12 +38,12 @@ namespace Lexical.FileSystem
         /// Any thrown exceptions are printed into the line that produced the error.
         /// </summary>
         /// <param name="filesystem"></param>
-        /// <param name="startPath"></param>
-        /// <param name="maxLevel"></param>
-        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string startPath = "", int maxLevel = Int32.MaxValue)
+        /// <param name="path"></param>
+        /// <param name="depth">maximum visit depth</param>
+        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue)
         {
             List<Line> queue = new List<Line>();
-            queue.Add( new Line(filesystem.GetEntry(startPath), 0, 0UL) );
+            queue.Add( new Line(filesystem.GetEntry(path), 0, 0UL) );
             while (queue.Count > 0)
             {
                 // Next entry
@@ -52,7 +52,7 @@ namespace Lexical.FileSystem
                 queue.RemoveAt(lastIx);
 
                 // Children
-                if (line.Entry.IsDirectory() && line.Level < maxLevel)
+                if (line.Entry.IsDirectory() && line.Level < depth)
                 {
                     int startIndex = queue.Count;
                     try
@@ -198,6 +198,18 @@ namespace Lexical.FileSystem
             {
                 StringBuilder sb = new StringBuilder();
                 AppendTo(sb);
+                return sb.ToString();
+            }
+
+            /// <summary>
+            /// Print line info.
+            /// </summary>
+            /// <param name="format">print format</param>
+            /// <returns></returns>
+            public string ToString(PrintTree.Format format)
+            {
+                StringBuilder sb = new StringBuilder();
+                AppendTo(sb, format);
                 return sb.ToString();
             }
 
