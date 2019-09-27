@@ -164,7 +164,7 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <param name="output"></param>
             /// <param name="format">print format</param>
-            public void AppendTo(StringBuilder output, Format format = Format.Name)
+            public void AppendTo(StringBuilder output, Format format = Format.Default)
             {
                 // Number of info fields printed
                 int column = 0;
@@ -214,7 +214,7 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <param name="output"></param>
             /// <param name="format">print format</param>
-            public void WriteTo(TextWriter output, Format format = Format.Name)
+            public void WriteTo(TextWriter output, Format format = Format.Default)
             {
                 // Number of info fields printed
                 int column = 0;

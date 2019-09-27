@@ -211,7 +211,7 @@ namespace Lexical.FileSystem
         /// <param name="depth">maximum visit depth</param>
         /// <param name="format">print format</param>
         /// <returns>Tree as string</returns>
-        public static String PrintTreeText(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
+        public static String PrintToString(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
         {
             StringBuilder sb = new StringBuilder();
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))

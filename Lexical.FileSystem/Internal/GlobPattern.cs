@@ -25,6 +25,12 @@ namespace Lexical.FileSystem.Internal
         /// Create glob pattern.
         /// </summary>
         /// <param name="globPattern"></param>
+        public GlobPattern(string globPattern) : base(MakeRegexPattern(globPattern, "/")) { }
+
+        /// <summary>
+        /// Create glob pattern.
+        /// </summary>
+        /// <param name="globPattern"></param>
         /// <param name="directorySeparatorCharacters"></param>
         public GlobPattern(string globPattern, string directorySeparatorCharacters) : base(MakeRegexPattern(globPattern, directorySeparatorCharacters)) { }
 
