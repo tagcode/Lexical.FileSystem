@@ -855,9 +855,9 @@ namespace Lexical.FileSystem
         /// <param name="disposeAction"></param>
         /// <param name="state"></param>
         /// <returns>self</returns>
-        public new MemoryFileSystem AddDisposeAction(Action<object> disposeAction, object state)
+        public MemoryFileSystem AddDisposeAction(Action<object> disposeAction, object state)
         {
-            base.AddDisposeAction(disposeAction, state);
+            ((IDisposeList)this).AddDisposeAction(disposeAction, state);
             return this;
         }
 

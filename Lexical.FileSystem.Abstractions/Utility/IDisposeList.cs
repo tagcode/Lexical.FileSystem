@@ -8,6 +8,7 @@ using System.Collections.Generic;
 
 namespace Lexical.FileSystem.Utility
 {
+    // <doc>
     /// <summary>
     /// Object that can be attached with <see cref="IDisposable"/>.
     /// They will be disposed along with the object.
@@ -60,6 +61,17 @@ namespace Lexical.FileSystem.Utility
         /// <param name="disposableObjects"></param>
         /// <returns>true if was removed, false if it wasn't in the list.</returns>
         bool RemoveDisposables(IEnumerable<object> disposableObjects);
+
+        /// <summary>
+        /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
+        /// 
+        /// If parent object is disposed or being disposed, the <paramref name="disposeAction"/> is executed immediately.
+        /// </summary>
+        /// <param name="disposeAction"></param>
+        /// <param name="state"></param>
+        /// <returns>true if was added to list, false if was disposed right away</returns>
+        bool AddDisposeAction(Action<object> disposeAction, object state);
     }
+    // </doc>
 
 }

@@ -63,12 +63,18 @@ namespace Lexical.FileSystem
         public virtual bool CanCreateFile => false;
 
         /// <summary>
+        /// Root entry
+        /// </summary>
+        protected IFileSystemEntry rootEntry;
+
+        /// <summary>
         /// Create embedded 
         /// </summary>
         /// <param name="assembly"></param>
         public EmbeddedFileSystem(Assembly assembly)
         {
             this.Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow);
         }
 
         /// <summary>
@@ -106,6 +112,7 @@ namespace Lexical.FileSystem
         public IFileSystemEntry[] Browse(string path)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
             if (path == "") return entries ?? (entries = CreateEntries());
             IFileSystemEntry e;
             if (EntryMap.TryGetValue(path, out e)) return new IFileSystemEntry[] { e };
@@ -127,6 +134,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public IFileSystemEntry GetEntry(string path)
         {
+            if (path == null) throw new ArgumentNullException(path);
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+            if (path == "") return rootEntry;
             IFileSystemEntry e;
             if (EntryMap.TryGetValue(path, out e)) return e;
             return null;
@@ -143,6 +153,7 @@ namespace Lexical.FileSystem
         public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
             if (fileMode != FileMode.Open) throw new IOException($"Cannot open embedded resouce in FileMode={fileMode}");
             if (fileAccess != FileAccess.Read) throw new IOException($"Cannot open embedded resouce in FileAccess={fileAccess}");
             Stream s = Assembly.GetManifestResourceStream(path);
@@ -181,9 +192,9 @@ namespace Lexical.FileSystem
         /// <param name="disposeAction"></param>
         /// <param name="state"></param>
         /// <returns>self</returns>
-        public new EmbeddedFileSystem AddDisposeAction(Action<object> disposeAction, object state)
+        public EmbeddedFileSystem AddDisposeAction(Action<object> disposeAction, object state)
         {
-            base.AddDisposeAction(disposeAction, state);
+            ((IDisposeList)this).AddDisposeAction(disposeAction, state);
             return this;
         }
 

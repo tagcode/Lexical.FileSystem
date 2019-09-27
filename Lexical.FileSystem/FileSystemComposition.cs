@@ -68,6 +68,11 @@ namespace Lexical.FileSystem
         public virtual bool CanCreateDirectory { get; protected set; }
 
         /// <summary>
+        /// Root entry
+        /// </summary>
+        protected IFileSystemEntry rootEntry;
+
+        /// <summary>
         /// Create composition of file systems
         /// </summary>
         /// <param name="filesystems"></param>
@@ -89,6 +94,7 @@ namespace Lexical.FileSystem
                 CanMove |= fs.CanMove();
                 CanCreateDirectory |= fs.CanCreateDirectory();
             }
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow);
         }
 
         /// <summary>
@@ -132,9 +138,17 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public IFileSystemEntry[] Browse(string path)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+
             StructList24<IFileSystemEntry> entries = new StructList24<IFileSystemEntry>();
             bool exists = false, supported = false;
-            foreach (var filesystem in filesystems)
+
+            IFileSystem[] _filesystems = filesystems;
+            if (_filesystems.Length == 0) return new IFileSystemEntry[0];
+            
+            HashSet<string> filenames = _filesystems.Length <= 1 ? null : new HashSet<string>();
+            foreach (var filesystem in _filesystems)
             {
                 if (!filesystem.CanBrowse()) continue;
                 try
@@ -143,7 +157,12 @@ namespace Lexical.FileSystem
                     exists = true; supported = true;
                     foreach (IFileSystemEntry e in list)
                     {
-                        entries.Add(FileSystemEntryDecoration.DecorateFileSystem(e, this));
+                        // Already exists
+                        if (filenames != null && !filenames.Add(e.Name)) continue;
+                        // Decorate
+                        IFileSystemEntry ee = FileSystemEntryDecoration.DecorateFileSystem(e, this);
+                        // Add to result
+                        entries.Add(ee);
                     }
                 }
                 catch (DirectoryNotFoundException) { supported = true; }
@@ -170,6 +189,10 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public IFileSystemEntry GetEntry(string path)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+            if (path == "") return rootEntry;
+
             bool supported = false;
             foreach (var filesystem in filesystems)
             {
@@ -209,6 +232,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+
             bool supported = false;
             foreach (var filesystem in filesystems)
             {
@@ -244,6 +270,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public void Delete(string path, bool recursive = false)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+
             bool supported = false;
             bool ok = false;
             foreach (var filesystem in filesystems)
@@ -279,6 +308,10 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public void Move(string oldPath, string newPath)
         {
+            if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
+            if (newPath == null) throw new ArgumentNullException(nameof(newPath));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+
             bool supported = false;
             bool ok = false;
             foreach (IFileSystem filesystem in filesystems)
@@ -315,6 +348,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public void CreateDirectory(string path)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+
             bool supported = false;
             bool ok = false;
             foreach (IFileSystem filesystem in filesystems)
@@ -351,6 +387,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public IFileSystemObserver Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+
             StructList12<IDisposable> disposables = new StructList12<IDisposable>();
             ObserverAdapter adapter = new ObserverAdapter(this, path, observer, state);
             foreach (var filesystem in filesystems)
@@ -458,9 +497,9 @@ namespace Lexical.FileSystem
         /// <param name="disposeAction"></param>
         /// <param name="state"></param>
         /// <returns>self</returns>
-        public new FileSystemComposition AddDisposeAction(Action<object> disposeAction, object state)
+        public FileSystemComposition AddDisposeAction(Action<object> disposeAction, object state)
         {
-            base.AddDisposeAction(disposeAction, state);
+            ((IDisposeList)this).AddDisposeAction(disposeAction, state);
             return this;
         }
 

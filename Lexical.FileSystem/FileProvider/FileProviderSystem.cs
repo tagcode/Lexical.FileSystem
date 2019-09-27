@@ -576,9 +576,9 @@ namespace Lexical.FileSystem.FileProvider
         /// <param name="disposeAction"></param>
         /// <param name="state"></param>
         /// <returns>self</returns>
-        public new FileProviderSystem AddDisposeAction(Action<object> disposeAction, object state)
+        public FileProviderSystem AddDisposeAction(Action<object> disposeAction, object state)
         {
-            base.AddDisposeAction(disposeAction, state);
+            ((IDisposeList)this).AddDisposeAction(disposeAction, state);
             return this;
         }
 

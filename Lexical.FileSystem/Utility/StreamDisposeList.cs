@@ -286,7 +286,7 @@ namespace Lexical.FileSystem.Utility
         /// <param name="disposeAction"></param>
         /// <param name="state"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        protected bool AddDisposeAction(Action<object> disposeAction, object state)
+        bool IDisposeList.AddDisposeAction(Action<object> disposeAction, object state)
         {
             // Argument error
             if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));

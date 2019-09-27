@@ -54,8 +54,15 @@ namespace Lexical.FileSystem.Internal
         /// Implicit converter
         /// </summary>
         /// <param name="str"></param>
-        public static implicit operator string(StringSegment str)
+        public static implicit operator String(StringSegment str)
             => str.ToString();
+
+        /// <summary>
+        /// Implicit converter
+        /// </summary>
+        /// <param name="str"></param>
+        public static implicit operator StringSegment(String str)
+            => new StringSegment(str);
 
         /// <summary>
         /// Create span of characters.

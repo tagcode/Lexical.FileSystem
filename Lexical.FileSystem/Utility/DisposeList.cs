@@ -285,12 +285,12 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Invoke <paramref name="disposeAction"/> on the dispose of the object.
         /// 
-        /// If parent object is disposed or being disposed, the disposable will be disposed immedialy.
+        /// If parent object is disposed or being disposed, the <paramref name="disposeAction"/> is executed immediately.
         /// </summary>
         /// <param name="disposeAction"></param>
         /// <param name="state"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        protected bool AddDisposeAction(Action<object> disposeAction, object state)
+        bool IDisposeList.AddDisposeAction(Action<object> disposeAction, object state)
         {
             // Argument error
             if (disposeAction == null) throw new ArgumentNullException(nameof(disposeAction));

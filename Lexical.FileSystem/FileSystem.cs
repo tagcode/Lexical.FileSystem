@@ -125,7 +125,7 @@ namespace Lexical.FileSystem
             if (!canonizedRelativePath.EndsWith("/")) canonizedRelativePath += "/";
 
             if (isWindows) this.Features |= FileSystemFeatures.CaseInsensitive;
-            if (isLinux || isOsx) this.Features |= FileSystemFeatures.CaseSensitive;
+            if (isLinux || isOsx) this.Features |= FileSystemFeatures.CaseSensitive | FileSystemFeatures.EmptyDirectoryName;
         }
 
         /// <summary>
@@ -501,6 +501,12 @@ namespace Lexical.FileSystem
             // Parse filter
             GlobPatternInfo info = new GlobPatternInfo(filter);
 
+            // Monitor drive letters
+            if (info.Prefix == "")
+            {
+                throw new NotImplementedException();
+            }
+
             // Monitor single file (or dir, we don't know "dir")
             if (!info.HasWildcards)
             {
@@ -533,8 +539,6 @@ namespace Lexical.FileSystem
                 return handle;
             }
             
-            // TODO Add watcher that monitors changes to drive letters.
-            // What kind of filter monitors root contents "*" and "**"
         }
 
         /// <summary>
@@ -933,9 +937,9 @@ namespace Lexical.FileSystem
         /// <param name="disposeAction"></param>
         /// <param name="state"></param>
         /// <returns>self</returns>
-        public new FileSystem AddDisposeAction(Action<object> disposeAction, object state)
+        public FileSystem AddDisposeAction(Action<object> disposeAction, object state)
         {
-            base.AddDisposeAction(disposeAction, state);
+            ((IDisposeList)this).AddDisposeAction(disposeAction, state);
             return this;
         }
 

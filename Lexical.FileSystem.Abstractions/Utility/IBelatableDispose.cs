@@ -7,6 +7,7 @@ using System;
 
 namespace Lexical.FileSystem.Utility
 {
+    // <doc>
     /// <summary>
     /// Interface for objects whose dispose can be belated. 
     /// </summary>
@@ -21,4 +22,5 @@ namespace Lexical.FileSystem.Utility
         /// <exception cref="ObjectDisposedException">thrown if object has already been disposed</exception>
         IDisposable BelateDispose();
     }
+    // </doc>
 }
