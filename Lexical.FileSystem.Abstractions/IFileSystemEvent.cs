@@ -7,7 +7,7 @@ using System;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
+    // <IFileSystemEvent>
     /// <summary>
     /// File entry event.
     /// 
@@ -45,7 +45,9 @@ namespace Lexical.FileSystem
         /// </summary>
         String Path { get; }
     }
+    // </IFileSystemEvent>
 
+    // <IFileSystemEventRename>
     /// <summary>
     /// File renamed event.
     /// </summary>
@@ -69,22 +71,30 @@ namespace Lexical.FileSystem
         /// </summary>
         String NewPath { get; }
     }
+    // </IFileSystemEventRename>
 
+    // <IFileSystemEventCreate>
     /// <summary>
     /// File created event
     /// </summary>
     public interface IFileSystemEventCreate : IFileSystemEvent { }
+    // </IFileSystemEventCreate>
 
+    // <IFileSystemEventDelete>
     /// <summary>
     /// File delete event
     /// </summary>
     public interface IFileSystemEventDelete : IFileSystemEvent { }
+    // </IFileSystemEventDelete>
 
+    // <IFileSystemEventChange>
     /// <summary>
     /// File contents changed event.
     /// </summary>
     public interface IFileSystemEventChange : IFileSystemEvent { }
+    // </IFileSystemEventChange>
 
+    // <IFileSystemEventError>
     /// <summary>
     /// Event for error with <see cref="IFileSystem"/> or a file entry.
     /// </summary>
@@ -95,15 +105,18 @@ namespace Lexical.FileSystem
         /// </summary>
         Exception Error { get; }
     }
+    // </IFileSystemEventError>
 
+    // <IFileSystemEventStart>
     /// <summary>
     /// The very first event when <see cref="IFileSystemObserve.Observe(string, IObserver{IFileSystemEvent}, object)"/> is called.
     /// </summary>
     public interface IFileSystemEventStart : IFileSystemEvent
     {
     }
-    // </doc>
+    // </IFileSystemEventStart>
 
+    // <IFileSystemEventDecoration>
     /// <summary>
     /// Signals that the event object decorates another event object.
     /// </summary>
@@ -114,6 +127,7 @@ namespace Lexical.FileSystem
         /// </summary>
         IFileSystemEvent Original { get; }
     }
+    // </IFileSystemEventDecoration>
 
     /// <summary>
     /// Extension methods for <see cref="IFileSystem"/>.

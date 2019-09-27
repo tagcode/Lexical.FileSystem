@@ -7,7 +7,7 @@ using System;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
+    // <IFileSystemEntry>
     /// <summary>
     /// Entry that represents a node of a <see cref="IFileSystem"/>.
     /// 
@@ -47,7 +47,9 @@ namespace Lexical.FileSystem
         /// </summary>
         DateTimeOffset LastModified { get; }
     }
+    // </IFileSystemEntry>
 
+    // <IFileSystemEntryFile>
     /// <summary>
     /// File entry
     /// </summary>
@@ -63,7 +65,9 @@ namespace Lexical.FileSystem
         /// </summary>
         long Length { get; }
     }
+    // </IFileSystemEntryFile>
 
+    // <IFileSystemEntryDirectory>
     /// <summary>
     /// Directory entry that can be browsed for contents with <see cref="IFileSystemBrowse"/>.
     /// </summary>
@@ -74,7 +78,9 @@ namespace Lexical.FileSystem
         /// </summary>
         bool IsDirectory { get; }
     }
+    // </IFileSystemEntryDirectory>
 
+    // <IFileSystemEntryDrive>
     /// <summary>
     /// Drive entry. 
     /// 
@@ -87,7 +93,9 @@ namespace Lexical.FileSystem
         /// </summary>
         bool IsDrive { get; }
     }
+    // </IFileSystemEntryDrive>
 
+    // <IFileSystemEntryMountpoint>
     /// <summary>
     /// Entry represents a mountpoint. 
     /// </summary>
@@ -98,8 +106,9 @@ namespace Lexical.FileSystem
         /// </summary>
         bool IsMountpoint { get; }
     }
-    // </doc>
+    // </IFileSystemEntryMountpoint>
 
+    // <IFileSystemEntryDecoration>
     /// <summary>
     /// Entry that is actually a decoration.
     /// </summary>
@@ -110,6 +119,7 @@ namespace Lexical.FileSystem
         /// </summary>
         IFileSystemEntry Original { get; }
     }
+    // </IFileSystemEntryDecoration>
 
     /// <summary>
     /// Extension methods for <see cref="IFileSystemEntry"/>.
