@@ -17,10 +17,11 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Print format
         /// </summary>
-        public enum Format
+        [Flags]
+        public enum Format : Int32
         {
             /// <summary>
-            /// Print format of entry name.
+            /// Print tree lines.
             /// 
             /// ""
             /// ├──""
@@ -33,10 +34,26 @@ namespace Lexical.FileSystem
             ///    └──"dir"
             ///       └──"dir"
             /// </summary>
-            Name,
+            Tree = 1 << 1,
 
             /// <summary>
-            /// Print format of entry path.
+            /// Print entry name.
+            /// 
+            /// ""
+            /// ├──""
+            /// │  ├──"mnt"
+            /// │  ├──"tmp"
+            /// │  │  └──"helloworld.txt"
+            /// │  └──"usr"
+            /// │     └──"lex"
+            /// └──"c:"
+            ///    └──"dir"
+            ///       └──"dir"
+            /// </summary>
+            Name = 1 << 8,
+
+            /// <summary>
+            /// Print entry path.
             /// 
             /// ├──/
             /// │  ├──/mnt
@@ -48,7 +65,63 @@ namespace Lexical.FileSystem
             ///    └──c:/dir
             ///       └──c:/dir/dir
             /// </summary>
-            Path
+            Path = 1 << 9,
+
+            /// <summary>
+            /// Print length on files
+            /// 
+            /// ├──/
+            /// │  ├──/mnt
+            /// │  ├──/tmp
+            /// │  │  └──/tmp/helloworld.txt 128
+            /// │  └──/usr
+            /// │     └──/usr/lex
+            /// </summary>
+            Length = 1 << 12,
+
+            /// <summary>
+            /// Print error on files
+            /// 
+            /// ├──/
+            /// │  └──/tmp IOException: File not found.
+            /// </summary>
+            Error = 1 << 16,
+
+            /// <summary>
+            /// Print "\n"
+            /// </summary>
+            LineFeed = 1 << 30,
+
+            /// <summary>
+            /// Default format.
+            /// 
+            /// ""
+            /// ├──""
+            /// │  ├──"mnt"
+            /// │  ├──"tmp"
+            /// │  │  └──"helloworld.txt"
+            /// │  └──"usr"
+            /// │     └──"lex"
+            /// └──"c:"
+            ///    └──"dir"
+            ///       └──"dir"
+            /// </summary>
+            Default = Tree | Name | Error,
+
+            /// <summary>
+            /// Print entry path.
+            /// 
+            /// ├──/
+            /// │  ├──/mnt
+            /// │  ├──/tmp
+            /// │  │  └──/tmp/helloworld.txt
+            /// │  └──/usr
+            /// │     └──/usr/lex
+            /// └──c:
+            ///    └──c:/dir
+            ///       └──c:/dir/dir
+            /// </summary>
+            DefaultPath = Tree | Path | Error,
         }
 
         /// <summary>
@@ -75,37 +148,11 @@ namespace Lexical.FileSystem
         /// <param name="output">output such as <see cref="Console.Out"/></param>
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
-        /// <param name="printFormat">print format</param>
-        public static void PrintTreeTo(this IFileSystem filesystem, TextWriter output, string path = "", int depth = Int32.MaxValue, Format printFormat = Format.Name)
+        /// <param name="format">print format</param>
+        public static void PrintTreeTo(this IFileSystem filesystem, TextWriter output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
         {
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
-            {
-                // Print indents
-                for (int l = 1; l < line.Level; l++) output.Write(line.LevelContinues(l) ? "│  " : "   ");
-                // Print last indent
-                if (line.Level >= 1) output.Write(line.LevelContinues(line.Level) ? "├──" : "└──");
-                // Print name
-                if (printFormat == Format.Name)
-                {
-                    output.Write("\"");
-                    output.Write(line.Entry.Name);
-                    output.Write("\"");
-                }
-                else if (printFormat == Format.Path)
-                {
-                    output.Write(line.Entry.Path);
-                }
-                // Print error
-                if (line.Error != null)
-                {
-                    output.Write(" ");
-                    output.Write(line.Error.GetType().Name);
-                    output.Write(": ");
-                    output.Write(line.Error.Message);
-                }
-                // Print line-feed
-                output.WriteLine();
-            }
+                line.WriteTo(output, format | Format.LineFeed);
         }
 
         /// <summary>
@@ -132,30 +179,11 @@ namespace Lexical.FileSystem
         /// <param name="output">output</param>
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
-        /// <param name="printFormat">print format</param>
-        public static void AppendTreeTo(this IFileSystem filesystem, StringBuilder output, string path = "", int depth = Int32.MaxValue, Format printFormat = Format.Name)
+        /// <param name="format">print format</param>
+        public static void AppendTreeTo(this IFileSystem filesystem, StringBuilder output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
         {
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
-            {
-                // Print indents
-                for (int l = 1; l < line.Level; l++) output.Append(line.LevelContinues(l) ? "│  " : "   ");
-                // Print last indent
-                if (line.Level >= 1) output.Append(line.LevelContinues(line.Level) ? "├──" : "└──");
-                // Print name
-                output.Append("\"");
-                output.Append(line.Entry.Name);
-                output.Append("\"");
-                // Print error
-                if (line.Error != null)
-                {
-                    output.Append(" ");
-                    output.Append(line.Error.GetType().Name);
-                    output.Append(": ");
-                    output.Append(line.Error.Message);
-                }
-                // Print line-feed
-                output.AppendLine();
-            }
+                line.AppendTo(output, format | Format.LineFeed);
         }
 
         /// <summary>
@@ -181,16 +209,13 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
-        /// <param name="printFormat">print format</param>
+        /// <param name="format">print format</param>
         /// <returns>Tree as string</returns>
-        public static String PrintTreeText(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format printFormat = Format.Name)
+        public static String PrintTreeText(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
         {
             StringBuilder sb = new StringBuilder();
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
-            {
-                line.AppendTo(sb, printFormat);
-                sb.AppendLine();
-            }
+                line.AppendTo(sb, format | Format.LineFeed);
             return sb.ToString();
         }
     }

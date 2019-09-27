@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using static Lexical.FileSystem.PrintTree;
 
 namespace Lexical.FileSystem
 {
@@ -162,32 +163,100 @@ namespace Lexical.FileSystem
             /// Write to <see cref="StringBuilder"/> <paramref name="output"/>.
             /// </summary>
             /// <param name="output"></param>
-            /// <param name="printFormat">print format</param>
-            public void AppendTo(StringBuilder output, PrintTree.Format printFormat = PrintTree.Format.Name)
+            /// <param name="format">print format</param>
+            public void AppendTo(StringBuilder output, Format format = Format.Name)
             {
-                // Print indents
-                for (int l = 1; l < Level; l++) output.Append(LevelContinues(l) ? "│  " : "   ");
-                // Print last indent
-                if (Level >= 1) output.Append(LevelContinues(Level) ? "├──" : "└──");
-                // Print name
-                if (printFormat == PrintTree.Format.Name)
+                // Number of info fields printed
+                int column = 0;
+                // Print tree
+                if (format.HasFlag(Format.Tree) && Level > 0)
                 {
+                    if (column++ > 0) output.Append(" ");
+                    // Print indents
+                    for (int l = 1; l < Level; l++) output.Append(LevelContinues(l) ? "│  " : "   ");
+                    // Print last indent
+                    if (Level >= 1) output.Append(LevelContinues(Level) ? "├──" : "└──");
+                }
+                // Print name
+                if (format.HasFlag(Format.Name))
+                {
+                    if (column++ > 0) output.Append(" ");
                     output.Append("\"");
                     output.Append(Entry.Name);
                     output.Append("\"");
                 }
-                else if (printFormat == PrintTree.Format.Path)
+                // Print path
+                if (format.HasFlag(Format.Path))
                 {
+                    if (column++ > 0) output.Append(" ");
                     output.Append(Entry.Path);
                 }
-                // Print error
-                if (Error != null)
+                // Print length
+                if (format.HasFlag(Format.Length) && Entry.IsFile())
                 {
-                    output.Append(" ");
+                    if (column++ > 0) output.Append(" ");
+                    output.Append(Entry.Length());
+                }
+                // Print error
+                if (format.HasFlag(Format.Error) && Error != null)
+                {
+                    if (column++ > 0) output.Append(" ");
                     output.Append(Error.GetType().Name);
                     output.Append(": ");
                     output.Append(Error.Message);
                 }
+                // Next line
+                if (format.HasFlag(Format.LineFeed)) output.AppendLine();
+            }
+
+            /// <summary>
+            /// Write to <see cref="StringBuilder"/> <paramref name="output"/>.
+            /// </summary>
+            /// <param name="output"></param>
+            /// <param name="format">print format</param>
+            public void WriteTo(TextWriter output, Format format = Format.Name)
+            {
+                // Number of info fields printed
+                int column = 0;
+                // Print tree
+                if (format.HasFlag(Format.Tree) && Level>0)
+                {
+                    if (column++ > 0) output.Write(" ");
+                    // Print indents
+                    for (int l = 1; l < Level; l++) output.Write(LevelContinues(l) ? "│  " : "   ");
+                    // Print last indent
+                    if (Level >= 1) output.Write(LevelContinues(Level) ? "├──" : "└──");
+                }
+                // Print name
+                if (format.HasFlag(Format.Name))
+                {
+                    if (column++ > 0) output.Write(" ");
+                    output.Write("\"");
+                    output.Write(Entry.Name);
+                    output.Write("\"");
+                }
+                // Print path
+                if (format.HasFlag(Format.Path))
+                {
+                    if (column++ > 0) output.Write(" ");
+                    output.Write(Entry.Path);
+                }
+                // Print length
+                if (format.HasFlag(Format.Length) && Entry.IsFile())
+                {
+                    if (column++ > 0) output.Write(" ");
+                    output.Write(Entry.Length());
+                }
+                // Print error
+                if (format.HasFlag(Format.Error) && Error != null)
+                {
+                    if (column++ > 0) output.Write(" ");
+                    output.Write(Error.GetType().Name);
+                    output.Write(": ");
+                    output.Write(Error.Message);
+                }
+                // Next line
+                if (format.HasFlag(Format.LineFeed)) output.WriteLine();
             }
 
             /// <summary>

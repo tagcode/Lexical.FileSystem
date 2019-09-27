@@ -135,6 +135,7 @@ namespace Lexical.FileSystem
         {
             /// <summary>
             /// Create an access to local filesystem.
+            /// </summary>
             /// <param name="path">Path to root directory, or "" for OS root which returns drive letters.</param>
             public NonDisposable(string path) : base(path)
             {
@@ -502,7 +503,7 @@ namespace Lexical.FileSystem
             GlobPatternInfo info = new GlobPatternInfo(filter);
 
             // Monitor drive letters
-            if (info.Prefix == "")
+            if (info.Prefix == "" && RootPath == "")
             {
                 throw new NotImplementedException();
             }

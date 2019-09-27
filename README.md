@@ -1,4 +1,4 @@
-# Introduction
+﻿# Introduction
 Lexical.FileSystem is a virtual filesystem class libraries for .NET.
 
 NuGet Packages:
@@ -7,89 +7,76 @@ NuGet Packages:
 
 # FileSystem
 
-**new FileSystem(<i>path</i>)** creates an instance to a path in local directory.
+# FileSystem
 
-```csharp
-string path = AppDomain.CurrentDomain.BaseDirectory;
-IFileSystem filesystem = new FileSystem(path);
-```
+**new FileSystem(<i>path</i>)** creates an instance to a path in local directory. "" path refers to operating system root.
+[!code-csharp[Snippet](Examples.cs#Snippet_1)]
 
-**new FileSystem("")** creates OS file-system root, which returns drive letters.
-
-```csharp
-IFileSystem filesystem = new FileSystem("");
-```
-
-```none
-C:
-D:
-/
-```
-
-Singleton instance **FileSystem.OS** refers to the same OS root.
-
-```csharp
-IFileSystem filesystem = FileSystem.OS;
-```
-
-Files can be browsed.
-
-```csharp
-foreach (var entry in filesystem.Browse(""))
-    Console.WriteLine(entry.Path);
-```
+*FileSystem* can be browsed.
+[!code-csharp[Snippet](Examples.cs#Snippet_2)]
 
 Files can be opened for reading.
-
-```csharp
-using (Stream s = filesystem.Open("file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
-{
-    Console.WriteLine(s.Length);
-}
-```
+[!code-csharp[Snippet](Examples.cs#Snippet_3a)]
 
 And for for writing.
-
-```csharp
-using (Stream s = filesystem.Open("somefile.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
-{
-    s.WriteByte(32);
-}
-```
+[!code-csharp[Snippet](Examples.cs#Snippet_3b)]
 
 Files and directories can be observed for changes.
-
-```csharp
-IObserver<IFileSystemEvent> observer = new Observer();
-using (IDisposable handle = filesystem.Observe("**", observer))
-{
-}
-```
+[!code-csharp[Snippet](Examples.cs#Snippet_4)]
 
 Directories can be created.
-
-```csharp
-filesystem.CreateDirectory("dir");
-```
+[!code-csharp[Snippet](Examples.cs#Snippet_5)]
 
 Directories can be deleted.
-
-```csharp
-filesystem.Delete("dir", recursive: true);
-```
+[!code-csharp[Snippet](Examples.cs#Snippet_6)]
 
 Files and directories can be renamed and moved.
+[!code-csharp[Snippet](Examples.cs#Snippet_7)]
 
-```csharp
-filesystem.CreateDirectory("dir");
-filesystem.Move("dir", "new-name");
+Singleton instance **FileSystem.OS** refers to a filesystem at the OS root.
+[!code-csharp[Snippet](Examples.cs#Snippet_8a)]
+
+Extension method **.VisitTree()** visits filesystem. On root path "" *FileSystem.OS* returns drive letters.
+[!code-csharp[Snippet](Examples.cs#Snippet_8b)]
+
+```none
+""
+├──"C:"
+└──"D:"
 ```
 
-If FileSystem is constructed with relative drive letter "C:", then the instance refers to the absolute path at time of the construction.
-If working directory is modified later on, the FileSystem instance is not affected.
+On linux it returns slash '/' root.
+[!code-csharp[Snippet](Examples.cs#Snippet_8c)]
 
-```csharp
-IFileSystem filesystem = new FileSystem("c:");
-foreach (var entry in filesystem.Browse(""))
-    Console.WriteLine(entry.Path);
+```none
+
+└──/
+   ├──/bin
+   ├──/boot
+   ├──/dev
+   ├──/etc
+   ├──/lib
+   ├──/media
+   ├──/mnt
+   ├──/root
+   ├──/sys
+   ├──/usr
+   └──/var
 ```
+
+
+**FileSystem.ApplicationRoot** refers to the application's root directory.
+[!code-csharp[Snippet](Examples.cs#Snippet_8d)]
+
+**FileSystem.Tmp** refers to the running user's temp directory.
+[!code-csharp[Snippet](Examples.cs#Snippet_8e)]
+
+Disposable objects can be attached to be disposed along with *FileSystem*.
+[!code-csharp[Snippet](Examples.cs#Snippet_10a)]
+
+Delegates can be attached to be executed at dispose of *FileSystem*.
+[!code-csharp[Snippet](Examples.cs#Snippet_10b)]
+
+**.BelateDispose()** creates a handle that postpones dispose on *.Dispose()*. Actual dispose will proceed once *.Dispose()* is called and
+all belate handles are disposed. This can be used for passing the *IFileSystem* to a worker thread. 
+[!code-csharp[Snippet](Examples.cs#Snippet_10c)]
