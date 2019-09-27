@@ -3,7 +3,7 @@ Lexical.FileSystem is a virtual filesystem class libraries for .NET.
 
 NuGet Packages:
 * Lexical.FileSystem ([Website](http://lexical.fi/FileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/))
-* Lexical.FileSystem.Abstractions ([Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
+* Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
 # FileSystem
 
 **new FileSystem(<i>path</i>)** creates an instance to a path in local directory. "" path refers to operating system root.
