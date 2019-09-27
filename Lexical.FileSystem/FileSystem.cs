@@ -40,21 +40,33 @@ namespace Lexical.FileSystem
         /// </summary>
         internal protected static bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows), isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux), isOsx = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
-        static FileSystem os = new FileSystem("");
+        /// <summary>Non-disposable instance at operating system root.</summary>
+        static FileSystem os = new FileSystem.NonDisposable("");
 
-        static Lazy<FileSystem> applicationRoot = new Lazy<FileSystem>(() => new FileSystem(AppDomain.CurrentDomain.BaseDirectory));
+        /// <summary>Non-disposable instance at user's temp directory.</summary>
+        static Lazy<FileSystem> tmp = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Path.GetTempPath()));
+
+        /// <summary>Non-disposable instance at application root.</summary>
+        static Lazy<FileSystem> applicationRoot = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(AppDomain.CurrentDomain.BaseDirectory));
 
         /// <summary>
-        /// File system system that reads from application base directory (application resources).
+        /// Filesystem that has root at application base directory (application resources).
         /// </summary>
         public static FileSystem ApplicationRoot => applicationRoot.Value;
 
         /// <summary>
-        /// File system system that represents the filesystem of the running operating system.
+        /// Filesystem system that represents the filesystem of the running operating system.
         /// 
         /// For instance allows drives on windows "C://Windows" and slashed root on linux "/mnt".
         /// </summary>
         public static FileSystem OS => os;
+
+        /// <summary>
+        /// Filesystem system that represents the filesystem of the running operating system.
+        /// 
+        /// For instance allows drives on windows "C://Windows" and slashed root on linux "/mnt".
+        /// </summary>
+        public static FileSystem Tmp => tmp.Value;
 
         /// <summary>
         /// The root path as provided with constructor.
@@ -114,6 +126,20 @@ namespace Lexical.FileSystem
 
             if (isWindows) this.Features |= FileSystemFeatures.CaseInsensitive;
             if (isLinux || isOsx) this.Features |= FileSystemFeatures.CaseSensitive;
+        }
+
+        /// <summary>
+        /// Non-disposable version of <see cref="FileSystem"/>.
+        /// </summary>
+        public class NonDisposable : FileSystem
+        {
+            /// <summary>
+            /// Create an access to local filesystem.
+            /// <param name="rootPath">Path to root directory, or "" for OS root which returns drive letters.</param>
+            public NonDisposable(string rootPath) : base(rootPath)
+            {
+                SetToNonDisposable();
+            }
         }
 
         /// <summary>

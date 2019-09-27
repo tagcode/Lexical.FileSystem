@@ -65,6 +65,26 @@ namespace Lexical.FileSystem.Internal
         protected int belateHandleCount;
 
         /// <summary>
+        /// Non disposable is a flag for objects that cannot be disposed, such as singleton instances.
+        /// <see cref="nonDisposable"/> is set at construction.
+        /// 
+        /// Use method <see cref="SetToNonDisposable"/> to modify the state at constructor.
+        /// </summary>
+        protected bool nonDisposable;
+
+        /// <summary>
+        /// Non-disposable is a flag for objects that cannot be disposed, such as singleton instances.
+        /// <see cref="nonDisposable"/> is set at construction.
+        /// 
+        /// When <see cref="Dispose"/> is called for non-disposable object, the attached disposables
+        /// are removed and disposed, but the object itself does not go into disposed state.
+        /// </summary>
+        protected void SetToNonDisposable()
+        {
+            this.nonDisposable = true;
+        }
+
+        /// <summary>
         /// Delay dispose until belate handle is disposed.
         /// </summary>
         /// <returns></returns>
@@ -110,11 +130,11 @@ namespace Lexical.FileSystem.Internal
                     int newCount = --_parent.belateHandleCount;
                     // Is not the handle.
                     if (newCount > 0) return;
-                    // Send state from 1 to 2
-                    processDispose = Interlocked.CompareExchange(ref _parent.disposing, 2L, 1L) == 1L;
+                    // Check Dispose() has been called when counter goes to 0
+                    processDispose = Interlocked.Read(ref _parent.disposing) == 1L;
                 }
                 // Start dispose
-                if (processDispose) _parent.ProcessDispose();
+                if (processDispose) { if (_parent.nonDisposable) _parent.ProcessNonDispose(); else _parent.ProcessDispose(); }
             }
         }
 
@@ -124,7 +144,7 @@ namespace Lexical.FileSystem.Internal
         /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
         public virtual void Dispose()
         {
-            // Set object state to have dispose started
+            // Dispose() called
             Interlocked.CompareExchange(ref disposing, 1L, 0L);
 
             // Should dispose be started
@@ -135,33 +155,39 @@ namespace Lexical.FileSystem.Internal
                 // Post-pone if there are belate handles
                 if (belateHandleCount > 0) return;
                 // Set state to dispose called
-                processDispose = Interlocked.CompareExchange(ref disposing, 2L, 1L) == 1L;
+                processDispose = Interlocked.Read(ref disposing) <= 1L;
             }
 
             // Start dispose
-            if (processDispose) ProcessDispose();
+            if (processDispose) { if (nonDisposable) ProcessNonDispose(); else ProcessDispose(); }
         }
 
         /// <summary>
-        /// Dispose all attached diposables and call <see cref="InnerDispose(ref StructList4{Exception})"/>.
+        /// Process the actual dispose. This may be called from <see cref="Dispose()"/> or from the dispose of the last
+        /// belate handle (After <see cref="Dispose()"/> has been called aswell).
+        /// 
+        /// Only one thread may process the dispose.
+        /// Sets state to 2, and then 3.
+        /// 
+        /// Unattaches all disposables, disposes them, and calls <see cref="InnerDispose(ref StructList4{Exception})"/>.
         /// </summary>
         /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
         protected virtual void ProcessDispose()
         {
-            // Dispose called
-            Interlocked.CompareExchange(ref disposing, 1L, 0L);
-            // Dispose started, only one thread processes the dispose.
-            if (Interlocked.CompareExchange(ref disposing, 2L, 1L) != 2L) return;
+            // Set state IsDisposing=2, but let only one thread continue.
+            bool thisThreadChangedStateToIsDispose = (Interlocked.CompareExchange(ref disposing, 2L, 0L) == 0L) || (Interlocked.CompareExchange(ref disposing, 2L, 1L) == 1L);
+            // Not for this thread.
+            if (!thisThreadChangedStateToIsDispose) return;
 
             // Extract snapshot, clear array
-            IDisposable[] toDispose = null;
-            lock (m_disposelist_lock) { toDispose = disposeList.ToArray(); disposeList.Clear(); }
+            StructList2<IDisposable> toDispose = default;
+            lock (m_disposelist_lock) { toDispose = disposeList; disposeList = default; }
 
             // Captured errors
             StructList4<Exception> disposeErrors = new StructList4<Exception>();
 
             // Dispose disposables
-            DisposeAndCapture(toDispose, ref disposeErrors);
+            DisposeAndCapture(ref toDispose, ref disposeErrors);
 
             // Call InnerDispose(). Capture errors to compose it with others.
             try
@@ -175,11 +201,52 @@ namespace Lexical.FileSystem.Internal
             }
 
             // Is disposed
-            Interlocked.CompareExchange(ref disposing, 3L, 1L);
             Interlocked.CompareExchange(ref disposing, 3L, 2L);
 
             // Throw captured errors
             if (disposeErrors.Count>0) throw new AggregateException(disposeErrors);
+        }
+
+        /// <summary>
+        /// Process the non-dispose. Used when <see cref="nonDisposable"/> is true (singleton instances).
+        /// 
+        /// This may be called from <see cref="Dispose()"/> or from the dispose of the last
+        /// belate handle (After <see cref="Dispose()"/> has been called aswell).
+        /// 
+        /// Only one thread may process the dispose. Returns state back to 0.
+        /// 
+        /// Unattaches all disposables, disposes them, and calls <see cref="InnerDispose(ref StructList4{Exception})"/>.
+        /// Does not set state 
+        /// </summary>
+        /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
+        protected virtual void ProcessNonDispose()
+        {
+            // Revert state
+            Interlocked.CompareExchange(ref disposing, 0L, 1L);
+
+            // Extract snapshot, clear array
+            StructList2<IDisposable> toDispose = default;
+            lock (m_disposelist_lock) { toDispose = disposeList; disposeList = default; }
+
+            // Captured errors
+            StructList4<Exception> disposeErrors = new StructList4<Exception>();
+
+            // Dispose disposables
+            DisposeAndCapture(ref toDispose, ref disposeErrors);
+
+            // Call InnerDispose(). Capture errors to compose it with others.
+            try
+            {
+                InnerDispose(ref disposeErrors);
+            }
+            catch (Exception e)
+            {
+                // Capture error
+                disposeErrors.Add(e);
+            }
+
+            // Throw captured errors
+            if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
         }
 
         /// <summary>
@@ -409,5 +476,37 @@ namespace Lexical.FileSystem.Internal
                 }
             }
         }
+
+        /// <summary>
+        /// Dispose enumerable and capture errors
+        /// </summary>
+        /// <param name="disposableObjects">list of disposables</param>
+        /// <param name="disposeErrors">list to be created if errors occur</param>
+        public static void DisposeAndCapture(ref StructList2<IDisposable> disposableObjects, ref StructList4<Exception> disposeErrors)
+        {
+            // Dispose disposables
+            for (int i=0; i<disposableObjects.Count; i++)
+            {
+                IDisposable disposable = disposableObjects[i];
+                if (disposable != null)
+                {
+                    try
+                    {
+                        disposable.Dispose();
+                    }
+                    catch (AggregateException ae)
+                    {
+                        foreach (Exception e in ae.InnerExceptions)
+                            disposeErrors.Add(e);
+                    }
+                    catch (Exception e)
+                    {
+                        // Capture error
+                        disposeErrors.Add(e);
+                    }
+                }
+            }
+        }
+
     }
 }
