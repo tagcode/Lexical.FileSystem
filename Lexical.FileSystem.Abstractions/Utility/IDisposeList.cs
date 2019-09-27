@@ -15,6 +15,21 @@ namespace Lexical.FileSystem.Utility
     public interface IDisposeList : IDisposable
     {
         /// <summary>
+        /// Has Dispose() been called, has dispose started, or has dispose completed.
+        /// </summary>
+        bool IsDisposeCalled { get; }
+
+        /// <summary>
+        /// Has dispose started or completed.
+        /// </summary>
+        bool IsDisposing { get; }
+
+        /// <summary>
+        /// Has dispose completed.
+        /// </summary>
+        bool IsDisposed { get; }
+
+        /// <summary>
         /// Add <paramref name="disposableObject"/> that is to be disposed along with the called object.
         /// 
         /// If the implementing object has already been disposed, this method immediately disposes the <paramref name="disposableObject"/>.

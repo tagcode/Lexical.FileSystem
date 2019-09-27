@@ -238,7 +238,7 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Stream to <see cref="MemoryFile"/>.
         /// </summary>
-        public class Stream : System.IO.Stream
+        public class Stream : StreamDisposeList
         {
             /// <summary>
             /// Parent
@@ -279,20 +279,6 @@ namespace Lexical.FileSystem.Utility
             /// Permissions
             /// </summary>
             bool canRead, canWrite;
-
-            /// <summary>
-            /// Disposed status
-            /// 
-            /// 0L - not disposed
-            /// 1L - dispose started
-            /// 2L - disposed
-            /// </summary>
-            protected long dispose;
-
-            /// <summary>
-            /// Test if stream is disposed
-            /// </summary>
-            public bool IsDisposed => Interlocked.Read(ref dispose) >= 1L;
 
             /// <inheritdoc/>
             public override bool CanRead => canRead;
@@ -661,17 +647,10 @@ namespace Lexical.FileSystem.Utility
             /// <summary>
             /// Close stream, relase share protections in <see cref="MemoryFile"/>.
             /// </summary>
-            /// <param name="disposing"></param>
-            protected override void Dispose(bool disposing)
+            protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
             {
-                // Start dispose
-                Interlocked.CompareExchange(ref dispose, 1L, 0L);
                 // Remove self from parent
                 lock (parent.m_stream_lock) parent.streams.Remove(this);
-                // Dispose stream
-                base.Dispose(disposing);
-                // End dispose
-                Interlocked.CompareExchange(ref dispose, 2L, 1L);
             }
         }
     }

@@ -4,12 +4,11 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
-using Lexical.FileSystem.Utility;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace Lexical.FileSystem.Internal
+namespace Lexical.FileSystem.Utility
 {
     /// <summary>
     /// A disposable that manages a list of disposable objects.
@@ -45,17 +44,17 @@ namespace Lexical.FileSystem.Internal
         protected long disposing;
 
         /// <summary>
-        /// Has Dispose() been called.
+        /// Has Dispose() been called, has dispose started, or has dispose completed.
         /// </summary>
         public bool IsDisposeCalled => Interlocked.Read(ref disposing) >= 1L;
 
         /// <summary>
-        /// Has disposing has started or completed.
+        /// Has dispose started or completed.
         /// </summary>
         public bool IsDisposing => Interlocked.Read(ref disposing) >= 2L;
 
         /// <summary>
-        /// Is disposing completed
+        /// Has dispose completed.
         /// </summary>
         public bool IsDisposed => Interlocked.Read(ref disposing) == 3L;
 
@@ -131,7 +130,7 @@ namespace Lexical.FileSystem.Internal
                     // Is not the handle.
                     if (newCount > 0) return;
                     // Check Dispose() has been called when counter goes to 0
-                    processDispose = Interlocked.Read(ref _parent.disposing) == 1L;
+                    processDispose = _parent.IsDisposeCalled;
                 }
                 // Start dispose
                 if (processDispose) { if (_parent.nonDisposable) _parent.ProcessNonDispose(); else _parent.ProcessDispose(); }
@@ -163,8 +162,8 @@ namespace Lexical.FileSystem.Internal
         }
 
         /// <summary>
-        /// Process the actual dispose. This may be called from <see cref="Dispose()"/> or from the dispose of the last
-        /// belate handle (After <see cref="Dispose()"/> has been called aswell).
+        /// Process the actual dispose. This may be called from <see cref="Dispose"/> or from the dispose of the last
+        /// belate handle (After <see cref="Dispose"/> has been called aswell).
         /// 
         /// Only one thread may process the dispose.
         /// Sets state to 2, and then 3.
@@ -204,14 +203,14 @@ namespace Lexical.FileSystem.Internal
             Interlocked.CompareExchange(ref disposing, 3L, 2L);
 
             // Throw captured errors
-            if (disposeErrors.Count>0) throw new AggregateException(disposeErrors);
+            if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
         }
 
         /// <summary>
         /// Process the non-dispose. Used when <see cref="nonDisposable"/> is true (singleton instances).
         /// 
-        /// This may be called from <see cref="Dispose()"/> or from the dispose of the last
-        /// belate handle (After <see cref="Dispose()"/> has been called aswell).
+        /// This may be called from <see cref="Dispose"/> or from the dispose of the last
+        /// belate handle (After <see cref="Dispose"/> has been called aswell).
         /// 
         /// Only one thread may process the dispose. Returns state back to 0.
         /// 
@@ -272,7 +271,7 @@ namespace Lexical.FileSystem.Internal
             // Cast to IDisposable
             IDisposable disposable = disposableObject as IDisposable;
             // Was not disposable, was not added to list
-            if (disposable == null) return false;            
+            if (disposable == null) return false;
             // Parent is disposed/ing
             if (IsDisposing) { disposable.Dispose(); return false; }
             // Add to list
@@ -300,7 +299,7 @@ namespace Lexical.FileSystem.Internal
             // Adapt to IDisposable
             IDisposable disposable = new DisposeAction<object>(disposeAction, state);
             // Add to list
-            lock (m_disposelist_lock) disposeList.Add( disposable );
+            lock (m_disposelist_lock) disposeList.Add(disposable);
             // Check parent again
             if (IsDisposing) { lock (m_disposelist_lock) disposeList.Remove(disposable); disposable.Dispose(); return false; }
             // OK
@@ -355,7 +354,7 @@ namespace Lexical.FileSystem.Internal
             /// <summary>
             /// Run delegate with the attached object.
             /// </summary>
-            public void Dispose() 
+            public void Dispose()
                 => action(disposeObject);
         }
 
@@ -376,7 +375,7 @@ namespace Lexical.FileSystem.Internal
                 // Dispose now
                 DisposeAndCapture(disposableObjects, ref disposeErrors);
                 // Throw captured errors
-                if (disposeErrors.Count>0) throw new AggregateException(disposeErrors);
+                if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
                 return false;
             }
 
@@ -396,7 +395,7 @@ namespace Lexical.FileSystem.Internal
                 // Remove
                 lock (m_disposelist_lock) foreach (IDisposable d in disposableObjects) disposeList.Remove(d);
                 // Throw captured errors
-                if (disposeErrors.Count>0) throw new AggregateException(disposeErrors);
+                if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
                 return false;
             }
 
@@ -485,7 +484,7 @@ namespace Lexical.FileSystem.Internal
         public static void DisposeAndCapture(ref StructList2<IDisposable> disposableObjects, ref StructList4<Exception> disposeErrors)
         {
             // Dispose disposables
-            for (int i=0; i<disposableObjects.Count; i++)
+            for (int i = 0; i < disposableObjects.Count; i++)
             {
                 IDisposable disposable = disposableObjects[i];
                 if (disposable != null)
