@@ -165,7 +165,7 @@ namespace Lexical.FileSystem.Utility
     public class FileSystemComparer : IEqualityComparer<IFileSystem>
     {
         /// <summary>
-        /// Compare for <see cref="FileSystem.RootPath"/> equality.
+        /// Compare for <see cref="FileSystem.Path"/> equality.
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>
@@ -176,7 +176,7 @@ namespace Lexical.FileSystem.Utility
             if (x == null && y == null) return true;
             // Compare
             if (x is FileSystem xFileSystem && y is FileSystem yFileSystem)
-                return xFileSystem.RootPath.Equals(yFileSystem.RootPath);
+                return xFileSystem.Path.Equals(yFileSystem.Path);
             // Did not apply
             return false;
         }
@@ -191,7 +191,7 @@ namespace Lexical.FileSystem.Utility
             // Handle null
             if (filesystem == null) return 0;
             // Use Assembly as hashcode
-            if (filesystem is FileSystem fs) return fs.RootPath.GetHashCode() ^ 0x234234;
+            if (filesystem is FileSystem fs) return fs.Path.GetHashCode() ^ 0x234234;
             // Did not apply
             return filesystem.GetHashCode();
         }
@@ -203,7 +203,7 @@ namespace Lexical.FileSystem.Utility
     public class FileProviderSystemComparer : IEqualityComparer<IFileSystem>
     {
         /// <summary>
-        /// Compare for <see cref="FileSystem.RootPath"/> equality.
+        /// Compare for <see cref="FileSystem.Path"/> equality.
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>

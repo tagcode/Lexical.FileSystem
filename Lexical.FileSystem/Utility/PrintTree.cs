@@ -149,7 +149,7 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
         /// <param name="format">print format</param>
-        public static void PrintTreeTo(this IFileSystem filesystem, TextWriter output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
+        public static void PrintTo(this IFileSystem filesystem, TextWriter output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
         {
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
                 line.WriteTo(output, format | Format.LineFeed);
@@ -180,7 +180,7 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
         /// <param name="format">print format</param>
-        public static void AppendTreeTo(this IFileSystem filesystem, StringBuilder output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
+        public static void PrintTo(this IFileSystem filesystem, StringBuilder output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
         {
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
                 line.AppendTo(output, format | Format.LineFeed);
@@ -211,7 +211,7 @@ namespace Lexical.FileSystem
         /// <param name="depth">maximum visit depth</param>
         /// <param name="format">print format</param>
         /// <returns>Tree as string</returns>
-        public static String PrintToString(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
+        public static String Print(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
         {
             StringBuilder sb = new StringBuilder();
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))

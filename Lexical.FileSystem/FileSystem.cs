@@ -33,51 +33,61 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Native separator character in the running OS.
         /// </summary>
-        internal protected static string osSeparator = Path.DirectorySeparatorChar + "";
+        internal protected static string osSeparator = System.IO.Path.DirectorySeparatorChar + "";
 
         /// <summary>
         /// Is OS Windows, Linux, or OSX.
         /// </summary>
         internal protected static bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows), isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux), isOsx = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
-        /// <summary>Non-disposable instance at operating system root.</summary>
+        /// <summary>Operating system root.</summary>
         static FileSystem os = new FileSystem.NonDisposable("");
+        /// <summary>Running application's base directory.</summary>
+        static Lazy<FileSystem> application = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(AppDomain.CurrentDomain.BaseDirectory));
+        /// <summary>Running user's temp directory. "C:\Users\lex\AppData\Local\Temp"</summary>
+        static Lazy<FileSystem> temp = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(System.IO.Path.GetTempPath()));
+        /// <summary>The My Documents folder. "C:\Users\lex\Documents"</summary>
+        static Lazy<FileSystem> myDocuments = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)));
+        /// <summary>A common repository for documents. "C:\Users\lex\Documents"</summary>
+        static Lazy<FileSystem> personal = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.Personal)));
+        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="ApplicationData"/>. "C:\Users\lex"</summary>
+        static Lazy<FileSystem> userProfile = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
+        /// <summary>A common repository for application-specific data for the current roaming user. "C:\Users\lex\AppData\Roaming"</summary>
+        static Lazy<FileSystem> applicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)));
+        /// <summary>A common repository for application-specific data that is used by the current, non-roaming user. "C:\Users\lex\AppData\Local"</summary>
+        static Lazy<FileSystem> localApplicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
+        /// <summary>A common repository for application-specific data that is used by all users. "C:\ProgramData"</summary>
+        static Lazy<FileSystem> commonApplicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)));
 
-        /// <summary>Non-disposable instance at user's temp directory.</summary>
-        static Lazy<FileSystem> tmp = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Path.GetTempPath()));
-
-        /// <summary>Non-disposable instance at application root.</summary>
-        static Lazy<FileSystem> applicationRoot = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(AppDomain.CurrentDomain.BaseDirectory));
-
-        /// <summary>
-        /// Filesystem that has root at application base directory (application resources).
-        /// </summary>
-        public static FileSystem ApplicationRoot => applicationRoot.Value;
-
-        /// <summary>
-        /// Filesystem system that represents the filesystem of the running operating system.
-        /// 
-        /// For instance allows drives on windows "C://Windows" and slashed root on linux "/mnt".
-        /// </summary>
+        /// <summary>Operating system root.</summary>
         public static FileSystem OS => os;
-
-        /// <summary>
-        /// Filesystem system that represents the filesystem of the running operating system.
-        /// 
-        /// For instance allows drives on windows "C://Windows" and slashed root on linux "/mnt".
-        /// </summary>
-        public static FileSystem Tmp => tmp.Value;
+        /// <summary>Running application's base directory.</summary>
+        public static FileSystem Application => application.Value;
+        /// <summary>Running user's temp directory. "C:\Users\lex\AppData\Local\Temp"</summary>
+        public static FileSystem Temp = temp.Value;
+        /// <summary>The My Documents folder. "C:\Users\lex\Documents"</summary>
+        public static FileSystem MyDocuments = myDocuments.Value;
+        /// <summary>A common repository for documents. "C:\Users\lex\Documents"</summary>
+        public static FileSystem Personal = personal.Value;
+        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="ApplicationData"/>. "C:\Users\lex"</summary>
+        public static FileSystem UserProfile = userProfile.Value;
+        /// <summary>A common repository for application-specific data for the current roaming user. "C:\Users\lex\AppData\Roaming"</summary>
+        public static FileSystem ApplicationData = applicationData.Value;
+        /// <summary>A common repository for application-specific data that is used by the current, non-roaming user. "C:\Users\lex\AppData\Local"</summary>
+        public static FileSystem LocalApplicationData = localApplicationData.Value;
+        /// <summary>A common repository for application-specific data that is used by all users. "C:\ProgramData"</summary>
+        public static FileSystem CommonApplicationData = commonApplicationData.Value;
 
         /// <summary>
         /// The root path as provided with constructor.
         /// </summary>
-        public readonly string RootPath;
+        public readonly string Path;
 
         /// <summary>
         /// Full absolute root path.
-        /// <see cref="RootPath"/> ran with <see cref="System.IO.Path.GetFullPath(string)"/>.
+        /// <see cref="Path"/> ran with <see cref="System.IO.Path.GetFullPath(string)"/>.
         /// </summary>
-        public readonly string AbsoluteRootPath;
+        public readonly string AbsolutePath;
 
         /// <summary>
         /// Constructed to filesystem root.
@@ -116,8 +126,8 @@ namespace Lexical.FileSystem
         /// <param name="path">Path to root directory, or "" for OS root which returns drive letters.</param>
         public FileSystem(string path) : base()
         {
-            RootPath = path ?? throw new ArgumentNullException(nameof(path));
-            AbsoluteRootPath = path == "" ? "" : System.IO.Path.GetFullPath(/*c: ?*/isWindows && path.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/path + osSeparator : /*c:\nn*/path);
+            Path = path ?? throw new ArgumentNullException(nameof(path));
+            AbsolutePath = path == "" ? "" : System.IO.Path.GetFullPath(/*c: ?*/isWindows && path.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/path + osSeparator : /*c:\nn*/path);
 
             IsOsRoot = path == "";
             // Canonized relative path uses "/" as separator. Ends with "/".
@@ -177,9 +187,9 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
-            string concatenatedPath = Path.Combine(AbsoluteRootPath, path);
-            string absolutePath = Path.GetFullPath(concatenatedPath);
-            if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+            string concatenatedPath = System.IO.Path.Combine(AbsolutePath, path);
+            string absolutePath = System.IO.Path.GetFullPath(concatenatedPath);
+            if (!absolutePath.StartsWith(AbsolutePath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
             return new FileStream(absolutePath, fileMode, fileAccess, fileShare);
         }
 
@@ -201,14 +211,14 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         public void CreateDirectory(string path)
         {
-            string concatenatedPath = Path.Combine(AbsoluteRootPath, path);
-            string absolutePath = Path.GetFullPath(concatenatedPath);
-            if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+            string concatenatedPath = System.IO.Path.Combine(AbsolutePath, path);
+            string absolutePath = System.IO.Path.GetFullPath(concatenatedPath);
+            if (!absolutePath.StartsWith(AbsolutePath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
             Directory.CreateDirectory(absolutePath);
         }
 
         /// <summary>
-        /// Concatenates <see cref="RootPath"/> to <paramref name="path"/> argument.
+        /// Concatenates <see cref="Path"/> to <paramref name="path"/> argument.
         /// 
         /// Asserts that <paramref name="path"/> doesn't refer over the constructed root, e.g. ".".
         /// 
@@ -232,11 +242,11 @@ namespace Lexical.FileSystem
                 // "dir\" remove OS directory separator from end.
                 if (path.EndsWith(osSeparator, StringComparison.InvariantCulture) || path.EndsWith("/", StringComparison.InvariantCulture)) path = path.Substring(0, path.Length - 1);
                 // Concatenate root path from construction to argumen path
-                concatenatedPath = RootPath == "" ? path : (RootPath.EndsWith("/", StringComparison.InvariantCulture) || RootPath.EndsWith("\\", StringComparison.InvariantCulture) || RootPath.EndsWith(":", StringComparison.InvariantCulture)) ? RootPath + path : RootPath + "/" + path;
+                concatenatedPath = Path == "" ? path : (Path.EndsWith("/", StringComparison.InvariantCulture) || Path.EndsWith("\\", StringComparison.InvariantCulture) || Path.EndsWith(":", StringComparison.InvariantCulture)) ? Path + path : Path + "/" + path;
                 // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
-                absolutePath = Path.GetFullPath(/*c: ?*/isWindows && concatenatedPath.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/concatenatedPath + osSeparator : /*c:\nnn*/concatenatedPath);
+                absolutePath = System.IO.Path.GetFullPath(/*c: ?*/isWindows && concatenatedPath.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/concatenatedPath + osSeparator : /*c:\nnn*/concatenatedPath);
                 // Assert that we are not browsing the parent of constructed path
-                if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+                if (!absolutePath.StartsWith(AbsolutePath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
                 // Return path without trailing separator
                 return path;
             }
@@ -262,9 +272,9 @@ namespace Lexical.FileSystem
                         // Concatenate root path from construction to argument path
                         concatenatedPath = path;
                         // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
-                        absolutePath = Path.GetFullPath(concatenatedPath);
+                        absolutePath = System.IO.Path.GetFullPath(concatenatedPath);
                         // Assert that we are not browsing the parent of constructed path
-                        if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+                        if (!absolutePath.StartsWith(AbsolutePath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
                         // Return path without trailing separator
                         return path;
                     }
@@ -277,11 +287,11 @@ namespace Lexical.FileSystem
                     // Remove trailing "/" from "dir/"
                     if (path.EndsWith(osSeparator, StringComparison.InvariantCulture)) path = path.Substring(0, path.Length - 1);
                     // Concatenate paths
-                    concatenatedPath = path == "" || path == "/" ? RootPath : RootPath + (RootPath.EndsWith("/", StringComparison.InvariantCulture) ? "" : "/") + path;
+                    concatenatedPath = path == "" || path == "/" ? Path : Path + (Path.EndsWith("/", StringComparison.InvariantCulture) ? "" : "/") + path;
                     // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
-                    absolutePath = Path.GetFullPath(concatenatedPath);
+                    absolutePath = System.IO.Path.GetFullPath(concatenatedPath);
                     // Assert that we are not browsing the parent of constructed path
-                    if (!absolutePath.StartsWith(AbsoluteRootPath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
+                    if (!absolutePath.StartsWith(AbsolutePath, StringComparison.InvariantCulture)) throw new InvalidOperationException("Path cannot refer outside IFileSystem root");
                     // Return path without trailing separator
                     return path;
                 }
@@ -310,7 +320,7 @@ namespace Lexical.FileSystem
         public IFileSystemEntry[] Browse(string path)
         {
             // Return OS-root, return drive letters.
-            if (path == "" && RootPath == "") return BrowseRoot();
+            if (path == "" && Path == "") return BrowseRoot();
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
             path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
@@ -503,7 +513,7 @@ namespace Lexical.FileSystem
             GlobPatternInfo info = new GlobPatternInfo(filter);
 
             // Monitor drive letters
-            if (info.Prefix == "" && RootPath == "")
+            if (info.Prefix == "" && Path == "")
             {
                 throw new NotImplementedException();
             }
@@ -518,7 +528,7 @@ namespace Lexical.FileSystem
                 string path = ConcatenateAndAssertPath(filter, out concatenatedPath, out absolutePath);
 
                 // Create observer object
-                FileObserver handle = new FileObserver(this, path, observer, state, AbsoluteRootPath, absolutePath);
+                FileObserver handle = new FileObserver(this, path, observer, state, AbsolutePath, absolutePath);
                 // Send IFileSystemEventStart
                 observer.OnNext(handle);
                 // Return handle
@@ -533,7 +543,7 @@ namespace Lexical.FileSystem
                 string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(info.Prefix, out concatenatedPath, out absolutePathToPrefixPart);
 
                 // Create observer object
-                PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsoluteRootPath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, info.Suffix);
+                PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, info.Suffix);
                 // Send IFileSystemEventStart
                 observer.OnNext(handle);
                 // Return handle
@@ -669,10 +679,10 @@ namespace Lexical.FileSystem
                 if (absolutePath.StartsWith(FileSystemRootAbsolutePath))
                 {
                     // Cut the relative path
-                    int length = absolutePath.Length > FileSystemRootAbsolutePath.Length && absolutePath[FileSystemRootAbsolutePath.Length] == Path.DirectorySeparatorChar ? absolutePath.Length - FileSystemRootAbsolutePath.Length - 1 : absolutePath.Length - FileSystemRootAbsolutePath.Length;
+                    int length = absolutePath.Length > FileSystemRootAbsolutePath.Length && absolutePath[FileSystemRootAbsolutePath.Length] == System.IO.Path.DirectorySeparatorChar ? absolutePath.Length - FileSystemRootAbsolutePath.Length - 1 : absolutePath.Length - FileSystemRootAbsolutePath.Length;
                     string _relativePath = absolutePath.Substring(absolutePath.Length-length, length);
                     // Convert separator back-slash '\' into slash '/'.
-                    if (Path.DirectorySeparatorChar != '/') _relativePath = _relativePath.Replace(Path.DirectorySeparatorChar, '/');
+                    if (System.IO.Path.DirectorySeparatorChar != '/') _relativePath = _relativePath.Replace(System.IO.Path.DirectorySeparatorChar, '/');
                     // Return
                     return _relativePath;
                 }
@@ -867,10 +877,10 @@ namespace Lexical.FileSystem
                 if (absolutePath.StartsWith(FileSystemRootAbsolutePath))
                 {
                     // Cut the relative path
-                    int length = absolutePath.Length > FileSystemRootAbsolutePath.Length && absolutePath[FileSystemRootAbsolutePath.Length] == Path.DirectorySeparatorChar ? absolutePath.Length - FileSystemRootAbsolutePath.Length - 1 : absolutePath.Length - FileSystemRootAbsolutePath.Length;
+                    int length = absolutePath.Length > FileSystemRootAbsolutePath.Length && absolutePath[FileSystemRootAbsolutePath.Length] == System.IO.Path.DirectorySeparatorChar ? absolutePath.Length - FileSystemRootAbsolutePath.Length - 1 : absolutePath.Length - FileSystemRootAbsolutePath.Length;
                     string _relativePath = absolutePath.Substring(absolutePath.Length - length, length);
                     // Convert separator back-slash '\' into slash '/'.
-                    if (Path.DirectorySeparatorChar != '/') _relativePath = _relativePath.Replace(Path.DirectorySeparatorChar, '/');
+                    if (System.IO.Path.DirectorySeparatorChar != '/') _relativePath = _relativePath.Replace(System.IO.Path.DirectorySeparatorChar, '/');
                     // Return
                     return _relativePath;
                 }
@@ -993,6 +1003,6 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => RootPath;
+            => Path;
     }
 }
