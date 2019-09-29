@@ -176,18 +176,18 @@ namespace Lexical.FileSystem
         public static IFileSystemOptionMount NoMount => noMount;
 
         /// <summary>Is filesystem capable of creating mountpoints.</summary>
-        public bool CanCreateMountpoint { get; protected set; }
+        public bool CanCreateMountPoint { get; protected set; }
         /// <summary>Is filesystem capable of listing mountpoints.</summary>
-        public bool CanListMountpoints { get; protected set; }
+        public bool CanListMountPoints { get; protected set; }
         /// <summary>Is filesystem capable of getting mountpoint entry.</summary>
-        public bool CanGetMountpoint { get; protected set; }
+        public bool CanGetMountPoint { get; protected set; }
 
         /// <summary>Create file system option for mount capabilities.</summary>
         public FileSystemOptionMount(bool canCreateMountpoint, bool canListMountpoints, bool canGetMountpoint)
         {
-            CanCreateMountpoint = canCreateMountpoint;
-            CanListMountpoints = canListMountpoints;
-            CanGetMountpoint = canGetMountpoint;
+            CanCreateMountPoint = canCreateMountpoint;
+            CanListMountPoints = canListMountpoints;
+            CanGetMountPoint = canGetMountpoint;
         }
     }
 
