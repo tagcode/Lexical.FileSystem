@@ -168,7 +168,7 @@ namespace Lexical.FileSystem.FileProvider
                     string entryPath = path.Length > 0 ? path + "/" + _fi.Name : _fi.Name;
                     IFileSystemEntry e =
                         _fi.IsDirectory ?
-                        (IFileSystemEntry)new FileSystemEntryDirectory(this, entryPath, _fi.Name, _fi.LastModified) :
+                        (IFileSystemEntry)new FileSystemEntryDirectory(this, entryPath, _fi.Name, _fi.LastModified, this) :
                         (IFileSystemEntry)new FileSystemEntryFile(this, entryPath, _fi.Name, _fi.LastModified, _fi.Length);
                     list.Add(e);
                 }
@@ -201,7 +201,7 @@ namespace Lexical.FileSystem.FileProvider
         /// <exception cref="ObjectDisposedException"/>
         public IFileSystemEntry GetEntry(string path)
         {
-            if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue);
+            if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, this);
             // Make path
             if (isPhysicalFileProvider && path.Contains(@"\")) path = path.Replace(@"\", "/");
             // Is disposed?
@@ -212,12 +212,12 @@ namespace Lexical.FileSystem.FileProvider
             IFileInfo fi = fp.GetFileInfo(path);
             if (fi.Exists)
                 return fi.IsDirectory ?
-                    new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified) :
+                    new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified, this) :
                     (IFileSystemEntry)new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, fi.Length);
 
             // Directory
             IDirectoryContents contents = fp.GetDirectoryContents(path);
-            if (contents.Exists) return new FileSystemEntryDirectory(this, path, Path.GetDirectoryName(path), DateTimeOffset.MinValue);
+            if (contents.Exists) return new FileSystemEntryDirectory(this, path, Path.GetDirectoryName(path), DateTimeOffset.MinValue, this);
 
             // Nothing was found
             return null;

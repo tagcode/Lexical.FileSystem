@@ -74,7 +74,7 @@ namespace Lexical.FileSystem
         public EmbeddedFileSystem(Assembly assembly)
         {
             this.Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
-            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow);
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow, this);
         }
 
         /// <summary>

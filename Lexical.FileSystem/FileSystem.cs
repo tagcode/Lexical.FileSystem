@@ -335,7 +335,7 @@ namespace Lexical.FileSystem
                 {
                     if (fsi is DirectoryInfo di)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(prefix) ? di.Name : prefix + di.Name, di.Name, di.LastWriteTimeUtc);
+                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(prefix) ? di.Name : prefix + di.Name, di.Name, di.LastWriteTimeUtc, this);
                         list.Add(e);
                     } else if (fsi is FileInfo _fi)
                     {
@@ -373,14 +373,14 @@ namespace Lexical.FileSystem
         public IFileSystemEntry GetEntry(string path)
         {
             // Return OS-root, return drive letters.
-            if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue);
+            if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, this);
 
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
             path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists) return new FileSystemEntryDirectory(this, path, dir.Name, dir.LastWriteTimeUtc);
+            if (dir.Exists) return new FileSystemEntryDirectory(this, path, dir.Name, dir.LastWriteTimeUtc, this);
 
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists) return new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtc, fi.Length);
@@ -403,7 +403,7 @@ namespace Lexical.FileSystem
             // Reduce all "/mnt/xx" into single "/" entry.
             if (unix > 0)
             {
-                IFileSystemEntry e = new FileSystemEntryDriveDirectory(this, "/", "", DateTimeOffset.MinValue);
+                IFileSystemEntry e = new FileSystemEntryDriveDirectory(this, "/", "", DateTimeOffset.MinValue, this);
                 return new IFileSystemEntry[] { e };
             }
 
@@ -420,7 +420,7 @@ namespace Lexical.FileSystem
 
                 IFileSystemEntry e =
                     di.IsReady ?
-                    new FileSystemEntryDriveDirectory(this, path, path, DateTimeOffset.MinValue) :
+                    new FileSystemEntryDriveDirectory(this, path, path, DateTimeOffset.MinValue, this) :
                     new FileSystemEntryDrive(this, path, path, DateTimeOffset.MinValue);
                 list.Add(e);
             }

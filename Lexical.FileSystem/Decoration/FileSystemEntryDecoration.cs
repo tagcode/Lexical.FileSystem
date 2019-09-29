@@ -50,6 +50,8 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsDirectory => Original.IsDirectory();
         /// <inheritdoc/>
+        public virtual IFileSystemOption Options => Original.Options();
+        /// <inheritdoc/>
         public virtual bool IsDrive => Original.IsDrive();
         /// <inheritdoc/>
         public virtual bool IsMountpoint => Original.IsMountpoint();

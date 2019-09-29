@@ -77,6 +77,11 @@ namespace Lexical.FileSystem
         /// Tests if entry represents a directory.
         /// </summary>
         bool IsDirectory { get; }
+
+        /// <summary>
+        /// Options that apply to this directory.
+        /// </summary>
+        IFileSystemOption Options { get; }
     }
     // </IFileSystemEntryDirectory>
 
@@ -110,7 +115,9 @@ namespace Lexical.FileSystem
 
     // <IFileSystemEntryDecoration>
     /// <summary>
-    /// Entry that is actually a decoration.
+    /// Entry that is actually a decoration. 
+    /// 
+    /// Decorating classes can implement this interface if they want to expose the original entry.
     /// </summary>
     public interface IFileSystemEntryDecoration : IFileSystemEntry
     {
@@ -148,6 +155,14 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public static bool IsDirectory(this IFileSystemEntry entry)
             => entry is IFileSystemEntryDirectory dir ? dir.IsDirectory : false;
+
+        /// <summary>
+        /// Get options
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns></returns>
+        public static IFileSystemOption Options(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryDirectory dir ? dir.Options : Lexical.FileSystem.Internal.FileSystemOption.NoOptions;
 
         /// <summary>
         /// Tests if <paramref name="entry"/> represents a drive.

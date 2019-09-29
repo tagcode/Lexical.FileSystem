@@ -6,7 +6,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>
-    /// Base interface for filesystem options.
+    /// Interface for filesystem options. 
     /// 
     /// See sub-interfaces:
     /// <list type="bullet">
@@ -21,6 +21,8 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemOptionObserve"/></item>
     ///     <item><see cref="IFileSystemOptionOpen"/></item>
     /// </list>
+    /// 
+    /// The options properties must be immutable in the implementing classes.
     /// </summary>
     public interface IFileSystemOption
     {
@@ -32,5 +34,13 @@ namespace Lexical.FileSystem
         /// <summary>Root path within filesystem.</summary>
         String Root { get; }
     }
+
+    /// <summary>Option for block size.</summary>
+    public interface IFileSystemOptionBlockSize : IFileSystemOption
+    {
+        /// <summary>Block size of files.</summary>
+        long BlockSize { get; }
+    }
+
     // </doc>
 }

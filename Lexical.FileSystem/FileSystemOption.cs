@@ -12,7 +12,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Implementations to <see cref="IFileSystemOption"/>.
     /// 
-    /// See sub-classes:
+    /// See classes:
     /// <list type="bullet">
     ///     <item><see cref="FileSystemOptionRoot"/></item>
     ///     <item><see cref="FileSystemOptionPath"/></item>
@@ -26,8 +26,13 @@ namespace Lexical.FileSystem
     ///     <item><see cref="FileSystemOptionOpen"/></item>
     /// </list>
     /// </summary>
-    public class FileSystemOption
+    public class FileSystemOption : IFileSystemOption
     {
+        /// <summary>No options</summary>
+        static IFileSystemOption noOptions = new FileSystemOption();
+
+        /// <summary>No options</summary>
+        public static IFileSystemOption NoOptions => noOptions;
     }
 
     /// <summary>Option for root path.</summary>

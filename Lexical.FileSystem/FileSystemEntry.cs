@@ -106,14 +106,21 @@ namespace Lexical.FileSystem
         public bool IsDirectory => true;
 
         /// <summary>
+        /// Options that apply to this directory.
+        /// </summary>
+        public IFileSystemOption Options { get; protected set; }
+
+        /// <summary>
         /// Create entry
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
-        public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified) : base(filesystem, path, name, lastModified)
+        /// <param name="options"></param>
+        public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, IFileSystemOption options) : base(filesystem, path, name, lastModified)
         {
+            this.Options = options ?? throw new ArgumentNullException(nameof(options));
         }
     }
 
@@ -150,14 +157,21 @@ namespace Lexical.FileSystem
         public bool IsDirectory => true;
 
         /// <summary>
+        /// Options that apply to this directory.
+        /// </summary>
+        public IFileSystemOption Options { get; protected set; }
+
+        /// <summary>
         /// Create entry
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
-        public FileSystemEntryDriveDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified) : base(filesystem, path, name, lastModified)
+        /// <param name="options"></param>
+        public FileSystemEntryDriveDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, IFileSystemOption options) : base(filesystem, path, name, lastModified)
         {
+            this.Options = options ?? throw new ArgumentNullException(nameof(options));
         }
     }
 

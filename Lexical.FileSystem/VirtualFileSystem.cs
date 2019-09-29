@@ -315,7 +315,7 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <returns></returns>
             public IFileSystemEntry CreateEntry()
-                => new FileSystemEntryDirectory(filesystem, Path, name, lastModified);
+                => new FileSystemEntryDirectory(filesystem, Path, name, lastModified, filesystem);
 
             /// <summary>
             /// Flush cached array of child entries.

@@ -94,7 +94,7 @@ namespace Lexical.FileSystem
                 CanMove |= fs.CanMove();
                 CanCreateDirectory |= fs.CanCreateDirectory();
             }
-            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow);
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow, this);
         }
 
         /// <summary>
