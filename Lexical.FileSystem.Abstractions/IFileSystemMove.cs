@@ -10,16 +10,18 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     // <doc>
+    /// <summary>File system option for move/rename.</summary>
+    public interface IFileSystemOptionMove : IFileSystemOption
+    {
+        /// <summary>Has Move capability.</summary>
+        bool CanMove { get; }
+    }
+
     /// <summary>
     /// File system that can move/rename files and directories.
     /// </summary>
-    public interface IFileSystemMove : IFileSystem
+    public interface IFileSystemMove : IFileSystemOptionMove
     {
-        /// <summary>
-        /// Has Move capability.
-        /// </summary>
-        bool CanMove { get; }
-
         /// <summary>
         /// Try to move/rename a file or directory.
         /// </summary>
@@ -49,7 +51,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Move capability</returns>
-        public static bool CanMove(this IFileSystem filesystem)
+        public static bool CanMove(this IFileSystemOption filesystem)
             => filesystem is IFileSystemMove mover ? mover.CanMove : false;
 
         /// <summary>

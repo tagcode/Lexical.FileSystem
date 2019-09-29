@@ -10,16 +10,18 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     // <doc>
+    /// <summary>File system option for observe.</summary>
+    public interface IFileSystemOptionObserve : IFileSystemOption
+    {
+        /// <summary>Has Observe capability.</summary>
+        bool CanObserve { get; }
+    }
+
     /// <summary>
     /// File system that observe file and directory changes.
     /// </summary>
-    public interface IFileSystemObserve : IFileSystem
+    public interface IFileSystemObserve : IFileSystem, IFileSystemOptionObserve
     {
-        /// <summary>
-        /// Has Observe capability.
-        /// </summary>
-        bool CanObserve { get; }
-
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 
         /// 
@@ -99,7 +101,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Observe capability</returns>
-        public static bool CanObserve(this IFileSystem filesystem)
+        public static bool CanObserve(this IFileSystemOption filesystem)
             => filesystem is IFileSystemObserve observer ? observer.CanObserve : false;
 
         /// <summary>

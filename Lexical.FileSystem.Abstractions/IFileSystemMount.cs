@@ -3,37 +3,32 @@
 // Date:           12.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-
 using System;
 using System.IO;
 
 namespace Lexical.FileSystem
 {
     // <doc>
+    /// <summary>File system option for mount capabilities.</summary>
+    public interface IFileSystemOptionMount : IFileSystemOption
+    {
+        /// <summary>Is filesystem capable of creating mountpoints.</summary>
+        bool CanCreateMountpoint { get; }
+        /// <summary>Is filesystem capable of listing mountpoints.</summary>
+        bool CanListMountpoints { get; }
+        /// <summary>Is filesystem capable of getting mountpoint entry.</summary>
+        bool CanGetMountpoint { get; }
+    }
+
     /// <summary>
     /// File system that is actually a decoration.
     /// </summary>
-    public interface IFileSystemMount : IFileSystem
+    public interface IFileSystemMount : IFileSystem, IFileSystemOptionMount
     {
-        /// <summary>
-        /// Is filesystem capable of creating mountpoints.
-        /// </summary>
-        bool CanCreateMountpoint { get; }
-
-        /// <summary>
-        /// Is filesystem capable of listing mountpoints.
-        /// </summary>
-        bool CanListMountpoints { get; }
-
-        /// <summary>
-        /// Is filesystem capable of getting mountpoint entry.
-        /// </summary>
-        bool CanGetMountpoint { get; }
-
         /// <summary>
         /// Create a mountpoint where other file systems can be mounted.
         /// 
-        /// If mountpoint already exists, returns another handle to same mountpoint. Both handles must be disposed separately.
+        /// If mountpoint already exists, returns another handle to same mountpoint. All handles must be disposed separately.
         /// </summary>
         /// <param name="path">path to the mountpoint</param>
         /// <returns>a handle to mountpoint</returns>
@@ -67,17 +62,24 @@ namespace Lexical.FileSystem
         IFileSystem FileSystem { get; }
 
         /// <summary>
-        /// Mount point path in <see cref="FileSystem"/>.
+        /// Path of the mountpoint in its <see cref="FileSystem"/>.
         /// </summary>
         String Path { get; }
 
         /// <summary>
-        /// Mount <paramref name="filesystem"/> at <paramref name="subpath"/> to the mountpoint.
+        /// Mount <paramref name="filesystem"/> at the mountpoint.
+        /// 
+        /// The <paramref name="options"/> parameter determine mounting options.
+        /// The mounted directory stucture will have intersection of options in <paramref name="filesystem"/> and <paramref name="options"/>.
+        /// 
+        /// For example if <paramref name="filesystem"/> has read and write permissions, but <paramref name="options"/> has only read permission,
+        /// then the mounted directory read but not write.
         /// </summary>
         /// <param name="filesystem"></param>
-        /// <param name="subpath"></param>
+        /// <param name="options">mounting options.</param>
         /// <returns></returns>
-        IFileSystemMountHandle Mount(IFileSystem filesystem, string subpath);
+        /// <exception cref="NotSupportedException">If the implementing class does not support mounting at all, or one of the mount <paramref name="options"/></exception>
+        IFileSystemMountHandle Mount(IFileSystem filesystem, params IFileSystemOption[] options);
     }
 
     /// <summary>
@@ -97,21 +99,21 @@ namespace Lexical.FileSystem
         /// Is filesystem capable of creating mountpoints.
         /// </summary>
         /// <returns></returns>
-        public static bool CanCreateMountpoint(this IFileSystem filesystem)
+        public static bool CanCreateMountpoint(this IFileSystemOption filesystem)
             => filesystem is IFileSystemMount mountable ? mountable.CanCreateMountpoint : false;
 
         /// <summary>
         /// Is filesystem capable of listing mountpoints.
         /// </summary>
         /// <returns></returns>
-        public static bool CanListMountpoints(this IFileSystem filesystem)
+        public static bool CanListMountpoints(this IFileSystemOption filesystem)
             => filesystem is IFileSystemMount mountable ? mountable.CanListMountpoints : false;
 
         /// <summary>
         /// Is filesystem capable of getting mountpoint entry.
         /// </summary>
         /// <returns></returns>
-        public static bool CanGetMountpoint(this IFileSystem filesystem)
+        public static bool CanGetMountpoint(this IFileSystemOption filesystem)
             => filesystem is IFileSystemMount mountable ? mountable.CanGetMountpoint : false;
 
         /// <summary>

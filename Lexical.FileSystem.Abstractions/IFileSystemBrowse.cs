@@ -10,21 +10,20 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     // <doc>
+    /// <summary>File system options for browse.</summary>
+    public interface IFileSystemOptionBrowse : IFileSystemOption
+    {
+        /// <summary>Has Browse capability.</summary>
+        bool CanBrowse { get; }
+        /// <summary>Has GetEntry capability.</summary>
+        bool CanGetEntry { get; }
+    }
+
     /// <summary>
     /// File system that can browse directories.
     /// </summary>
-    public interface IFileSystemBrowse : IFileSystem
+    public interface IFileSystemBrowse : IFileSystem, IFileSystemOptionBrowse
     {
-        /// <summary>
-        /// Has Browse capability.
-        /// </summary>
-        bool CanBrowse { get; }
-
-        /// <summary>
-        /// Has GetEntry capability.
-        /// </summary>
-        bool CanGetEntry { get; }
-
         /// <summary>
         /// Browse a directory for file and subdirectory entries.
         /// </summary>
@@ -73,7 +72,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true if has Browse capability</returns>
-        public static bool CanBrowse(this IFileSystem filesystem)
+        public static bool CanBrowse(this IFileSystemOption filesystem)
             => filesystem is IFileSystemBrowse browser ? browser.CanBrowse : false;
 
         /// <summary>
@@ -81,7 +80,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true if has Exists capability</returns>
-        public static bool CanGetEntry(this IFileSystem filesystem)
+        public static bool CanGetEntry(this IFileSystemOption filesystem)
             => filesystem is IFileSystemBrowse browser ? browser.CanGetEntry : false;
 
         /// <summary>

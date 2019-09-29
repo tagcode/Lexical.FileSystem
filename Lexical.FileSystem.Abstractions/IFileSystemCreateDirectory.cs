@@ -10,16 +10,18 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     // <doc>
+    /// <summary>File system option for creating directories.</summary>
+    public interface IFileSystemOptionCreateDirectory : IFileSystemOption
+    {
+        /// <summary>Has CreateDirectory capability.</summary>
+        bool CanCreateDirectory { get; }
+    }
+
     /// <summary>
     /// File system that can create directories.
     /// </summary>
-    public interface IFileSystemCreateDirectory : IFileSystem
+    public interface IFileSystemCreateDirectory : IFileSystem, IFileSystemOptionCreateDirectory
     {
-        /// <summary>
-        /// Has CreateDirectory capability.
-        /// </summary>
-        bool CanCreateDirectory { get; }
-
         /// <summary>
         /// Create a directory, or multiple cascading directories.
         /// 
@@ -51,7 +53,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has CreateDirectory capability</returns>
-        public static bool CanCreateDirectory(this IFileSystem filesystem)
+        public static bool CanCreateDirectory(this IFileSystemOption filesystem)
             => filesystem is IFileSystemCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : false;
 
         /// <summary>

@@ -23,12 +23,23 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemDisposable"/></item>
     /// </list>
     /// </summary>
-    public interface IFileSystem
+    public interface IFileSystem : IFileSystemOption
     {
         /// <summary>
         /// Features of the filesystem.
         /// </summary>
         FileSystemFeatures Features { get; }
+    }
+
+    /// <summary>Path related options</summary>
+    public interface IFileSystemOptionPath
+    {
+        /// <summary>Some or all files use case-sensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
+        bool CaseSensitive { get; }
+        /// <summary>Some or all files use case-insensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
+        bool CaseInsensitive { get; }
+        /// <summary>Filesystem allows empty string "" directory names.</summary>
+        bool EmptyDirectoryName { get; }
     }
 
     /// <summary>

@@ -10,10 +10,8 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     // <doc>
-    /// <summary>
-    /// File system that can open files for reading and writing. 
-    /// </summary>
-    public interface IFileSystemOpen : IFileSystem
+    /// <summary>File system options for open, create, read and write files.</summary>
+    public interface IFileSystemOptionOpen : IFileSystemOption
     {
         /// <summary>Can open file</summary>
         bool CanOpen { get; }
@@ -23,7 +21,13 @@ namespace Lexical.FileSystem
         bool CanWrite { get; }
         /// <summary>Can open and create file.</summary>
         bool CanCreateFile { get; }
+    }
 
+    /// <summary>
+    /// File system that can open files for reading and writing. 
+    /// </summary>
+    public interface IFileSystemOpen : IFileSystem, IFileSystemOptionOpen
+    {
         /// <summary>
         /// Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="FileMode.Create"/> or <see cref="FileMode.CreateNew"/>.
         /// </summary>
@@ -60,7 +64,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Open capability</returns>
-        public static bool CanOpen(this IFileSystem filesystem)
+        public static bool CanOpen(this IFileSystemOption filesystem)
             => filesystem is IFileSystemOpen opener ? opener.CanOpen : false;
 
         /// <summary>
@@ -68,7 +72,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Read capability</returns>
-        public static bool CanRead(this IFileSystem filesystem)
+        public static bool CanRead(this IFileSystemOption filesystem)
             => filesystem is IFileSystemOpen opener ? opener.CanRead : false;
 
         /// <summary>
@@ -76,7 +80,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Write capability</returns>
-        public static bool CanWrite(this IFileSystem filesystem)
+        public static bool CanWrite(this IFileSystemOption filesystem)
             => filesystem is IFileSystemOpen opener ? opener.CanWrite : false;
 
         /// <summary>
@@ -84,7 +88,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has CreateFile capability</returns>
-        public static bool CanCreateFile(this IFileSystem filesystem)
+        public static bool CanCreateFile(this IFileSystemOption filesystem)
             => filesystem is IFileSystemOpen opener ? opener.CanCreateFile : false;
 
         /// <summary>

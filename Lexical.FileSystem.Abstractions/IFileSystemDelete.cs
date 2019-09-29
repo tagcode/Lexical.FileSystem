@@ -10,16 +10,18 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     // <doc>
+    /// <summary>File system option for deleting files and directories.</summary>
+    public interface IFileSystemOptionDelete : IFileSystemOption
+    {
+        /// <summary>Has Delete capability.</summary>
+        bool CanDelete { get; }
+    }
+
     /// <summary>
     /// File system that can delete files and directories.
     /// </summary>
-    public interface IFileSystemDelete : IFileSystem
+    public interface IFileSystemDelete : IFileSystem, IFileSystemOptionDelete
     {
-        /// <summary>
-        /// Has Delete capability.
-        /// </summary>
-        bool CanDelete { get; }
-
         /// <summary>
         /// Delete a file or directory.
         /// 
@@ -52,7 +54,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// </summary>
         /// <returns>true, if has Delete capability</returns>
-        public static bool CanDelete(this IFileSystem filesystem)
+        public static bool CanDelete(this IFileSystemOption filesystem)
             => filesystem is IFileSystemDelete deleter ? deleter.CanDelete : false;
 
         /// <summary>

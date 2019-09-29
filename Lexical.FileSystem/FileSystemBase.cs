@@ -28,7 +28,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Has SetEventDispatcher() capability.
         /// </summary>
-        public virtual bool CanSetEventDispatcher { get; protected set; }
+        public virtual bool CanSetEventDispatcher { get; protected set; } = true;
 
         /// <summary>
         /// Task-factory that is used for sending events.
