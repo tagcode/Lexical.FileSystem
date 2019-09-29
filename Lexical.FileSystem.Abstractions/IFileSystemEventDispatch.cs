@@ -39,12 +39,12 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Observe capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has Observe capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true, if has Observe capability</returns>
-        public static bool CanSetEventDispatcher(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemEventDispatch eventDispatchHandler ? eventDispatchHandler.CanSetEventDispatcher : false;
+        public static bool CanSetEventDispatcher(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemEventDispatch eventDispatchHandler ? eventDispatchHandler.CanSetEventDispatcher : false;
 
         /// <summary>
         /// Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.

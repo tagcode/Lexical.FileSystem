@@ -60,36 +60,36 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Open capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has Open capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true, if has Open capability</returns>
-        public static bool CanOpen(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemOpen opener ? opener.CanOpen : false;
+        public static bool CanOpen(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemOpen opener ? opener.CanOpen : false;
 
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Read capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has Read capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true, if has Read capability</returns>
-        public static bool CanRead(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemOpen opener ? opener.CanRead : false;
+        public static bool CanRead(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemOpen opener ? opener.CanRead : false;
 
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Write capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has Write capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true, if has Write capability</returns>
-        public static bool CanWrite(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemOpen opener ? opener.CanWrite : false;
+        public static bool CanWrite(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemOpen opener ? opener.CanWrite : false;
 
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has CreateFile capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has CreateFile capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true, if has CreateFile capability</returns>
-        public static bool CanCreateFile(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemOpen opener ? opener.CanCreateFile : false;
+        public static bool CanCreateFile(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemOpen opener ? opener.CanCreateFile : false;
 
         /// <summary>
         /// Create a new file. If file exists, does nothing.

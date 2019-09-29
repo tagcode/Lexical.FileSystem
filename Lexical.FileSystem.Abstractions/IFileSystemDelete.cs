@@ -50,12 +50,12 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Delete capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has Delete capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true, if has Delete capability</returns>
-        public static bool CanDelete(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemDelete deleter ? deleter.CanDelete : false;
+        public static bool CanDelete(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemDelete deleter ? deleter.CanDelete : false;
 
         /// <summary>
         /// Delete a file or directory.

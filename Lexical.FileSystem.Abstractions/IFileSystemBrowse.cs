@@ -68,20 +68,20 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Browse capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has Browse capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true if has Browse capability</returns>
-        public static bool CanBrowse(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemBrowse browser ? browser.CanBrowse : false;
+        public static bool CanBrowse(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemBrowse browser ? browser.CanBrowse : false;
 
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Exists capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has Exists capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true if has Exists capability</returns>
-        public static bool CanGetEntry(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemBrowse browser ? browser.CanGetEntry : false;
+        public static bool CanGetEntry(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemBrowse browser ? browser.CanGetEntry : false;
 
         /// <summary>
         /// Browse a directory for file and subdirectory entries.

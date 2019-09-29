@@ -99,22 +99,22 @@ namespace Lexical.FileSystem
         /// Is filesystem capable of creating mountpoints.
         /// </summary>
         /// <returns></returns>
-        public static bool CanCreateMountpoint(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemMount mountable ? mountable.CanCreateMountpoint : false;
+        public static bool CanCreateMountpoint(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemMount mountable ? mountable.CanCreateMountpoint : false;
 
         /// <summary>
         /// Is filesystem capable of listing mountpoints.
         /// </summary>
         /// <returns></returns>
-        public static bool CanListMountpoints(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemMount mountable ? mountable.CanListMountpoints : false;
+        public static bool CanListMountpoints(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemMount mountable ? mountable.CanListMountpoints : false;
 
         /// <summary>
         /// Is filesystem capable of getting mountpoint entry.
         /// </summary>
         /// <returns></returns>
-        public static bool CanGetMountpoint(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemMount mountable ? mountable.CanGetMountpoint : false;
+        public static bool CanGetMountpoint(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemMount mountable ? mountable.CanGetMountpoint : false;
 
         /// <summary>
         /// Create a mountpoint where other file systems can be mounted.

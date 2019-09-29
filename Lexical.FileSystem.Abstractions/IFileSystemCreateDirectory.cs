@@ -49,12 +49,12 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has CreateDirectory capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has CreateDirectory capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true, if has CreateDirectory capability</returns>
-        public static bool CanCreateDirectory(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : false;
+        public static bool CanCreateDirectory(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : false;
 
         /// <summary>
         /// Create a directory, or multiple cascading directories.

@@ -47,12 +47,12 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Move capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystemOption"/> has Move capability.
+        /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>true, if has Move capability</returns>
-        public static bool CanMove(this IFileSystemOption filesystem)
-            => filesystem is IFileSystemMove mover ? mover.CanMove : false;
+        public static bool CanMove(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemMove mover ? mover.CanMove : false;
 
         /// <summary>
         /// Try to move/rename a file or directory.
