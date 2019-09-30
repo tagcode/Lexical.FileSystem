@@ -19,7 +19,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.
     /// </summary>
-    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemEventDispatch
+    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory
     {
         /// <summary>
         /// File system components.
@@ -46,12 +46,13 @@ namespace Lexical.FileSystem
         /// </summary>
         public IFileSystem[] FileSystems => filesystems;
 
+        bool canObserve;
         /// <inheritdoc/>
         public virtual bool CanBrowse { get; protected set; }
         /// <inheritdoc/>
         public virtual bool CanGetEntry { get; protected set; }
         /// <inheritdoc/>
-        public virtual bool CanObserve { get; protected set; }
+        public override bool CanObserve => canObserve;
         /// <inheritdoc/>
         public virtual bool CanOpen { get; protected set; }
         /// <inheritdoc/>
@@ -84,7 +85,7 @@ namespace Lexical.FileSystem
                 features |= fs.Features;
                 CanBrowse |= fs.CanBrowse();
                 CanGetEntry |= fs.CanGetEntry();
-                CanObserve |= fs.CanObserve();
+                canObserve |= fs.CanObserve();
                 CanSetEventDispatcher |= fs.CanSetEventDispatcher();
                 CanOpen |= fs.CanOpen();
                 CanRead |= fs.CanRead();
@@ -107,7 +108,7 @@ namespace Lexical.FileSystem
         /// <returns>memory filesystem</returns>
         public FileSystemComposition SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemEventDispatch)this).SetEventDispatcher(eventHandler);
+            ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
             return this;
         }
 
@@ -385,7 +386,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserver Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
+        public override IFileSystemObserver Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);

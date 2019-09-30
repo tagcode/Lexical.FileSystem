@@ -79,7 +79,9 @@ namespace Lexical.FileSystem
         bool IsDirectory { get; }
 
         /// <summary>
-        /// Options that apply to this directory.
+        /// Options that apply to this directory. 
+        /// 
+        /// The options returned here is equal to or a subset of options in the parent <see cref="IFileSystem"/>.
         /// </summary>
         IFileSystemOption Options { get; }
     }
@@ -162,7 +164,7 @@ namespace Lexical.FileSystem
         /// <param name="entry"></param>
         /// <returns></returns>
         public static IFileSystemOption Options(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryDirectory dir ? dir.Options : Lexical.FileSystem.Internal.FileSystemOption.NoOptions;
+            => entry is IFileSystemEntryDirectory dir ? dir.Options : Lexical.FileSystem.Internal.FileSystemOptionNone.NoOptions;
 
         /// <summary>
         /// Tests if <paramref name="entry"/> represents a drive.

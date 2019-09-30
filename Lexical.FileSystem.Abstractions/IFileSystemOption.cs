@@ -10,12 +10,11 @@ namespace Lexical.FileSystem
     /// 
     /// See sub-interfaces:
     /// <list type="bullet">
-    ///     <item><see cref="IFileSystemOptionRoot"/></item>
+    ///     <item><see cref="IFileSystemOptionMountPath"/></item>
     ///     <item><see cref="IFileSystemOptionPath"/></item>
     ///     <item><see cref="IFileSystemOptionBrowse"/></item>
     ///     <item><see cref="IFileSystemOptionCreateDirectory"/></item>
     ///     <item><see cref="IFileSystemOptionDelete"/></item>
-    ///     <item><see cref="IFileSystemOptionEventDispatch"/></item>
     ///     <item><see cref="IFileSystemOptionMount"/></item>
     ///     <item><see cref="IFileSystemOptionMove"/></item>
     ///     <item><see cref="IFileSystemOptionObserve"/></item>
@@ -28,19 +27,26 @@ namespace Lexical.FileSystem
     {
     }
 
-    /// <summary>Option for root path.</summary>
-    public interface IFileSystemOptionRoot : IFileSystemOption
+    /// <summary>Option for mount path. Used with <see cref="IFileSystemMountHandle"/></summary>
+    public interface IFileSystemOptionMountPath : IFileSystemOption
     {
-        /// <summary>Root path within filesystem.</summary>
-        String Root { get; }
+        /// <summary>Mount path.</summary>
+        String MountPath { get; }
     }
-
-    /// <summary>Option for block size.</summary>
-    public interface IFileSystemOptionBlockSize : IFileSystemOption
-    {
-        /// <summary>Block size of files.</summary>
-        long BlockSize { get; }
-    }
-
     // </doc>
+
+    /// <summary>
+    /// Extension methods for <see cref="IFileSystem"/>.
+    /// </summary>
+    public static partial class IFileSystemExtensions
+    {
+        /// <summary>
+        /// Get mount path option.
+        /// <param name="filesystemOption"></param>
+        /// </summary>
+        /// <returns>mount path or null</returns>
+        public static String MountPath(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemOptionMountPath mp ? mp.MountPath : null;
+
+    }
 }

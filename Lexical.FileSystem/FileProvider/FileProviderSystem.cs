@@ -42,12 +42,13 @@ namespace Lexical.FileSystem.FileProvider
         /// </summary>
         public IDisposable FileProviderDisposable => fileProvider as IDisposable;
 
+        bool canObserve;
         /// <inheritdoc/>
         public virtual bool CanBrowse { get; protected set; }
         /// <inheritdoc/>
         public virtual bool CanGetEntry { get; protected set; }
         /// <inheritdoc/>
-        public virtual bool CanObserve { get; protected set; }
+        public override bool CanObserve => canObserve;
         /// <inheritdoc/>
         public virtual bool CanOpen { get; protected set; }
         /// <inheritdoc/>
@@ -73,7 +74,7 @@ namespace Lexical.FileSystem.FileProvider
         {
             this.fileProvider = sourceFileProvider ?? throw new ArgumentNullException(nameof(sourceFileProvider));
             this.CanBrowse = this.CanGetEntry = canBrowse;
-            this.CanObserve = canObserve;
+            this.canObserve = canObserve;
             this.CanOpen = this.CanRead = canOpen;
             this.isPhysicalFileProvider = sourceFileProvider.GetType().FullName == "Microsoft.Extensions.FileProviders.PhysicalFileProvider";
         }
@@ -87,7 +88,7 @@ namespace Lexical.FileSystem.FileProvider
         /// <returns>memory filesystem</returns>
         public FileProviderSystem SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemEventDispatch)this).SetEventDispatcher(eventHandler);
+            ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
             return this;
         }
 
@@ -242,7 +243,7 @@ namespace Lexical.FileSystem.FileProvider
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
             // Assert observe is enabled.
             if (!CanObserve) throw new NotSupportedException("Observe not supported.");

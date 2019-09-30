@@ -136,9 +136,10 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Dispose all attached diposables and call <see cref="InnerDispose(ref StructList4{Exception})"/>.
         /// </summary>
+        /// <param name="_disposing">dummy argument</param>
         /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
-        public virtual void Dispose()
-        {
+        protected override void Dispose(bool _disposing)
+        { 
             // Dispose() called
             Interlocked.CompareExchange(ref disposing, 1L, 0L);
 
@@ -158,8 +159,8 @@ namespace Lexical.FileSystem.Utility
         }
 
         /// <summary>
-        /// Process the actual dispose. This may be called from <see cref="Dispose()"/> or from the dispose of the last
-        /// belate handle (After <see cref="Dispose()"/> has been called aswell).
+        /// Process the actual dispose. This may be called from <see cref="Dispose"/> or from the dispose of the last
+        /// belate handle (After <see cref="Dispose"/> has been called aswell).
         /// 
         /// Only one thread may process the dispose.
         /// Sets state to 2, and then 3.
@@ -205,8 +206,8 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Process the non-dispose. Used when <see cref="nonDisposable"/> is true (singleton instances).
         /// 
-        /// This may be called from <see cref="Dispose()"/> or from the dispose of the last
-        /// belate handle (After <see cref="Dispose()"/> has been called aswell).
+        /// This may be called from <see cref="Dispose"/> or from the dispose of the last
+        /// belate handle (After <see cref="Dispose"/> has been called aswell).
         /// 
         /// Only one thread may process the dispose. Returns state back to 0.
         /// 

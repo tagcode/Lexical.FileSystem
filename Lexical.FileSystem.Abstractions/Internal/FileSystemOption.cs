@@ -12,10 +12,10 @@ namespace Lexical.FileSystem.Internal
     /// <summary>
     /// Implementation to <see cref="IFileSystemOption"/>.
     /// </summary>
-    public class FileSystemOption : IFileSystemOption
+    public class FileSystemOptionNone : IFileSystemOption
     {
         /// <summary>No options</summary>
-        static IFileSystemOption noOptions = new FileSystemOption();
+        static IFileSystemOption noOptions = new FileSystemOptionNone();
 
         /// <summary>No options</summary>
         public static IFileSystemOption NoOptions => noOptions;

@@ -57,7 +57,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanDelete => true;
         /// <inheritdoc/>
-        public virtual bool CanObserve => true;
+        public override bool CanObserve => true;
         /// <inheritdoc/>
         public virtual bool CanMove => true;
         /// <inheritdoc/>
@@ -103,7 +103,7 @@ namespace Lexical.FileSystem
         /// <returns>memory filesystem</returns>
         public MemoryFileSystem SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemEventDispatch)this).SetEventDispatcher(eventHandler);
+            ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
             return this;
         }
 
@@ -913,7 +913,7 @@ namespace Lexical.FileSystem
             => GetType().Name;
 
         /// <inheritdoc/>
-        public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);

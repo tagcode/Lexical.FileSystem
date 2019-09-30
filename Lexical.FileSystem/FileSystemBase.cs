@@ -18,7 +18,7 @@ namespace Lexical.FileSystem
     /// 
     /// Can send events to observers.
     /// </summary>
-    public abstract class FileSystemBase : DisposeList, IFileSystemDisposable, IFileSystemEventDispatch
+    public abstract class FileSystemBase : DisposeList, IFileSystemDisposable, IFileSystemObserve
     {
         /// <summary>
         /// Get capabilities.
@@ -29,6 +29,11 @@ namespace Lexical.FileSystem
         /// Has SetEventDispatcher() capability.
         /// </summary>
         public virtual bool CanSetEventDispatcher { get; protected set; } = true;
+
+        /// <summary>
+        /// Can observe
+        /// </summary>
+        public abstract bool CanObserve { get; }
 
         /// <summary>
         /// Task-factory that is used for sending events.
@@ -55,7 +60,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="eventHandler">(optional) factory that handles observer events</param>
         /// <returns>memory filesystem</returns>
-        IFileSystem IFileSystemEventDispatch.SetEventDispatcher(TaskFactory eventHandler)
+        IFileSystem IFileSystemObserve.SetEventDispatcher(TaskFactory eventHandler)
         {
             this.eventHandler = eventHandler;
             return this;
@@ -208,5 +213,8 @@ namespace Lexical.FileSystem
                 if (error != null) throw error;
             }
         }
+
+        /// <inheritdoc/>
+        public abstract IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
     }
 }

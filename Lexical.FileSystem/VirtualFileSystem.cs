@@ -49,7 +49,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanDelete => true;
         /// <inheritdoc/>
-        public virtual bool CanObserve => true;
+        public override bool CanObserve => true;
         /// <inheritdoc/>
         public virtual bool CanMove => true;
         /// <inheritdoc/>
@@ -149,6 +149,18 @@ namespace Lexical.FileSystem
             }
             parent = cursor;
             return true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <param name="observer"></param>
+        /// <param name="state"></param>
+        /// <returns></returns>
+        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

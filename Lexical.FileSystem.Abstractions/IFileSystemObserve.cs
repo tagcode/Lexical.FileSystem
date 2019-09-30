@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Security;
+using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
@@ -15,6 +16,8 @@ namespace Lexical.FileSystem
     {
         /// <summary>Has Observe capability.</summary>
         bool CanObserve { get; }
+        /// <summary>Has SetEventDispatcher capability.</summary>
+        bool CanSetEventDispatcher { get; }
     }
 
     /// <summary>
@@ -62,6 +65,14 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
         IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
+
+        /// <summary>
+        /// Set a <see cref="TaskFactory"/> that dispatches the events. If set to null, runs in running thread.
+        /// </summary>
+        /// <param name="eventDispatcher">(optional) Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.</param>
+        /// <returns>this</returns>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
+        IFileSystem SetEventDispatcher(TaskFactory eventDispatcher);
     }
 
     /// <summary>
@@ -103,6 +114,14 @@ namespace Lexical.FileSystem
         /// <returns>true, if has Observe capability</returns>
         public static bool CanObserve(this IFileSystemOption filesystemOption)
             => filesystemOption is IFileSystemObserve observer ? observer.CanObserve : false;
+
+        /// <summary>
+        /// Test if <paramref name="filesystemOption"/> has Observe capability.
+        /// <param name="filesystemOption"></param>
+        /// </summary>
+        /// <returns>true, if has Observe capability</returns>
+        public static bool CanSetEventDispatcher(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemObserve observer ? observer.CanSetEventDispatcher : false;
 
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 
@@ -149,6 +168,20 @@ namespace Lexical.FileSystem
             if (filesystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state);
             else throw new NotSupportedException(nameof(Observe));
         }
+
+        /// <summary>
+        /// Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="eventHandler">(optional) Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.</param>
+        /// <returns><paramref name="filesystem"/></returns>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
+        public static IFileSystem SetEventDispatcher(IFileSystem filesystem, TaskFactory eventHandler)
+        {
+            if (filesystem is IFileSystemObserve _observer) return _observer.SetEventDispatcher(eventHandler);
+            else throw new NotSupportedException(nameof(SetEventDispatcher));
+        }
+
     }
 
 }

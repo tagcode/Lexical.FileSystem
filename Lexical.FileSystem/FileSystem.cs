@@ -99,7 +99,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanGetEntry => true;
         /// <inheritdoc/>
-        public virtual bool CanObserve => true;
+        public override bool CanObserve => true;
         /// <inheritdoc/>
         public virtual bool CanOpen => true;
         /// <inheritdoc/>
@@ -162,7 +162,7 @@ namespace Lexical.FileSystem
         /// <returns>memory filesystem</returns>
         public FileSystem SetEventDispatcher(TaskFactory eventHandler)
         {
-            ((IFileSystemEventDispatch)this).SetEventDispatcher(eventHandler);
+            ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
             return this;
         }
 
@@ -507,7 +507,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
+        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
         {
             // Parse filter
             GlobPatternInfo info = new GlobPatternInfo(filter);

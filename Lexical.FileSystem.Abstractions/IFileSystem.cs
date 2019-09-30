@@ -19,7 +19,6 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemDelete"/></item>
     ///     <item><see cref="IFileSystemMove"/></item>
     ///     <item><see cref="IFileSystemObserve"/></item>
-    ///     <item><see cref="IFileSystemEventDispatch"/></item>
     ///     <item><see cref="IFileSystemDisposable"/></item>
     /// </list>
     /// </summary>
@@ -31,13 +30,25 @@ namespace Lexical.FileSystem
         FileSystemFeatures Features { get; }
     }
 
+    /// <summary>Knolwedge about path name case sensitivity</summary>
+    [Flags]
+    public enum FileSystemCaseSensitivity
+    {
+        /// <summary>Unknown.</summary>
+        Unknown = 0,
+        /// <summary>Path names are case-sensitive</summary>
+        CaseSensitive = 1,
+        /// <summary>Path names are case-insensitive</summary>
+        CaseInsensitive = 2,
+        /// <summary>Some parts are sensitive, some insensitive</summary>
+        Inconsistent = 3
+    }
+
     /// <summary>Path related options</summary>
     public interface IFileSystemOptionPath
     {
-        /// <summary>Some or all files use case-sensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
-        bool CaseSensitive { get; }
-        /// <summary>Some or all files use case-insensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
-        bool CaseInsensitive { get; }
+        /// <summary>Case sensitivity</summary>
+        FileSystemCaseSensitivity CaseSensitivity { get; }
         /// <summary>Filesystem allows empty string "" directory names.</summary>
         bool EmptyDirectoryName { get; }
     }

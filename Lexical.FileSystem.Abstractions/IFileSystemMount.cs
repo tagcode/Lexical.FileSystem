@@ -69,7 +69,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Mount <paramref name="filesystem"/> at the mountpoint.
         /// 
-        /// The <paramref name="options"/> parameter determine mounting options.
+        /// The <paramref name="options"/> parameter determines the mounting options.
         /// The mounted directory stucture will have intersection of options in <paramref name="filesystem"/> and <paramref name="options"/>.
         /// 
         /// For example if <paramref name="filesystem"/> has read and write permissions, but <paramref name="options"/> has only read permission,

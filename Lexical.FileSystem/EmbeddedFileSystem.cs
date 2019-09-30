@@ -61,6 +61,8 @@ namespace Lexical.FileSystem
         public virtual bool CanWrite => false;
         /// <inheritdoc/>
         public virtual bool CanCreateFile => false;
+        /// <inheritdoc/>
+        public override bool CanObserve => false;
 
         /// <summary>
         /// Root entry
@@ -248,5 +250,9 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public override string ToString()
             => Assembly.FullName;
+
+        /// <inheritdoc/>
+        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+            => throw new NotSupportedException(nameof(Observe));
     }
 }
