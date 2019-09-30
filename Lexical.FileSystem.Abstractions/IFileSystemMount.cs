@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
         bool CanGetMountPoint { get; }
     }
 
-    /// <summary>Option for mount path. Used with <see cref="IFileSystemMountHandle"/></summary>
+    /// <summary>Option for mount path. Used as mounting option with <see cref="IFileSystemMountPoint"/> Mount method.</summary>
     public interface IFileSystemOptionMountPath : IFileSystemOption
     {
         /// <summary>Mount path.</summary>
@@ -64,12 +64,12 @@ namespace Lexical.FileSystem
     public interface IFileSystemMountPoint : IDisposable
     {
         /// <summary>
-        /// The file system this mountpoint is part of.
+        /// The mountable parent file system.
         /// </summary>
         IFileSystem FileSystem { get; }
 
         /// <summary>
-        /// Path of the mountpoint in its <see cref="FileSystem"/>.
+        /// Path of the mount point in the parent <see cref="FileSystem"/>.
         /// </summary>
         String Path { get; }
 
@@ -81,6 +81,8 @@ namespace Lexical.FileSystem
         /// 
         /// For example if <paramref name="filesystem"/> has read and write permissions, but <paramref name="options"/> has only read permission,
         /// then the mounted directory read but not write.
+        /// 
+        /// To mount a subpath of <paramref name="filesystem"/> use <see cref="IFileSystemOptionMountPath"/> as an option to <paramref name="options"/>.
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="options">mounting options.</param>

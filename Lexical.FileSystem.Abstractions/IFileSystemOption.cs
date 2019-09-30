@@ -10,15 +10,15 @@ namespace Lexical.FileSystem
     /// 
     /// See sub-interfaces:
     /// <list type="bullet">
-    ///     <item><see cref="IFileSystemOptionMountPath"/></item>
-    ///     <item><see cref="IFileSystemOptionPath"/></item>
+    ///     <item><see cref="IFileSystemOptionOpen"/></item>
+    ///     <item><see cref="IFileSystemOptionObserve"/></item>
+    ///     <item><see cref="IFileSystemOptionMove"/></item>
     ///     <item><see cref="IFileSystemOptionBrowse"/></item>
     ///     <item><see cref="IFileSystemOptionCreateDirectory"/></item>
     ///     <item><see cref="IFileSystemOptionDelete"/></item>
     ///     <item><see cref="IFileSystemOptionMount"/></item>
-    ///     <item><see cref="IFileSystemOptionMove"/></item>
-    ///     <item><see cref="IFileSystemOptionObserve"/></item>
-    ///     <item><see cref="IFileSystemOptionOpen"/></item>
+    ///     <item><see cref="IFileSystemOptionMountPath"/></item>
+    ///     <item><see cref="IFileSystemOptionPath"/></item>
     /// </list>
     /// 
     /// The options properties must be immutable in the implementing classes.
