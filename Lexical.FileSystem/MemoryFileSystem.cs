@@ -24,7 +24,7 @@ namespace Lexical.FileSystem
     /// Maximum file length is <see cref="int.MaxValue"/>*<see cref="BlockSize"/>.
     /// The default blocksize is 1024 which allows 2TB - 1KB files.
     /// </summary>
-    public class MemoryFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable
+    public class MemoryFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IFileSystemOptionPath
     {
         /// <summary>
         /// Root directory
@@ -47,7 +47,9 @@ namespace Lexical.FileSystem
         ObserverHandle[] Observers => observers.Array;
 
         /// <inheritdoc/>
-        public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive | FileSystemFeatures.EmptyDirectoryName;
+        public FileSystemCaseSensitivity CaseSensitivity => FileSystemCaseSensitivity.CaseSensitive;
+        /// <inheritdoc/>
+        public bool EmptyDirectoryName => true;
         /// <inheritdoc/>
         public virtual bool CanBrowse => true;
         /// <inheritdoc/>

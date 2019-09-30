@@ -16,7 +16,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Virtual filesystem.
     /// </summary>
-    public class VirtualFileSystem : FileSystemBase//, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IFileSystemMount
+    public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath //, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IFileSystemMount
     {
         /// <summary>
         /// Reader writer lock for modifying directory structure. 
@@ -39,7 +39,9 @@ namespace Lexical.FileSystem
         Node root;
 
         /// <inheritdoc/>
-        public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive | FileSystemFeatures.EmptyDirectoryName;
+        public FileSystemCaseSensitivity CaseSensitivity => FileSystemCaseSensitivity.Inconsistent;
+        /// <inheritdoc/>
+        public bool EmptyDirectoryName => true;
         /// <inheritdoc/>
         public virtual bool CanBrowse => true;
         /// <inheritdoc/>

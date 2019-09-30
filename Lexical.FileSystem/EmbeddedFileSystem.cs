@@ -15,7 +15,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File System that represents embedded resources of an <see cref="System.Reflection.Assembly"/>.
     /// </summary>
-    public class EmbeddedFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemOpen
+    public class EmbeddedFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemOpen, IFileSystemOptionPath
     {
         /// <summary>
         /// Zero entries.
@@ -44,11 +44,10 @@ namespace Lexical.FileSystem
         /// </summary>
         protected Dictionary<string, IFileSystemEntry> EntryMap => entryMap ?? (Entries.ToDictionary(e => e.Path));
 
-        /// <summary>
-        /// Filesystem features.
-        /// </summary>
-        public override FileSystemFeatures Features => FileSystemFeatures.CaseSensitive;
-
+        /// <inheritdoc/>
+        public FileSystemCaseSensitivity CaseSensitivity => FileSystemCaseSensitivity.CaseSensitive;
+        /// <inheritdoc/>
+        public bool EmptyDirectoryName => false;
         /// <inheritdoc/>
         public virtual bool CanBrowse => true;
         /// <inheritdoc/>

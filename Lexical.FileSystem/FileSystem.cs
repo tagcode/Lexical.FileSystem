@@ -23,7 +23,7 @@ namespace Lexical.FileSystem
     /// If file watchers have been created, and file system is disposed, then watchers will be disposed also. 
     /// <see cref="IObserver{T}.OnCompleted"/> event is forwarded to watchers.
     /// </summary>
-    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve
+    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemOptionPath
     {
         /// <summary>
         /// Regex pattern that extracts features and classifies paths.
@@ -95,6 +95,10 @@ namespace Lexical.FileSystem
         public readonly bool IsOsRoot;
 
         /// <inheritdoc/>
+        public FileSystemCaseSensitivity CaseSensitivity { get; protected set; }
+        /// <inheritdoc/>
+        public bool EmptyDirectoryName => false;
+        /// <inheritdoc/>
         public virtual bool CanBrowse => true;
         /// <inheritdoc/>
         public virtual bool CanGetEntry => true;
@@ -134,8 +138,8 @@ namespace Lexical.FileSystem
             string canonizedRelativePath = IsOsRoot ? "" : osSeparator == "/" ? path : path.Replace(osSeparator, " / ");
             if (!canonizedRelativePath.EndsWith("/")) canonizedRelativePath += "/";
 
-            if (isWindows) this.Features |= FileSystemFeatures.CaseInsensitive;
-            if (isLinux || isOsx) this.Features |= FileSystemFeatures.CaseSensitive | FileSystemFeatures.EmptyDirectoryName;
+            if (isWindows) this.CaseSensitivity = FileSystemCaseSensitivity.Inconsistent; /*Smb drives may have sensitive names*/
+            if (isLinux || isOsx) this.CaseSensitivity = FileSystemCaseSensitivity.Inconsistent; /*Smb drives may have insensitive names*/
         }
 
         /// <summary>

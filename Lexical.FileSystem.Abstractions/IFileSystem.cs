@@ -24,67 +24,6 @@ namespace Lexical.FileSystem
     /// </summary>
     public interface IFileSystem : IFileSystemOption
     {
-        /// <summary>
-        /// Features of the filesystem.
-        /// </summary>
-        FileSystemFeatures Features { get; }
-    }
-
-    /// <summary>Knolwedge about path name case sensitivity</summary>
-    [Flags]
-    public enum FileSystemCaseSensitivity
-    {
-        /// <summary>Unknown.</summary>
-        Unknown = 0,
-        /// <summary>Path names are case-sensitive</summary>
-        CaseSensitive = 1,
-        /// <summary>Path names are case-insensitive</summary>
-        CaseInsensitive = 2,
-        /// <summary>Some parts are sensitive, some insensitive</summary>
-        Inconsistent = 3
-    }
-
-    /// <summary>Path related options</summary>
-    public interface IFileSystemOptionPath
-    {
-        /// <summary>Case sensitivity</summary>
-        FileSystemCaseSensitivity CaseSensitivity { get; }
-        /// <summary>Filesystem allows empty string "" directory names.</summary>
-        bool EmptyDirectoryName { get; }
-    }
-
-    /// <summary>
-    /// File system operation capabilities
-    /// </summary>
-    [Flags]
-    public enum FileSystemFeatures : UInt64
-    {
-        /// <summary></summary>
-        None = 0UL,
-
-        /// <summary>Some or all files use case-sensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
-        CaseSensitive = 1UL << 48,
-        /// <summary>Some or all files use case-insensitive filenames. Note, if neither <see cref="CaseSensitive"/> or <see cref="CaseInsensitive"/> then sensitivity is not consistent or is unknown. If both are set, then sensitivity is inconsistent.</summary>
-        CaseInsensitive = 1UL << 49,
-        /// <summary>Flag describes that filesystem allows empty string "" directory names</summary>
-        EmptyDirectoryName = 1UL << 50,
-
-        /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved0 = 1UL << 56,
-        /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved1 = 1UL << 57,
-        /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved2 = 1UL << 58,
-        /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved3 = 1UL << 59,
-        /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved4 = 1UL << 60,
-        /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved5 = 1UL << 61,
-        /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved6 = 1UL << 62,
-        /// <summary>Reserved for implementing classes to use for any purpose.</summary>
-        Reserved7 = 1UL << 63
     }
     // </doc>
 

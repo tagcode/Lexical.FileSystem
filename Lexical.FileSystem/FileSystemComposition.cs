@@ -19,7 +19,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.
     /// </summary>
-    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory
+    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemOptionPath
     {
         /// <summary>
         /// File system components.
@@ -32,21 +32,16 @@ namespace Lexical.FileSystem
         public int Count => filesystems.Length;
 
         /// <summary>
-        /// Union of capabilities
-        /// </summary>
-        protected FileSystemFeatures features;
-
-        /// <summary>
-        /// Union of capabilities.
-        /// </summary>
-        public override FileSystemFeatures Features => features;
-
-        /// <summary>
         /// File system components.
         /// </summary>
         public IFileSystem[] FileSystems => filesystems;
 
         bool canObserve;
+
+        /// <inheritdoc/>
+        public FileSystemCaseSensitivity CaseSensitivity { get; protected set; }
+        /// <inheritdoc/>
+        public bool EmptyDirectoryName { get; protected set; }
         /// <inheritdoc/>
         public virtual bool CanBrowse { get; protected set; }
         /// <inheritdoc/>
@@ -82,7 +77,8 @@ namespace Lexical.FileSystem
             this.filesystems = filesystems;
             foreach (IFileSystem fs in filesystems)
             {
-                features |= fs.Features;
+                CaseSensitivity |= fs.CaseSensitivity();
+                EmptyDirectoryName |= fs.EmptyDirectoryName();
                 CanBrowse |= fs.CanBrowse();
                 CanGetEntry |= fs.CanGetEntry();
                 canObserve |= fs.CanObserve();
@@ -115,11 +111,9 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Create colletion of file systems
         /// </summary>
-        /// <param name="filesystems"></param>
-        public FileSystemComposition(IEnumerable<IFileSystem> filesystems)
+        /// <param name="filesystemsEnumrable"></param>
+        public FileSystemComposition(IEnumerable<IFileSystem> filesystemsEnumrable) : this(filesystems: filesystemsEnumrable.ToArray())
         {
-            this.filesystems = filesystems.ToArray();
-            foreach (IFileSystem fs in this.filesystems) features |= fs.Features;
         }
 
         /// <summary>

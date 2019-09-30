@@ -9,7 +9,7 @@ using System.IO;
 namespace Lexical.FileSystem
 {
     // <doc>
-    /// <summary>File system option for mount capabilities.</summary>
+    /// <summary>File system option for mount capabilities. Used with <see cref="IFileSystemMount"/>.</summary>
     public interface IFileSystemOptionMount : IFileSystemOption
     {
         /// <summary>Is filesystem capable of creating mountpoints.</summary>
@@ -18,6 +18,13 @@ namespace Lexical.FileSystem
         bool CanListMountPoints { get; }
         /// <summary>Is filesystem capable of getting mountpoint entry.</summary>
         bool CanGetMountPoint { get; }
+    }
+
+    /// <summary>Option for mount path. Used with <see cref="IFileSystemMountHandle"/></summary>
+    public interface IFileSystemOptionMountPath : IFileSystemOption
+    {
+        /// <summary>Mount path.</summary>
+        String MountPath { get; }
     }
 
     /// <summary>
@@ -115,6 +122,14 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public static bool CanGetMountPoint(this IFileSystemOption filesystemOption)
             => filesystemOption is IFileSystemMount mountable ? mountable.CanGetMountPoint : false;
+
+        /// <summary>
+        /// Get mount path option.
+        /// <param name="filesystemOption"></param>
+        /// </summary>
+        /// <returns>mount path or null</returns>
+        public static String MountPath(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemOptionMountPath mp ? mp.MountPath : null;
 
         /// <summary>
         /// Create a mountpoint where other file systems can be mounted.

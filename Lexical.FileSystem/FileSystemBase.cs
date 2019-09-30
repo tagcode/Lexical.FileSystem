@@ -21,11 +21,6 @@ namespace Lexical.FileSystem
     public abstract class FileSystemBase : DisposeList, IFileSystemDisposable, IFileSystemObserve
     {
         /// <summary>
-        /// Get capabilities.
-        /// </summary>
-        public virtual FileSystemFeatures Features { get; protected set; } = FileSystemFeatures.None;
-
-        /// <summary>
         /// Has SetEventDispatcher() capability.
         /// </summary>
         public virtual bool CanSetEventDispatcher { get; protected set; } = true;

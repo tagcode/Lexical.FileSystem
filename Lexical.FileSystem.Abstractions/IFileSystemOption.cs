@@ -27,12 +27,29 @@ namespace Lexical.FileSystem
     {
     }
 
-    /// <summary>Option for mount path. Used with <see cref="IFileSystemMountHandle"/></summary>
-    public interface IFileSystemOptionMountPath : IFileSystemOption
+    /// <summary>Knolwedge about path name case sensitivity</summary>
+    [Flags]
+    public enum FileSystemCaseSensitivity
     {
-        /// <summary>Mount path.</summary>
-        String MountPath { get; }
+        /// <summary>Unknown.</summary>
+        Unknown = 0,
+        /// <summary>Path names are case-sensitive</summary>
+        CaseSensitive = 1,
+        /// <summary>Path names are case-insensitive</summary>
+        CaseInsensitive = 2,
+        /// <summary>Some parts are sensitive, some insensitive</summary>
+        Inconsistent = 3
     }
+
+    /// <summary>Path related options</summary>
+    public interface IFileSystemOptionPath
+    {
+        /// <summary>Case sensitivity</summary>
+        FileSystemCaseSensitivity CaseSensitivity { get; }
+        /// <summary>Filesystem allows empty string "" directory names. The value of this property excludes the default empty "" root path.</summary>
+        bool EmptyDirectoryName { get; }
+    }
+
     // </doc>
 
     /// <summary>
@@ -41,12 +58,20 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Get mount path option.
+        /// Get case sensitivity.
         /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>mount path or null</returns>
-        public static String MountPath(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemOptionMountPath mp ? mp.MountPath : null;
+        public static FileSystemCaseSensitivity CaseSensitivity(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemOptionPath op ? op.CaseSensitivity : FileSystemCaseSensitivity.Unknown;
+
+        /// <summary>
+        /// Get option for Filesystem allows empty string "" directory names.
+        /// <param name="filesystemOption"></param>
+        /// </summary>
+        /// <returns>mount path or null</returns>
+        public static bool EmptyDirectoryName(this IFileSystemOption filesystemOption)
+            => filesystemOption is IFileSystemOptionPath op ? op.EmptyDirectoryName : false;
 
     }
 }
