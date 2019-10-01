@@ -27,11 +27,34 @@ namespace Lexical.FileSystem
     {
     }
 
+    /// <summary>
+    /// Interface for option classes that adapt to option types at runtime.
+    /// Also enumerates supported <see cref="IFileSystemOption"/> option type interfaces.
+    /// </summary>
+    public interface IFileSystemOptionAdaptable : IFileSystemOption, IEnumerable<KeyValuePair<Type, IFileSystemOption>>
+    {
+        /// <summary>
+        /// Get option with type interface.
+        /// </summary>
+        /// <param name="optionInterfaceType">Subtype of <see cref="IFileSystemOption"/></param>
+        /// <returns>Option or null</returns>
+        IFileSystemOption GetOption(Type optionInterfaceType);
+    }
+
+    /// <summary>Path related options</summary>
+    public interface IFileSystemOptionPath : IFileSystemOption
+    {
+        /// <summary>Case sensitivity</summary>
+        FileSystemCaseSensitivity CaseSensitivity { get; }
+        /// <summary>Filesystem allows empty string "" directory names. The value of this property excludes the default empty "" root path.</summary>
+        bool EmptyDirectoryName { get; }
+    }
+
     /// <summary>Knolwedge about path name case sensitivity</summary>
     [Flags]
     public enum FileSystemCaseSensitivity
     {
-        /// <summary>Unknown.</summary>
+        /// <summary>Unknown</summary>
         Unknown = 0,
         /// <summary>Path names are case-sensitive</summary>
         CaseSensitive = 1,
@@ -40,16 +63,6 @@ namespace Lexical.FileSystem
         /// <summary>Some parts are sensitive, some insensitive</summary>
         Inconsistent = 3
     }
-
-    /// <summary>Path related options</summary>
-    public interface IFileSystemOptionPath
-    {
-        /// <summary>Case sensitivity</summary>
-        FileSystemCaseSensitivity CaseSensitivity { get; }
-        /// <summary>Filesystem allows empty string "" directory names. The value of this property excludes the default empty "" root path.</summary>
-        bool EmptyDirectoryName { get; }
-    }
-
     // </doc>
 
     /// <summary>
@@ -63,7 +76,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>mount path or null</returns>
         public static FileSystemCaseSensitivity CaseSensitivity(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemOptionPath op ? op.CaseSensitivity : FileSystemCaseSensitivity.Unknown;
+            => filesystemOption.As<IFileSystemOptionPath>() is IFileSystemOptionPath op ? op.CaseSensitivity : FileSystemCaseSensitivity.Unknown;
 
         /// <summary>
         /// Get option for Filesystem allows empty string "" directory names.
@@ -71,7 +84,20 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>mount path or null</returns>
         public static bool EmptyDirectoryName(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemOptionPath op ? op.EmptyDirectoryName : false;
+            => filesystemOption.As<IFileSystemOptionPath>() is IFileSystemOptionPath op ? op.EmptyDirectoryName : false;
+
+        /// <summary>
+        /// Get option as <typeparamref name="T"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="option"></param>
+        /// <returns>Option casted as <typeparamref name="T"/> or null</returns>
+        public static T As<T>(this IFileSystemOption option) where T : IFileSystemOption
+        {
+            if (option is T casted) return casted;
+            if (option is IFileSystemOptionAdaptable adaptable && adaptable.GetOption(typeof(T)) is T casted_) return casted_;
+            return default;
+        }
 
     }
 }

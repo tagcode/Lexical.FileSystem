@@ -173,7 +173,38 @@ namespace Lexical.FileSystem
             exception.path = path;
             return false;
         }
+    }
 
+    /// <summary>
+    /// Requested <see cref="IFileSystemOption"/> is not supported.
+    /// </summary>
+    public class FileSystemExceptionOptionNotSupported : FileSystemException
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public IFileSystemOption Option { get; protected set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Type OptionType { get; protected set; }
+
+        /// <summary>
+        /// Create file system option
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path">(optional) a path where the option was applied</param>
+        /// <param name="option">(optional) option instance</param>
+        /// <param name="optionType">The <see cref="IFileSystemOption"/> interface that was not supported</param>
+        public FileSystemExceptionOptionNotSupported(IFileSystem filesystem = null, string path = null, IFileSystemOption option = null, Type optionType = null) : base(filesystem, path, "Option not supported")
+        {
+            Option = option;
+            OptionType = optionType;
+        }
+
+        /// <inheritdoc/>
+        protected FileSystemExceptionOptionNotSupported(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 }

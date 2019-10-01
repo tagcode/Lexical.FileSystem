@@ -20,20 +20,13 @@ namespace Lexical.FileSystem
         bool CanGetMountPoint { get; }
     }
 
-    /// <summary>Option for mount path. Used as mounting option with <see cref="IFileSystemMountPoint"/> Mount method.</summary>
-    public interface IFileSystemOptionMountPath : IFileSystemOption
-    {
-        /// <summary>Mount path.</summary>
-        String MountPath { get; }
-    }
-
     /// <summary>
-    /// File system that is actually a decoration.
+    /// Filesystem that can mount other filesystems into its directory tree.
     /// </summary>
     public interface IFileSystemMount : IFileSystem, IFileSystemOptionMount
     {
         /// <summary>
-        /// Create a mountpoint where other file systems can be mounted.
+        /// Create a mountpoint where other filesystems can be mounted.
         /// 
         /// If mountpoint already exists, returns another handle to same mountpoint. All handles must be disposed separately.
         /// </summary>
@@ -59,7 +52,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>
-    /// Mount point
+    /// Mount point is a virtual directory where other filesystems can be assigned by mounting.
     /// </summary>
     public interface IFileSystemMountPoint : IDisposable
     {
@@ -76,26 +69,44 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Mount <paramref name="filesystem"/> at the mountpoint.
         /// 
-        /// The <paramref name="options"/> parameter determines the mounting options.
-        /// The mounted directory stucture will have intersection of options in <paramref name="filesystem"/> and <paramref name="options"/>.
+        /// The <paramref name="option"/> parameter determines the mounting options.
+        /// The mounted directory stucture will have intersection of options in <paramref name="filesystem"/> and <paramref name="option"/>.
         /// 
-        /// For example if <paramref name="filesystem"/> has read and write permissions, but <paramref name="options"/> has only read permission,
+        /// For example if <paramref name="filesystem"/> has read and write permissions, but <paramref name="option"/> has only read permission,
         /// then the mounted directory read but not write.
         /// 
-        /// To mount a subpath of <paramref name="filesystem"/> use <see cref="IFileSystemOptionMountPath"/> as an option to <paramref name="options"/>.
+        /// To mount a subpath of <paramref name="filesystem"/> use <see cref="IFileSystemOptionMountPath"/> as an option to <paramref name="option"/>.
         /// </summary>
         /// <param name="filesystem"></param>
-        /// <param name="options">mounting options.</param>
+        /// <param name="option">mounting options.</param>
         /// <returns></returns>
-        /// <exception cref="NotSupportedException">If the implementing class does not support mounting at all, or one of the mount <paramref name="options"/></exception>
-        IFileSystemMountHandle Mount(IFileSystem filesystem, params IFileSystemOption[] options);
+        /// <exception cref="NotSupportedException">If the implementing class does not support mounting at all, or one of the mount <paramref name="option"/></exception>
+        IFileSystemMountAssignment Mount(IFileSystem filesystem, IFileSystemOption option);
+
+        /// <summary>
+        /// Get mounting assignments.
+        /// </summary>
+        /// <returns></returns>
+        IFileSystemMountAssignment[] GetMounts();
     }
 
     /// <summary>
     /// Mount handle. Dispose the handle to unmount.
     /// </summary>
-    public interface IFileSystemMountHandle : IDisposable
+    public interface IFileSystemMountAssignment : IDisposable
     {
+        /// <summary>Mounted filesystem</summary>
+        IFileSystem MountedFileSystem { get; }
+
+        /// <summary>Mount options</summary>
+        IFileSystemOption[] Options { get; }
+    }
+
+    /// <summary>Option for mount path. Used as mounting option with <see cref="IFileSystemMountPoint"/> Mount method.</summary>
+    public interface IFileSystemOptionMountPath : IFileSystemOption
+    {
+        /// <summary>Mount path.</summary>
+        String MountPath { get; }
     }
     // </doc>
 
@@ -109,21 +120,21 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns></returns>
         public static bool CanCreateMountPoint(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemMount mountable ? mountable.CanCreateMountPoint : false;
+            => filesystemOption.As<IFileSystemMount>() is IFileSystemMount mountable ? mountable.CanCreateMountPoint : false;
 
         /// <summary>
         /// Is filesystem capable of listing mountpoints.
         /// </summary>
         /// <returns></returns>
         public static bool CanListMountPoints(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemMount mountable ? mountable.CanListMountPoints : false;
+            => filesystemOption.As<IFileSystemMount>() is IFileSystemMount mountable ? mountable.CanListMountPoints : false;
 
         /// <summary>
         /// Is filesystem capable of getting mountpoint entry.
         /// </summary>
         /// <returns></returns>
         public static bool CanGetMountPoint(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemMount mountable ? mountable.CanGetMountPoint : false;
+            => filesystemOption.As<IFileSystemMount>() is IFileSystemMount mountable ? mountable.CanGetMountPoint : false;
 
         /// <summary>
         /// Get mount path option.

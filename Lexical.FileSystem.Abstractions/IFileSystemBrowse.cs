@@ -73,7 +73,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true if has Browse capability</returns>
         public static bool CanBrowse(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemBrowse browser ? browser.CanBrowse : false;
+            => filesystemOption.As<IFileSystemOptionBrowse>() is IFileSystemBrowse browser ? browser.CanBrowse : false;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Exists capability.
@@ -81,7 +81,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true if has Exists capability</returns>
         public static bool CanGetEntry(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemBrowse browser ? browser.CanGetEntry : false;
+            => filesystemOption.As<IFileSystemOptionBrowse>() is IFileSystemBrowse browser ? browser.CanGetEntry : false;
 
         /// <summary>
         /// Browse a directory for file and subdirectory entries.
