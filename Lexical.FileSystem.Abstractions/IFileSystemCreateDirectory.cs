@@ -3,6 +3,7 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Option;
 using System;
 using System.IO;
 using System.Security;
@@ -11,6 +12,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>File system option for creating directories.</summary>
+    [Operations(typeof(FileSystemOptionOperationCreateDirectory))]
     public interface IFileSystemOptionCreateDirectory : IFileSystemOption
     {
         /// <summary>Has CreateDirectory capability.</summary>
@@ -79,6 +81,19 @@ namespace Lexical.FileSystem
             if (filesystem is IFileSystemCreateDirectory directoryConstructor) directoryConstructor.CreateDirectory(path);
             else throw new NotSupportedException(nameof(CreateDirectory));
         }
+    }
+
+    /// <summary><see cref="IFileSystemOptionCreateDirectory"/> operations.</summary>
+    public class FileSystemOptionOperationCreateDirectory : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    {
+        /// <summary>The option type that this class has operations for.</summary>
+        public Type OptionType => typeof(IFileSystemOptionCreateDirectory);
+        /// <summary>Flatten to simpler instance.</summary>
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionCreateDirectory c ? o is FileSystemOptionCreateDirectory ? /*already flattened*/o : /*new instance*/new FileSystemOptionCreateDirectory(c.CanCreateDirectory) : throw new InvalidCastException($"{typeof(IFileSystemOptionCreateDirectory)} expected.");
+        /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionCreateDirectory c1 && o2 is IFileSystemOptionCreateDirectory c2 ? new FileSystemOptionCreateDirectory(c1.CanCreateDirectory && c2.CanCreateDirectory) : throw new InvalidCastException($"{typeof(IFileSystemOptionCreateDirectory)} expected.");
+        /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionCreateDirectory c1 && o2 is IFileSystemOptionCreateDirectory c2 ? new FileSystemOptionCreateDirectory(c1.CanCreateDirectory || c2.CanCreateDirectory) : throw new InvalidCastException($"{typeof(IFileSystemOptionCreateDirectory)} expected.");
     }
 
 }

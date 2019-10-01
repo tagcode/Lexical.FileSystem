@@ -3,6 +3,7 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Option;
 using System;
 using System.IO;
 using System.Security;
@@ -11,6 +12,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>File system option for move/rename.</summary>
+    [Operations(typeof(FileSystemOptionOperationMove))]
     public interface IFileSystemOptionMove : IFileSystemOption
     {
         /// <summary>Has Move capability.</summary>
@@ -76,6 +78,19 @@ namespace Lexical.FileSystem
             if (filesystem is IFileSystemMove mover) mover.Move(oldPath, newPath);
             else throw new NotSupportedException(nameof(Move));
         }
+    }
+
+    /// <summary><see cref="IFileSystemOptionMove"/> operations.</summary>
+    public class FileSystemOptionOperationMove : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    {
+        /// <summary>The option type that this class has operations for.</summary>
+        public Type OptionType => typeof(IFileSystemOptionMove);
+        /// <summary>Flatten to simpler instance.</summary>
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionMove c ? o is FileSystemOptionMove ? /*already flattened*/o : /*new instance*/new FileSystemOptionMove(c.CanMove) : throw new InvalidCastException($"{typeof(IFileSystemOptionMove)} expected.");
+        /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMove c1 && o2 is IFileSystemOptionMove c2 ? new FileSystemOptionMove(c1.CanMove && c2.CanMove) : throw new InvalidCastException($"{typeof(IFileSystemOptionMove)} expected.");
+        /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMove c1 && o2 is IFileSystemOptionMove c2 ? new FileSystemOptionMove(c1.CanMove || c2.CanMove) : throw new InvalidCastException($"{typeof(IFileSystemOptionMove)} expected.");
     }
 
 }

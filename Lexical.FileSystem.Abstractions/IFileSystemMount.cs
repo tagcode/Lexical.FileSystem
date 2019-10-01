@@ -3,6 +3,7 @@
 // Date:           12.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Option;
 using System;
 using System.IO;
 
@@ -10,6 +11,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>File system option for mount capabilities. Used with <see cref="IFileSystemMount"/>.</summary>
+    [Operations(typeof(FileSystemOptionOperationMount))]
     public interface IFileSystemOptionMount : IFileSystemOption
     {
         /// <summary>Is filesystem capable of creating mountpoints.</summary>
@@ -103,6 +105,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>Option for mount path. Used as mounting option with <see cref="IFileSystemMountPoint"/> Mount method.</summary>
+    [Operations(typeof(FileSystemOptionOperationMountPath))]
     public interface IFileSystemOptionMountPath : IFileSystemOption
     {
         /// <summary>Mount path.</summary>
@@ -184,5 +187,28 @@ namespace Lexical.FileSystem
             throw new NotSupportedException();
         }
     }
+
+    /// <summary><see cref="IFileSystemOptionMount"/> operations.</summary>
+    public class FileSystemOptionOperationMount : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    {
+        /// <summary>The option type that this class has operations for.</summary>
+        public Type OptionType => typeof(IFileSystemOptionMount);
+        /// <summary>Flatten to simpler instance.</summary>
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionMount c ? o is FileSystemOptionMount ? /*already flattened*/o : /*new instance*/new FileSystemOptionMount(c.CanCreateMountPoint, c.CanListMountPoints, c.CanGetMountPoint) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanCreateMountPoint || c1.CanCreateMountPoint, c1.CanListMountPoints || c2.CanListMountPoints, c1.CanGetMountPoint || c2.CanGetMountPoint) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanCreateMountPoint && c1.CanCreateMountPoint, c1.CanListMountPoints && c2.CanListMountPoints, c1.CanGetMountPoint && c2.CanGetMountPoint) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+    }
+
+    /// <summary><see cref="IFileSystemOptionMountPath"/> operations.</summary>
+    public class FileSystemOptionOperationMountPath : IFileSystemOptionOperationFlatten
+    {
+        /// <summary>The option type that this class has operations for.</summary>
+        public Type OptionType => typeof(IFileSystemOptionMountPath);
+        /// <summary>Flatten to simpler instance.</summary>
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionMountPath b ? o is FileSystemOptionMountPath ? /*already flattened*/o : /*new instance*/new FileSystemOptionMountPath(b.MountPath) : throw new InvalidCastException($"{typeof(IFileSystemOptionMountPath)} expected.");
+    }
+
 
 }

@@ -3,6 +3,7 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Option;
 using System;
 using System.IO;
 using System.Security;
@@ -12,6 +13,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>File system option for observe.</summary>
+    [Operations(typeof(FileSystemOptionOperationObserve))]
     public interface IFileSystemOptionObserve : IFileSystemOption
     {
         /// <summary>Has Observe capability.</summary>
@@ -183,5 +185,19 @@ namespace Lexical.FileSystem
         }
 
     }
+
+    /// <summary><see cref="IFileSystemOptionObserve"/> operations.</summary>
+    public class FileSystemOptionOperationObserve : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    {
+        /// <summary>The option type that this class has operations for.</summary>
+        public Type OptionType => typeof(IFileSystemOptionObserve);
+        /// <summary>Flatten to simpler instance.</summary>
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionObserve c ? o is FileSystemOptionObserve ? /*already flattened*/o : /*new instance*/new FileSystemOptionObserve(c.CanObserve, c.CanSetEventDispatcher) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+        /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve && c2.CanObserve, c1.CanSetEventDispatcher && c2.CanSetEventDispatcher) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+        /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve || c2.CanObserve, c1.CanSetEventDispatcher || c2.CanSetEventDispatcher) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+    }
+
 
 }

@@ -3,6 +3,7 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Option;
 using System;
 using System.IO;
 using System.Security;
@@ -11,6 +12,7 @@ namespace Lexical.FileSystem
 {
     // <doc>
     /// <summary>File system option for deleting files and directories.</summary>
+    [Operations(typeof(FileSystemOptionOperationDelete))]
     public interface IFileSystemOptionDelete : IFileSystemOption
     {
         /// <summary>Has Delete capability.</summary>
@@ -81,6 +83,19 @@ namespace Lexical.FileSystem
             if (filesystem is IFileSystemDelete deleter) deleter.Delete(path, recursive);
             else throw new NotSupportedException(nameof(Delete));
         }
+    }
+
+    /// <summary><see cref="IFileSystemOptionDelete"/> operations.</summary>
+    public class FileSystemOptionOperationDelete : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    {
+        /// <summary>The option type that this class has operations for.</summary>
+        public Type OptionType => typeof(IFileSystemOptionDelete);
+        /// <summary>Flatten to simpler instance.</summary>
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionDelete c ? o is FileSystemOptionDelete ? /*already flattened*/o : /*new instance*/new FileSystemOptionDelete(c.CanDelete) : throw new InvalidCastException($"{typeof(IFileSystemOptionDelete)} expected.");
+        /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionDelete c1 && o2 is IFileSystemOptionDelete c2 ? new FileSystemOptionDelete(c1.CanDelete && c2.CanDelete) : throw new InvalidCastException($"{typeof(IFileSystemOptionDelete)} expected.");
+        /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionDelete c1 && o2 is IFileSystemOptionDelete c2 ? new FileSystemOptionDelete(c1.CanDelete || c2.CanDelete) : throw new InvalidCastException($"{typeof(IFileSystemOptionDelete)} expected.");
     }
 
 }

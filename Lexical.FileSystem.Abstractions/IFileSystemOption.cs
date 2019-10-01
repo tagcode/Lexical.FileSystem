@@ -3,6 +3,7 @@
 // Date:           28.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Option;
 using System;
 using System.Collections.Generic;
 
@@ -47,6 +48,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>Path related options</summary>
+    [Operations(typeof(FileSystemOptionOperationPath))]
     public interface IFileSystemOptionPath : IFileSystemOption
     {
         /// <summary>Case sensitivity</summary>
@@ -103,6 +105,18 @@ namespace Lexical.FileSystem
             if (option is IFileSystemOptionAdaptable adaptable && adaptable.GetOption(typeof(T)) is T casted_) return casted_;
             return default;
         }
+    }
 
+    /// <summary><see cref="IFileSystemOptionPath"/> operations.</summary>
+    public class FileSystemOptionOperationPath : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    {
+        /// <summary>The option type that this class has operations for.</summary>
+        public Type OptionType => typeof(IFileSystemOptionPath);
+        /// <summary>Flatten to simpler instance.</summary>
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionPath b ? o is FileSystemOptionPath ? /*already flattened*/o : /*new instance*/new FileSystemOptionPath(b.CaseSensitivity, b.EmptyDirectoryName) : throw new InvalidCastException($"{typeof(IFileSystemOptionPath)} expected.");
+        /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionPath b1 && o2 is IFileSystemOptionPath b2 ? new FileSystemOptionPath(b1.CaseSensitivity & b2.CaseSensitivity, b1.EmptyDirectoryName && b2.EmptyDirectoryName) : throw new InvalidCastException($"{typeof(IFileSystemOptionPath)} expected.");
+        /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionPath b1 && o2 is IFileSystemOptionPath b2 ? new FileSystemOptionPath(b1.CaseSensitivity | b2.CaseSensitivity, b1.EmptyDirectoryName || b2.EmptyDirectoryName) : throw new InvalidCastException($"{typeof(IFileSystemOptionPath)} expected.");
     }
 }
