@@ -207,4 +207,42 @@ namespace Lexical.FileSystem
         protected FileSystemExceptionOptionNotSupported(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
+    /// <summary>
+    /// Requested <see cref="IFileSystemOptionOperation"/> is not supported.
+    /// </summary>
+    public class FileSystemExceptionOptionOperationNotSupported : FileSystemException
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public IFileSystemOption Option { get; protected set; }
+
+        /// <summary>
+        /// Subinterface of <see cref="IFileSystemOption"/>.
+        /// </summary>
+        public Type OptionType { get; protected set; }
+
+        /// <summary>
+        /// Subinterface of <see cref="IFileSystemOptionOperation"/>.
+        /// </summary>
+        public Type OptionOperationType { get; protected set; }
+
+        /// <summary>
+        /// Create file system option
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path">(optional) a path where the option was applied</param>
+        /// <param name="option">(optional) option instance</param>
+        /// <param name="optionType">The <see cref="IFileSystemOption"/> interface that was not supported</param>
+        public FileSystemExceptionOptionOperationNotSupported(IFileSystem filesystem = null, string path = null, IFileSystemOption option = null, Type optionType = null, Type optionOperationType = null) : base(filesystem, path, "Option operation not supported")
+        {
+            Option = option;
+            OptionType = optionType;
+            OptionOperationType = optionOperationType;
+        }
+
+        /// <inheritdoc/>
+        protected FileSystemExceptionOptionOperationNotSupported(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
 }

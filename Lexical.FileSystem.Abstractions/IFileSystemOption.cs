@@ -1,6 +1,10 @@
-﻿using System;
+﻿// --------------------------------------------------------
+// Copyright:      Toni Kalajainen
+// Date:           28.9.2019
+// Url:            http://lexical.fi
+// --------------------------------------------------------
+using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Lexical.FileSystem
 {
@@ -19,6 +23,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemOptionMount"/></item>
     ///     <item><see cref="IFileSystemOptionMountPath"/></item>
     ///     <item><see cref="IFileSystemOptionPath"/></item>
+    ///     <item><see cref="IFileSystemOptionAdaptable"/></item>
     /// </list>
     /// 
     /// The options properties must be immutable in the implementing classes.

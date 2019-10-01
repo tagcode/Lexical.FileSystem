@@ -3,6 +3,7 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Option;
 using System;
 using System.IO;
 using System.Security;
@@ -22,6 +23,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File system that can browse directories.
     /// </summary>
+    [Operations(typeof(FileSystemOptionOperationBrowse))]
     public interface IFileSystemBrowse : IFileSystem, IFileSystemOptionBrowse
     {
         /// <summary>
