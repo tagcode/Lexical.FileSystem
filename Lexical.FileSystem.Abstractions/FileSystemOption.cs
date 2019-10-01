@@ -3,14 +3,14 @@
 // Date:           29.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Option;
+
 
 namespace Lexical.FileSystem
 {
     /// <summary>
     /// Facade for <see cref="IFileSystemOption"/> values and operations.
     /// </summary>
-    public partial class FileSystemOption : IFileSystemOption
+    public partial class FileSystemOption
     {
         // Operations //
         /// <summary>Join <paramref name="options"/>, takes first instance of each option.</summary>

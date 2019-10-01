@@ -3,7 +3,7 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Option;
+
 using System;
 using System.IO;
 using System.Security;
@@ -159,7 +159,7 @@ namespace Lexical.FileSystem
         /// <summary>The option type that this class has operations for.</summary>
         public Type OptionType => typeof(IFileSystemOptionOpen);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionOpen c ? o is FileSystemOptionOpen ? /*already flattened*/o : /*new instance*/new FileSystemOptionOpen(c.CanOpen, c.CanSetEventDispatcher) : throw new InvalidCastException($"{typeof(IFileSystemOptionOpen)} expected.");
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionOpen c ? o is FileSystemOptionOpen ? /*already flattened*/o : /*new instance*/new FileSystemOptionOpen(c.CanOpen, c.CanRead, c.CanWrite, c.CanCreateFile) : throw new InvalidCastException($"{typeof(IFileSystemOptionOpen)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
         public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionOpen c1 && o2 is IFileSystemOptionOpen c2 ? new FileSystemOptionOpen(c1.CanOpen && c2.CanOpen, c1.CanRead && c2.CanRead, c1.CanWrite && c2.CanWrite, c1.CanCreateFile && c2.CanCreateFile) : throw new InvalidCastException($"{typeof(IFileSystemOptionOpen)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>

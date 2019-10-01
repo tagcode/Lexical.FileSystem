@@ -3,7 +3,7 @@
 // Date:           28.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Option;
+
 using System;
 using System.Collections.Generic;
 

@@ -3,7 +3,8 @@
 // Date:           12.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Option;
+
+using Lexical.FileSystem.Utility;
 using System;
 using System.IO;
 
@@ -14,16 +15,24 @@ namespace Lexical.FileSystem
     [Operations(typeof(FileSystemOptionOperationMount))]
     public interface IFileSystemOptionMount : IFileSystemOption
     {
-        /// <summary>Is filesystem capable of creating mountpoints.</summary>
+        /// <summary>CAn filesystem create mountpoints.</summary>
         bool CanCreateMountPoint { get; }
-        /// <summary>Is filesystem capable of listing mountpoints.</summary>
+        /// <summary>Is filesystem allowed to list mountpoints handles.</summary>
         bool CanListMountPoints { get; }
-        /// <summary>Is filesystem capable of getting mountpoint entry.</summary>
+        /// <summary>Can filesystem capable get mountpoint entry by path.</summary>
         bool CanGetMountPoint { get; }
+        /// <summary>Is filesystem allowed to close mount point.</summary>
+        bool CanCloseMountPoint { get; }
+        /// <summary>Can filesystem assign mount to mountpoint.</summary>
+        bool CanMount { get; }
+        /// <summary>Is filesystem allowed to get mount assignment handles.</summary>
+        bool CanListMounts { get; }
+        /// <summary>Is filesystem allowed to close mount assignment.</summary>
+        bool CanCloseMount { get; }
     }
 
     /// <summary>
-    /// Filesystem that can mount other filesystems into its directory tree.
+    /// FileSystem that can mount other filesystems into its directory tree.
     /// </summary>
     public interface IFileSystemMount : IFileSystem, IFileSystemOptionMount
     {
@@ -55,8 +64,10 @@ namespace Lexical.FileSystem
 
     /// <summary>
     /// Mount point is a virtual directory where other filesystems can be assigned by mounting.
+    /// 
+    /// All mount assignments are disposed when mountpoint is disposed <see cref="IFileSystemMountAssignment"/>.
     /// </summary>
-    public interface IFileSystemMountPoint : IDisposable
+    public interface IFileSystemMountPoint : IDisposeList
     {
         /// <summary>
         /// The mountable parent file system.
@@ -71,22 +82,24 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Mount <paramref name="filesystem"/> at the mountpoint.
         /// 
-        /// The <paramref name="option"/> parameter determines the mounting options.
-        /// The mounted directory stucture will have intersection of options in <paramref name="filesystem"/> and <paramref name="option"/>.
+        /// The <paramref name="options"/> parameter determines the mounting options.
+        /// The mounted directory stucture will have intersection of options in <paramref name="filesystem"/> and <paramref name="options"/>.
         /// 
-        /// For example if <paramref name="filesystem"/> has read and write permissions, but <paramref name="option"/> has only read permission,
-        /// then the mounted directory read but not write.
+        /// For example if <paramref name="filesystem"/> has read and write permissions, but <paramref name="options"/> uses <see cref="FileSystemOption.ReadOnly"/>, then the mounted directory can be read but not written to.
         /// 
-        /// To mount a subpath of <paramref name="filesystem"/> use <see cref="IFileSystemOptionMountPath"/> as an option to <paramref name="option"/>.
+        /// To mount a subpath of <paramref name="filesystem"/> use <see cref="IFileSystemOptionMountPath"/> as an option to <paramref name="options"/>.
+        /// For example <see cref="FileSystemOption.MountPath(string)"/>.
+        /// 
+        /// To combine multiple mounting options use <see cref="FileSystemOption.Union(IFileSystemOption[])"/>.
         /// </summary>
         /// <param name="filesystem"></param>
-        /// <param name="option">mounting options.</param>
+        /// <param name="options">(optional) mounting options.</param>
         /// <returns></returns>
-        /// <exception cref="NotSupportedException">If the implementing class does not support mounting at all, or one of the mount <paramref name="option"/></exception>
-        IFileSystemMountAssignment Mount(IFileSystem filesystem, IFileSystemOption option);
+        /// <exception cref="NotSupportedException">If the implementing class does not support mounting at all, or one of the mount <paramref name="options"/></exception>
+        IFileSystemMountAssignment Mount(IFileSystem filesystem, IFileSystemOption options);
 
         /// <summary>
-        /// Get mounting assignments.
+        /// Get mounting assignment handles.
         /// </summary>
         /// <returns></returns>
         IFileSystemMountAssignment[] GetMounts();
@@ -94,14 +107,16 @@ namespace Lexical.FileSystem
 
     /// <summary>
     /// Mount handle. Dispose the handle to unmount.
+    /// 
+    /// All disposables are disposed when mountpoint is disposed <see cref="IFileSystemMountAssignment"/>.
     /// </summary>
-    public interface IFileSystemMountAssignment : IDisposable
+    public interface IFileSystemMountAssignment : IDisposeList
     {
         /// <summary>Mounted filesystem</summary>
         IFileSystem MountedFileSystem { get; }
 
-        /// <summary>Mount options</summary>
-        IFileSystemOption[] Options { get; }
+        /// <summary>The effective mount options</summary>
+        IFileSystemOption Options { get; }
     }
 
     /// <summary>Option for mount path. Used as mounting option with <see cref="IFileSystemMountPoint"/> Mount method.</summary>
@@ -194,11 +209,11 @@ namespace Lexical.FileSystem
         /// <summary>The option type that this class has operations for.</summary>
         public Type OptionType => typeof(IFileSystemOptionMount);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionMount c ? o is FileSystemOptionMount ? /*already flattened*/o : /*new instance*/new FileSystemOptionMount(c.CanCreateMountPoint, c.CanListMountPoints, c.CanGetMountPoint) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionMount c ? o is FileSystemOptionMount ? /*already flattened*/o : /*new instance*/new FileSystemOptionMount(c.CanCreateMountPoint, c.CanListMountPoints, c.CanGetMountPoint, c.CanCloseMount, c.CanMount, c.CanListMounts, c.CanCloseMount) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanCreateMountPoint || c1.CanCreateMountPoint, c1.CanListMountPoints || c2.CanListMountPoints, c1.CanGetMountPoint || c2.CanGetMountPoint) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanCreateMountPoint || c1.CanCreateMountPoint, c1.CanListMountPoints || c2.CanListMountPoints, c1.CanGetMountPoint || c2.CanGetMountPoint, c1.CanCloseMountPoint || c2.CanCloseMountPoint, c1.CanMount||c2.CanMount, c1.CanListMounts||c2.CanListMounts, c1.CanCloseMount||c2.CanCloseMount) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanCreateMountPoint && c1.CanCreateMountPoint, c1.CanListMountPoints && c2.CanListMountPoints, c1.CanGetMountPoint && c2.CanGetMountPoint) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanCreateMountPoint && c1.CanCreateMountPoint, c1.CanListMountPoints && c2.CanListMountPoints, c1.CanGetMountPoint && c2.CanGetMountPoint, c1.CanCloseMountPoint && c2.CanCloseMountPoint, c1.CanMount && c2.CanMount, c1.CanListMounts && c2.CanListMounts, c1.CanCloseMount && c2.CanCloseMount) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
     }
 
     /// <summary><see cref="IFileSystemOptionMountPath"/> operations.</summary>

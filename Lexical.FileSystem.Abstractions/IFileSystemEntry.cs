@@ -164,7 +164,7 @@ namespace Lexical.FileSystem
         /// <param name="entry"></param>
         /// <returns></returns>
         public static IFileSystemOption Options(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryDirectory dir ? dir.Options : Lexical.FileSystem.Internal.FileSystemOptionNone.NoOptions;
+            => entry is IFileSystemEntryDirectory dir ? dir.Options : Lexical.FileSystem.FileSystemOptionNone.NoOptions;
 
         /// <summary>
         /// Tests if <paramref name="entry"/> represents a drive.

@@ -10,6 +10,8 @@ namespace Lexical.FileSystem.Utility
     // <doc>
     /// <summary>
     /// Interface for objects whose dispose can be belated. 
+    /// 
+    /// Belating is a reference counting mechanism that is based on disposable handles instead of reference.
     /// </summary>
     public interface IBelatableDispose : IDisposable
     {

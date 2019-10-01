@@ -12,7 +12,7 @@ namespace Lexical.FileSystem.Internal
     /// <summary>
     /// Tool that makes path conversions.
     /// </summary>
-    public struct PathConversionTool
+    public class PathConversionTool
     {
         
     }

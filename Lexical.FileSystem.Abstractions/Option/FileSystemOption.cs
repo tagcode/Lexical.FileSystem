@@ -3,13 +3,13 @@
 // Date:           29.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Option;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Lexical.FileSystem.Option
+namespace Lexical.FileSystem
 {
     /// <summary>
     /// Base class for implementations of <see cref="IFileSystemOption"/>.
@@ -124,13 +124,25 @@ namespace Lexical.FileSystem.Option
         public bool CanListMountPoints { get; protected set; }
         /// <summary>Is filesystem capable of getting mountpoint entry.</summary>
         public bool CanGetMountPoint { get; protected set; }
+        /// <summary>Is filesystem allowed to close mount point.</summary>
+        public bool CanCloseMountPoint { get; protected set; }
+        /// <summary>Can filesystem assign mount to mountpoint.</summary>
+        public bool CanMount { get; protected set; }
+        /// <summary>Is filesystem allowed to get mount assignment handles.</summary>
+        public bool CanListMounts { get; protected set; }
+        /// <summary>Is filesystem allowed to close mount assignment.</summary>
+        public bool CanCloseMount { get; protected set; }
 
         /// <summary>Create file system option for mount capabilities.</summary>
-        public FileSystemOptionMount(bool canCreateMountpoint, bool canListMountpoints, bool canGetMountpoint)
+        public FileSystemOptionMount(bool canCreateMountpoint, bool canListMountpoints, bool canGetMountpoint, bool canCloseMountPoint, bool canMount, bool canListMounts, bool canCloseMount)
         {
             CanCreateMountPoint = canCreateMountpoint;
             CanListMountPoints = canListMountpoints;
             CanGetMountPoint = canGetMountpoint;
+            CanCloseMountPoint = canCloseMountPoint;
+            CanMount = canMount;
+            CanListMounts = canListMounts;
+            CanCloseMount = canCloseMount;
         }
     }
 
@@ -313,12 +325,6 @@ namespace Lexical.FileSystem.Option
     public class FileSystemOptionReadOnly : FileSystemOptionBase, IFileSystemOptionCreateDirectory, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionOpen, IFileSystemOptionMount
     {
         /// <inheritdoc/>
-        public bool CanCreateMountPoint => false;
-        /// <inheritdoc/>
-        public bool CanListMountPoints => true;
-        /// <inheritdoc/>
-        public bool CanGetMountPoint => true;
-        /// <inheritdoc/>
         public bool CanOpen => true;
         /// <inheritdoc/>
         public bool CanRead => true;
@@ -332,6 +338,20 @@ namespace Lexical.FileSystem.Option
         public bool CanDelete => false;
         /// <inheritdoc/>
         public bool CanCreateDirectory => false;
+        /// <inheritdoc/>
+        public bool CanCreateMountPoint => false;
+        /// <inheritdoc/>
+        public bool CanListMountPoints => true;
+        /// <inheritdoc/>
+        public bool CanGetMountPoint => true;
+        /// <inheritdoc/>
+        public bool CanCloseMountPoint => false;
+        /// <inheritdoc/>
+        public bool CanMount => false;
+        /// <inheritdoc/>
+        public bool CanListMounts => true;
+        /// <inheritdoc/>
+        public bool CanCloseMount => false;
     }
 
     /// <summary>
@@ -361,8 +381,8 @@ namespace Lexical.FileSystem
         internal static IFileSystemOptionDelete noDelete = new FileSystemOptionDelete(false);
         internal static IFileSystemOptionMove move = new FileSystemOptionMove(true);
         internal static IFileSystemOptionMove noMove = new FileSystemOptionMove(false);
-        internal static IFileSystemOptionMount mount = new FileSystemOptionMount(true, true, true);
-        internal static IFileSystemOptionMount noMount = new FileSystemOptionMount(false, false, false);
+        internal static IFileSystemOptionMount mount = new FileSystemOptionMount(true, true, true, true, true, true, true);
+        internal static IFileSystemOptionMount noMount = new FileSystemOptionMount(false, false, false, false, false, true, false);
         internal static IFileSystemOptionOpen openReadWriteCreate = new FileSystemOptionOpen(true, true, true, true);
         internal static IFileSystemOptionOpen openReadWrite = new FileSystemOptionOpen(true, true, true, false);
         internal static IFileSystemOptionOpen openRead = new FileSystemOptionOpen(true, true, false, false);
