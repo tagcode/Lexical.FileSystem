@@ -43,9 +43,14 @@ namespace Lexical.FileSystem
         string Name { get; }
 
         /// <summary>
-        /// Date time of last modification. In UTC time, if possible.
+        /// Date time of last modification. In UTC time, if possible. If Unknown returns <see cref="DateTimeOffset.MinValue"/>.
         /// </summary>
         DateTimeOffset LastModified { get; }
+
+        /// <summary>
+        /// Last access time of entry. If Unknown returns <see cref="DateTimeOffset.MinValue"/>.
+        /// </summary>
+        DateTimeOffset LastAccess { get; }
     }
     // </IFileSystemEntry>
 
@@ -181,7 +186,7 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public static bool IsMount(this IFileSystemEntry entry)
             => entry is IFileSystemEntryMount mount ? mount.IsMount : false;
-
+        
     }
 
 }

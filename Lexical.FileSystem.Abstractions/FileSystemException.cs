@@ -233,7 +233,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="path">(optional) a path where the option was applied</param>
         /// <param name="option">(optional) option instance</param>
-        /// <param name="optionType">The <see cref="IFileSystemOption"/> interface that was not supported</param>
+        /// <param name="optionType">The <see cref="IFileSystemOption"/> interface type that was not supported</param>
+        /// <param name="optionOperationType">The <see cref="IFileSystemOptionOperation"/> interface type that was not supported</param>
         public FileSystemExceptionOptionOperationNotSupported(IFileSystem filesystem = null, string path = null, IFileSystemOption option = null, Type optionType = null, Type optionOperationType = null) : base(filesystem, path, "Option operation not supported")
         {
             Option = option;

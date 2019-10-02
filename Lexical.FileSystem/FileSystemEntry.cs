@@ -44,18 +44,25 @@ namespace Lexical.FileSystem
         public DateTimeOffset LastModified { get; protected set; }
 
         /// <summary>
+        /// Last access time of entry. If Unknown returns <see cref="DateTimeOffset.MinValue"/>.
+        /// </summary>
+        public DateTimeOffset LastAccess { get; protected set; }
+
+        /// <summary>
         /// Create entry
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
-        public FileSystemEntryBase(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified)
+        /// <param name="lastAccess"></param>
+        public FileSystemEntryBase(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess)
         {
             FileSystem = filesystem;
             Path = path;
             Name = name;
             LastModified = lastModified;
+            LastAccess = lastAccess;
         }
 
         /// <summary>
@@ -88,8 +95,9 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
+        /// <param name="lastAccess"></param>
         /// <param name="length"></param>
-        public FileSystemEntryFile(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, long length) : base(filesystem, path, name, lastModified)
+        public FileSystemEntryFile(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length) : base(filesystem, path, name, lastModified, lastAccess)
         {
             Length = length;
         }
@@ -117,8 +125,9 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
+        /// <param name="lastAccess"></param>
         /// <param name="options"></param>
-        public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, IFileSystemOption options) : base(filesystem, path, name, lastModified)
+        public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess)
         {
             this.Options = options ?? throw new ArgumentNullException(nameof(options));
         }
@@ -141,7 +150,8 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
-        public FileSystemEntryDrive(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified) : base(filesystem, path, name, lastModified)
+        /// <param name="lastAccess"></param>
+        public FileSystemEntryDrive(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess) : base(filesystem, path, name, lastModified, lastAccess)
         {
         }
     }
@@ -168,8 +178,9 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
+        /// <param name="lastAccess"></param>
         /// <param name="options"></param>
-        public FileSystemEntryDriveDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, IFileSystemOption options) : base(filesystem, path, name, lastModified)
+        public FileSystemEntryDriveDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess)
         {
             this.Options = options ?? throw new ArgumentNullException(nameof(options));
         }

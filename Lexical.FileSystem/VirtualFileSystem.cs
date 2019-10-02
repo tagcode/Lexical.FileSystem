@@ -242,6 +242,11 @@ namespace Lexical.FileSystem
             protected internal DateTimeOffset lastModified;
 
             /// <summary>
+            /// Last access time.
+            /// </summary>
+            protected internal DateTimeOffset lastAccess;
+
+            /// <summary>
             /// Parent filesystem.
             /// </summary>
             protected VirtualFileSystem filesystem;
@@ -329,7 +334,7 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <returns></returns>
             public IFileSystemEntry CreateEntry()
-                => new FileSystemEntryDirectory(filesystem, Path, name, lastModified, filesystem);
+                => new FileSystemEntryDirectory(filesystem, Path, name, lastModified, lastAccess, filesystem);
 
             /// <summary>
             /// Flush cached array of child entries.

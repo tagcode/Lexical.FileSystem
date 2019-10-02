@@ -389,13 +389,5 @@ namespace Lexical.FileSystem.Utility
             }
         }
 
-        /// <summary>
-        /// Forward Close() to Dispose()
-        /// </summary>
-        public override void Close()
-        {
-            Dispose();
-            base.Close();
-        }
     }
 }

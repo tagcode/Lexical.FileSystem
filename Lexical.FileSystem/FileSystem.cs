@@ -119,6 +119,9 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanCreateDirectory => true;
 
+        /// <summary>Root "" entry</summary>
+        protected IFileSystemEntry rootEntry;
+
         /// <summary>
         /// Create an access to local filesystem.
         /// 
@@ -140,6 +143,8 @@ namespace Lexical.FileSystem
 
             if (isWindows) this.CaseSensitivity = FileSystemCaseSensitivity.Inconsistent; /*Smb drives may have sensitive names*/
             if (isLinux || isOsx) this.CaseSensitivity = FileSystemCaseSensitivity.Inconsistent; /*Smb drives may have insensitive names*/
+
+            rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, this);
         }
 
         /// <summary>
@@ -339,11 +344,11 @@ namespace Lexical.FileSystem
                 {
                     if (fsi is DirectoryInfo di)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(prefix) ? di.Name : prefix + di.Name, di.Name, di.LastWriteTimeUtc, this);
+                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(prefix) ? di.Name : prefix + di.Name, di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), this);
                         list.Add(e);
                     } else if (fsi is FileInfo _fi)
                     {
-                        IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtc, _fi.Length);
+                        IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length);
                         list.Add(e);
                     }
                 }
@@ -353,7 +358,7 @@ namespace Lexical.FileSystem
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists)
             {
-                IFileSystemEntry e = new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtc, fi.Length);
+                IFileSystemEntry e = new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length);
                 return new IFileSystemEntry[] { e };
             }
 
@@ -377,17 +382,17 @@ namespace Lexical.FileSystem
         public IFileSystemEntry GetEntry(string path)
         {
             // Return OS-root, return drive letters.
-            if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, this);
+            if (path == "") return rootEntry;
 
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
             path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists) return new FileSystemEntryDirectory(this, path, dir.Name, dir.LastWriteTimeUtc, this);
+            if (dir.Exists) return new FileSystemEntryDirectory(this, path, dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), this);
 
             FileInfo fi = new FileInfo(absolutePath);
-            if (fi.Exists) return new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtc, fi.Length);
+            if (fi.Exists) return new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length);
 
             return null;
         }
@@ -407,25 +412,26 @@ namespace Lexical.FileSystem
             // Reduce all "/mnt/xx" into single "/" entry.
             if (unix > 0)
             {
-                IFileSystemEntry e = new FileSystemEntryDriveDirectory(this, "/", "", DateTimeOffset.MinValue, this);
+                DirectoryInfo di = new DirectoryInfo("/");
+                IFileSystemEntry e = new FileSystemEntryDriveDirectory(this, "/", "", di.LastWriteTimeUtcUnchecked(), DateTimeOffset.MinValue, this);
                 return new IFileSystemEntry[] { e };
             }
 
             List<IFileSystemEntry> list = new List<IFileSystemEntry>(matches.Length);
 
-            foreach ((DriveInfo di, Match m) in matches)
+            foreach ((DriveInfo driveInfo, Match m) in matches)
             {
                 // Reduce all "/mnt/xx" into one "/" root.
                 if (m.Groups["unix_rooted_path"].Success) continue;
 
                 string path = m.Value;
-                DirectoryInfo directoryInfo = new DirectoryInfo(path);
+                DirectoryInfo di = driveInfo.RootDirectory;
                 if (path.EndsWith(osSeparator)) path = path.Substring(0, path.Length - 1);
-
+                
                 IFileSystemEntry e =
-                    di.IsReady ?
-                    new FileSystemEntryDriveDirectory(this, path, path, DateTimeOffset.MinValue, this) :
-                    new FileSystemEntryDrive(this, path, path, DateTimeOffset.MinValue);
+                    driveInfo.IsReady ?
+                    new FileSystemEntryDriveDirectory(this, path, path, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), this) :
+                    new FileSystemEntryDrive(this, path, path, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked());
                 list.Add(e);
             }
 
@@ -1008,5 +1014,42 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public override string ToString()
             => Path;
+    }
+
+    internal static class FileSystemInfoExtensions
+    {
+        /// <summary>
+        /// Gets LastAccessTime, but captures exceptions and returns default value.
+        /// </summary>
+        /// <param name="fi"></param>
+        /// <returns></returns>
+        public static DateTimeOffset LastAccessTimeUtcUnchecked(this FileSystemInfo fi)
+        {
+            try
+            {
+                return fi.LastAccessTimeUtc;
+            } catch (Exception)
+            {
+                return DateTimeOffset.MinValue;
+            }
+        }
+
+        /// <summary>
+        /// Gets LastWriteTime, but captures exceptions and returns default value.
+        /// </summary>
+        /// <param name="fi"></param>
+        /// <returns></returns>
+        public static DateTimeOffset LastWriteTimeUtcUnchecked(this FileSystemInfo fi)
+        {
+            try
+            {
+                return fi.LastWriteTimeUtc;
+            }
+            catch (Exception)
+            {
+                return DateTimeOffset.MinValue;
+            }
+        }
+
     }
 }

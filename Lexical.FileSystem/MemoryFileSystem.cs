@@ -204,7 +204,7 @@ namespace Lexical.FileSystem
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
-            DateTimeOffset time = DateTimeOffset.UtcNow;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
             // Queue of events
             StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
             // Take snapshot of observers
@@ -221,6 +221,8 @@ namespace Lexical.FileSystem
                 {
                     // Name
                     StringSegment name = enumr.Current;
+                    // Update last access
+                    cursor.lastAccess = now;
                     // Get entry under lock.
                     if (cursor is Directory directory)
                     {
@@ -240,15 +242,15 @@ namespace Lexical.FileSystem
                         if (!directory.contents.TryGetValue(name, out cursor))
                         {
                             // Create child directory
-                            Directory newDirectory = new Directory(this, directory, name, DateTimeOffset.UtcNow);
+                            Directory newDirectory = new Directory(this, directory, name, now);
                             // Add event about child being created
                             if (observers != null)
                                 foreach (ObserverHandle observer in observers)
                                 {
-                                    if (observer.Qualify(newDirectory.Path)) events.Add(new FileSystemEventCreate(observer, time, newDirectory.Path));
+                                    if (observer.Qualify(newDirectory.Path)) events.Add(new FileSystemEventCreate(observer, now, newDirectory.Path));
                                 }
                             // Update time of parent
-                            directory.lastModified = time;
+                            directory.lastModified = now;
                             // Add child to parent
                             directory.contents[enumr.Current] = newDirectory;
                             // Flush caches
@@ -299,7 +301,7 @@ namespace Lexical.FileSystem
             // 
             if (path == "") throw new FileSystemExceptionNoWriteAccess(this, path);
             // Datetime
-            DateTimeOffset time = DateTimeOffset.UtcNow;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
             // Queue of events
             StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
             // Take snapshot of observers
@@ -324,11 +326,11 @@ namespace Lexical.FileSystem
                     // Remove from parent
                     parent.contents.Remove(new StringSegment(node.name));
                     // Update parent datetime
-                    parent.lastModified = time;
+                    parent.lastModified = now;
                     // Create delete event
                     if (observers != null)
                         foreach (ObserverHandle observer in observers)
-                            if (observer.Qualify(node.Path)) events.Add(new FileSystemEventDelete(observer, time, node.Path));
+                            if (observer.Qualify(node.Path)) events.Add(new FileSystemEventDelete(observer, now, node.Path));
                     // Flush caches
                     parent.FlushChildEntries();
                     parent.FlushEntry();
@@ -346,7 +348,7 @@ namespace Lexical.FileSystem
                         // Create delete event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
-                                if (observer.Qualify(n.Path)) events.Add(new FileSystemEventDelete(observer, time, n.Path));
+                                if (observer.Qualify(n.Path)) events.Add(new FileSystemEventDelete(observer, now, n.Path));
                         // Mark deleted
                         n.Dispose();
                         n.FlushEntry();
@@ -354,7 +356,7 @@ namespace Lexical.FileSystem
                     // Remove from parent
                     parent.contents.Remove(new StringSegment(node.name));
                     // Update parent datetime
-                    parent.lastModified = time;
+                    parent.lastModified = now;
                     // Flush caches
                     parent.FlushChildEntries();
                     parent.FlushEntry();
@@ -532,7 +534,7 @@ namespace Lexical.FileSystem
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
-            DateTimeOffset time = DateTimeOffset.UtcNow;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
             // Events
             StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
             // Take snapshot of observers
@@ -571,19 +573,19 @@ namespace Lexical.FileSystem
                         // Invalid name
                         if (name == StringSegment.Dot || name == StringSegment.DotDot || name == StringSegment.Empty) throw new FileSystemExceptionInvalidName(this, path);
                         // Create file.
-                        File f = new File(this, parent, name, time);
+                        File f = new File(this, parent, name, now);
                         // Open stream
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
                         parent.contents[name] = f;
-                        parent.lastModified = time;
+                        parent.lastModified = now;
                         parent.FlushEntry();
                         parent.FlushChildEntries();
                         // Create event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(path))
-                                    events.Add(new FileSystemEventCreate(observer, time, path));
+                                    events.Add(new FileSystemEventCreate(observer, now, path));
                         // Return stream
                         return stream;
                     }
@@ -616,23 +618,23 @@ namespace Lexical.FileSystem
                             if (observers != null)
                                 foreach (ObserverHandle observer in observers)
                                     if (observer.Qualify(path))
-                                        events.Add(new FileSystemEventDelete(observer, time, path));
+                                        events.Add(new FileSystemEventDelete(observer, now, path));
                         }
 
                         // Create file.
-                        File f = new File(this, parent, name, time);
+                        File f = new File(this, parent, name, now);
                         // Open stream
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
                         parent.contents[name] = f;
-                        parent.lastModified = time;
+                        parent.lastModified = now;
                         parent.FlushEntry();
                         parent.FlushChildEntries();
                         // Create event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(path))
-                                    events.Add(new FileSystemEventCreate(observer, time, path));
+                                    events.Add(new FileSystemEventCreate(observer, now, path));
                         // Return stream
                         return stream;
                     }
@@ -683,19 +685,19 @@ namespace Lexical.FileSystem
                         if (name == StringSegment.Dot || name == StringSegment.DotDot || name == StringSegment.Empty) throw new FileSystemExceptionInvalidName(this, path);
 
                         // Create file
-                        File f = new File(this, parent, name, time);
+                        File f = new File(this, parent, name, now);
                         // Open stream
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
                         parent.contents[name] = f;
-                        parent.lastModified = time;
+                        parent.lastModified = now;
                         parent.FlushEntry();
                         parent.FlushChildEntries();
                         // Create event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(path))
-                                    events.Add(new FileSystemEventCreate(observer, time, path));
+                                    events.Add(new FileSystemEventCreate(observer, now, path));
                         // Return stream
                         return stream;
                     }
@@ -729,11 +731,15 @@ namespace Lexical.FileSystem
             if (path == "") return root;
             // Node cursor
             Node cursor = root;
+            // Current time
+            DateTimeOffset now = DateTimeOffset.UtcNow;
             // Path '/' splitter, enumerates name strings from root towards tail
             PathEnumerator2 enumr = new PathEnumerator2(path);
             // Get next name from the path
             while (enumr.MoveNext())
             {
+                // Update last access
+                cursor.lastAccess = now;
                 // Name
                 StringSegment name = enumr.Current;
                 // Get entry under lock.
@@ -786,12 +792,16 @@ namespace Lexical.FileSystem
             // Separate to parentPath and name
             if (names.Count == 1) { name = names[0]; parentPath = StringSegment.Empty; }
             else { name = names[names.Count - 1]; parentPath = new StringSegment(path, names[0].Start, names[names.Count - 2].Start + names[names.Count - 2].Length); }
+            // Current time
+            DateTimeOffset now = DateTimeOffset.UtcNow;
             // Search parent directory
             Node cursor = root;
             for (int i = 0; i < names.Count - 1; i++)
             {
                 // Name
                 StringSegment cursorName = names[i];
+                // Update last access
+                cursor.lastAccess = now;
                 // Get entry under lock.
                 if (cursor is Directory directory)
                 {
@@ -1004,6 +1014,11 @@ namespace Lexical.FileSystem
             protected internal DateTimeOffset lastModified;
 
             /// <summary>
+            /// Last access time.
+            /// </summary>
+            protected internal DateTimeOffset lastAccess;
+
+            /// <summary>
             /// Parent filesystem.
             /// </summary>
             protected MemoryFileSystem filesystem;
@@ -1051,13 +1066,14 @@ namespace Lexical.FileSystem
             /// <param name="filesystem"></param>
             /// <param name="parent"></param>
             /// <param name="name"></param>
-            /// <param name="lastModified"></param>
-            protected Node(MemoryFileSystem filesystem, Directory parent, string name, DateTimeOffset lastModified)
+            /// <param name="time">time for lastmodified and lastaccess</param>
+            protected Node(MemoryFileSystem filesystem, Directory parent, string name, DateTimeOffset time)
             {
                 this.filesystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.parent = parent;
                 this.name = name ?? throw new ArgumentNullException(nameof(name));
-                this.lastModified = lastModified;
+                this.lastModified = time;
+                this.lastAccess = time;
             }
 
             /// <summary>
@@ -1156,7 +1172,7 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <returns></returns>
             public override IFileSystemEntry CreateEntry()
-                => new FileSystemEntryDirectory(filesystem, Path, name, lastModified, filesystem);
+                => new FileSystemEntryDirectory(filesystem, Path, name, lastModified, lastAccess, filesystem);
 
             /// <summary>
             /// Flush cached array of child entries.
@@ -1215,7 +1231,7 @@ namespace Lexical.FileSystem
             public override IFileSystemEntry CreateEntry()
             {
                 // Create entry snapshot
-                return new FileSystemEntryFile(filesystem, Path, name, memoryFile.LastModified, memoryFile.Length);
+                return new FileSystemEntryFile(filesystem, Path, name, memoryFile.LastModified, memoryFile.LastModified > lastAccess ? memoryFile.LastModified : lastAccess, memoryFile.Length);
             }
 
             void IObserver<MemoryFile.ModifiedEvent>.OnCompleted() { }
@@ -1228,7 +1244,11 @@ namespace Lexical.FileSystem
             void IObserver<MemoryFile.ModifiedEvent>.OnNext(MemoryFile.ModifiedEvent value)
             {
                 // Update time
-                if (value.Time > this.lastModified) this.lastModified = value.Time;
+                if (value.Time > this.lastModified)
+                {
+                    this.lastModified = value.Time;
+                    this.lastAccess = value.Time;
+                }
                 // Notify subscribers of filesystem change
                 ObserverHandle[] observers = filesystem.Observers;
                 if (observers.Length > 0)

@@ -44,6 +44,8 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual DateTimeOffset LastModified => Original.LastModified;
         /// <inheritdoc/>
+        public virtual DateTimeOffset LastAccess => Original.LastAccess;
+        /// <inheritdoc/>
         public virtual bool IsFile => Original.IsFile();
         /// <inheritdoc/>
         public virtual long Length => Original.Length();

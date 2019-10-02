@@ -75,7 +75,7 @@ namespace Lexical.FileSystem
         public EmbeddedFileSystem(Assembly assembly)
         {
             this.Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
-            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow, this);
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, this);
         }
 
         /// <summary>
@@ -87,16 +87,16 @@ namespace Lexical.FileSystem
             string[] names = Assembly.GetManifestResourceNames();
 
             // Get file time, or use Unix time 0.
-            DateTimeOffset time;
+            DateTimeOffset writetime;
             if (Assembly.Location != null && File.Exists(Assembly.Location))
-                time = new FileInfo(Assembly.Location).LastWriteTimeUtc;
+                writetime = new FileInfo(Assembly.Location).LastWriteTimeUtc;
             else
-                time = DateTimeOffset.FromUnixTimeSeconds(0L);
+                writetime = DateTimeOffset.MinValue;
 
             IFileSystemEntry[] result = new IFileSystemEntry[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
-                result[i] = new FileSystemEntryFile(this, names[i], names[i], time, -1L);
+                result[i] = new FileSystemEntryFile(this, names[i], names[i], writetime, DateTimeOffset.MinValue, - 1L);
             }
             return result;
         }
