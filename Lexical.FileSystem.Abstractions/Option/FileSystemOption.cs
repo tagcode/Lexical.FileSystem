@@ -31,13 +31,13 @@ namespace Lexical.FileSystem
     {
     }
 
-    /// <summary>Option for mount path. Used with <see cref="IFileSystemMountAssignment"/></summary>
+    /// <summary>Option for mount path. Use with decorator.</summary>
     public class FileSystemOptionMountPath : FileSystemOptionBase, IFileSystemOptionMountPath
     {
         /// <summary>Mount path.</summary>
         public String MountPath { get; protected set; }
 
-        /// <summary>Create option for mount path. Used with <see cref="IFileSystemMountAssignment"/></summary>
+        /// <summary>Create option for mount path.</summary>
         public FileSystemOptionMountPath(string mountPath)
         {
             MountPath = mountPath; ;
@@ -118,34 +118,21 @@ namespace Lexical.FileSystem
     /// <summary>File system option for mount capabilities.</summary>
     public class FileSystemOptionMount : FileSystemOptionBase, IFileSystemOptionMount
     {
-        /// <summary>Is filesystem capable of creating mountpoints.</summary>
-        public bool CanCreateMountPoint { get; protected set; }
-        /// <summary>Is filesystem capable of listing mountpoints.</summary>
-        public bool CanListMountPoints { get; protected set; }
-        /// <summary>Is filesystem capable of getting mountpoint entry.</summary>
-        public bool CanGetMountPoint { get; protected set; }
-        /// <summary>Is filesystem allowed to close mount point.</summary>
-        public bool CanCloseMountPoint { get; protected set; }
-        /// <summary>Can filesystem assign mount to mountpoint.</summary>
+        /// <summary>Can filesystem mount other filesystems.</summary>
         public bool CanMount { get; protected set; }
-        /// <summary>Is filesystem allowed to get mount assignment handles.</summary>
+        /// <summary>Is filesystem allowed to unmount a mount.</summary>
+        public bool CanUnmount { get; protected set; }
+        /// <summary>Is filesystem allowed to list mounts.</summary>
         public bool CanListMounts { get; protected set; }
-        /// <summary>Is filesystem allowed to close mount assignment.</summary>
-        public bool CanCloseMount { get; protected set; }
 
         /// <summary>Create file system option for mount capabilities.</summary>
-        public FileSystemOptionMount(bool canCreateMountpoint, bool canListMountpoints, bool canGetMountpoint, bool canCloseMountPoint, bool canMount, bool canListMounts, bool canCloseMount)
+        public FileSystemOptionMount(bool canMount, bool canUnmount, bool canListMounts)
         {
-            CanCreateMountPoint = canCreateMountpoint;
-            CanListMountPoints = canListMountpoints;
-            CanGetMountPoint = canGetMountpoint;
-            CanCloseMountPoint = canCloseMountPoint;
             CanMount = canMount;
+            CanUnmount = canUnmount;
             CanListMounts = canListMounts;
-            CanCloseMount = canCloseMount;
         }
     }
-
 
     /// <summary>File system options for open, create, read and write files.</summary>
     public class FileSystemOptionOpen : FileSystemOptionBase, IFileSystemOptionOpen
@@ -339,19 +326,11 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public bool CanCreateDirectory => false;
         /// <inheritdoc/>
-        public bool CanCreateMountPoint => false;
-        /// <inheritdoc/>
-        public bool CanListMountPoints => true;
-        /// <inheritdoc/>
-        public bool CanGetMountPoint => true;
-        /// <inheritdoc/>
-        public bool CanCloseMountPoint => false;
-        /// <inheritdoc/>
         public bool CanMount => false;
         /// <inheritdoc/>
-        public bool CanListMounts => true;
+        public bool CanUnmount => false;
         /// <inheritdoc/>
-        public bool CanCloseMount => false;
+        public bool CanListMounts => true;
     }
 
     /// <summary>
@@ -381,8 +360,8 @@ namespace Lexical.FileSystem
         internal static IFileSystemOptionDelete noDelete = new FileSystemOptionDelete(false);
         internal static IFileSystemOptionMove move = new FileSystemOptionMove(true);
         internal static IFileSystemOptionMove noMove = new FileSystemOptionMove(false);
-        internal static IFileSystemOptionMount mount = new FileSystemOptionMount(true, true, true, true, true, true, true);
-        internal static IFileSystemOptionMount noMount = new FileSystemOptionMount(false, false, false, false, false, true, false);
+        internal static IFileSystemOptionMount mount = new FileSystemOptionMount(true, true, true);
+        internal static IFileSystemOptionMount noMount = new FileSystemOptionMount(false, false, false);
         internal static IFileSystemOptionOpen openReadWriteCreate = new FileSystemOptionOpen(true, true, true, true);
         internal static IFileSystemOptionOpen openReadWrite = new FileSystemOptionOpen(true, true, true, false);
         internal static IFileSystemOptionOpen openRead = new FileSystemOptionOpen(true, true, false, false);

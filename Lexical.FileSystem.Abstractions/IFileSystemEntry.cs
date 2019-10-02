@@ -18,7 +18,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemEntryFile"/></item>
     ///     <item><see cref="IFileSystemEntryDirectory"/></item>
     ///     <item><see cref="IFileSystemEntryDrive"/></item>
-    ///     <item><see cref="IFileSystemEntryMountpoint"/></item>
+    ///     <item><see cref="IFileSystemEntryMount"/></item>
     /// </list>    
     /// </summary>
     public interface IFileSystemEntry
@@ -102,18 +102,18 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemEntryDrive>
 
-    // <IFileSystemEntryMountpoint>
+    // <IFileSystemEntryMount>
     /// <summary>
-    /// Entry represents a mountpoint. 
+    /// Entry represents a mountpoint (mount root). 
     /// </summary>
-    public interface IFileSystemEntryMountpoint : IFileSystemEntry
+    public interface IFileSystemEntryMount : IFileSystemEntry
     {
         /// <summary>
-        /// Tests if entry represents a mountpoint.
+        /// Tests if entry represents a mount root.
         /// </summary>
-        bool IsMountpoint { get; }
+        bool IsMount { get; }
     }
-    // </IFileSystemEntryMountpoint>
+    // </IFileSystemEntryMount>
 
     // <IFileSystemEntryDecoration>
     /// <summary>
@@ -175,12 +175,12 @@ namespace Lexical.FileSystem
             => entry is IFileSystemEntryDrive drive ? drive.IsDrive : false;
 
         /// <summary>
-        /// Tests if <paramref name="entry"/> represents a mountpoint.
+        /// Tests if <paramref name="entry"/> represents a mount root.
         /// </summary>
         /// <param name="entry"></param>
         /// <returns></returns>
-        public static bool IsMountpoint(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryMountpoint mountPoint ? mountPoint.IsMountpoint : false;
+        public static bool IsMount(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryMount mount ? mount.IsMount : false;
 
     }
 

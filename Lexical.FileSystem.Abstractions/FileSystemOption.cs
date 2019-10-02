@@ -74,7 +74,7 @@ namespace Lexical.FileSystem
 
 
         // FileSystem-level options //
-        /// <summary>Create option for mount path. Used with <see cref="IFileSystemMountAssignment"/></summary>
+        /// <summary>Create option for mount path. Used with decorator.</summary>
         public static IFileSystemOption MountPath(string mountPath) => new FileSystemOptionMountPath(mountPath);
         /// <summary>No mount path.</summary>
         public static IFileSystemOption NoMountPath => noMountPath;

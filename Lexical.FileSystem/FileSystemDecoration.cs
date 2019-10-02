@@ -1,6 +1,6 @@
 ﻿// --------------------------------------------------------
 // Copyright:      Toni Kalajainen
-// Date:           14.6.2019
+// Date:           1.10.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Decoration;
@@ -27,7 +27,7 @@ namespace Lexical.FileSystem
         public class Setup
         {
             /// <summary>
-            /// (optional) Parent file system to use as reference for adapted observers and mountpoint handles.
+            /// (optional) FileSystem to use in decorated events and mountpoints.
             /// If given as null, then returns the instance of <see cref="FileSystemDecoration"/>
             /// </summary>
             public IFileSystem Parent { get; internal protected set; }
@@ -61,22 +61,49 @@ namespace Lexical.FileSystem
             /// Makes path conversions and path assertions between parent and child filesystems.
             /// </summary>
             PathConversionTool PathUtil;
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="parent">(optional) filesystem to use on decorated events and mountpoints</param>
+            /// <param name="parentPath">(optional) expected path in <paramref name="parent"/>. Used with path conversions</param>
+            /// <param name="child">the decorated filesystem</param>
+            /// <param name="childPath">(optional) expected path in <paramref name="child"/>. Used with path conversions</param>
+            /// <param name="decorationOptions">(optional) options that reduce permissions of <paramref name="child"/></param>
+            public Setup(IFileSystem parent, string parentPath, IFileSystem child, string childPath, IFileSystemOption decorationOptions)
+            {
+                Parent = parent;
+                ParentPath = parentPath;
+                Child = child;
+                ChildPath = childPath;
+                DecorationOptions = decorationOptions;
+            }
         }
 
         /// <inheritdoc/>
         public override bool CanObserve => throw new NotImplementedException();
 
         /// <summary>
-        /// Create decoration of one child filesystem.
+        /// Create decoration of one decorated filesystem.
         /// </summary>
-        /// <param name="setup"></param>
-        public FileSystemDecoration(Setup setup) : base()
-        {
-
-        }
+        /// <param name="fs">filesystem that is decorated</param>
+        /// <param name="option">(optional) decorating options</param>
+        public FileSystemDecoration(IFileSystem fs, IFileSystemOption option) : this(new Setup[] { new Setup(null, null, fs, null, option) }) { }
 
         /// <summary>
-        /// Create decoration of multiple filesystems.
+        /// Create decoration of one decorated filesystem.
+        /// </summary>
+        /// <param name="setups">filesystems to be decorated</param>
+        public FileSystemDecoration(params (IFileSystem fs, IFileSystemOption option)[] setups) : this(setups.Select(s=>new Setup(null, null, s.fs, null, s.option)).ToArray()) { }
+
+        /// <summary>
+        /// Create decoration of one decorated filesystem.
+        /// </summary>
+        /// <param name="setup"></param>
+        public FileSystemDecoration(Setup setup) : this(new Setup[] { setup }) { }
+
+        /// <summary>
+        /// Create decoration of multiple decorated filesystems.
         /// </summary>
         /// <param name="setups"></param>
         public FileSystemDecoration(params Setup[] setups) : base()

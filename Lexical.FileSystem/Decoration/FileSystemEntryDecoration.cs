@@ -10,7 +10,7 @@ namespace Lexical.FileSystem.Decoration
     /// <summary>
     /// Abstract base class for decorated entry.
     /// </summary>
-    public abstract class FileSystemEntryDecoration : IFileSystemEntryDecoration, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive, IFileSystemEntryMountpoint
+    public abstract class FileSystemEntryDecoration : IFileSystemEntryDecoration, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive, IFileSystemEntryMount
     {
         /// <summary>
         /// Decorate filesystem.
@@ -54,7 +54,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsDrive => Original.IsDrive();
         /// <inheritdoc/>
-        public virtual bool IsMountpoint => Original.IsMountpoint();
+        public virtual bool IsMount => Original.IsMount();
 
         /// <summary>
         /// Create decorated entry.
