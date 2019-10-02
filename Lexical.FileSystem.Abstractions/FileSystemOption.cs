@@ -5,6 +5,8 @@
 // --------------------------------------------------------
 
 
+using System.Collections.Generic;
+
 namespace Lexical.FileSystem
 {
     /// <summary>
@@ -15,10 +17,16 @@ namespace Lexical.FileSystem
         // Operations //
         /// <summary>Join <paramref name="options"/>, takes first instance of each option.</summary>
         public static IFileSystemOption Join(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.First, options);
+        /// <summary>Join <paramref name="options"/>, takes first instance of each option.</summary>
+        public static IFileSystemOption Join(IEnumerable<IFileSystemOption> options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.First, options);
         /// <summary>Union of <paramref name="options"/>.</summary>
         public static IFileSystemOption Union(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, options);
+        /// <summary>Union of <paramref name="options"/>.</summary>
+        public static IFileSystemOption Union(IEnumerable<IFileSystemOption> options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, options);
         /// <summary>Intersection of <paramref name="options"/>.</summary>
         public static IFileSystemOption Intersection(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Intersection, options);
+        /// <summary>Intersection of <paramref name="options"/>.</summary>
+        public static IFileSystemOption Intersection(IEnumerable<IFileSystemOption> options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Intersection, options);
 
         // Path-level options //
         /// <summary>Read-only operations allowed, deny modification and write operations</summary>

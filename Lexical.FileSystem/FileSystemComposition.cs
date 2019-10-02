@@ -19,12 +19,20 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Composition of multiple <see cref="IFileSystem"/>s.
     /// </summary>
-    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemOptionPath
+    public class FileSystemComposition : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemMount, IFileSystemOptionPath
     {
+        /// <summary>Zero entries</summary>
+        static IFileSystemEntry[] noEntries = new IFileSystemEntry[0];
+
         /// <summary>
         /// File system components.
         /// </summary>
         protected IFileSystem[] filesystems;
+
+        /// <summary>
+        /// FileSystem specific setups.
+        /// </summary>
+        protected Component[] components;
 
         /// <summary>
         /// Count 
@@ -36,32 +44,42 @@ namespace Lexical.FileSystem
         /// </summary>
         public IFileSystem[] FileSystems => filesystems;
 
-        bool canObserve;
+        /// <summary>Union of options.</summary>
+        protected Options option;
+
+        /// <summary>Is there only one component.</summary>
+        protected bool one;
 
         /// <inheritdoc/>
-        public FileSystemCaseSensitivity CaseSensitivity { get; protected set; }
+        public FileSystemCaseSensitivity CaseSensitivity => option.CaseSensitivity;
         /// <inheritdoc/>
-        public bool EmptyDirectoryName { get; protected set; }
+        public bool EmptyDirectoryName => option.EmptyDirectoryName;
         /// <inheritdoc/>
-        public virtual bool CanBrowse { get; protected set; }
+        public virtual bool CanBrowse => option.CanBrowse;
         /// <inheritdoc/>
-        public virtual bool CanGetEntry { get; protected set; }
+        public virtual bool CanGetEntry => option.CanGetEntry;
         /// <inheritdoc/>
-        public override bool CanObserve => canObserve;
+        public override bool CanObserve => option.CanObserve;
         /// <inheritdoc/>
-        public virtual bool CanOpen { get; protected set; }
+        public virtual bool CanOpen => option.CanOpen;
         /// <inheritdoc/>
-        public virtual bool CanRead { get; protected set; }
+        public virtual bool CanRead => option.CanRead;
         /// <inheritdoc/>
-        public virtual bool CanWrite { get; protected set; }
+        public virtual bool CanWrite => option.CanWrite;
         /// <inheritdoc/>
-        public virtual bool CanCreateFile { get; protected set; }
+        public virtual bool CanCreateFile => option.CanCreateFile;
         /// <inheritdoc/>
-        public virtual bool CanDelete { get; protected set; }
+        public virtual bool CanDelete => option.CanDelete;
         /// <inheritdoc/>
-        public virtual bool CanMove { get; protected set; }
+        public virtual bool CanMove => option.CanMove();
         /// <inheritdoc/>
-        public virtual bool CanCreateDirectory { get; protected set; }
+        public virtual bool CanCreateDirectory => option.CanCreateDirectory;
+        /// <inheritdoc/>
+        public bool CanMount => option.CanMount;
+        /// <inheritdoc/>
+        public bool CanUnmount => option.CanUnmount;
+        /// <inheritdoc/>
+        public bool CanListMounts => option.CanListMounts;
 
         /// <summary>
         /// Root entry
@@ -69,30 +87,83 @@ namespace Lexical.FileSystem
         protected IFileSystemEntry rootEntry;
 
         /// <summary>
-        /// Create composition of file systems
+        /// Create decorated filesystem.
+        /// 
+        /// Modifies the permissions of <paramref name="filesystem"/>. 
+        /// The effective options will be an intersection of option in <paramref name="filesystem"/> and <paramref name="option"/>.
+        /// 
+        /// <see cref="IFileSystemOptionMountPath"/> exposes a subpath of <paramref name="filesystem"/>.
+        /// <see cref="FileSystemOption.ReadOnly"/> decorates filesystem in readonly mode.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="option">(optional) decoration option</param>
+        public FileSystemComposition(IFileSystem filesystem, IFileSystemOption option)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", now, now, this);
+            this.components = new Component[] { new Component(filesystem, option) };
+            this.filesystems = new IFileSystem[] { filesystem };
+            this.option = Options.Read(this.components[0].Option);
+            this.one = true;
+        }
+
+        /// <summary>
+        /// Create composition of filesystems
         /// </summary>
         /// <param name="filesystems"></param>
         public FileSystemComposition(params IFileSystem[] filesystems)
         {
-            this.filesystems = filesystems;
-            foreach (IFileSystem fs in filesystems)
-            {
-                CaseSensitivity |= fs.CaseSensitivity();
-                EmptyDirectoryName |= fs.EmptyDirectoryName();
-                CanBrowse |= fs.CanBrowse();
-                CanGetEntry |= fs.CanGetEntry();
-                canObserve |= fs.CanObserve();
-                CanSetEventDispatcher |= fs.CanSetEventDispatcher();
-                CanOpen |= fs.CanOpen();
-                CanRead |= fs.CanRead();
-                CanWrite |= fs.CanWrite();
-                CanCreateFile |= fs.CanCreateFile();
-                CanDelete |= fs.CanDelete();
-                CanMove |= fs.CanMove();
-                CanCreateDirectory |= fs.CanCreateDirectory();
-            }
             DateTimeOffset now = DateTimeOffset.UtcNow;
             this.rootEntry = new FileSystemEntryDirectory(this, "", "", now, now, this);
+            this.components = filesystems.Select(fs => new Component(fs, null)).ToArray();
+            this.filesystems = filesystems.ToArray();
+            this.option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
+            this.one = filesystems.Length == 1;
+        }
+
+        /// <summary>
+        /// Create composition of filesystems.
+        /// 
+        /// Optional FileSystem specific options can be given for each filesystem. 
+        /// An intersection of filesystem and option are used, so the option reduces 
+        /// the options of the filesystem.
+        /// 
+        /// <see cref="IFileSystemOptionMountPath"/> option can be used to use subpath of <see cref="IFileSystem"/>.
+        /// </summary>
+        /// <param name="filesystems"></param>
+        public FileSystemComposition(params (IFileSystem filesystem, IFileSystemOption option)[] filesystems)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", now, now, this);
+            this.components = filesystems.Select(p => new Component(p.filesystem, p.option)).ToArray();
+            this.filesystems = components.Select(c => c.FileSystem).ToArray();
+            this.option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
+            this.one = filesystems.Length == 1;
+        }
+
+        /// <summary>FileSystem specific information</summary>
+        protected class Component
+        {
+            /// <summary>FileSystem component</summary>
+            public IFileSystem FileSystem;
+
+            /// <summary>Intersection of option in <see cref="FileSystem"/> and option that was provided in constructor.</summary>
+            public Options Option;
+
+            /// <summary>(optional) The option parameter that was provided in construction</summary>
+            public IFileSystemOption OptionParameter;
+
+            /// <summary>Tool that converts paths.</summary>
+            public PathConversionTool Path;
+
+            /// <summary>Create component info.</summary>
+            public Component(IFileSystem filesystem, IFileSystemOption option)
+            {
+                this.OptionParameter = option;
+                this.Option = Options.Read( option == null ? filesystem : FileSystemOption.Intersection(filesystem, option) );
+                this.FileSystem = filesystem;
+                this.Path = new PathConversionTool("", option.MountPath() ?? "");
+            }
         }
 
         /// <summary>
@@ -137,36 +208,84 @@ namespace Lexical.FileSystem
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
 
-            StructList24<IFileSystemEntry> entries = new StructList24<IFileSystemEntry>();
-            bool exists = false, supported = false;
-
-            IFileSystem[] _filesystems = filesystems;
-            if (_filesystems.Length == 0) return new IFileSystemEntry[0];
-            
-            HashSet<string> filenames = _filesystems.Length <= 1 ? null : new HashSet<string>();
-            foreach (var filesystem in _filesystems)
+            try
             {
-                if (!filesystem.CanBrowse()) continue;
-                try
+                /*
+                if (one)
                 {
-                    IFileSystemEntry[] list = filesystem.Browse(path);
-                    exists = true; supported = true;
-                    foreach (IFileSystemEntry e in list)
+                    Component c = components[0];
+                    if (!c.Option.CanBrowse) throw new NotSupportedException(nameof(Browse));
+                    StringSegment childPath;
+                    if (!c.Path.ParentToChild(path, out childPath)) return noEntries;
+                    IFileSystemEntry[] childEntries = c.FileSystem.Browse(childPath);
+                    // Result array to be filled
+                    IFileSystemEntry[] result = new IFileSystemEntry[childEntries.Length];
+                    // Is result array filled with null enties
+                    int nullCount = 0;
+                    // Decorate elements
+                    for (int i=0; i<childEntries.Length; i++)
                     {
-                        // Already exists
-                        if (filenames != null && !filenames.Add(e.Name)) continue;
+                        // Get entry
+                        IFileSystemEntry e = childEntries[i];
+                        // Convert path
+                        StringSegment parentPath;
+                        if (!c.Path.ChildToParent(e.Path, out parentPath))
+                        {
+                            // Path conversion failed. Omit entry. Remove it later
+                            nullCount++;
+                            continue;
+                        }
                         // Decorate
-                        IFileSystemEntry ee = FileSystemEntryDecoration.DecorateFileSystem(e, this);
-                        // Add to result
-                        entries.Add(ee);
+                        result[i] = FileSystemEntryDecoration.DecorateFileSystemAndPath(e, this, parentPath);
                     }
+                    // Remove null entries
+                    if (nullCount>0)
+                    {
+                        IFileSystemEntry[] newResult = new IFileSystemEntry[result.Length - nullCount];
+                        int ix = 0;
+                        foreach (var e in result) if (e != null) newResult[ix++] = e;
+                        result = newResult;
+                    }
+                    return result;
+                }*/
+
+                StructList24<IFileSystemEntry> entries = new StructList24<IFileSystemEntry>();
+                bool exists = false, supported = false;
+
+                IFileSystem[] _filesystems = filesystems;
+                if (_filesystems.Length == 0) return noEntries;
+
+                HashSet<string> filenames = _filesystems.Length <= 1 ? null : new HashSet<string>();
+                foreach (var filesystem in _filesystems)
+                {
+                    if (!filesystem.CanBrowse()) continue;
+                    try
+                    {
+                        IFileSystemEntry[] list = filesystem.Browse(path);
+                        exists = true; supported = true;
+                        foreach (IFileSystemEntry e in list)
+                        {
+                            // Already exists
+                            if (filenames != null && !filenames.Add(e.Name)) continue;
+                            // Decorate
+                            IFileSystemEntry ee = FileSystemEntryDecoration.DecorateFileSystem(e, this);
+                            // Add to result
+                            entries.Add(ee);
+                        }
+                    }
+                    catch (DirectoryNotFoundException) { supported = true; }
+                    catch (NotSupportedException) { }
                 }
-                catch (DirectoryNotFoundException) { supported = true; }
-                catch (NotSupportedException) { }
+                if (!supported) throw new NotSupportedException(nameof(Browse));
+                if (!exists) throw new DirectoryNotFoundException(path);
+                return entries.ToArray();
             }
-            if (!supported) throw new NotSupportedException(nameof(Browse));
-            if (!exists) throw new DirectoryNotFoundException(path);
-            return entries.ToArray();
+            // Update references in the expception and let it fly
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, this, path))
+            {
+                // Never goes here
+                return noEntries;
+            }
         }
 
         /// <summary>
@@ -560,6 +679,112 @@ namespace Lexical.FileSystem
         public override string ToString()
             => String.Join<IFileSystem>(", ", filesystems);
 
+        /// <summary>
+        /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
+        /// 
+        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="filesystem"></param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public FileSystemComposition Mount(string path, IFileSystem filesystem)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unmount a filesystem at <paramref name="path"/>.
+        /// 
+        /// If there is no mount at <paramref name="path"/>, then does nothing.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public FileSystemComposition Unmount(string path)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// List all mounts.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public IFileSystemEntryMount[] ListMounts()
+        {
+            throw new NotImplementedException();
+        }
+
+        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem) => Mount(path, filesystem);
+        IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
+
+        /// <summary>Flattened options for (slight) performance.</summary>
+        protected class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath
+        {
+            /// <inheritdoc/>
+            public bool CanBrowse { get; set; }
+            /// <inheritdoc/>
+            public bool CanGetEntry { get; set; }
+            /// <inheritdoc/>
+            public bool CanObserve { get; set; }
+            /// <inheritdoc/>
+            public bool CanSetEventDispatcher { get; set; }
+            /// <inheritdoc/>
+            public bool CanOpen { get; set; }
+            /// <inheritdoc/>
+            public bool CanRead { get; set; }
+            /// <inheritdoc/>
+            public bool CanWrite { get; set; }
+            /// <inheritdoc/>
+            public bool CanCreateFile { get; set; }
+            /// <inheritdoc/>
+            public bool CanDelete { get; set; }
+            /// <inheritdoc/>
+            public bool CanMove { get; set; }
+            /// <inheritdoc/>
+            public bool CanCreateDirectory { get; set; }
+            /// <inheritdoc/>
+            public bool CanMount { get; set; }
+            /// <inheritdoc/>
+            public bool CanUnmount { get; set; }
+            /// <inheritdoc/>
+            public bool CanListMounts { get; set; }
+            /// <inheritdoc/>
+            public FileSystemCaseSensitivity CaseSensitivity { get; set; }
+            /// <inheritdoc/>
+            public bool EmptyDirectoryName { get; set; }
+
+            /// <summary>
+            /// Read options from <paramref name="ooption"/> and return flattened object.
+            /// </summary>
+            /// <param name="ooption"></param>
+            /// <returns></returns>
+            public static Options Read(IFileSystemOption ooption)
+            {
+                Options result = new Options();
+                result.CanBrowse = ooption.CanBrowse();
+                result.CanGetEntry = ooption.CanGetEntry();
+                result.CanObserve = ooption.CanObserve();
+                result.CanSetEventDispatcher = ooption.CanSetEventDispatcher();
+                result.CanOpen = ooption.CanOpen();
+                result.CanRead = ooption.CanRead();
+                result.CanWrite = ooption.CanWrite();
+                result.CanCreateFile = ooption.CanCreateFile();
+                result.CanDelete = ooption.CanDelete();
+                result.CanMount = ooption.CanMount();
+                result.CanCreateFile = ooption.CanCreateFile();
+                result.CanDelete = ooption.CanDelete();
+                result.CanMove = ooption.CanMove();
+                result.CanCreateDirectory = ooption.CanCreateDirectory();
+                result.CanMount = ooption.CanMount();
+                result.CanUnmount = ooption.CanUnmount();
+                result.CanListMounts = ooption.CanListMounts();
+                return result;
+            }
+        }
     }
 
 }
