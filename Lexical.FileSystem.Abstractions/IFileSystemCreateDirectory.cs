@@ -95,4 +95,16 @@ namespace Lexical.FileSystem
         public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionCreateDirectory c1 && o2 is IFileSystemOptionCreateDirectory c2 ? new FileSystemOptionCreateDirectory(c1.CanCreateDirectory || c2.CanCreateDirectory) : throw new InvalidCastException($"{typeof(IFileSystemOptionCreateDirectory)} expected.");
     }
 
+    /// <summary>File system option for creating directories.</summary>
+    public class FileSystemOptionCreateDirectory : IFileSystemOptionCreateDirectory
+    {
+        /// <summary>Has CreateDirectory capability.</summary>
+        public bool CanCreateDirectory { get; protected set; }
+
+        /// <summary>Create file system option for creating directories.</summary>
+        public FileSystemOptionCreateDirectory(bool canCreateDirectory)
+        {
+            CanCreateDirectory = canCreateDirectory;
+        }
+    }
 }

@@ -166,4 +166,25 @@ namespace Lexical.FileSystem
         public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionOpen c1 && o2 is IFileSystemOptionOpen c2 ? new FileSystemOptionOpen(c1.CanOpen || c2.CanOpen, c1.CanRead && c2.CanRead, c1.CanWrite && c2.CanWrite, c1.CanCreateFile && c2.CanCreateFile) : throw new InvalidCastException($"{typeof(IFileSystemOptionOpen)} expected.");
     }
 
+    /// <summary>File system options for open, create, read and write files.</summary>
+    public class FileSystemOptionOpen : IFileSystemOptionOpen
+    {
+        /// <summary>Can open file</summary>
+        public bool CanOpen { get; protected set; }
+        /// <summary>Can open file for reading(</summary>
+        public bool CanRead { get; protected set; }
+        /// <summary>Can open file for writing.</summary>
+        public bool CanWrite { get; protected set; }
+        /// <summary>Can open and create file.</summary>
+        public bool CanCreateFile { get; protected set; }
+
+        /// <summary>Create file system options for open, create, read and write files.</summary>
+        public FileSystemOptionOpen(bool canOpen, bool canRead, bool canWrite, bool canCreateFile)
+        {
+            CanOpen = canOpen;
+            CanRead = canRead;
+            CanWrite = canWrite;
+            CanCreateFile = canCreateFile;
+        }
+    }
 }

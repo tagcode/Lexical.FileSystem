@@ -4,6 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.Collections.Generic;
 
 namespace Lexical.FileSystem
 {
@@ -123,6 +124,20 @@ namespace Lexical.FileSystem
         /// <returns>flattened instance of <paramref name="optionType"/></returns>
         public static IFileSystemOption IntersectionAs(this IFileSystemOption option, IFileSystemOption anotherOption, Type optionType)
             => option.Operation<IFileSystemOptionOperationIntersection>(optionType).Intersection(option, anotherOption);
+
+        /// <summary>
+        /// Enumerate all the supported <see cref="IFileSystemOption"/> Types.
+        /// </summary>
+        /// <param name="option"></param>
+        /// <returns>types</returns>
+        public static IEnumerable<Type> OperationTypes(this IFileSystemOption option)
+        {
+            foreach (Type type in option.GetType().GetInterfaces())
+                if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type)) yield return type;
+            if (option is IFileSystemOptionAdaptable adaptable)
+                foreach (KeyValuePair<Type, IFileSystemOption> line in adaptable)
+                    yield return line.Key;
+        }
 
         /// <summary>
         /// Get first operation instance for <paramref name="option"/>.

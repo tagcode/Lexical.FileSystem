@@ -29,6 +29,7 @@ namespace Lexical.FileSystem
         /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
         /// 
         /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
         /// </summary>
         /// <param name="path"></param>
         /// <param name="filesystem"></param>
@@ -40,6 +41,7 @@ namespace Lexical.FileSystem
         /// Unmount a filesystem at <paramref name="path"/>.
         /// 
         /// If there is no mount at <paramref name="path"/>, then does nothing.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
         /// </summary>
         /// <param name="path"></param>
         /// <returns>this (parent filesystem)</returns>
@@ -176,6 +178,38 @@ namespace Lexical.FileSystem
              c1 == null && c2 == null ? (IFileSystemOption)null :
              throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(IFileSystemOptionMountPath), typeof(IFileSystemOptionOperationIntersection))) :
             throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+    }
+
+    /// <summary>Option for mount path. Use with decorator.</summary>
+    public class FileSystemOptionMountPath : IFileSystemOptionMountPath
+    {
+        /// <summary>Mount path.</summary>
+        public String MountPath { get; protected set; }
+
+        /// <summary>Create option for mount path.</summary>
+        public FileSystemOptionMountPath(string mountPath)
+        {
+            MountPath = mountPath;
+        }
+    }
+
+    /// <summary>File system option for mount capabilities.</summary>
+    public class FileSystemOptionMount : IFileSystemOptionMount
+    {
+        /// <summary>Can filesystem mount other filesystems.</summary>
+        public bool CanMount { get; protected set; }
+        /// <summary>Is filesystem allowed to unmount a mount.</summary>
+        public bool CanUnmount { get; protected set; }
+        /// <summary>Is filesystem allowed to list mounts.</summary>
+        public bool CanListMounts { get; protected set; }
+
+        /// <summary>Create file system option for mount capabilities.</summary>
+        public FileSystemOptionMount(bool canMount, bool canUnmount, bool canListMounts)
+        {
+            CanMount = canMount;
+            CanUnmount = canUnmount;
+            CanListMounts = canListMounts;
+        }
     }
 
 

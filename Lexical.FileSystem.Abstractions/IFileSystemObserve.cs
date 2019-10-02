@@ -199,5 +199,20 @@ namespace Lexical.FileSystem
         public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve || c2.CanObserve, c1.CanSetEventDispatcher || c2.CanSetEventDispatcher) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
     }
 
+    /// <summary>File system option for observe.</summary>
+    public class FileSystemOptionObserve : IFileSystemOptionObserve
+    {
+        /// <summary>Has Observe capability.</summary>
+        public bool CanObserve { get; protected set; }
+        /// <summary>Has SetEventDispatcher capability.</summary>
+        public bool CanSetEventDispatcher { get; protected set; }
+
+        /// <summary>Create file system option for observe.</summary>
+        public FileSystemOptionObserve(bool canObserve, bool canSetEventDispatcher)
+        {
+            CanObserve = canObserve;
+            CanSetEventDispatcher = canSetEventDispatcher;
+        }
+    }
 
 }

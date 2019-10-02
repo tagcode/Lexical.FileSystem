@@ -97,4 +97,16 @@ namespace Lexical.FileSystem
         public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionDelete c1 && o2 is IFileSystemOptionDelete c2 ? new FileSystemOptionDelete(c1.CanDelete || c2.CanDelete) : throw new InvalidCastException($"{typeof(IFileSystemOptionDelete)} expected.");
     }
 
+    /// <summary>File system option for deleting files and directories.</summary>
+    public class FileSystemOptionDelete : IFileSystemOptionDelete
+    {
+        /// <summary>Has Delete capability.</summary>
+        public bool CanDelete { get; protected set; }
+
+        /// <summary>Create file system option for deleting files and directories.</summary>
+        public FileSystemOptionDelete(bool canDelete)
+        {
+            CanDelete = canDelete;
+        }
+    }
 }

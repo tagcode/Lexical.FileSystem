@@ -93,4 +93,16 @@ namespace Lexical.FileSystem
         public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMove c1 && o2 is IFileSystemOptionMove c2 ? new FileSystemOptionMove(c1.CanMove || c2.CanMove) : throw new InvalidCastException($"{typeof(IFileSystemOptionMove)} expected.");
     }
 
+    /// <summary>File system option for move/rename.</summary>
+    public class FileSystemOptionMove : IFileSystemOptionMove
+    {
+        /// <summary>Has Move capability.</summary>
+        public bool CanMove { get; protected set; }
+
+        /// <summary>Create file system option for move/rename.</summary>
+        public FileSystemOptionMove(bool canMove)
+        {
+            CanMove = canMove;
+        }
+    }
 }

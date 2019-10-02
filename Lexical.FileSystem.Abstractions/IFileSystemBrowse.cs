@@ -165,4 +165,20 @@ namespace Lexical.FileSystem
         public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionBrowse b1 && o2 is IFileSystemOptionBrowse b2 ? new FileSystemOptionBrowse(b1.CanBrowse || b2.CanBrowse, b1.CanGetEntry || b2.CanGetEntry) : throw new InvalidCastException($"{typeof(IFileSystemOptionBrowse)} expected.");
     }
 
+    /// <summary>File system options for browse.</summary>
+    public class FileSystemOptionBrowse : IFileSystemOptionBrowse
+    {
+        /// <summary>Has Browse capability.</summary>
+        public bool CanBrowse { get; protected set; }
+        /// <summary>Has GetEntry capability.</summary>
+        public bool CanGetEntry { get; protected set; }
+
+        /// <summary>Create file system options for browse.</summary>
+        public FileSystemOptionBrowse(bool canBrowse, bool canGetEntry)
+        {
+            CanBrowse = canBrowse;
+            CanGetEntry = canGetEntry;
+        }
+    }
+
 }
