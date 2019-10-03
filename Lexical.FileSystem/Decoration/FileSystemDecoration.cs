@@ -3,7 +3,6 @@
 // Date:           14.6.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Decoration;
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
@@ -88,11 +87,11 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool CanCreateDirectory => option.CanCreateDirectory;
         /// <inheritdoc/>
-        public bool CanMount => option.CanMount;
+        public virtual bool CanMount => option.CanMount;
         /// <inheritdoc/>
-        public bool CanUnmount => option.CanUnmount;
+        public virtual bool CanUnmount => option.CanUnmount;
         /// <inheritdoc/>
-        public bool CanListMounts => option.CanListMounts;
+        public virtual bool CanListMounts => option.CanListMounts;
 
         /// <summary>
         /// Root entry
@@ -195,7 +194,7 @@ namespace Lexical.FileSystem.Decoration
             this.rootEntry = new FileSystemEntryDirectory(parentFileSystem, "", "", now, now, option);
         }
 
-        /// <summary>FileSystem specific information</summary>
+        /// <summary>FileSystem (as component of composition) specific information</summary>
         protected class Component
         {
             /// <summary>FileSystem component</summary>
@@ -217,7 +216,7 @@ namespace Lexical.FileSystem.Decoration
             public Component(string parentPath, IFileSystem filesystem, IFileSystemOption option)
             {
                 this.OptionParameter = option;
-                this.Option = Options.Read( option == null ? filesystem : FileSystemOption.Intersection(filesystem, option) );
+                this.Option = Options.Read(option == null ? filesystem : FileSystemOption.Intersection(filesystem, option));
                 this.FileSystem = filesystem;
                 this.Path = new PathDecoration(parentPath ?? "", option.MountPath() ?? "");
             }
@@ -286,7 +285,7 @@ namespace Lexical.FileSystem.Decoration
                     // Is result array filled with null enties
                     int removedCount = 0;
                     // Decorate elements
-                    for (int i=0; i<childEntries.Length; i++)
+                    for (int i = 0; i < childEntries.Length; i++)
                     {
                         // Get entry
                         IFileSystemEntry e = childEntries[i];
@@ -302,7 +301,7 @@ namespace Lexical.FileSystem.Decoration
                         result[i] = new Entry(e, parentFileSystem, parentPath, component.Option);
                     }
                     // Remove null entries
-                    if (removedCount>0)
+                    if (removedCount > 0)
                     {
                         IFileSystemEntry[] newResult = new IFileSystemEntry[result.Length - removedCount];
                         int ix = 0;
@@ -348,7 +347,7 @@ namespace Lexical.FileSystem.Decoration
                     // Create list for result
                     List<IFileSystemEntry> result = new List<IFileSystemEntry>(entryCount);
 
-                    for (int i=0; i<entryArrays.Count; i++)
+                    for (int i = 0; i < entryArrays.Count; i++)
                     {
                         // Get component and result array
                         (Component c, IFileSystemEntry[] array) = entryArrays[i];
@@ -372,7 +371,7 @@ namespace Lexical.FileSystem.Decoration
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, this, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
             {
                 // Never goes here
                 return noEntries;
@@ -411,68 +410,78 @@ namespace Lexical.FileSystem.Decoration
                 return null;
             }
 
-            // One component
-            if (component != null)  
+            try
             {
-                // Assert can get entry
-                if (!component.Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
-                // Return root
-                if (path == "") return rootEntry;
-
-                // Convert Path
-                String/*Segment*/ childPath;
-                if (!component.Path.ParentToChild(path, out childPath)) return null;
-                // GetEntry
-                IFileSystemEntry childEntry = component.FileSystem.GetEntry(childPath);
-                // Got no result
-                if (childEntry == null) return null;
-                // Convert again
-                String/*Segment*/ parentPath;
-                if (!component.Path.ChildToParent(childEntry.Path, out parentPath)) return null;
-                // Decorate
-                childEntry = new Entry(childEntry, parentFileSystem, parentPath, component.Option);
-                // Return
-                return childEntry;
-            }
-
-            // Many components
-            else {
-                // Assert can get entry
-                if (!option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
-
-                bool supported = false;
-                foreach (var c in components)
+                // One component
+                if (component != null)
                 {
                     // Assert can get entry
-                    if (!c.Option.CanGetEntry) continue;
+                    if (!component.Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
+                    // Return root
+                    if (path == "") return rootEntry;
 
                     // Convert Path
                     String/*Segment*/ childPath;
-                    if (!component.Path.ParentToChild(path, out childPath)) continue;
-
-                    try
-                    {
-                        // Try to get etnry
-                        IFileSystemEntry e = c.FileSystem.GetEntry(childPath);
-                        // Didn't throw exception
-                        supported = true;
-                        // Continue
-                        if (e == null) continue;
-                        // Convert again
-                        String/*Segment*/ parentPath;
-                        if (!component.Path.ChildToParent(e.Path, out parentPath)) continue;
-                        // Decorate
-                        e = new Entry(e, this, parentPath, component.Option);
-                        // Return
-                        return e;
-                    }
-                    catch (DirectoryNotFoundException) { supported = true; }
-                    catch (NotSupportedException) { }
+                    if (!component.Path.ParentToChild(path, out childPath)) return null;
+                    // GetEntry
+                    IFileSystemEntry childEntry = component.FileSystem.GetEntry(childPath);
+                    // Got no result
+                    if (childEntry == null) return null;
+                    // Convert again
+                    String/*Segment*/ parentPath;
+                    if (!component.Path.ChildToParent(childEntry.Path, out parentPath)) return null;
+                    // Decorate
+                    childEntry = new Entry(childEntry, parentFileSystem, parentPath, component.Option);
+                    // Return
+                    return childEntry;
                 }
-                if (!supported) throw new NotSupportedException(nameof(Browse));
 
-                // Return root
-                if (path == "") return rootEntry;
+                // Many components
+                else
+                {
+                    // Assert can get entry
+                    if (!option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
+
+                    bool supported = false;
+                    foreach (var c in components)
+                    {
+                        // Assert can get entry
+                        if (!c.Option.CanGetEntry) continue;
+
+                        // Convert Path
+                        String/*Segment*/ childPath;
+                        if (!component.Path.ParentToChild(path, out childPath)) continue;
+
+                        try
+                        {
+                            // Try to get etnry
+                            IFileSystemEntry e = c.FileSystem.GetEntry(childPath);
+                            // Didn't throw exception
+                            supported = true;
+                            // Continue
+                            if (e == null) continue;
+                            // Convert again
+                            String/*Segment*/ parentPath;
+                            if (!component.Path.ChildToParent(e.Path, out parentPath)) continue;
+                            // Decorate
+                            e = new Entry(e, this, parentPath, component.Option);
+                            // Return
+                            return e;
+                        }
+                        catch (DirectoryNotFoundException) { supported = true; }
+                        catch (NotSupportedException) { }
+                    }
+                    if (!supported) throw new NotSupportedException(nameof(GetEntry));
+
+                    // Return root
+                    if (path == "") return rootEntry;
+                }
+            }
+            // Update references in the expception and let it fly
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            {
+                // Never goes here
+                return null;
             }
 
             return null;
@@ -500,22 +509,68 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="ObjectDisposedException"/>
         public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
         {
+            // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
 
-            bool supported = false;
-            foreach (var filesystem in filesystems)
+            // Zero components
+            if (components.Length == 0)
             {
-                if (!filesystem.CanOpen()) continue;
-                try
-                {
-                    return filesystem.Open(path, fileMode, fileAccess, fileShare);
-                }
-                catch (FileNotFoundException) { supported = true; }
-                catch (NotSupportedException) { }
+                // Assert can open
+                if (!this.option.CanOpen) throw new NotSupportedException(nameof(Open));
+                if (!this.option.CanRead && fileAccess.HasFlag(FileAccess.Read)) throw new NotSupportedException(nameof(CanRead));
+                if (!this.option.CanWrite && fileAccess.HasFlag(FileAccess.Write)) throw new NotSupportedException(nameof(CanWrite));
+                if (!this.option.CanCreateFile && fileMode != FileMode.Open) throw new NotSupportedException(nameof(CanCreateFile));
+                throw new FileNotFoundException(path);
             }
-            if (!supported) throw new NotSupportedException(nameof(Browse));
-            throw new FileNotFoundException(path);
+
+            try
+            {
+                // One Component
+                if (component != null)
+                {
+                    if (!component.Option.CanOpen) throw new NotSupportedException(nameof(Open));
+                    if (!component.Option.CanRead && fileAccess.HasFlag(FileAccess.Read)) throw new NotSupportedException(nameof(CanRead));
+                    if (!component.Option.CanWrite && fileAccess.HasFlag(FileAccess.Write)) throw new NotSupportedException(nameof(CanWrite));
+                    if (!component.Option.CanCreateFile && fileMode != FileMode.Open) throw new NotSupportedException(nameof(CanCreateFile));
+
+                    // Convert Path
+                    String childPath;
+                    if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
+                    // Open
+                    return component.FileSystem.Open(childPath, fileMode, fileAccess, fileShare);
+                }
+
+                // Many components
+                {
+                    bool supported = false;
+                    foreach (var c in components)
+                    {
+                        if (!c.Option.CanOpen) continue;
+                        if (!c.Option.CanRead && fileAccess.HasFlag(FileAccess.Read)) continue;
+                        if (!c.Option.CanWrite && fileAccess.HasFlag(FileAccess.Write)) continue;
+                        if (!c.Option.CanCreateFile && fileMode != FileMode.Open) continue;
+                        // Convert Path
+                        String childPath;
+                        if (!component.Path.ParentToChild(path, out childPath)) continue;
+                        try
+                        {
+                            return c.FileSystem.Open(childPath, fileMode, fileAccess, fileShare);
+                        }
+                        catch (FileNotFoundException) { supported = true; }
+                        catch (NotSupportedException) { }
+                    }
+                    if (!supported) throw new NotSupportedException(nameof(Open));
+                    throw new FileNotFoundException(path);
+                }
+            }
+            // Update references in the expception and let it fly
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            {
+                // Never goes here
+                throw new NotSupportedException(nameof(Open));
+            }
         }
 
         /// <summary>
@@ -636,6 +691,48 @@ namespace Lexical.FileSystem.Decoration
             if (!ok) throw new FileNotFoundException(path);
         }
 
+        /// <summary>
+        /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
+        /// 
+        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="filesystem"></param>
+        /// <param name="mountOption">(optional)</param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public FileSystemDecoration Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unmount a filesystem at <paramref name="path"/>.
+        /// 
+        /// If there is no mount at <paramref name="path"/>, then does nothing.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public FileSystemDecoration Unmount(string path)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// List all mounts.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public IFileSystemEntryMount[] ListMounts()
+        {
+            throw new NotImplementedException();
+        }
+
+        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption) => Mount(path, filesystem, mountOption);
+        IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a single file or directory. 
         /// Observing a directory will observe the whole subtree.
@@ -830,50 +927,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => GetType().Name+"("+String.Join<IFileSystem>(", ", filesystems)+")";
-
-        /// <summary>
-        /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
-        /// 
-        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
-        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="filesystem"></param>
-        /// <param name="mountOption">(optional)</param>
-        /// <returns>this (parent filesystem)</returns>
-        /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public FileSystemDecoration Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Unmount a filesystem at <paramref name="path"/>.
-        /// 
-        /// If there is no mount at <paramref name="path"/>, then does nothing.
-        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <returns>this (parent filesystem)</returns>
-        /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public FileSystemDecoration Unmount(string path)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// List all mounts.
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public IFileSystemEntryMount[] ListMounts()
-        {
-            throw new NotImplementedException();
-        }
-
-        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption) => Mount(path, filesystem, mountOption);
-        IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
+            => GetType().Name + "(" + String.Join<IFileSystem>(", ", filesystems) + ")";
 
         /// <summary>Flattened options for (slight) performance gain.</summary>
         protected class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionMountPath
@@ -989,10 +1043,10 @@ namespace Lexical.FileSystem.Decoration
             public override string Path => newPath;
             /// <summary>(optional) Option that will be intersected lazily with original options.</summary>
             protected Options optionModifier;
-            /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and <see cref="Original"/>.Option()</summary>
+            /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and Original.Option()</summary>
             protected IFileSystemOption optionIntersection;
-            /// <summary>Intersection of <see cref="Original"/>.Option() and <see cref="optionModifier"/></summary>
-            public override IFileSystemOption Option => optionIntersection ?? (optionIntersection = optionModifier == null ? Original.Options() : optionModifier.Intersection(Original.Options()) );
+            /// <summary>Intersection of Original.Option() and <see cref="optionModifier"/></summary>
+            public override IFileSystemOption Option => optionIntersection ?? (optionIntersection = optionModifier == null ? Original.Options() : optionModifier.Intersection(Original.Options()));
             /// <summary>
             /// Create decoration with <paramref name="newFileSystem"/>.
             /// </summary>
