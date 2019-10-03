@@ -27,7 +27,7 @@ namespace Lexical.FileSystem
 
             if (anotherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) filesystems.AddIfNew(fs);
             else if (anotherFileSystem != null) filesystems.AddIfNew(anotherFileSystem);
-            return new FileSystemComposition(filesystems.ToArray());
+            return new FileSystemDecoration(filesystems.ToArray());
         }
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace Lexical.FileSystem
                 if (otherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) filesystems.AddIfNew(fs);
                 else if (otherFileSystem != null) filesystems.AddIfNew(otherFileSystem);
 
-            return new FileSystemComposition(filesystems.ToArray());
+            return new FileSystemDecoration(filesystems.ToArray());
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace Lexical.FileSystem
                 if (otherFileSystem is IEnumerable<IFileSystem> composition_) foreach (IFileSystem fs in composition_) filesystems.AddIfNew(fs);
                 else if (otherFileSystem != null) filesystems.AddIfNew(otherFileSystem);
 
-            return new FileSystemComposition(filesystems.ToArray());
+            return new FileSystemDecoration(filesystems.ToArray());
         }
 
     }

@@ -17,7 +17,7 @@ namespace Lexical.FileSystem
     /// Visit extension methods for <see cref="IFileSystem"/>.
     /// </summary>
     public static class TreeVisit
-    { 
+    {
         /// <summary>
         /// Vists tree structure of filesystem. 
         /// 
@@ -41,6 +41,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
+        /// <exception cref="Exception">any exception that GetEntry or Browse can throw</exception>
+        /// <exception cref="IOException">If Browse returns an entry whose path is not under parent entry's path</exception>
         public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue)
         {
             List<Line> queue = new List<Line>();
@@ -64,9 +66,9 @@ namespace Lexical.FileSystem
                         foreach (IFileSystemEntry child in children) if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
                         // Bitmask when this level continues
                         ulong levelContinuesBitMask = line.LevelContinuesBitMask | (line.Level < 64 ? 1UL << line.Level : 0UL);
-                        // Add children                        
+                        // Add children in reverse order
                         foreach (IFileSystemEntry child in children) queue.Add(new Line(child, line.Level + 1, levelContinuesBitMask));
-                        // Sort
+                        // Sort the entries that were added
                         if (children.Length>1) sorter.QuickSortInverse(ref queue, startIndex, queue.Count - 1);
                         // Last entry doesn't continue on its level.
                         if (children.Length>=1) queue[startIndex] = queue[startIndex].NewLevelContinuesBitMask(line.LevelContinuesBitMask);
@@ -87,7 +89,7 @@ namespace Lexical.FileSystem
         static StructListSorter<List<Line>, Line> sorter = new StructListSorter<List<Line>, Line>(Line.Comparer.TypeNameComparer);
 
         /// <summary>
-        /// Tree visitor line.
+        /// Tree visit line.
         /// </summary>
         public struct Line
         {
@@ -97,7 +99,7 @@ namespace Lexical.FileSystem
             public readonly IFileSystemEntry Entry;
 
             /// <summary>
-            /// Visit depth, 0 is start path.
+            /// Visit depth, starts at 0.
             /// </summary>
             public readonly int Level;
 

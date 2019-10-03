@@ -55,7 +55,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has CreateDirectory capability</returns>
         public static bool CanCreateDirectory(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemCreateDirectory>() is IFileSystemCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : false;
+            => filesystemOption.As<IFileSystemOptionCreateDirectory>() is IFileSystemOptionCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : false;
 
         /// <summary>
         /// Create a directory, or multiple cascading directories.

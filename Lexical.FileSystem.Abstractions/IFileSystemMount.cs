@@ -97,7 +97,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>mount path or null</returns>
         public static String MountPath(this IFileSystemOption filesystemOption)
-            => filesystemOption is IFileSystemOptionMountPath mp ? mp.MountPath : null;
+            => filesystemOption.As<IFileSystemOptionMountPath>() is IFileSystemOptionMountPath mp ? mp.MountPath : null;
 
         /// <summary>
         /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.

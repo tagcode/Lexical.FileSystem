@@ -56,7 +56,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has Delete capability</returns>
         public static bool CanDelete(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemDelete>() is IFileSystemDelete deleter ? deleter.CanDelete : false;
+            => filesystemOption.As<IFileSystemOptionDelete>() is IFileSystemOptionDelete deleter ? deleter.CanDelete : false;
 
         /// <summary>
         /// Delete a file or directory.

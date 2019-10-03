@@ -27,7 +27,7 @@ namespace Lexical.FileSystem.Utility
         ///     <item><see cref="EmbeddedFileSystem"/></item>
         ///     <item><see cref="FileSystem"/></item>
         ///     <item><see cref="FileProviderSystem"/></item>
-        ///     <item><see cref="FileSystemComposition"/></item>
+        ///     <item><see cref="FileSystemDecoration"/></item>
         ///     <item><see cref="MemoryFileSystem"/></item>
         /// </list>
         /// </summary>
@@ -253,7 +253,7 @@ namespace Lexical.FileSystem.Utility
     }
 
     /// <summary>
-    /// Compares <see cref="FileSystemComposition"/> instances for equal filesystems in equal order.
+    /// Compares <see cref="FileSystemDecoration"/> instances for equal filesystems in equal order.
     /// </summary>
     public class FileSystemCompositionComparer : IEqualityComparer<IFileSystem>
     {
@@ -287,7 +287,7 @@ namespace Lexical.FileSystem.Utility
             // Handle null
             if (x == null && y == null) return true;
             // Compare
-            if (x is FileSystemComposition xFileSystem && y is FileSystemComposition yFileSystem)
+            if (x is FileSystemDecoration xFileSystem && y is FileSystemDecoration yFileSystem)
             {
                 // Get filesystems
                 IFileSystem[] xFileSystems = xFileSystem.FileSystems, yFileSystems = yFileSystem.FileSystems;
@@ -312,7 +312,7 @@ namespace Lexical.FileSystem.Utility
             // Handle null
             if (filesystem == null) return 0;
             // Use Assembly as hashcode
-            if (filesystem is FileSystemComposition fs)
+            if (filesystem is FileSystemDecoration fs)
             {
                 int hash = unchecked((int)2166136261);
                 // Apply elements

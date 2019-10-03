@@ -32,6 +32,17 @@ namespace Lexical.FileSystem.Decoration
             => new NewFileSystemAndPath(entry, newFileSystem, newPath);
 
         /// <summary>
+        /// Decorate filesystem and path, and add option modifier.
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <param name="newFileSystem"></param>
+        /// <param name="newPath"></param>
+        /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
+        /// <returns>decorated entry</returns>
+        public static IFileSystemEntry DecorateFileSystemPathAndOptionModifier(IFileSystemEntry entry, IFileSystem newFileSystem, string newPath, IFileSystemOption optionModifier)
+            => new NewFileSystemPathAndOptionModifier(entry, newFileSystem, newPath, optionModifier);        
+
+        /// <summary>
         /// Original entry that is being decorated.
         /// </summary>
         public virtual IFileSystemEntry Original { get; protected set; }
@@ -52,7 +63,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsDirectory => Original.IsDirectory();
         /// <inheritdoc/>
-        public virtual IFileSystemOption Options => Original.Options();
+        public virtual IFileSystemOption Option => Original.Options();
         /// <inheritdoc/>
         public virtual bool IsDrive => Original.IsDrive();
         /// <inheritdoc/>
@@ -70,7 +81,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// New overriding filesystem.
         /// </summary>
-        protected class NewFileSystem : FileSystemEntryDecoration
+        public class NewFileSystem : FileSystemEntryDecoration
         {
             /// <summary>New overriding filesystem.</summary>
             protected IFileSystem newFileSystem;
@@ -90,7 +101,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// New overriding filesystem and Path
         /// </summary>
-        protected class NewFileSystemAndPath : FileSystemEntryDecoration
+        public class NewFileSystemAndPath : FileSystemEntryDecoration
         {
             /// <summary>New overriding filesystem.</summary>
             protected IFileSystem newFileSystem;
@@ -112,6 +123,41 @@ namespace Lexical.FileSystem.Decoration
                 this.newPath = newPath;
             }
         }
+
+        /// <summary>
+        /// New overriding filesystem, Path and Option modifier
+        /// </summary>
+        public class NewFileSystemPathAndOptionModifier : FileSystemEntryDecoration
+        {
+            /// <summary>New overriding filesystem.</summary>
+            protected IFileSystem newFileSystem;
+            /// <summary>New overriding path.</summary>
+            protected string newPath;
+            /// <summary>New overriding filesystem.</summary>
+            public override IFileSystem FileSystem => newFileSystem;
+            /// <summary>New path.</summary>
+            public override string Path => newPath;
+            /// <summary>(optional) Option that will be intersected lazily with original options.</summary>
+            protected IFileSystemOption optionModifier;
+            /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and <see cref="Original"/>.Option()</summary>
+            protected IFileSystemOption optionIntersection;
+            /// <summary>Intersection of <see cref="Original"/>.Option() and <see cref="optionModifier"/></summary>
+            public override IFileSystemOption Option => optionIntersection ?? (optionIntersection = FileSystemOption.Intersection(optionModifier, Original.Options()));
+            /// <summary>
+            /// Create decoration with <paramref name="newFileSystem"/>.
+            /// </summary>
+            /// <param name="original"></param>
+            /// <param name="newFileSystem"></param>
+            /// <param name="newPath"></param>
+            /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
+            public NewFileSystemPathAndOptionModifier(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, IFileSystemOption optionModifier) : base(original)
+            {
+                this.newFileSystem = newFileSystem;
+                this.newPath = newPath;
+                this.optionModifier = optionModifier;
+            }
+        }
+
     }
 
 }

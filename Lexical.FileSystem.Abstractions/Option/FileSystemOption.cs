@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// FileSystem option that denies write and modification operations.
     /// </summary>
-    public class FileSystemOptionReadOnly : IFileSystemOptionCreateDirectory, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionOpen, IFileSystemOptionMount
+    public class FileSystemOptionReadOnly : IFileSystemOptionCreateDirectory, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionOpen, IFileSystemOptionMount, IFileSystemOptionBrowse, IFileSystemOptionObserve
     {
         /// <inheritdoc/>
         public bool CanOpen => true;
@@ -42,6 +42,14 @@ namespace Lexical.FileSystem
         public bool CanUnmount => false;
         /// <inheritdoc/>
         public bool CanListMounts => true;
+        /// <inheritdoc/>
+        public bool CanBrowse => true;
+        /// <inheritdoc/>
+        public bool CanGetEntry => true;
+        /// <inheritdoc/>
+        public bool CanObserve => true;
+        /// <inheritdoc/>
+        public bool CanSetEventDispatcher => false;
     }
 
     /// <summary>No options of <see cref="IFileSystemOption"/>.</summary>

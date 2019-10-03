@@ -67,7 +67,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has Open capability</returns>
         public static bool CanOpen(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionOpen>() is IFileSystemOpen opener ? opener.CanOpen : false;
+            => filesystemOption.As<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanOpen : false;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Read capability.
@@ -75,7 +75,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has Read capability</returns>
         public static bool CanRead(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionOpen>() is IFileSystemOpen opener ? opener.CanRead : false;
+            => filesystemOption.As<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanRead : false;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Write capability.
@@ -83,7 +83,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has Write capability</returns>
         public static bool CanWrite(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionOpen>() is IFileSystemOpen opener ? opener.CanWrite : false;
+            => filesystemOption.As<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanWrite : false;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has CreateFile capability.
@@ -91,7 +91,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has CreateFile capability</returns>
         public static bool CanCreateFile(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionOpen>() is IFileSystemOpen opener ? opener.CanCreateFile : false;
+            => filesystemOption.As<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanCreateFile : false;
 
         /// <summary>
         /// Create a new file. If file exists, does nothing.

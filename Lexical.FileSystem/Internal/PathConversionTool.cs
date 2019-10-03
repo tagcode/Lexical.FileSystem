@@ -19,12 +19,18 @@ namespace Lexical.FileSystem.Internal
         /// <summary>
         /// Expected parent path
         /// </summary>
-        StringSegment ParentPath;
+        public readonly StringSegment ParentPath;
 
         /// <summary>
         /// Added prefix on child filesystem.
         /// </summary>
-        StringSegment ChildPath;
+        public readonly StringSegment ChildPath;
+
+        /// <summary>
+        /// If <see cref="ParentPath"/> and <see cref="ChildPath"/> are equal, then 
+        /// they can be passed as is with no modification.
+        /// </summary>
+        bool equals;
 
         /// <summary>
         /// Create conversion tool.
@@ -35,6 +41,7 @@ namespace Lexical.FileSystem.Internal
         {
             this.ParentPath = new StringSegment(parentPath);
             this.ChildPath = new StringSegment(childPath);
+            equals = StringSegment.Comparer.Instance.Equals(parentPath, childPath);
         }
 
         /// <summary>
@@ -48,6 +55,9 @@ namespace Lexical.FileSystem.Internal
         /// <returns>true <paramref name="parentPath"/> started with expected <see cref="ParentPath"/></returns>
         public bool ParentToChild(StringSegment parentPath, out StringSegment childPath)
         {
+            // Pass on string as is
+            if (equals) { childPath = parentPath; return true; }
+
             childPath = default;
             return false;
         }
@@ -62,6 +72,9 @@ namespace Lexical.FileSystem.Internal
         /// <returns>true if <paramref name="childPath"/> started with expected <see cref="ChildPath"/></returns>
         public bool ChildToParent(StringSegment childPath, out StringSegment parentPath)
         {
+            // Pass on string as is
+            if (equals) { parentPath = childPath; return true; }
+
             parentPath = default;
             return false;
         }

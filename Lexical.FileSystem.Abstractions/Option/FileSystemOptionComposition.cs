@@ -47,14 +47,49 @@ namespace Lexical.FileSystem
         /// Create composition of filesystem options.
         /// </summary>
         /// <param name="op">Join operation of same option intefaces</param>
+        /// <param name="option1">option to join</param>
+        /// <param name="option2">option to join</param>
+        public FileSystemOptionComposition(Op op, IFileSystemOption option1, IFileSystemOption option2)
+        {
+            if (option1 != null)
+            {
+                // IFileSystemOption
+                foreach (Type type in option1.GetType().GetInterfaces())
+                    if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
+                        Add(op, type, option1);
+                // IFileSystemOptionAdaptable
+                if (option1 is IFileSystemOptionAdaptable adaptable)
+                    foreach (KeyValuePair<Type, IFileSystemOption> line in adaptable)
+                        Add(op, line.Key, line.Value);
+            }
+            if (option2 != null)
+            {
+                // IFileSystemOption
+                foreach (Type type in option2.GetType().GetInterfaces())
+                    if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
+                        Add(op, type, option2);
+                // IFileSystemOptionAdaptable
+                if (option2 is IFileSystemOptionAdaptable adaptable)
+                    foreach (KeyValuePair<Type, IFileSystemOption> line in adaptable)
+                        Add(op, line.Key, line.Value);
+            }
+            Flatten();
+        }
+
+        /// <summary>
+        /// Create composition of filesystem options.
+        /// </summary>
+        /// <param name="op">Join operation of same option intefaces</param>
         /// <param name="options">options to compose</param>
         public FileSystemOptionComposition(Op op, IEnumerable<IFileSystemOption> options)
         {
             foreach (IFileSystemOption option in options)
             {
+                // Check not null
+                if (option == null) continue;
                 // IFileSystemOption
                 foreach (Type type in option.GetType().GetInterfaces())
-                    if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type))
+                    if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
                         Add(op, type, option);
                 // IFileSystemOptionAdaptable
                 if (option is IFileSystemOptionAdaptable adaptable)
@@ -141,6 +176,5 @@ namespace Lexical.FileSystem
 
         IEnumerator<KeyValuePair<Type, IFileSystemOption>> IEnumerable<KeyValuePair<Type, IFileSystemOption>>.GetEnumerator() => byType.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => byType.GetEnumerator();
-
     }
 }

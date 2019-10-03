@@ -79,15 +79,15 @@ namespace Lexical.FileSystem
         /// <summary>
         /// A class that implements <see cref="IFileSystemOptionOperation"/>.
         /// </summary>
-        public readonly Type InterfaceType;
+        public readonly Type OperationsClass;
 
         /// <summary>
-        /// Crate attribute that gives reference to a class that manages an option type.
+        /// Crate attribute that gives reference to a class that manages an operations for an option interface or class.
         /// </summary>
-        /// <param name="typeHandler">A class that implements <see cref="IFileSystemOptionOperation"/>.</param>
-        public OperationsAttribute(Type typeHandler)
+        /// <param name="operationsClass">A class that implements <see cref="IFileSystemOptionOperation"/>.</param>
+        public OperationsAttribute(Type operationsClass)
         {
-            InterfaceType = typeHandler ?? throw new ArgumentNullException(nameof(InterfaceType));
+            OperationsClass = operationsClass ?? throw new ArgumentNullException(nameof(OperationsClass));
         }
     }
 
@@ -147,12 +147,19 @@ namespace Lexical.FileSystem
         /// <returns>operation instance or null</returns>
         public static IFileSystemOptionOperation GetOperation(this IFileSystemOption option, Type optionType)
         {
-            foreach (object attrib in option.GetType().GetCustomAttributes(typeof(IFileSystemOptionOperation), true))
+            foreach (object attrib in option.GetType().GetCustomAttributes(typeof(OperationsAttribute), true))
             {
                 if (attrib is OperationsAttribute opAttrib)
                 {
-                    if (!optionType.Equals(opAttrib.InterfaceType)) continue;
-                    return (IFileSystemOptionOperation) Activator.CreateInstance(opAttrib.InterfaceType);
+                    //if (!optionType.Equals(opAttrib.OperationsClass)) continue;
+                    return (IFileSystemOptionOperation)Activator.CreateInstance(opAttrib.OperationsClass);
+                }
+            }
+            foreach (object attrib in optionType.GetCustomAttributes(typeof(OperationsAttribute), true))
+            {
+                if (attrib is OperationsAttribute opAttrib)
+                {
+                    return (IFileSystemOptionOperation)Activator.CreateInstance(opAttrib.OperationsClass);
                 }
             }
             return null;
@@ -167,12 +174,20 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionOptionOperationNotSupported">If operation is not supported.</exception>
         public static T Operation<T>(this IFileSystemOption option, Type optionType) where T : IFileSystemOptionOperation
         {
-            foreach (object attrib in option.GetType().GetCustomAttributes(typeof(IFileSystemOptionOperation), true))
+            foreach (object attrib in option.GetType().GetCustomAttributes(typeof(OperationsAttribute), true))
             {
                 if (attrib is OperationsAttribute opAttrib)
                 {
-                    if (!optionType.Equals(opAttrib.InterfaceType)) continue;
-                    object op = Activator.CreateInstance(opAttrib.InterfaceType);
+                    //if (!optionType.Equals(opAttrib.OperationsClass)) continue;
+                    object op = Activator.CreateInstance(opAttrib.OperationsClass);
+                    if (op is T casted) return casted;
+                }
+            }
+            foreach (object attrib in optionType.GetCustomAttributes(typeof(OperationsAttribute), true))
+            {
+                if (attrib is OperationsAttribute opAttrib)
+                {
+                    object op = Activator.CreateInstance(opAttrib.OperationsClass);
                     if (op is T casted) return casted;
                 }
             }

@@ -114,9 +114,9 @@ namespace Lexical.FileSystem
         public bool IsDirectory => true;
 
         /// <summary>
-        /// Options that apply to this directory.
+        /// Options that describe features and capabilities in that apply to entries in this directory.
         /// </summary>
-        public IFileSystemOption Options { get; protected set; }
+        public IFileSystemOption Option { get; protected set; }
 
         /// <summary>
         /// Create entry
@@ -129,7 +129,7 @@ namespace Lexical.FileSystem
         /// <param name="options"></param>
         public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess)
         {
-            this.Options = options ?? throw new ArgumentNullException(nameof(options));
+            this.Option = options ?? throw new ArgumentNullException(nameof(options));
         }
     }
 
@@ -169,7 +169,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Options that apply to this directory.
         /// </summary>
-        public IFileSystemOption Options { get; protected set; }
+        public IFileSystemOption Option { get; protected set; }
 
         /// <summary>
         /// Create entry
@@ -182,7 +182,7 @@ namespace Lexical.FileSystem
         /// <param name="options"></param>
         public FileSystemEntryDriveDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess)
         {
-            this.Options = options ?? throw new ArgumentNullException(nameof(options));
+            this.Option = options ?? throw new ArgumentNullException(nameof(options));
         }
     }
 

@@ -88,7 +88,7 @@ namespace Lexical.FileSystem
         /// 
         /// The options returned here is equal to or a subset of options in the parent <see cref="IFileSystem"/>.
         /// </summary>
-        IFileSystemOption Options { get; }
+        IFileSystemOption Option { get; }
     }
     // </IFileSystemEntryDirectory>
 
@@ -169,7 +169,7 @@ namespace Lexical.FileSystem
         /// <param name="entry"></param>
         /// <returns></returns>
         public static IFileSystemOption Options(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryDirectory dir ? dir.Options : Lexical.FileSystem.FileSystemOptionNone.NoOptions;
+            => entry is IFileSystemEntryDirectory dir ? dir.Option : Lexical.FileSystem.FileSystemOptionNone.NoOptions;
 
         /// <summary>
         /// Tests if <paramref name="entry"/> represents a drive.

@@ -15,14 +15,20 @@ namespace Lexical.FileSystem
     public partial class FileSystemOption
     {
         // Operations //
+        /// <summary>Join <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
+        public static IFileSystemOption Join(IFileSystemOption option1, IFileSystemOption option2) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.First, option1, option2);
         /// <summary>Join <paramref name="options"/>, takes first instance of each option.</summary>
         public static IFileSystemOption Join(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.First, options);
         /// <summary>Join <paramref name="options"/>, takes first instance of each option.</summary>
         public static IFileSystemOption Join(IEnumerable<IFileSystemOption> options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.First, options);
+        /// <summary>Union of <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
+        public static IFileSystemOption Union(IFileSystemOption option1, IFileSystemOption option2) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, option1, option2);
         /// <summary>Union of <paramref name="options"/>.</summary>
         public static IFileSystemOption Union(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, options);
         /// <summary>Union of <paramref name="options"/>.</summary>
         public static IFileSystemOption Union(IEnumerable<IFileSystemOption> options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, options);
+        /// <summary>Intersection of <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
+        public static IFileSystemOption Intersection(IFileSystemOption option1, IFileSystemOption option2) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Intersection, option1, option2);
         /// <summary>Intersection of <paramref name="options"/>.</summary>
         public static IFileSystemOption Intersection(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Intersection, options);
         /// <summary>Intersection of <paramref name="options"/>.</summary>
