@@ -14,7 +14,7 @@ using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 
-namespace Lexical.FileSystem
+namespace Lexical.FileSystem.Decoration
 {
     /// <summary>
     /// <see cref="IFileSystem"/> decoration.
@@ -123,7 +123,7 @@ namespace Lexical.FileSystem
         public FileSystemDecoration(IFileSystem filesystem, IFileSystemOption option)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.component = new Component(filesystem, option);
+            this.component = new Component(null, filesystem, option);
             this.components = new Component[] { component };
             this.filesystems = new IFileSystem[] { filesystem };
             this.option = this.components[0].Option;
@@ -137,7 +137,7 @@ namespace Lexical.FileSystem
         public FileSystemDecoration(params IFileSystem[] filesystems)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = filesystems.Select(fs => new Component(fs, null)).ToArray();
+            this.components = filesystems.Select(fs => new Component(null, fs, null)).ToArray();
             this.filesystems = filesystems.ToArray();
             this.option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
             this.component = components.Length == 1 ? components[0] : null;
@@ -157,11 +157,29 @@ namespace Lexical.FileSystem
         public FileSystemDecoration(params (IFileSystem filesystem, IFileSystemOption option)[] filesystems)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = filesystems.Select(p => new Component(p.filesystem, p.option)).ToArray();
+            this.components = filesystems.Select(p => new Component(null, p.filesystem, p.option)).ToArray();
             this.filesystems = components.Select(c => c.FileSystem).ToArray();
             this.option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
             this.component = components.Length == 1 ? components[0] : null;
             SetParentFileSystem(this);
+        }
+
+        /// <summary>
+        /// Create composition of filesystems.
+        /// 
+        /// A constructor version that exposes its filesystem at a subpath parentPath. 
+        /// Also allows to configure what filesystem instance is exposed on decorated file entries and events.
+        /// </summary>
+        /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
+        /// <param name="filesystems">child filesystem configurations</param>
+        public FileSystemDecoration(IFileSystem parentFileSystem, params (string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystems)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            this.components = filesystems.Select(p => new Component(p.parentPath, p.filesystem, p.option)).ToArray();
+            this.filesystems = components.Select(c => c.FileSystem).ToArray();
+            this.option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
+            this.component = components.Length == 1 ? components[0] : null;
+            SetParentFileSystem(parentFileSystem ?? this);
         }
 
         /// <summary>
@@ -177,63 +195,6 @@ namespace Lexical.FileSystem
             this.rootEntry = new FileSystemEntryDirectory(parentFileSystem, "", "", now, now, option);
         }
 
-        /// <summary>
-        /// A version of <see cref="FileSystemDecoration"/> that exposes its filesystem at a subpath.
-        /// This is used by <see cref="VirtualFileSystem"/> when a filesystem is mounted at subpath.
-        /// </summary>
-        public class AtPath : FileSystemDecoration
-        {
-            /// <summary>
-            /// Create decorated filesystem.
-            /// 
-            /// Modifies the permissions of <paramref name="childFileSystem"/>. 
-            /// The effective options will be an intersection of option in <paramref name="childFileSystem"/> and <paramref name="option"/>.
-            /// 
-            /// <see cref="IFileSystemOptionMountPath"/> exposes a subpath of <paramref name="childFileSystem"/>.
-            /// <see cref="FileSystemOption.ReadOnly"/> decorates filesystem in readonly mode.
-            /// </summary>
-            /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
-            /// <param name="parentPath">The subpath the filesystem starts at</param>
-            /// <param name="childFileSystem"></param>
-            /// <param name="option">(optional) decoration option</param>
-            public AtPath(IFileSystem parentFileSystem, string parentPath, IFileSystem childFileSystem, IFileSystemOption option) : base(childFileSystem, option)
-            {
-                foreach (Component c in components) c.Path = new PathConversionTool(parentPath, c.Path.ChildPath);
-                if (parentFileSystem != null) SetParentFileSystem(parentFileSystem);
-            }
-
-            /// <summary>
-            /// Create composition of filesystems
-            /// </summary>
-            /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
-            /// <param name="parentPath">The subpath the filesystem starts at</param>
-            /// <param name="filesystems"></param>
-            public AtPath(IFileSystem parentFileSystem, string parentPath, params IFileSystem[] filesystems) : base(filesystems)
-            {
-                foreach (Component c in components) c.Path = new PathConversionTool(parentPath, c.Path.ChildPath);
-                if (parentFileSystem != null) SetParentFileSystem(parentFileSystem);
-            }
-
-            /// <summary>
-            /// Create composition of filesystems.
-            /// 
-            /// Optional FileSystem specific options can be given for each filesystem. 
-            /// An intersection of filesystem and option are used, so the option reduces 
-            /// the options of the filesystem.
-            /// 
-            /// <see cref="IFileSystemOptionMountPath"/> option can be used to use subpath of <see cref="IFileSystem"/>.
-            /// </summary>
-            /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
-            /// <param name="parentPath">The subpath the filesystem starts at</param>
-            /// <param name="filesystems">child filesystems and mount options</param>
-            public AtPath(IFileSystem parentFileSystem, string parentPath, params (IFileSystem filesystem, IFileSystemOption option)[] filesystems) : base(filesystems)
-            {
-                foreach(Component c in components) c.Path = new PathConversionTool(parentPath, c.Path.ChildPath);
-                if (parentFileSystem != null) SetParentFileSystem(parentFileSystem);
-            }
-
-        }
-
         /// <summary>FileSystem specific information</summary>
         protected class Component
         {
@@ -247,15 +208,18 @@ namespace Lexical.FileSystem
             public IFileSystemOption OptionParameter;
 
             /// <summary>Tool that converts paths.</summary>
-            public PathConversionTool Path;
+            public PathDecoration Path;
 
             /// <summary>Create component info.</summary>
-            public Component(IFileSystem filesystem, IFileSystemOption option)
+            /// <param name="parentPath">The subpath the filesystem starts at</param>
+            /// <param name="filesystem">child filesystem</param>
+            /// <param name="option">(optional) <paramref name="filesystem"/> mount options</param>
+            public Component(string parentPath, IFileSystem filesystem, IFileSystemOption option)
             {
                 this.OptionParameter = option;
                 this.Option = Options.Read( option == null ? filesystem : FileSystemOption.Intersection(filesystem, option) );
                 this.FileSystem = filesystem;
-                this.Path = new PathConversionTool("", option.MountPath() ?? "");
+                this.Path = new PathDecoration(parentPath ?? "", option.MountPath() ?? "");
             }
         }
 
@@ -876,9 +840,10 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <param name="filesystem"></param>
+        /// <param name="mountOption">(optional)</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public FileSystemDecoration Mount(string path, IFileSystem filesystem)
+        public FileSystemDecoration Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
         {
             throw new NotImplementedException();
         }
@@ -907,7 +872,7 @@ namespace Lexical.FileSystem
             throw new NotImplementedException();
         }
 
-        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem) => Mount(path, filesystem);
+        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption) => Mount(path, filesystem, mountOption);
         IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
 
         /// <summary>Flattened options for (slight) performance gain.</summary>

@@ -78,6 +78,10 @@ namespace Lexical.FileSystem.Decoration
             Original = original ?? throw new ArgumentNullException(nameof(original));
         }
 
+        /// <summary>Print info</summary>
+        /// <returns>path</returns>
+        public override string ToString() => Path;
+
         /// <summary>
         /// New overriding filesystem.
         /// </summary>

@@ -55,7 +55,7 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <param name="str"></param>
         public static implicit operator String(StringSegment str)
-            => str.ToString();
+            => str.String.Substring(str.Start, str.Length);
 
         /// <summary>
         /// Implicit converter
@@ -75,7 +75,7 @@ namespace Lexical.FileSystem.Internal
             this.Length = str.Length;
             this.hashcode = str.GetHashCode();
 
-            // Hash
+            // Calculate hashcode from content
             int hash = unchecked((int)2166136261);
             for (int i = 0; i < Length; i++)
             {
@@ -158,13 +158,19 @@ namespace Lexical.FileSystem.Internal
             /// <returns></returns>
             public bool Equals(StringSegment x, StringSegment y)
             {
+                // Compare hash
                 if (x.hashcode == y.hashcode && x.String == y.String && x.Start == y.Start && x.Length == y.Length) return true;
+
+                // Compare lengths
                 if (x.Length != y.Length) return false;
+
+                // Compare characters
                 for (int i = 0; i < x.Length; i++)
                 {
                     char c1 = x.String[x.Start + i], c2 = y.String[y.Start + i];
                     if (c1 != c2) return false;
                 }
+
                 return true;
             }
 

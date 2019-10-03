@@ -3,18 +3,19 @@
 // Date:           14.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Internal;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Lexical.FileSystem.Internal
+namespace Lexical.FileSystem.Decoration
 {
     /// <summary>
-    /// Tool that makes path conversions.
+    /// Tool that makes path conversions of decorated filesystems.
     /// 
     /// This tool is used by <see cref="IFileSystem"/> implementations that support <see cref="IFileSystemOptionMountPath"/> option.
     /// </summary>
-    public class PathConversionTool
+    public class PathDecoration
     {
         /// <summary>
         /// Expected parent path
@@ -37,7 +38,7 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <param name="parentPath"></param>
         /// <param name="childPath"></param>
-        public PathConversionTool(string parentPath, string childPath)
+        public PathDecoration(string parentPath, string childPath)
         {
             this.ParentPath = new StringSegment(parentPath);
             this.ChildPath = new StringSegment(childPath);

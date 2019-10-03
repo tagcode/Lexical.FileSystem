@@ -33,9 +33,10 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <param name="filesystem"></param>
+        /// <param name="mountOption">(Optional) mount options</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystem Mount(string path, IFileSystem filesystem);
+        IFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null);
 
         /// <summary>
         /// Unmount a filesystem at <paramref name="path"/>.
@@ -105,11 +106,12 @@ namespace Lexical.FileSystem
         /// <param name="parentFileSystem"></param>
         /// <param name="path"></param>
         /// <param name="filesystem"></param>
+        /// <param name="mountOption">(Optional) mount options</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem)
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
         {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystem);
+            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystem, mountOption);
             throw new NotSupportedException(nameof(Mount));
         }
 
