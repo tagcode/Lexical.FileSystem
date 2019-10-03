@@ -153,11 +153,11 @@ namespace Lexical.FileSystem.Decoration
         /// 
         /// <see cref="IFileSystemOptionMountPath"/> option can be used to use subpath of <see cref="IFileSystem"/>.
         /// </summary>
-        /// <param name="filesystems"></param>
-        public FileSystemDecoration(params (IFileSystem filesystem, IFileSystemOption option)[] filesystems)
+        /// <param name="filesystemsAndOptions"></param>
+        public FileSystemDecoration(params (IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = filesystems.Select(p => new Component(null, p.filesystem, p.option)).ToArray();
+            this.components = filesystemsAndOptions.Select(p => new Component(null, p.filesystem, p.option)).ToArray();
             this.filesystems = components.Select(c => c.FileSystem).ToArray();
             this.option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
             this.component = components.Length == 1 ? components[0] : null;
@@ -171,11 +171,11 @@ namespace Lexical.FileSystem.Decoration
         /// Also allows to configure what filesystem instance is exposed on decorated file entries and events.
         /// </summary>
         /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
-        /// <param name="filesystems">child filesystem configurations</param>
-        public FileSystemDecoration(IFileSystem parentFileSystem, params (string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystems)
+        /// <param name="filesystemsAndOptions">child filesystem configurations</param>
+        public FileSystemDecoration(IFileSystem parentFileSystem, (string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = filesystems.Select(p => new Component(p.parentPath, p.filesystem, p.option)).ToArray();
+            this.components = filesystemsAndOptions.Select(p => new Component(p.parentPath, p.filesystem, p.option)).ToArray();
             this.filesystems = components.Select(c => c.FileSystem).ToArray();
             this.option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
             this.component = components.Length == 1 ? components[0] : null;

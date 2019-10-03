@@ -48,25 +48,4 @@ namespace Lexical.FileSystem
         IFileSystemOption GetOption(Type optionInterfaceType);
     }
     // </doc>
-
-    /// <summary>
-    /// Extension methods for <see cref="IFileSystem"/>.
-    /// </summary>
-    public static partial class IFileSystemExtensions
-    {
-
-        /// <summary>
-        /// Get option as <typeparamref name="T"/>.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="option"></param>
-        /// <returns>Option casted as <typeparamref name="T"/> or null</returns>
-        public static T As<T>(this IFileSystemOption option) where T : IFileSystemOption
-        {
-            if (option is T casted) return casted;
-            if (option is IFileSystemOptionAdaptable adaptable && adaptable.GetOption(typeof(T)) is T casted_) return casted_;
-            return default;
-        }
-    }
-
 }

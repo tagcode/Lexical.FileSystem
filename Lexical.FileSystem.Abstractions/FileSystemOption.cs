@@ -10,7 +10,7 @@ using System.Collections.Generic;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// Facade for <see cref="IFileSystemOption"/> values and operations.
+    /// Facade for <see cref="IFileSystemOption"/> static values.
     /// </summary>
     public partial class FileSystemOption
     {
