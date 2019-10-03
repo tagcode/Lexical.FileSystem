@@ -4,7 +4,6 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
-using System.Collections.Generic;
 
 namespace Lexical.FileSystem
 {
@@ -71,7 +70,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>
-    /// Attribute for <see cref="IFileSystemOption"/> interfaces for class that manages that option type.
+    /// Attribute for <see cref="IFileSystemOption"/> interfaces to expose a class that manages operations for that interface.
     /// </summary>
     [AttributeUsage(AttributeTargets.Interface)]
     public class OperationsAttribute : Attribute

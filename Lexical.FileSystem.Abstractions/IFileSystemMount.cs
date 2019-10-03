@@ -30,10 +30,12 @@ namespace Lexical.FileSystem
         /// 
         /// If <paramref name="path"/> is already mounted, then replaces previous mount.
         /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// 
+        /// If <paramref name="filesystem"/> is null, then an empty directory is created into the parent filesystem.
         /// </summary>
         /// <param name="path"></param>
-        /// <param name="filesystem"></param>
-        /// <param name="mountOption">(Optional) mount options</param>
+        /// <param name="filesystem">(optional) filesystem to be mounted</param>
+        /// <param name="mountOption">(optional) mount options</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         IFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null);

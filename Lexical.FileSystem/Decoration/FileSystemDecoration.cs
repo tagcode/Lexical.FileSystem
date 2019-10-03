@@ -277,7 +277,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert permission to browse
                     if (!component.Option.CanBrowse) throw new NotSupportedException(nameof(Browse));
                     // Convert Path
-                    StringSegment childPath;
+                    String/*Segment*/ childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) return noEntries;
                     // Browse
                     IFileSystemEntry[] childEntries = component.FileSystem.Browse(childPath);
@@ -291,7 +291,7 @@ namespace Lexical.FileSystem.Decoration
                         // Get entry
                         IFileSystemEntry e = childEntries[i];
                         // Convert path
-                        StringSegment parentPath;
+                        String/*Segment*/ parentPath;
                         if (!component.Path.ChildToParent(e.Path, out parentPath))
                         {
                             // Path conversion failed. Omit entry. Remove it later
@@ -328,7 +328,7 @@ namespace Lexical.FileSystem.Decoration
                         // Assert component can browse
                         if (!c.Option.CanBrowse) continue;
                         // Convert Path
-                        StringSegment childPath;
+                        String/*Segment*/ childPath;
                         if (!c.Path.ParentToChild(path, out childPath)) continue;
                         // Catch NotSupported
                         try
@@ -358,7 +358,7 @@ namespace Lexical.FileSystem.Decoration
                             // Remove already existing entry
                             if (filenames != null && !filenames.Add(e.Name)) continue;
                             // Convert path
-                            StringSegment parentPath;
+                            String/*Segment*/ parentPath;
                             if (!component.Path.ChildToParent(e.Path, out parentPath)) continue;
                             // Decorate
                             IFileSystemEntry ee = new Entry(e, parentFileSystem, parentPath, c.Option);
@@ -420,14 +420,14 @@ namespace Lexical.FileSystem.Decoration
                 if (path == "") return rootEntry;
 
                 // Convert Path
-                StringSegment childPath;
+                String/*Segment*/ childPath;
                 if (!component.Path.ParentToChild(path, out childPath)) return null;
                 // GetEntry
                 IFileSystemEntry childEntry = component.FileSystem.GetEntry(childPath);
                 // Got no result
                 if (childEntry == null) return null;
                 // Convert again
-                StringSegment parentPath;
+                String/*Segment*/ parentPath;
                 if (!component.Path.ChildToParent(childEntry.Path, out parentPath)) return null;
                 // Decorate
                 childEntry = new Entry(childEntry, parentFileSystem, parentPath, component.Option);
@@ -447,7 +447,7 @@ namespace Lexical.FileSystem.Decoration
                     if (!c.Option.CanGetEntry) continue;
 
                     // Convert Path
-                    StringSegment childPath;
+                    String/*Segment*/ childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) continue;
 
                     try
@@ -459,7 +459,7 @@ namespace Lexical.FileSystem.Decoration
                         // Continue
                         if (e == null) continue;
                         // Convert again
-                        StringSegment parentPath;
+                        String/*Segment*/ parentPath;
                         if (!component.Path.ChildToParent(e.Path, out parentPath)) continue;
                         // Decorate
                         e = new Entry(e, this, parentPath, component.Option);

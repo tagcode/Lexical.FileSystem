@@ -16,6 +16,13 @@ namespace Lexical.FileSystem.Internal
     public struct StringSegment : IEquatable<StringSegment>
     {
         /// <summary>
+        /// Character at <paramref name="ix"/>
+        /// </summary>
+        /// <param name="ix"></param>
+        /// <returns>character</returns>
+        public char this[int ix] => String[Start+ix];
+
+        /// <summary>
         /// Empty string "".
         /// </summary>
         public static StringSegment Empty = new StringSegment("");
