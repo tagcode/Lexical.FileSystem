@@ -83,12 +83,12 @@ namespace Lexical.FileSystem.Decoration
                 int ix = this.ParentPath.Length;
 
                 // Move past separator '/' in parentPath
-                if (ix < parentPath.Length - 1 && parentPath[ix] == '/') ix++;
+                //if (ix < parentPath.Length - 1 && parentPath[ix] == '/') ix++;
 
                 // Append childpath suffix
                 if (this.ChildPath.Length > 0)
                 {
-                    string resultString = parentPath.Length - ix == 0 ? this.ChildPath : this.ChildPath + "/" + parentPath.String.Substring(parentPath.Start + ix, parentPath.Length - ix);
+                    string resultString = parentPath.Length - ix == 0 ? this.ChildPath : this.ChildPath /*+ "/"*/ + parentPath.String.Substring(parentPath.Start + ix, parentPath.Length - ix);
                     childPath = resultString;
                     return true;
                 }
@@ -105,7 +105,7 @@ namespace Lexical.FileSystem.Decoration
                 // Append childpath suffix
                 if (this.ChildPath.Length > 0)
                 {
-                    string resultString = parentPath.Length == 0 ? this.ChildPath : this.ChildPath + "/" + parentPath.String.Substring(parentPath.Start, parentPath.Length);
+                    string resultString = parentPath.Length == 0 ? this.ChildPath : this.ChildPath /*+ "/"*/ + parentPath.String.Substring(parentPath.Start, parentPath.Length);
                     childPath = resultString;
                     return true;
                 }
@@ -123,12 +123,16 @@ namespace Lexical.FileSystem.Decoration
         /// suitable path of child filesystem.
         /// 
         /// This method is used in most methods in parent filesystem implementation for converting input path to suitable for child filesystem, such as Browse, GetEntry, Open, CreateDirectory, Move.
+        /// 
+        /// If <paramref name="childPath"/> is null then <paramref name="parentPath"/> is placed null as well.
         /// </summary>
-        /// <param name="parentPath"></param>
-        /// <param name="childPath"></param>
+        /// <param name="parentPath">(optional) path in parent filesystem's format</param>
+        /// <param name="childPath">(optional) <paramref name="parentPath"/> converted to child filesystem's path notation</param>
         /// <returns>true <paramref name="parentPath"/> started with expected <see cref="ParentPathSegment"/></returns>
         public bool ParentToChild(String parentPath, out String childPath)
         {
+            // Pass null
+            if (parentPath == null) { childPath = null; return true; }
             // Pass on string as is
             if (equals) { childPath = parentPath; return true; }
 
@@ -146,12 +150,12 @@ namespace Lexical.FileSystem.Decoration
                 int ix = this.ParentPath.Length;
 
                 // Move past separator '/' in parentPath
-                if (ix < parentPath.Length - 1 && parentPath[ix] == '/') ix++;
+                //if (ix < parentPath.Length - 1 && parentPath[ix] == '/') ix++;
 
                 // Append childpath suffix
                 if (this.ChildPath.Length > 0)
                 {
-                    string resultString = parentPath.Length - ix == 0 ? this.ChildPath : this.ChildPath + "/" + parentPath.Substring(ix, parentPath.Length - ix);
+                    string resultString = parentPath.Length - ix == 0 ? this.ChildPath : this.ChildPath /*+ "/"*/ + parentPath.Substring(ix, parentPath.Length - ix);
                     childPath = resultString;
                     return true;
                 }
@@ -168,7 +172,7 @@ namespace Lexical.FileSystem.Decoration
                 // Append childpath suffix
                 if (this.ChildPath.Length > 0)
                 {
-                    string resultString = parentPath.Length == 0 ? this.ChildPath : this.ChildPath + "/" + parentPath.Substring(0, parentPath.Length);
+                    string resultString = parentPath.Length == 0 ? this.ChildPath : this.ChildPath /*+ "/"*/ + parentPath.Substring(0, parentPath.Length);
                     childPath = resultString;
                     return true;
                 }
@@ -208,12 +212,12 @@ namespace Lexical.FileSystem.Decoration
                 int ix = this.ChildPath.Length;
 
                 // Move past separator '/' in childPath
-                if (ix < childPath.Length - 1 && childPath[ix] == '/') ix++;
+                //if (ix < childPath.Length - 1 && childPath[ix] == '/') ix++;
 
                 // Append parentpath suffix
                 if (this.ParentPath.Length > 0)
                 {
-                    string resultString = childPath.Length - ix == 0 ? this.ParentPath : this.ParentPath + "/" + childPath.String.Substring(childPath.Start + ix, childPath.Length - ix);
+                    string resultString = childPath.Length - ix == 0 ? this.ParentPath : this.ParentPath /*+ "/"*/ + childPath.String.Substring(childPath.Start + ix, childPath.Length - ix);
                     parentPath = resultString;
                     return true;
                 }
@@ -230,7 +234,7 @@ namespace Lexical.FileSystem.Decoration
                 // Append parentpath suffix
                 if (this.ParentPath.Length > 0)
                 {
-                    string resultString = childPath.Length == 0 ? this.ParentPath : this.ParentPath + "/" + childPath.String.Substring(childPath.Start, childPath.Length);
+                    string resultString = childPath.Length == 0 ? this.ParentPath : this.ParentPath /*+ "/"*/ + childPath.String.Substring(childPath.Start, childPath.Length);
                     parentPath = resultString;
                     return true;
                 }
@@ -273,12 +277,12 @@ namespace Lexical.FileSystem.Decoration
                 int ix = this.ChildPath.Length;
 
                 // Move past separator '/' in childPath
-                if (ix < childPath.Length - 1 && childPath[ix] == '/') ix++;
+                //if (ix < childPath.Length - 1 && childPath[ix] == '/') ix++;
 
                 // Append parentpath suffix
                 if (this.ParentPath.Length > 0)
                 {
-                    string resultString = childPath.Length - ix == 0 ? this.ParentPath : this.ParentPath + "/" + childPath.Substring(ix, childPath.Length - ix);
+                    string resultString = childPath.Length - ix == 0 ? this.ParentPath : this.ParentPath /*+ "/"*/ + childPath.Substring(ix, childPath.Length - ix);
                     parentPath = resultString;
                     return true;
                 }
@@ -295,7 +299,7 @@ namespace Lexical.FileSystem.Decoration
                 // Append parentpath suffix
                 if (this.ParentPath.Length > 0)
                 {
-                    string resultString = childPath.Length == 0 ? this.ParentPath : this.ParentPath + "/" + childPath.Substring(0, childPath.Length);
+                    string resultString = childPath.Length == 0 ? this.ParentPath : this.ParentPath /*+ "/"*/ + childPath.Substring(0, childPath.Length);
                     parentPath = resultString;
                     return true;
                 }

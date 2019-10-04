@@ -78,6 +78,15 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Non-disposable <see cref="VirtualFileSystem"/> disposes and cleans all attached <see cref="IDisposable"/> on dispose, but doesn't go into disposed state.
+        /// </summary>
+        public class NonDisposable : VirtualFileSystem
+        {
+            /// <summary>Create non-disposable virtual filesystem.</summary>
+            public NonDisposable() : base() { SetToNonDisposable(); }
+        }
+
+        /// <summary>
         /// Get node by <paramref name="path"/>.
         /// Caller must ensure that lock is acquired.
         /// </summary>

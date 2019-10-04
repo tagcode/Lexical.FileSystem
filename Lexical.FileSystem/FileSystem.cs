@@ -148,18 +148,13 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Non-disposable version of <see cref="FileSystem"/>.
+        /// Non-disposable <see cref="FileSystem"/> disposes and cleans all attached <see cref="IDisposable"/> on dispose, but doesn't go into disposed state.
         /// </summary>
         public class NonDisposable : FileSystem
         {
-            /// <summary>
-            /// Create an access to local filesystem.
-            /// </summary>
+            /// <summary>Create non-disposable filesystem.</summary>
             /// <param name="path">Path to root directory, or "" for OS root which returns drive letters.</param>
-            public NonDisposable(string path) : base(path)
-            {
-                SetToNonDisposable();
-            }
+            public NonDisposable(string path) : base(path) { SetToNonDisposable(); }
         }
 
         /// <summary>

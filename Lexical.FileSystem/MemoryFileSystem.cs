@@ -97,6 +97,38 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Non-disposable <see cref="MemoryFileSystem"/> cleans all files on dispose, closes observers, but doesn't go into disposed state.
+        /// </summary>
+        public class NonDisposable : MemoryFileSystem
+        {
+            /// <summary>Create non-disposable memory filesystem.</summary>
+            public NonDisposable() : base() { SetToNonDisposable(); }
+            /// <summary>Create non-disposable memory filesystem.</summary>
+            public NonDisposable(long blockSize) : base(blockSize) { SetToNonDisposable(); }
+            /// <summary>Clean files</summary>
+            /// <param name="disposeErrors"></param>
+            protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
+            {
+                // Close handles, dispose attached disposables
+                base.InnerDispose(ref disposeErrors);
+                // Write lock
+                m_lock.AcquireWriterLock(int.MaxValue);
+                try
+                {
+                    // Clear root
+                    this.root.contents.Clear();
+                    // Touch
+                    this.root.lastAccess = this.root.lastModified = DateTimeOffset.UtcNow;
+                }
+                finally
+                {
+                    m_lock.ReleaseWriterLock();
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Set <paramref name="eventHandler"/> to be used for handling observer events.
         /// 
         /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
@@ -827,13 +859,25 @@ namespace Lexical.FileSystem
             return cursor is Directory;
         }
 
-
         /// <summary>
         /// Handle dispose
         /// </summary>
         /// <param name="disposeErrors"></param>
         protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
         {
+            // Snapshot of handles
+            ObserverHandle[] observerArray = observers.Array;
+            // Close each handle
+            foreach(ObserverHandle observerHandle in observerArray)
+            {
+                // Close handle
+                try
+                {
+                    observerHandle.Dispose();
+                } catch (Exception)
+                {
+                }
+            }
         }
 
         /// <summary>
