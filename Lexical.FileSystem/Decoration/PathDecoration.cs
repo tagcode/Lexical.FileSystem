@@ -247,12 +247,16 @@ namespace Lexical.FileSystem.Decoration
         /// Converts input from an event in child filesystem to compatible path in parent filesystem.
         /// 
         /// This method is called observer decorations that convert paths from child filesystem such as events entries from GetEntry and Browse.
+        /// 
+        /// If <paramref name="childPath"/> is null then <paramref name="parentPath"/> is placed null as well.
         /// </summary>
-        /// <param name="childPath"></param>
-        /// <param name="parentPath"></param>
+        /// <param name="childPath">(optional) child filesystem path to be converted</param>
+        /// <param name="parentPath">(optional) path in parent filesystem format</param>
         /// <returns>true if <paramref name="childPath"/> started with expected <see cref="ChildPathSegment"/></returns>
         public bool ChildToParent(String childPath, out String parentPath)
         {
+            // Pass null
+            if (childPath == null) { parentPath = null; return true; }
             // Pass on string as is
             if (equals) { parentPath = childPath; return true; }
 

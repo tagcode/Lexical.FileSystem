@@ -60,6 +60,14 @@ namespace Lexical.FileSystem
             => new FileSystemDecoration(filesystems);
 
         /// <summary>
+        /// Concatenate <paramref name="filesystemsAndOptions"/> into one composition filesystem.
+        /// </summary>
+        /// <param name="filesystemsAndOptions"></param>
+        /// <returns></returns>
+        public static FileSystemDecoration Concat(params (IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
+            => new FileSystemDecoration(filesystemsAndOptions);
+
+        /// <summary>
         /// Creates a new filesystem decoration that reduces the permissions of <paramref name="filesystem"/> by 
         /// intersecting <paramref name="filesystem"/>'s options with <paramref name="option"/>.
         /// </summary>

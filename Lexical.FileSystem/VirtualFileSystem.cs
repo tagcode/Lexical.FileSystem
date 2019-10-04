@@ -16,7 +16,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Virtual filesystem.
     /// </summary>
-    public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath //, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IFileSystemMount
+    public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath, IFileSystemMount //, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IFileSystemMount
     {
         /// <summary>
         /// Reader writer lock for modifying directory structure. 
@@ -62,6 +62,12 @@ namespace Lexical.FileSystem
         public virtual bool CanWrite => true;
         /// <inheritdoc/>
         public virtual bool CanCreateFile => true;
+        /// <inheritdoc/>
+        public virtual bool CanMount => true;
+        /// <inheritdoc/>
+        public virtual bool CanUnmount => true;
+        /// <inheritdoc/>
+        public virtual bool CanListMounts => true;
 
         /// <summary>
         /// Create virtual filesystem.
@@ -393,7 +399,38 @@ namespace Lexical.FileSystem
             public override string ToString() => Path;
         }
 
+        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption) => Mount(path, filesystem, mountOption);
+        IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
 
+        /// <summary>
+        /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
+        /// 
+        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="filesystem"></param>
+        /// <param name="mountOption">(optional)</param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public VirtualFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
+        {
+            return this;
+        }
+
+        /// <summary>
+        /// Unmount a filesystem at <paramref name="path"/>.
+        /// 
+        /// If there is no mount at <paramref name="path"/>, then does nothing.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public VirtualFileSystem Unmount(string path)
+        {
+            return this;
+        }
 
         /// <summary>
         /// Handle dispose
@@ -491,7 +528,9 @@ namespace Lexical.FileSystem
         public override string ToString()
             => GetType().Name;
 
-
-
+        public IFileSystemEntryMount[] ListMounts()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

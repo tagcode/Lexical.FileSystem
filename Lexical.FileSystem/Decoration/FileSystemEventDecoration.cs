@@ -22,7 +22,7 @@ namespace Lexical.FileSystem.Decoration
     public abstract class FileSystemEventDecoration : IFileSystemEventDecoration
     {
         /// <summary>
-        /// Convert <paramref name="event"/> to implement <see cref="IFileSystemEventDecoration"/> when possible.
+        /// Decorate <paramref name="event"/> with <paramref name="newObserver"/>.
         /// </summary>
         /// <param name="event"></param>
         /// <param name="newObserver">overriding observer</param>
@@ -42,6 +42,35 @@ namespace Lexical.FileSystem.Decoration
                 case IFileSystemEventChange cc: return new FileSystemEventDecorationChange.NewObserver(@event, newObserver);
                 case IFileSystemEventRename re: return new FileSystemEventDecorationRename.NewObserver(@event, newObserver);
                 case IFileSystemEventError  ee: return new FileSystemEventDecorationError.NewObserver(@event, newObserver);
+                default:
+                    if (throwIfUnknown) throw new NotSupportedException(@event.GetType().FullName);
+                    else return @event;
+            }
+        }
+
+        /// <summary>
+        /// Decorate <paramref name="event"/> with <paramref name="newObserver"/> and <paramref name="newPath"/>.
+        /// </summary>
+        /// <param name="event"></param>
+        /// <param name="newObserver">overriding observer</param>
+        /// <param name="newPath">overriding path</param>
+        /// <param name="newNewPath">overriding NewPath for <see cref="IFileSystemEventRename"/> events</param>
+        /// <param name="throwIfUnknown">
+        ///     If true, throws exception if <paramref name="event"/> is not recognized. 
+        ///     If false, returns <paramref name="event"/> as-is undecorated.
+        /// </param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException">If the interface of <paramref name="event"/> is not supported.</exception>
+        public static IFileSystemEvent DecorateObserverAndPath(IFileSystemEvent @event, IFileSystemObserver newObserver, string newPath, string newNewPath = null, bool throwIfUnknown = true)
+        {
+            switch (@event)
+            {
+                case IFileSystemEventStart se: return new FileSystemEventDecorationStart.NewObserverAndPath(@event, newObserver, newPath);
+                case IFileSystemEventCreate ce: return new FileSystemEventDecorationCreate.NewObserverAndPath(@event, newObserver, newPath);
+                case IFileSystemEventDelete de: return new FileSystemEventDecorationDelete.NewObserverAndPath(@event, newObserver, newPath);
+                case IFileSystemEventChange cc: return new FileSystemEventDecorationChange.NewObserverAndPath(@event, newObserver, newPath);
+                case IFileSystemEventRename re: return new FileSystemEventDecorationRename.NewObserverAndPath(@event, newObserver, newPath, newNewPath);
+                case IFileSystemEventError ee: return new FileSystemEventDecorationError.NewObserverAndPath(@event, newObserver, newPath);
                 default:
                     if (throwIfUnknown) throw new NotSupportedException(@event.GetType().FullName);
                     else return @event;
@@ -99,6 +128,17 @@ namespace Lexical.FileSystem.Decoration
                 this.newObserver = newObserver;
             }
         }
+
+        /// <summary>Override observer and path.</summary>
+        public class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IFileSystemEvent original, IFileSystemObserver newObserver, string newPath) : base(original, newObserver) { this.newPath = newPath; }
+        }
     }
 
     /// <summary>
@@ -152,6 +192,21 @@ namespace Lexical.FileSystem.Decoration
                 this.newObserver = newObserver;
             }
         }
+
+        /// <summary>Override observer and path.</summary>
+        public new class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newOldPath, newNewPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newOldPath;
+            /// <summary>New observer value.</summary>
+            public override string OldPath => newOldPath;
+            /// <summary>New observer value.</summary>
+            public override string NewPath => newNewPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IFileSystemEvent original, IFileSystemObserver newObserver, string newOldPath, string newNewPath) : base(original, newObserver) { this.newOldPath = newOldPath; this.newNewPath = newNewPath; }
+        }
     }
 
     /// <summary>
@@ -186,6 +241,17 @@ namespace Lexical.FileSystem.Decoration
             {
                 this.newObserver = newObserver;
             }
+        }
+
+        /// <summary>Override observer and path.</summary>
+        public new class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IFileSystemEvent original, IFileSystemObserver newObserver, string newPath) : base(original, newObserver) { this.newPath = newPath; }
         }
     }
 
@@ -222,6 +288,17 @@ namespace Lexical.FileSystem.Decoration
                 this.newObserver = newObserver;
             }
         }
+
+        /// <summary>Override observer and path.</summary>
+        public new class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IFileSystemEvent original, IFileSystemObserver newObserver, string newPath) : base(original, newObserver) { this.newPath = newPath; }
+        }
     }
 
     /// <summary>
@@ -256,6 +333,17 @@ namespace Lexical.FileSystem.Decoration
             {
                 this.newObserver = newObserver;
             }
+        }
+
+        /// <summary>Override observer and path.</summary>
+        public new class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IFileSystemEvent original, IFileSystemObserver newObserver, string newPath) : base(original, newObserver) { this.newPath = newPath; }
         }
     }
 
@@ -297,6 +385,17 @@ namespace Lexical.FileSystem.Decoration
                 this.newObserver = newObserver;
             }
         }
+
+        /// <summary>Override observer and path.</summary>
+        public new class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IFileSystemEvent original, IFileSystemObserver newObserver, string newPath) : base(original, newObserver) { this.newPath = newPath; }
+        }
     }
 
     /// <summary>
@@ -324,14 +423,24 @@ namespace Lexical.FileSystem.Decoration
             protected IFileSystemObserver newObserver;
             /// <summary>New observer value.</summary>
             public override IFileSystemObserver Observer => newObserver;
-            /// <summary>Start decoration with observer override.</summary>
-            /// <param name="original">original event</param>
-            /// <param name="newObserver">observer override</param>
+            /// <summary>Create observer decoration.</summary>
             public NewObserver(IFileSystemEvent original, IFileSystemObserver newObserver) : base(original)
             {
                 this.newObserver = newObserver;
             }
         }
+
+        /// <summary>Override observer and path.</summary>
+        public new class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IFileSystemEvent original, IFileSystemObserver newObserver, string newPath) : base(original, newObserver) { this.newPath = newPath; }
+        }
+
     }
 
 
