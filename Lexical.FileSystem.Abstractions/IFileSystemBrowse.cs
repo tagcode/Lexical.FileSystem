@@ -27,6 +27,8 @@ namespace Lexical.FileSystem
     {
         /// <summary>
         /// Browse a directory for file and subdirectory entries.
+        /// 
+        /// <paramref name="path"/> should end with directory separator character '/', for example "mydir/".
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
         /// <returns>

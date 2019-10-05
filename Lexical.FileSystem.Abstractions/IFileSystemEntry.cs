@@ -32,6 +32,7 @@ namespace Lexical.FileSystem
         /// Path that is relative to the <see cref="IFileSystem"/>.
         /// 
         /// Separator is forward slash "/".
+        /// Directories end with "/" unless root directory.
         /// </summary>
         string Path { get; }
 

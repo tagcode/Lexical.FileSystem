@@ -26,6 +26,9 @@ namespace Lexical.FileSystem
     {
         /// <summary>
         /// Try to move/rename a file or directory.
+        /// 
+        /// If <paramref name="oldPath"/> and <paramref name="newPath"/> refers to a directory, then the path names 
+        /// should end with directory separator character '/'.
         /// </summary>
         /// <param name="oldPath">old path of a file or directory</param>
         /// <param name="newPath">new path of a file or directory</param>

@@ -25,6 +25,8 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Delete a file or directory.
         /// 
+        /// If <paramref name="path"/> is directory, then it should end with directory separator character '/', for example "dir/".
+        /// 
         /// If <paramref name="recurse"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="IOException"/> is thrown.
         /// If <paramref name="recurse"/> is true, then any file or directory in <paramref name="path"/> is deleted as well.
         /// </summary>

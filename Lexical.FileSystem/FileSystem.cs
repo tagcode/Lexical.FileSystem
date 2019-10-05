@@ -339,7 +339,7 @@ namespace Lexical.FileSystem
                 {
                     if (fsi is DirectoryInfo di)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(prefix) ? di.Name : prefix + di.Name, di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), this);
+                        IFileSystemEntry e = new FileSystemEntryDirectory(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), this);
                         list.Add(e);
                     } else if (fsi is FileInfo _fi)
                     {
@@ -384,7 +384,7 @@ namespace Lexical.FileSystem
             path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists) return new FileSystemEntryDirectory(this, path, dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), this);
+            if (dir.Exists) return new FileSystemEntryDirectory(this, path+"/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), this);
 
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists) return new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length);
@@ -419,14 +419,14 @@ namespace Lexical.FileSystem
                 // Reduce all "/mnt/xx" into one "/" root.
                 if (m.Groups["unix_rooted_path"].Success) continue;
 
-                string path = m.Value;
+                string name = m.Value, path = m.Value+"/";
                 DirectoryInfo di = driveInfo.RootDirectory;
                 if (path.EndsWith(osSeparator)) path = path.Substring(0, path.Length - 1);
                 
                 IFileSystemEntry e =
                     driveInfo.IsReady ?
-                    new FileSystemEntryDriveDirectory(this, path, path, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), this) :
-                    new FileSystemEntryDrive(this, path, path, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked());
+                    new FileSystemEntryDriveDirectory(this, path, name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), this) :
+                    new FileSystemEntryDrive(this, path, name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked());
                 list.Add(e);
             }
 
@@ -586,7 +586,7 @@ namespace Lexical.FileSystem
             protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             /// <summary>
-            /// Create observer for one file.
+            /// Create observer for one file (or directory).
             /// </summary>
             /// <param name="filesystem">associated file system</param>
             /// <param name="relativePath">path to file as <see cref="IFileSystem"/> path</param>
@@ -764,7 +764,7 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Watcher
             /// </summary>
-            protected FileSystemWatcher watcher;
+            protected FileSystemWatcher fileWatcher, directoryWatcher;
 
             /// <summary>
             /// Filter glob pattern
@@ -801,15 +801,24 @@ namespace Lexical.FileSystem
                 this.RelativePathToPrefixPartWithoutTrailingSeparatorRelativePath = relativePathToPrefixPartWithoutTrailingSeparator ?? throw new ArgumentNullException(nameof(relativePathToPrefixPartWithoutTrailingSeparator));
                 this.SuffixPart = suffixPart ?? throw new ArgumentNullException(nameof(suffixPart));
                 this.Pattern = GlobPatternFactory.Slash.CreateRegex(filterString ?? throw new ArgumentNullException(nameof(filterString)));
-                watcher = new FileSystemWatcher(AbsolutePathToPrefixPart);
-                watcher.IncludeSubdirectories = true;
-                watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.Size;
-                watcher.Error += OnError;
-                watcher.Changed += OnEvent;
-                watcher.Created += OnEvent;
-                watcher.Deleted += OnEvent;
-                watcher.Renamed += OnEvent;
-                watcher.EnableRaisingEvents = true;
+                fileWatcher = new FileSystemWatcher(AbsolutePathToPrefixPart);
+                fileWatcher.IncludeSubdirectories = true;
+                fileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size;
+                fileWatcher.Error += OnError;
+                fileWatcher.Changed += OnEvent;
+                fileWatcher.Created += OnEvent;
+                fileWatcher.Deleted += OnEvent;
+                fileWatcher.Renamed += OnEvent;
+                fileWatcher.EnableRaisingEvents = true;
+                directoryWatcher = new FileSystemWatcher(AbsolutePathToPrefixPart);
+                directoryWatcher.IncludeSubdirectories = true;
+                directoryWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.DirectoryName | NotifyFilters.Size;
+                directoryWatcher.Error += OnError;
+                //directoryWatcher.Changed += OnEvent;
+                directoryWatcher.Created += OnEvent;
+                directoryWatcher.Deleted += OnEvent;
+                directoryWatcher.Renamed += OnEvent;
+                directoryWatcher.EnableRaisingEvents = true;
             }
 
             /// <summary>
@@ -846,22 +855,27 @@ namespace Lexical.FileSystem
                 IFileSystem _filesystem = FileSystem;
                 if (_filesystem == null) return;
 
+                // Is file or directory
+                bool isDirectory = sender == directoryWatcher || Directory.Exists(e.FullPath);
+
                 // Forward event(s)
                 DateTimeOffset time = DateTimeOffset.UtcNow;
                 string path = ConvertPath(e.FullPath);
+                if (isDirectory && path != "") path = path + "/";
 
                 // Event type
                 WatcherChangeTypes type = e.ChangeType;
                 // HasFlag has been optimized since .Net core 2.1
                 StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
-                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))) events.Add(new FileSystemEventCreate(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) events.Add(new FileSystemEventChange(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path) || Pattern.IsMatch("/" + path))) events.Add(new FileSystemEventDelete(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/"+path)*/)) events.Add(new FileSystemEventCreate(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/" + path)*/)) events.Add(new FileSystemEventChange(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/" + path)*/)) events.Add(new FileSystemEventDelete(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re) 
                 {
                     string oldPath = ConvertPath(re.OldFullPath);
+                    if (isDirectory && oldPath != "") oldPath = oldPath + "/";
                     // One path match match glob pattenr
-                    if ((oldPath != null && (Pattern.IsMatch(oldPath)||Pattern.IsMatch("/"+oldPath))) || (path != null && (Pattern.IsMatch(path)||Pattern.IsMatch("/"+path))))
+                    if ((oldPath != null && (Pattern.IsMatch(oldPath)/*||Pattern.IsMatch("/"+oldPath)*/)) || (path != null && (Pattern.IsMatch(path)/*||Pattern.IsMatch("/"+path)*/)))
                     {
                         // Send event
                         events.Add(new FileSystemEventRename(this, time, oldPath, path));
@@ -902,13 +916,28 @@ namespace Lexical.FileSystem
             protected override void InnerDispose(ref StructList4<Exception> errors)
             {
                 base.InnerDispose(ref errors);
-                var _watcher = watcher;
-                if (_watcher != null)
+
+                var _fileWatcher = fileWatcher;
+                if (_fileWatcher != null)
                 {
-                    watcher = null;
+                    fileWatcher = null;
                     try
                     {
-                        _watcher.Dispose();
+                        _fileWatcher.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
+
+                var _directoryWatcher = directoryWatcher;
+                if (_directoryWatcher != null)
+                {
+                    directoryWatcher = null;
+                    try
+                    {
+                        _directoryWatcher.Dispose();
                     }
                     catch (Exception e)
                     {

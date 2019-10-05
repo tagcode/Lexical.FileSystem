@@ -43,6 +43,13 @@ namespace Lexical.FileSystem
 
         /// <summary>
         /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
+        /// 
+        /// The <paramref name="path"/> should end at directory separator character '/', unless root directory "" is mounted.
+        /// 
+        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// 
+        /// If <paramref name="filesystem"/> is null, then an empty directory is created into the parent filesystem.
         /// </summary>
         /// <param name="parentFileSystem"></param>
         /// <param name="path"></param>

@@ -26,6 +26,8 @@ namespace Lexical.FileSystem
         /// Create a directory, or multiple cascading directories.
         /// 
         /// If directory at <paramref name="path"/> already exists, then returns without exception.
+        /// 
+        /// <paramref name="path"/> should end with directory separator character '/'.
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>

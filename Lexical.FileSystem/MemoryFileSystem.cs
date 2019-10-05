@@ -248,7 +248,7 @@ namespace Lexical.FileSystem
                 // Cursor starts at root
                 Node cursor = root;
                 // Split path at '/' slashes
-                PathEnumerator2 enumr = new PathEnumerator2(path);
+                PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
                 while (enumr.MoveNext())
                 {
                     // Name
@@ -766,7 +766,7 @@ namespace Lexical.FileSystem
             // Current time
             DateTimeOffset now = DateTimeOffset.UtcNow;
             // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator2 enumr = new PathEnumerator2(path);
+            PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
             // Get next name from the path
             while (enumr.MoveNext())
             {
@@ -814,7 +814,7 @@ namespace Lexical.FileSystem
             // Special case for root
             if (path == "") { parentPath = StringSegment.Empty; name = StringSegment.Empty; parent = root; return false; }
             // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator2 enumr = new PathEnumerator2(path);
+            PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
             // Path's name parts
             StructList12<StringSegment> names = new StructList12<StringSegment>();
             // Split path into names
@@ -1085,24 +1085,7 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Path to the entry.
             /// </summary>
-            public string Path
-            {
-                get
-                {
-                    // Get reference of previous cached value
-                    string _path = path;
-                    // Return previous cached value
-                    if (_path != null) return _path;
-                    // Get reference of parent
-                    Directory _parent = parent;
-                    // Case for root
-                    if (_parent == null) return path = "";
-                    // Case for first level paths
-                    if (_parent == filesystem.root) return path = (name == "" ? "/" : name);
-                    // 2nd+ level paths
-                    return path = _parent.Path == "/" && name != "" ? _parent.Path + name : _parent.Path + "/" + name;
-                }
-            }
+            public abstract string Path { get; }
 
             /// <summary>
             /// Create entry
@@ -1201,6 +1184,26 @@ namespace Lexical.FileSystem
             }
 
             /// <summary>
+            /// Path to the entry.
+            /// </summary>
+            public override string Path
+            {
+                get
+                {
+                    // Get reference of previous cached value
+                    string _path = path;
+                    // Return previous cached value
+                    if (_path != null) return _path;
+                    // Get reference of parent
+                    Directory _parent = parent;
+                    // Case for root
+                    if (_parent == null) return path = "";
+                    // k2nd+ level paths
+                    return _parent.Path + name + "/";
+                }
+            }
+
+            /// <summary>
             /// Create directory entry
             /// </summary>
             /// <param name="filesystem"></param>
@@ -1254,6 +1257,24 @@ namespace Lexical.FileSystem
             /// Memory file
             /// </summary>
             protected internal MemoryFile memoryFile;
+
+            /// <summary>
+            /// Path to the entry.
+            /// </summary>
+            public override string Path
+            {
+                get
+                {
+                    // Get reference of previous cached value
+                    string _path = path;
+                    // Return previous cached value
+                    if (_path != null) return _path;
+                    // Get reference of parent
+                    Directory _parent = parent;
+                    // k2nd+ level paths
+                    return _parent.Path + name;
+                }
+            }
 
             /// <summary>
             /// Create file entry.

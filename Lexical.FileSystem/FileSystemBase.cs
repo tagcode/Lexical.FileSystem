@@ -83,14 +83,14 @@ namespace Lexical.FileSystem
                 {
                     try
                     {
-                        e.Observer.Observer.OnNext(e);
+                        e.Observer?.Observer?.OnNext(e);
                     }
                     catch (Exception error)
                     {
                         // Bumerang error
                         try
                         {
-                            e.Observer.Observer.OnError(error);
+                            e.Observer?.Observer?.OnError(error);
                         }
                         catch (Exception error2)
                         {
@@ -129,14 +129,14 @@ namespace Lexical.FileSystem
                 Exception error = null;
                 try
                 {
-                    @event.Observer.Observer.OnNext(@event);
+                    @event.Observer?.Observer?.OnNext(@event);
                 }
                 catch (Exception error1)
                 {
                     // Bumerang error
                     try
                     {
-                        @event.Observer.Observer.OnError(error1);
+                        @event.Observer?.Observer?.OnError(error1);
                     }
                     catch (Exception error2)
                     {
@@ -167,14 +167,14 @@ namespace Lexical.FileSystem
                 {
                     try
                     {
-                        e.Observer.Observer.OnNext(e);
+                        e.Observer?.Observer?.OnNext(e);
                     }
                     catch (Exception error)
                     {
                         // Bumerang error
                         try
                         {
-                            e.Observer.Observer.OnError(error);
+                            e.Observer?.Observer?.OnError(error);
                         }
                         catch (Exception error2)
                         {
@@ -190,14 +190,14 @@ namespace Lexical.FileSystem
                 Exception error = null;
                 try
                 {
-                    @event.Observer.Observer.OnNext(@event);
+                    @event.Observer?.Observer?.OnNext(@event);
                 }
                 catch (Exception error1)
                 {
                     // Bumerang error
                     try
                     {
-                        @event.Observer.Observer.OnError(error1);
+                        @event.Observer?.Observer?.OnError(error1);
                     }
                     catch (Exception error2)
                     {

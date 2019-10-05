@@ -63,6 +63,8 @@ namespace Lexical.FileSystem.FileProvider
         /// </summary>
         protected bool isPhysicalFileProvider;
 
+        protected IFileSystemEntry rootEntry;
+
         /// <summary>
         /// Create file provider based file system.
         /// </summary>
@@ -77,6 +79,7 @@ namespace Lexical.FileSystem.FileProvider
             this.canObserve = canObserve;
             this.CanOpen = this.CanRead = canOpen;
             this.isPhysicalFileProvider = sourceFileProvider.GetType().FullName == "Microsoft.Extensions.FileProviders.PhysicalFileProvider";
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, this);
         }
 
         /// <summary>
@@ -164,14 +167,18 @@ namespace Lexical.FileSystem.FileProvider
             {
                 // Convert result
                 StructList24<IFileSystemEntry> list = new StructList24<IFileSystemEntry>();
-                foreach (IFileInfo _fi in contents)
+                foreach (IFileInfo info in contents)
                 {
-                    string entryPath = path.Length > 0 ? path + "/" + _fi.Name : _fi.Name;
-                    IFileSystemEntry e =
-                        _fi.IsDirectory ?
-                        (IFileSystemEntry)new FileSystemEntryDirectory(this, entryPath, _fi.Name, _fi.LastModified, DateTimeOffset.MinValue, this) :
-                        (IFileSystemEntry)new FileSystemEntryFile(this, entryPath, _fi.Name, _fi.LastModified, DateTimeOffset.MinValue, _fi.Length);
-                    list.Add(e);
+                    if (info.IsDirectory)
+                    {
+                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue, this);
+                        list.Add(e);
+                    }
+                    else
+                    {
+                        IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(path) ? info.Name : path + "/" + info.Name, info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length);
+                        list.Add(e);
+                    }
                 }
                 return list.ToArray();
             }
@@ -202,7 +209,7 @@ namespace Lexical.FileSystem.FileProvider
         /// <exception cref="ObjectDisposedException"/>
         public IFileSystemEntry GetEntry(string path)
         {
-            if (path == "") return new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, this);
+            if (path == "") return rootEntry;
             // Make path
             if (isPhysicalFileProvider && path.Contains(@"\")) path = path.Replace(@"\", "/");
             // Is disposed?
@@ -212,13 +219,35 @@ namespace Lexical.FileSystem.FileProvider
             // File
             IFileInfo fi = fp.GetFileInfo(path);
             if (fi.Exists)
-                return fi.IsDirectory ?
-                    new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, this) :
-                    (IFileSystemEntry)new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length);
+            {
+                if (fi.IsDirectory)
+                {
+                    if (path != "" && !path.EndsWith("/") && !path.EndsWith("\\")) path = path + "/";
+                    return new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, this);
+                }
+                else return new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length);
+            }
 
             // Directory
             IDirectoryContents contents = fp.GetDirectoryContents(path);
-            if (contents.Exists) return new FileSystemEntryDirectory(this, path, Path.GetDirectoryName(path), DateTimeOffset.MinValue, DateTimeOffset.MinValue, this);
+            if (contents.Exists)
+            {
+                string name;
+                if (path == "")
+                {
+                    name = "";
+                    path = "";
+                }
+                else if (!path.EndsWith("/") && !path.EndsWith("\\"))
+                {
+                    name = Path.GetFileName(path);
+                    path = path + "/";
+                } else
+                {
+                    name = Path.GetDirectoryName(path);
+                }
+                return new FileSystemEntryDirectory(this, path, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, this);
+            }
 
             // Nothing was found
             return null;
