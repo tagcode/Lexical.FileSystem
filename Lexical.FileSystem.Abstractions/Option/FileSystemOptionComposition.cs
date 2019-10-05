@@ -122,8 +122,8 @@ namespace Lexical.FileSystem
             {
                 if (op == Op.First) return;
                 if (op == Op.Last) { byType[type] = option; return; }
-                if (op == Op.Union) { byType[type] = option.UnionAs(prev, type); return; };
-                if (op == Op.Intersection) { byType[type] = option.IntersectionAs(prev, type); return; };
+                if (op == Op.Union) { byType[type] = option.OptionUnionAs(prev, type); return; };
+                if (op == Op.Intersection) { byType[type] = option.OptionIntersectionAs(prev, type); return; };
                 throw new ArgumentException(nameof(op));
             }
             else

@@ -85,7 +85,7 @@ namespace Lexical.FileSystem
         /// <param name="eventHandler">(optional) Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.</param>
         /// <returns><paramref name="filesystem"/></returns>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
-        public static IFileSystem SetEventDispatcher(IFileSystem filesystem, TaskFactory eventHandler)
+        public static IFileSystem SetEventDispatcher(this IFileSystem filesystem, TaskFactory eventHandler)
         {
             if (filesystem is IFileSystemObserve _observer) return _observer.SetEventDispatcher(eventHandler);
             else throw new NotSupportedException(nameof(SetEventDispatcher));

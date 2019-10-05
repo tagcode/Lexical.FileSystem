@@ -12,6 +12,7 @@ namespace Lexical.FileSystem
     // <doc>
     /// <summary>File system options for browse.</summary>
     [Operations(typeof(FileSystemOptionOperationBrowse))]
+    // <IFileSystemOptionBrowse>
     public interface IFileSystemOptionBrowse : IFileSystemOption
     {
         /// <summary>Has Browse capability.</summary>
@@ -19,6 +20,7 @@ namespace Lexical.FileSystem
         /// <summary>Has GetEntry capability.</summary>
         bool CanGetEntry { get; }
     }
+    // </IFileSystemOptionBrowse>
 
     /// <summary>
     /// File system that can browse directories.

@@ -19,7 +19,7 @@ namespace Lexical.FileSystem
         /// <param name="option"></param>
         /// <param name="optionType">option interface type, a subtype of <see cref="IFileSystemOption"/></param>
         /// <returns>Either <paramref name="option"/> or flattened version as <paramref name="optionType"/></returns>
-        public static IFileSystemOption FlattenAs(this IFileSystemOption option, Type optionType)
+        public static IFileSystemOption OptionFlattenAs(this IFileSystemOption option, Type optionType)
             => option.Operation<IFileSystemOptionOperationFlatten>(optionType).Flatten(option);
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace Lexical.FileSystem
         /// <param name="anotherOption"></param>
         /// <param name="optionType">option interface type, a subtype of <see cref="IFileSystemOption"/></param>
         /// <returns>flattened instance of <paramref name="optionType"/></returns>
-        public static IFileSystemOption UnionAs(this IFileSystemOption option, IFileSystemOption anotherOption, Type optionType)
+        public static IFileSystemOption OptionUnionAs(this IFileSystemOption option, IFileSystemOption anotherOption, Type optionType)
             => option.Operation<IFileSystemOptionOperationUnion>(optionType).Union(option, anotherOption);
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace Lexical.FileSystem
         /// <param name="anotherOption"></param>
         /// <param name="optionType">option interface type, a subtype of <see cref="IFileSystemOption"/></param>
         /// <returns>flattened instance of <paramref name="optionType"/></returns>
-        public static IFileSystemOption IntersectionAs(this IFileSystemOption option, IFileSystemOption anotherOption, Type optionType)
+        public static IFileSystemOption OptionIntersectionAs(this IFileSystemOption option, IFileSystemOption anotherOption, Type optionType)
             => option.Operation<IFileSystemOptionOperationIntersection>(optionType).Intersection(option, anotherOption);
 
         /// <summary>

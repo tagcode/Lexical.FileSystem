@@ -419,9 +419,11 @@ namespace Lexical.FileSystem
                 // Reduce all "/mnt/xx" into one "/" root.
                 if (m.Groups["unix_rooted_path"].Success) continue;
 
-                string name = m.Value, path = m.Value+"/";
-                DirectoryInfo di = driveInfo.RootDirectory;
+                string path = m.Value;
                 if (path.EndsWith(osSeparator)) path = path.Substring(0, path.Length - 1);
+                string name = path;
+                DirectoryInfo di = driveInfo.RootDirectory;
+                path = path + "/";
                 
                 IFileSystemEntry e =
                     driveInfo.IsReady ?

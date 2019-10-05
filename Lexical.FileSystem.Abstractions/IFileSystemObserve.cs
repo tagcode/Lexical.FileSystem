@@ -13,6 +13,7 @@ namespace Lexical.FileSystem
     // <doc>
     /// <summary>File system option for observe.</summary>
     [Operations(typeof(FileSystemOptionOperationObserve))]
+    // <IFileSystemOptionObserve>
     public interface IFileSystemOptionObserve : IFileSystemOption
     {
         /// <summary>Has Observe capability.</summary>
@@ -20,6 +21,7 @@ namespace Lexical.FileSystem
         /// <summary>Has SetEventDispatcher capability.</summary>
         bool CanSetEventDispatcher { get; }
     }
+    // </IFileSystemOptionObserve>
 
     /// <summary>
     /// File system that observe file and directory changes.

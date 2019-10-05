@@ -182,13 +182,13 @@ namespace Lexical.FileSystem
     }
     // </IPackageLoadInfo>
 
-    // <IFileSystemPackageLoader>
     /// <summary>Option for auto-mounted packages.</summary>
     [Operations(typeof(FileSystemOptionOperationPackageLoader))]
+    // <IFileSystemOptionPackageLoader>
     public interface IFileSystemOptionPackageLoader : IFileSystemOption
     {
         /// <summary>Package loaders that can mount package files, such as .zip.</summary>
         IFileSystemPackageLoader[] PackageLoaders { get; }
     }
-    // </IFileSystemPackageLoader>
+    // </IFileSystemOptionPackageLoader>
 }

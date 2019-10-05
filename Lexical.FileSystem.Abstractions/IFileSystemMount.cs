@@ -10,6 +10,7 @@ namespace Lexical.FileSystem
     // <doc>
     /// <summary>File system option for mount capabilities. Used with <see cref="IFileSystemMount"/>.</summary>
     [Operations(typeof(FileSystemOptionOperationMount))]
+    // <IFileSystemOptionMount>
     public interface IFileSystemOptionMount : IFileSystemOption
     {
         /// <summary>Can filesystem mount other filesystems.</summary>
@@ -19,6 +20,7 @@ namespace Lexical.FileSystem
         /// <summary>Is filesystem allowed to list mounts.</summary>
         bool CanListMounts { get; }
     }
+    // </IFileSystemOptionMount>
 
     /// <summary>
     /// FileSystem that can mount other filesystems into its directory tree.
@@ -60,13 +62,15 @@ namespace Lexical.FileSystem
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         IFileSystemEntryMount[] ListMounts();
     }
+    // </doc>
 
     /// <summary>Option for mount path. Use with decorator.</summary>
     [Operations(typeof(FileSystemOptionOperationMountPath))]
+    // <IFileSystemOptionMountPath>
     public interface IFileSystemOptionMountPath : IFileSystemOption
     {
         /// <summary>Mount path.</summary>
         String MountPath { get; }
     }
-    // </doc>
+    // </IFileSystemOptionMountPath>
 }

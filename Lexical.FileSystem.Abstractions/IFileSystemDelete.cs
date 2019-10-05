@@ -12,11 +12,13 @@ namespace Lexical.FileSystem
     // <doc>
     /// <summary>File system option for deleting files and directories.</summary>
     [Operations(typeof(FileSystemOptionOperationDelete))]
+    // <IFileSystemOptionDelete>
     public interface IFileSystemOptionDelete : IFileSystemOption
     {
         /// <summary>Has Delete capability.</summary>
         bool CanDelete { get; }
     }
+    // </IFileSystemOptionDelete>
 
     /// <summary>
     /// File system that can delete files and directories.

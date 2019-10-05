@@ -34,9 +34,9 @@ namespace Lexical.FileSystem
     /// </summary>
     public interface IFileSystemDisposable : IFileSystem, IDisposable { }
 
-
     /// <summary>Path related options</summary>
     [Operations(typeof(FileSystemOptionOperationPath))]
+    // <IFileSystemOptionPath>
     public interface IFileSystemOptionPath : IFileSystemOption
     {
         /// <summary>Case sensitivity</summary>
@@ -44,6 +44,7 @@ namespace Lexical.FileSystem
         /// <summary>Filesystem allows empty string "" directory names. The value of this property excludes the default empty "" root path.</summary>
         bool EmptyDirectoryName { get; }
     }
+    // </IFileSystemOptionPath>
 
     /// <summary>Knolwedge about path name case sensitivity</summary>
     [Flags]

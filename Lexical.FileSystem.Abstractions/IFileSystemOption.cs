@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
+    // <IFileSystemOption>
     /// <summary>
     /// Interface for filesystem options. 
     /// 
@@ -33,7 +33,9 @@ namespace Lexical.FileSystem
     public interface IFileSystemOption
     {
     }
+    // </IFileSystemOption>
 
+    // <IFileSystemOptionAdaptable>
     /// <summary>
     /// Interface for option classes that adapt to option types at runtime.
     /// Also enumerates supported <see cref="IFileSystemOption"/> option type interfaces.
@@ -47,5 +49,5 @@ namespace Lexical.FileSystem
         /// <returns>Option or null</returns>
         IFileSystemOption GetOption(Type optionInterfaceType);
     }
-    // </doc>
+    // </IFileSystemOptionAdaptable>
 }

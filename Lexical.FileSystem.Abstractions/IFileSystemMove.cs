@@ -13,11 +13,13 @@ namespace Lexical.FileSystem
     // <doc>
     /// <summary>File system option for move/rename.</summary>
     [Operations(typeof(FileSystemOptionOperationMove))]
+    // <IFileSystemOptionMove>
     public interface IFileSystemOptionMove : IFileSystemOption
     {
         /// <summary>Has Move capability.</summary>
         bool CanMove { get; }
     }
+    // </IFileSystemOptionMove>
 
     /// <summary>
     /// File system that can move/rename files and directories.

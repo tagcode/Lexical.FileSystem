@@ -12,6 +12,7 @@ namespace Lexical.FileSystem
     // <doc>
     /// <summary>File system options for open, create, read and write files.</summary>
     [Operations(typeof(FileSystemOptionOperationOpen))]
+    // <IFileSystemOptionOpen>
     public interface IFileSystemOptionOpen : IFileSystemOption
     {
         /// <summary>Can open file</summary>
@@ -23,6 +24,7 @@ namespace Lexical.FileSystem
         /// <summary>Can open and create file.</summary>
         bool CanCreateFile { get; }
     }
+    // </IFileSystemOptionOpen>
 
     /// <summary>
     /// File system that can open files for reading and writing. 

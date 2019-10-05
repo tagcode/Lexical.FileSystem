@@ -12,11 +12,13 @@ namespace Lexical.FileSystem
     // <doc>
     /// <summary>File system option for creating directories.</summary>
     [Operations(typeof(FileSystemOptionOperationCreateDirectory))]
+    // <IFileSystemOptionCreateDirectory>
     public interface IFileSystemOptionCreateDirectory : IFileSystemOption
     {
         /// <summary>Has CreateDirectory capability.</summary>
         bool CanCreateDirectory { get; }
     }
+    // </IFileSystemOptionCreateDirectory>
 
     /// <summary>
     /// File system that can create directories.

@@ -8,15 +8,6 @@ using System;
 
 namespace Lexical.FileSystem
 {
-
-
-
-
-
-
-
-
-
     /// <summary>
     /// FileSystem option that denies write and modification operations.
     /// </summary>
