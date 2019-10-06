@@ -551,7 +551,7 @@ token.RegisterChangeCallback(o => Console.WriteLine("Changed"), null);
 
 # MemoryFileSystem
 
-**MemoryFileSystem** is an memory based filesystem.
+**MemoryFileSystem** is a memory based filesystem.
 
 ```csharp
 IFileSystem filesystem = new MemoryFileSystem();
@@ -579,7 +579,7 @@ using (Stream s = filesystem.Open("file.txt", FileMode.Open, FileAccess.Read, Fi
 }
 ```
 
-And for for writing.
+And for writing.
 
 ```csharp
 using (Stream s = filesystem.Open("file.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
