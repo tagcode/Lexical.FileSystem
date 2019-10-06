@@ -233,7 +233,7 @@ filesystem.Dispose();
 # Decoration
 
 The <i>IFileSystems</i><b>.Decorate(<i>IFileSystemOption</i>)</b> extension method decorates a filesystem with new decorated options. 
-Decoration options is an intersection of filesystem's options and the options in the parameters, so features are reduced.
+Decoration options is an intersection of filesystem's options and the options in the parameters, so decoration reduces features.
 
 ```csharp
 IFileSystem ram = new MemoryFileSystem();
@@ -249,10 +249,10 @@ IFileSystem rom = ram.AsReadOnly();
 **FileSystemOption.NoBrowse** prevents browsing, hiding files.
 
 ```csharp
-IFileSystem invisible = ram.Decorate(FileSystemOption.NoOpen);
+IFileSystem invisible = ram.Decorate(FileSystemOption.NoBrowse);
 ```
 
-**FileSystemOption.MountPath(<i>subpath</i>)** option mounts to a subpath.
+**FileSystemOption.MountPath(<i>subpath</i>)** option exposes a subpath.
 
 ```csharp
 IFileSystem ram = new MemoryFileSystem();
@@ -740,7 +740,7 @@ The initial start path is extracted from the pattern.
 filescanner.AddGlobPattern("myfile.zip/**.txt");
 ```
 
-Search is started when **IEnumerator&lt;*string*&gt;** is enumerated from the scanner.
+Search is started when **IEnumerator&lt;*IFileSystemEntry*&gt;** is enumerated from the scanner.
 
 ```csharp
 foreach (IFileSystemEntry entry in filescanner)
