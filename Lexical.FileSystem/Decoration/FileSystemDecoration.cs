@@ -56,6 +56,11 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         public IFileSystem[] FileSystems => filesystems;
 
+        /// <summary>
+        /// File system components as <see cref="IDisposable"/>.
+        /// </summary>
+        public IEnumerable<IDisposable> DisposableFileSystems => filesystems.Where(fs => fs is IDisposable).Cast<IDisposable>();
+
         /// <summary>Union of options.</summary>
         protected Options Option;
 
@@ -1233,6 +1238,16 @@ namespace Lexical.FileSystem.Decoration
             IFileSystemObserver IFileSystemEvent.Observer => this;
             DateTimeOffset IFileSystemEvent.EventTime => startTime;
             string IFileSystemEvent.Path => null;
+        }
+
+        /// <summary>
+        /// Add source <see cref="IFileSystem"/> instances to be disposed along with this decoration.
+        /// </summary>
+        /// <returns>self</returns>
+        public FileSystemDecoration AddSourceToBeDisposed()
+        {
+            AddDisposables(filesystems);
+            return this;
         }
 
         /// <summary>

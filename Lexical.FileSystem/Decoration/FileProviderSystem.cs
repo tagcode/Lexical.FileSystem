@@ -13,7 +13,7 @@ using System.IO;
 using System.Security;
 using System.Threading.Tasks;
 
-namespace Lexical.FileSystem.FileProvider
+namespace Lexical.FileSystem.Decoration
 {
     /// <summary>
     /// File system that reads, observes and browses files from <see cref="IFileProvider"/> source.
@@ -63,6 +63,9 @@ namespace Lexical.FileSystem.FileProvider
         /// </summary>
         protected bool isPhysicalFileProvider;
 
+        /// <summary>
+        /// Root entry.
+        /// </summary>
         protected IFileSystemEntry rootEntry;
 
         /// <summary>
@@ -573,6 +576,16 @@ namespace Lexical.FileSystem.FileProvider
             IFileSystemObserver IFileSystemEvent.Observer => this;
             DateTimeOffset IFileSystemEvent.EventTime => startTime;
             string IFileSystemEvent.Path => null;
+        }
+
+        /// <summary>
+        /// Add the source <see cref="IFileProvider"/> instance to be disposed along with this decoration.
+        /// </summary>
+        /// <returns>self</returns>
+        public FileProviderSystem AddSourceToBeDisposed()
+        {
+            AddDisposable(this.FileProvider);
+            return this;
         }
 
         /// <summary>

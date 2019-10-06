@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 
-namespace Lexical.FileSystem.FileProvider
+namespace Lexical.FileSystem.Decoration
 {
     /// <summary>
     /// Adapts <see cref="IFileSystem"/> into <see cref="IFileProvider"/>.
@@ -336,7 +336,16 @@ namespace Lexical.FileSystem.FileProvider
                     token = null;
                 }
             }
+        }
 
+        /// <summary>
+        /// Add the source <see cref="IFileSystem"/> instance to be disposed along with this decoration.
+        /// </summary>
+        /// <returns>self</returns>
+        public FileSystemProvider AddSourceToBeDisposed()
+        {
+            AddDisposable(this.FileSystem);
+            return this;
         }
 
         /// <summary>
