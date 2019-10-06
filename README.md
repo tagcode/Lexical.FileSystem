@@ -5,6 +5,7 @@ NuGet Packages:
 * Lexical.FileSystem ([Website](http://lexical.fi/FileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/))
 * Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
 
+
 # FileSystem
 
 **new FileSystem(<i>path</i>)** creates an instance of filesystem at directory. Path "" refers to operating system root.
@@ -96,7 +97,8 @@ foreach (var line in FileSystem.OS.VisitTree(depth: 2))
 └──"D:"
 </pre>
 
-The separator character is always forward slash '/'. For example "C:/Windows/win.ini".
+> [!NOTE]
+> The separator character is always forward slash '/'. For example "C:/Windows/win.ini".
 
 Extension method **.PrintTo()** appends the visited filesystem to text output. 
 
@@ -549,6 +551,7 @@ token.RegisterChangeCallback(o => Console.WriteLine("Changed"), null);
 ```
 
 
+
 # MemoryFileSystem
 
 **MemoryFileSystem** is a memory based filesystem.
@@ -631,7 +634,7 @@ filesystem.CreateDirectory("/tmp/dir/");
       └──"dir"
 </pre>
 
-Path "file://" refers to three directories. The directory between two slashes "//" has empty name.
+Path "file://" refers to three directories; the root, "file:" and a empty-named directory between two slashes "//".
 
 ```csharp
 filesystem.CreateDirectory("file://");
@@ -654,5 +657,118 @@ Files and directories can be renamed and moved.
 ```csharp
 filesystem.CreateDirectory("dir/");
 filesystem.Move("dir/", "new-name/");
+```
+
+
+# Disposing
+
+Disposable objects can be attached to be disposed along with *FileSystem*.
+
+```csharp
+// Init
+object obj = new ReaderWriterLockSlim();
+IFileSystemDisposable filesystem = new FileSystem("").AddDisposable(obj);
+
+// ... do work ...
+
+// Dispose both
+filesystem.Dispose();
+```
+
+Delegates can be attached to be executed at dispose of *FileSystem*.
+
+```csharp
+IFileSystemDisposable filesystem = new FileSystem("")
+    .AddDisposeAction(f => Console.WriteLine("Disposed"));
+```
+
+**.BelateDispose()** creates a handle that postpones dispose on *.Dispose()*. Actual dispose proceeds once *.Dispose()* is called and
+all belate handles are disposed. This can be used for passing the *IFileSystem* to worker threads. 
+
+```csharp
+MemoryFileSystem filesystem = new MemoryFileSystem();
+filesystem.CreateDirectory("/tmp/dir/");
+
+// Postpone dispose
+IDisposable belateDisposeHandle = filesystem.BelateDispose();
+// Start concurrent work
+Task.Run(() =>
+{
+    // Do work
+    Thread.Sleep(1000);
+    filesystem.GetEntry("");
+    // Release belate handle. Disposes here or below, depending which thread runs last.
+    belateDisposeHandle.Dispose();
+});
+
+// Start dispose, but postpone it until belatehandle is disposed in another thread.
+filesystem.Dispose();
+```
+
+# FileScanner
+**FileScanner** scans the tree structure of a filesystem for files that match its configured criteria. It uses concurrent threads.
+
+```csharp
+IFileSystem fs = new MemoryFileSystem();
+fs.CreateDirectory("myfile.zip/folder");
+fs.CreateFile("myfile.zip/folder/somefile.txt");
+
+FileScanner filescanner = new FileScanner(fs);
+```
+
+*FileScanner* needs to be populated with at least one filter, such as wildcard pattern, **.AddWildcard(*string*)**.
+
+```csharp
+filescanner.AddWildcard("*.zip");
+```
+
+Or regular expression.
+
+```csharp
+filescanner.AddRegex(path: "", pattern: new Regex(@".*\.zip"));
+```
+
+Or glob pattern.
+
+```csharp
+filescanner.AddGlobPattern("**.zip/**.txt");
+```
+
+The initial start path is extracted from the pattern.
+
+```csharp
+filescanner.AddGlobPattern("myfile.zip/**.txt");
+```
+
+Search is started when **IEnumerator&lt;*string*&gt;** is enumerated from the scanner.
+
+```csharp
+foreach (IFileSystemEntry entry in filescanner)
+{
+    Console.WriteLine(entry.Path);
+}
+```
+
+Exceptions that occur at real-time can be captured into concurrent collection.
+
+```csharp
+// Collect errors
+filescanner.errors = new ConcurrentBag<Exception>();
+// Run scan
+IFileSystemEntry[] entries = filescanner.ToArray();
+// View errors
+foreach (Exception e in filescanner.errors) Console.WriteLine(e);
+```
+
+The property **.ReturnDirectories** determines whether scanner returns directories.
+
+```csharp
+filescanner.ReturnDirectories = true;
+```
+
+The property **.SetDirectoryEvaluator(<i>Func&lt;IFileSystemEntry, bool&gt; func</i>)** sets a criteria that determines whether scanner enters a directory.
+
+```csharp
+filescanner.SetDirectoryEvaluator(e => e.Name != "tmp");
 ```
 
