@@ -187,14 +187,14 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Add regular expression pattern to scanner match patterns.
         /// </summary>
-        /// <param name="subpath"></param>
-        /// <param name="regex"></param>
+        /// <param name="path"></param>
+        /// <param name="pattern"></param>
         /// <returns></returns>
-        public FileScanner AddRegex(string subpath, Regex regex)
+        public FileScanner AddRegex(string path, Regex pattern)
         {
             PatternSet set;
-            if (!patterns.TryGetValue(subpath, out set)) patterns[subpath] = set = new PatternSet();
-            set.AddRegex(regex);
+            if (!patterns.TryGetValue(path, out set)) patterns[path] = set = new PatternSet();
+            set.AddRegex(pattern);
             return this;
         }
 

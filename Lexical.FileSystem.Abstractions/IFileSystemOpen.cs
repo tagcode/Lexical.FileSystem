@@ -9,7 +9,6 @@ using System.Security;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
     /// <summary>File system options for open, create, read and write files.</summary>
     [Operations(typeof(FileSystemOptionOperationOpen))]
     // <IFileSystemOptionOpen>
@@ -26,6 +25,7 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemOptionOpen>
 
+    // <doc>
     /// <summary>
     /// File system that can open files for reading and writing. 
     /// </summary>

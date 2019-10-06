@@ -7,7 +7,6 @@ using System;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
     /// <summary>File system option for mount capabilities. Used with <see cref="IFileSystemMount"/>.</summary>
     [Operations(typeof(FileSystemOptionOperationMount))]
     // <IFileSystemOptionMount>
@@ -22,6 +21,7 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemOptionMount>
 
+    // <doc>
     /// <summary>
     /// FileSystem that can mount other filesystems into its directory tree.
     /// </summary>

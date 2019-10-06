@@ -9,7 +9,6 @@ using System.Security;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
     /// <summary>File system options for browse.</summary>
     [Operations(typeof(FileSystemOptionOperationBrowse))]
     // <IFileSystemOptionBrowse>
@@ -22,6 +21,7 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemOptionBrowse>
 
+    // <doc>
     /// <summary>
     /// File system that can browse directories.
     /// </summary>

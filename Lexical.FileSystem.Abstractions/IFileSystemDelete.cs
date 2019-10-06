@@ -9,7 +9,6 @@ using System.Security;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
     /// <summary>File system option for deleting files and directories.</summary>
     [Operations(typeof(FileSystemOptionOperationDelete))]
     // <IFileSystemOptionDelete>
@@ -20,6 +19,7 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemOptionDelete>
 
+    // <doc>
     /// <summary>
     /// File system that can delete files and directories.
     /// </summary>

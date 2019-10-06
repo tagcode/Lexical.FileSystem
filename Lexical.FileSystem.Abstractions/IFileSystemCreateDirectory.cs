@@ -9,7 +9,6 @@ using System.Security;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
     /// <summary>File system option for creating directories.</summary>
     [Operations(typeof(FileSystemOptionOperationCreateDirectory))]
     // <IFileSystemOptionCreateDirectory>
@@ -20,6 +19,7 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemOptionCreateDirectory>
 
+    // <doc>
     /// <summary>
     /// File system that can create directories.
     /// </summary>

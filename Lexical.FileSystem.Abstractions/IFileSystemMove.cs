@@ -10,7 +10,6 @@ using System.Security;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
     /// <summary>File system option for move/rename.</summary>
     [Operations(typeof(FileSystemOptionOperationMove))]
     // <IFileSystemOptionMove>
@@ -21,6 +20,7 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemOptionMove>
 
+    // <doc>
     /// <summary>
     /// File system that can move/rename files and directories.
     /// </summary>

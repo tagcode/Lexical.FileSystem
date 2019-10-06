@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
-    // <doc>
     /// <summary>File system option for observe.</summary>
     [Operations(typeof(FileSystemOptionOperationObserve))]
     // <IFileSystemOptionObserve>
@@ -23,6 +22,7 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemOptionObserve>
 
+    // <doc>
     /// <summary>
     /// File system that observe file and directory changes.
     /// </summary>
