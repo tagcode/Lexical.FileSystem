@@ -4,9 +4,10 @@ Lexical.FileSystem is a virtual filesystem class libraries for .NET.
 NuGet Packages:
 * Lexical.FileSystem ([Website](http://lexical.fi/FileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/))
 * Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
+
 # FileSystem
 
-**new FileSystem(<i>path</i>)** creates an instance to a path in local directory. "" path refers to operating system root.
+**new FileSystem(<i>path</i>)** creates an instance of filesystem at directory. Path "" refers to operating system root.
 
 ```csharp
 IFileSystem filesystem = new FileSystem(path: "");
@@ -41,7 +42,7 @@ Files and directories can be observed for changes.
 
 ```csharp
 IObserver<IFileSystemEvent> observer = new Observer();
-using (IDisposable handle = filesystem.Observe("c:/**", observer))
+using (IDisposable handle = filesystem.Observe("C:/**", observer))
 {
 }
 ```
@@ -49,23 +50,24 @@ using (IDisposable handle = filesystem.Observe("c:/**", observer))
 Directories can be created.
 
 ```csharp
-filesystem.CreateDirectory("dir");
+filesystem.CreateDirectory("dir/");
 ```
 
 Directories can be deleted.
 
 ```csharp
-filesystem.Delete("dir", recursive: true);
+filesystem.Delete("dir/", recurse: true);
 ```
 
 Files and directories can be renamed and moved.
 
 ```csharp
-filesystem.CreateDirectory("dir");
-filesystem.Move("dir", "new-name");
+filesystem.CreateDirectory("dir/");
+filesystem.Move("dir/", "new-name/");
 ```
 
-Singleton instance **FileSystem.OS** refers to a filesystem at the OS root.
+# File structure
+The singleton instance **FileSystem.OS** refers to a filesystem at the OS root.
 
 ```csharp
 IFileSystem filesystem = FileSystem.OS;
@@ -74,55 +76,113 @@ IFileSystem filesystem = FileSystem.OS;
 Extension method **.VisitTree()** visits filesystem. On root path "" *FileSystem.OS* returns drive letters.
 
 ```csharp
-foreach (var line in FileSystem.OS.VisitTree(depth: 1))
+foreach (var line in FileSystem.OS.VisitTree(depth: 2))
     Console.WriteLine(line);
 ```
 
-```none
+
+<pre style="line-height:1.2;">
 ""
 ├──"C:"
+│  ├── "hiberfil.sys"
+│  ├── "pagefile.sys"
+│  ├── "swapfile.sys"
+│  ├── "Documents and Settings"
+│  ├── "Program Files"
+│  ├── "Program Files (x86)"
+│  ├── "System Volume Information"
+│  ├── "Users"
+│  └── "Windows10"
 └──"D:"
-```
+</pre>
 
-On linux it returns slash '/' root.
+The separator character is always forward slash '/'. For example "C:/Windows/win.ini".
+
+Extension method **.PrintTo()** appends the visited filesystem to text output. 
+
 
 ```csharp
-foreach (var line in FileSystem.OS.VisitTree(depth: 3))
-    Console.WriteLine(line.ToString(PrintTree.Format.DefaultPath));
+FileSystem.OS.PrintTo(Console.Out, depth: 2, format: PrintTree.Format.DefaultPath);
 ```
 
-```none
+<pre style="line-height:1.2;">
+├── C:/
+│  ├── C:/hiberfil.sys
+│  ├── C:/pagefile.sys
+│  ├── C:/swapfile.sys
+│  ├── C:/Documents and Settings/
+│  ├── C:/Program Files/
+│  ├── C:/Program Files (x86)/
+│  ├── C:/System Volume Information/
+│  ├── C:/Users/
+│  └── C:/Windows/
+└── D:/
+</pre>
+
+On linux *FileSystem.OS* returns slash '/' root.
+
+```csharp
+FileSystem.OS.PrintTo(Console.Out, depth: 3, format: PrintTree.Format.DefaultPath);
+```
+
+<pre style="line-height:1.2;">
 
 └──/
-   ├──/bin
-   ├──/boot
-   ├──/dev
-   ├──/etc
-   ├──/lib
-   ├──/media
-   ├──/mnt
-   ├──/root
-   ├──/sys
-   ├──/usr
-   └──/var
-```
+   ├──/bin/
+   ├──/boot/
+   ├──/dev/
+   ├──/etc/
+   ├──/lib/
+   ├──/media/
+   ├──/mnt/
+   ├──/root/
+   ├──/sys/
+   ├──/usr/
+   └──/var/
+</pre>
 
-
-**FileSystem.ApplicationRoot** refers to the application's root directory.
-
-```csharp
-IFileSystem filesystem = FileSystem.ApplicationRoot;
-foreach (var line in filesystem.VisitTree(depth: 3))
-    Console.WriteLine(line);
-```
-
-**FileSystem.Tmp** refers to the running user's temp directory.
+**FileSystem.Application** refers to the application's root directory.
 
 ```csharp
-IFileSystem filesystem = FileSystem.Tmp;
-foreach (var line in filesystem.VisitTree(depth: 1))
-    Console.WriteLine(line);
+FileSystem.Application.PrintTo(Console.Out);
 ```
+
+<pre style="line-height:1.2;">
+""
+├── "Application.dll"
+├── "Application.runtimeconfig.json"
+├── "Lexical.FileSystem.Abstractions.dll"
+└── "Lexical.FileSystem.dll"
+</pre>
+
+**FileSystem.Temp** refers to the running user's temp directory.
+
+```csharp
+FileSystem.Temp.PrintTo(Console.Out, depth: 1);
+```
+
+<pre style="line-height:1.2;">
+""
+├── "dmk55ohj.jjp"
+├── "wrz4cms5.r2f"
+├── "18e1904137f065db88dfbd23609eb877"
+└── "82e759b7-b237-45f7-91b9-8450b0732a6e.tmp"
+</pre>
+
+**Singleton** instances:
+| Name                             | Description                                                                                      | On Windows                                            | On Linux                                 |
+|:---------------------------------|:-------------------------------------------------------------------------------------------------|:------------------------------------------------------|:-----------------------------------------|
+| FileSystem.OS                    | Operating system root.                                                                           | ""                                                    | ""                                       |
+| FileSystem.Application           | Running application's base directory.                                                            |                                                       |                                          |
+| FileSystem.UserProfile           | The user's profile folder.                                                                       | "C:\\Users\\<i>&lt;user&gt;</i>"                      | "/home/<i>&lt;user&gt;</i>"              |
+| FileSystem.MyDocuments           | The My Documents folder.                                                                         | "C:\\Users\\<i>&lt;user&gt;</i>\\Documents"           | "/home/<i>&lt;user&gt;</i>"              |
+| FileSystem.Personal              | A common repository for documents.                                                               | "C:\\Users\\<i>&lt;user&gt;</i>\\Documents"           | "/home/<i>&lt;user&gt;</i>"              |
+| FileSystem.Temp                  | Running user's temp directory.                                                                   | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local\\Temp"| "/tmp                                    |
+| FileSystem.ApplicationData       | A common repository for application-specific data for the current roaming user.                  | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
+| FileSysten.LocalApplicationData  | A common repository for application-specific data that is used by the current, non-roaming user. | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
+| FileSysten.CommonApplicationData | A common repository for application-specific data that is used by all users.                     | "C:\\ProgramData"                                     | "/usr/share"                             |
+
+# Disposing
 
 Disposable objects can be attached to be disposed along with *FileSystem*.
 
