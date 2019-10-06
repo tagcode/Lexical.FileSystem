@@ -227,3 +227,325 @@ Task.Run(() =>
 // Start dispose, but postpone it until belatehandle is disposed in another thread.
 filesystem.Dispose();
 ```
+
+# Decoration
+
+The <i>IFileSystems</i><b>.Decorate(<i>IFileSystemOption</i>)</b> extension method decorates a filesystem with new decorated options. 
+Decoration options is an intersection of filesystem's options and the options in the parameters, so features are reduced.
+
+```csharp
+IFileSystem ram = new MemoryFileSystem();
+IFileSystem rom = ram.Decorate(FileSystemOption.ReadOnly);
+```
+
+<i>IFileSystems</i><b>.AsReadOnly()</b> is same as <i>IFileSystems.Decorate(FileSystemOption.ReadOnly)</i>.
+
+```csharp
+IFileSystem rom = ram.AsReadOnly();
+```
+
+**FileSystemOption.NoBrowse** prevents browsing, hiding files.
+
+```csharp
+IFileSystem invisible = ram.Decorate(FileSystemOption.NoOpen);
+```
+
+**FileSystemOption.MountPath(<i>subpath</i>)** option mounts to a subpath.
+
+```csharp
+IFileSystem ram = new MemoryFileSystem();
+ram.CreateDirectory("tmp/dir/");
+ram.CreateFile("tmp/dir/file.txt", new byte[] { 32,32,32,32,32,32,32,32,32 });
+
+IFileSystem tmp = ram.Decorate(FileSystemOption.MountPath("tmp/"));
+tmp.PrintTo(Console.Out, format: PrintTree.Format.DefaultPath);
+```
+<pre style="line-height:1.2;">
+
+└── dir/
+   └── dir/file.txt
+</pre>
+
+The decoration implements **IDisposeList** and **IBelatableDispose** which allows to add disposables.
+
+```csharp
+MemoryFileSystem ram = new MemoryFileSystem();
+ram.CreateDirectory("tmp/dir/");
+ram.CreateFile("tmp/dir/file.txt", new byte[] { 32, 32, 32, 32, 32, 32, 32, 32, 32 });
+IFileSystemDisposable rom = ram.Decorate(FileSystemOption.ReadOnly).AddDisposable(ram);
+// Do work ...
+rom.Dispose();
+```
+
+If multiple decorations are used, the source reference can be 'forgotten' after construction if belate dispose handles are passed over to decorations.
+
+```csharp
+// Create ram filesystem
+MemoryFileSystem ram = new MemoryFileSystem();
+ram.CreateDirectory("tmp/dir/");
+ram.CreateFile("tmp/dir/file.txt", new byte[] { 32, 32, 32, 32, 32, 32, 32, 32, 32 });
+
+// Create decorations
+IFileSystemDisposable rom = ram.Decorate(FileSystemOption.ReadOnly).AddDisposable(ram.BelateDispose());
+IFileSystemDisposable tmp = ram.Decorate(FileSystemOption.MountPath("tmp/")).AddDisposable(ram.BelateDispose());
+ram.Dispose();
+
+// Do work ...
+
+// Dispose rom1 and tmp, disposes ram as well
+rom.Dispose();
+tmp.Dispose();
+```
+
+# Concat
+<b>FileSystems.Concat(<i>IFileSystem[]</i>)</b> method composes IFileSystem instances into one.
+
+```csharp
+IFileSystem ram = new MemoryFileSystem();
+IFileSystem os = FileSystem.OS;
+IFileSystem fp = new PhysicalFileProvider(AppDomain.CurrentDomain.BaseDirectory).ToFileSystem()
+    .AddDisposeAction(fs=>fs.FileProviderDisposable?.Dispose());
+IFileSystem embedded = new EmbeddedFileSystem(typeof(Composition_Examples).Assembly);
+
+IFileSystem composition = FileSystems.Concat(ram, os, fp, embedded)
+    .AddDisposable(embedded)
+    .AddDisposable(fp)
+    .AddDisposable(os);
+```
+
+Composed set of files can be browsed.
+
+```csharp
+foreach (var entry in composition.VisitTree(depth: 1))
+    Console.WriteLine(entry);
+```
+
+Files can be read from the composed set.
+
+```csharp
+using (Stream s = composition.Open("docs.example-file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
+{
+    Console.WriteLine(s.Length);
+}
+```
+
+If two files have same name and path, the file in the first *IFileSystem* overshadows files from later *IFileSystem*s.
+
+```csharp
+IFileSystem ram1 = new MemoryFileSystem();
+IFileSystem ram2 = new MemoryFileSystem();
+IFileSystem composition = FileSystems.Concat(ram1, ram2);
+
+// Create file of 1024 bytes
+ram1.CreateFile("file.txt", new byte[1024]);
+
+// Create file of 10 bytes
+ram2.CreateFile("file.txt", new byte[10]);
+
+// Get only one entry size of 1024 bytes.
+composition.PrintTo(Console.Out, format: PrintTree.Format.Default | PrintTree.Format.Length);
+```
+
+<pre style="line-height:1.2;">
+""
+└── "file.txt" 1024
+</pre>
+
+<b>FileSystems.Concat(<i>(IFileSystem, IFileSystemOption)[]</i>)</b> applies options to the filesystems.
+
+```csharp
+IFileSystem filesystem = FileSystem.Application;
+IFileSystem overrides = new MemoryFileSystem();
+IFileSystem composition = FileSystems.Concat(
+    (filesystem, null), 
+    (overrides, FileSystemOption.ReadOnly)
+);
+```
+
+# IFileProvider 
+
+There are decorating adapters to and from **IFileProvider** instances.
+
+To use *IFileProvider* decorations, the calling assembly must import the **Microsoft.Extensions.FileProviders.Abstractions** assembly.
+
+## To IFileSystem
+The extension method <i>IFileProvider</i><b>.ToFileSystem()</b> adapts *IFileProvider* into *IFileSystem*.
+
+```csharp
+IFileSystem fs = new PhysicalFileProvider(@"C:\Users").ToFileSystem();
+```
+
+Parameters <b>.ToFileSystem(*bool canBrowse, bool canObserve, bool canOpen*)</b> can be used for limiting the capabilities of the adapted *IFileSystem*.
+
+```csharp
+IFileProvider fp = new PhysicalFileProvider(@"C:\");
+IFileSystem fs = fp.ToFileSystem(
+    canBrowse: true,
+    canObserve: true,
+    canOpen: true);
+```
+
+**.AddDisposable(<i>object</i>)** attaches a disposable to be disposed along with the *IFileSystem* adapter.
+
+```csharp
+IFileProvider fp = new PhysicalFileProvider(@"C:\Users");
+IFileSystemDisposable filesystem = fp.ToFileSystem().AddDisposable(fp);
+```
+
+**.AddDisposeAction()** attaches a delegate to be ran at dispose. It can be used for disposing the source *IFileProvider*.
+
+```csharp
+IFileSystemDisposable filesystem = new PhysicalFileProvider(@"C:\Users")
+    .ToFileSystem()
+    .AddDisposeAction(fs => fs.FileProviderDisposable?.Dispose());
+```
+
+**.BelateDispose()** creates a handle that postpones dispose on *.Dispose()*. Actual dispose will proceed once *.Dispose()* is called and
+all belate handles are disposed. This can be used for passing the *IFileSystem* to a worker thread. 
+
+```csharp
+using (var fs = new PhysicalFileProvider(@"C:\Users")
+    .ToFileSystem()
+    .AddDisposeAction(f => f.FileProviderDisposable?.Dispose()))
+{
+    fs.Browse("");
+
+    // Post pone dispose at end of using()
+    IDisposable belateDisposeHandle = fs.BelateDispose();
+    // Start concurrent work
+    Task.Run(() =>
+    {
+        // Do work
+        Thread.Sleep(100);
+        fs.GetEntry("");
+
+        // Release the belate dispose handle
+        // FileSystem is actually disposed here
+        // provided that the using block has exited
+        // in the main thread.
+        belateDisposeHandle.Dispose();
+    });
+
+    // using() exists here and starts the dispose fs
+}
+```
+
+The adapted *IFileSystem* can be used as any filesystem that has Open(), Browse() and Observe() features.
+
+```csharp
+IFileSystem fs = new PhysicalFileProvider(@"C:\Users").ToFileSystem();
+foreach (var line in fs.VisitTree(depth: 2))
+    Console.WriteLine(line);
+```
+
+<pre style="line-height:1.2;">
+""
+├──"Public"
+│  ├──"Shared Files"
+│  ├──"Documents"
+│  ├──"Downloads"
+│  ├──"Music"
+│  ├──"Pictures"
+│  ├──"Roaming"
+│  └──"Videos"
+└──"user"
+   ├──"Contacts"
+   ├──"Desktop"
+   ├──"Documents"
+   ├──"Downloads"
+   ├──"Favorites"
+   ├──"Links"
+   ├──"Music"
+   ├──"OneDrive"
+   ├──"Pictures"
+   └──"Videos"
+</pre>
+
+**.Observe()** attaches an watcher to the source *IFileProvider* and adapts events.
+
+```csharp
+IFileSystem fs = new PhysicalFileProvider(@"C:\Users").ToFileSystem();
+IObserver<IFileSystemEvent> observer = new Observer();
+using (IDisposable handle = fs.Observe("**", observer))
+{
+}
+```
+
+> [!WARNING]
+> Note that, observing a IFileProvider through IFileSystem adapter browses
+> the whole subtree in the source IFileProvider and compares snapshots
+> in order to produce delta events for the observer of the IFileSystem.
+
+## To IFileProvider
+<i>*IFileSystem*</i><b>.ToFileProvider()</b> adapts *IFileProvider* into *IFileSystem*.
+
+```csharp
+IFileProvider fp = FileSystem.OS.ToFileProvider();
+```
+
+**.AddDisposable(<i>object</i>)** attaches a disposable to be disposed along with the *IFileProvider* adapter.
+
+```csharp
+IFileSystem fs = new FileSystem("");
+IFileProviderDisposable fp = fs.ToFileProvider().AddDisposable(fs);
+```
+
+**.AddDisposeAction()** attaches a delegate to be ran at dispose. It can be used for disposing the source *IFileSystem*.
+
+```csharp
+IFileProviderDisposable fp = new FileSystem("")
+    .ToFileProvider()
+    .AddDisposeAction(fs => fs.FileSystemDisposable?.Dispose());
+```
+
+**.BelateDispose()** creates a handle that postpones dispose on *.Dispose()*. Actual dispose will proceed once *.Dispose()* is called and
+all belate handles are disposed. This can be used for passing the *IFileProvider* to a worker thread. 
+
+```csharp
+using (var fp = new FileSystem("").ToFileProvider()
+        .AddDisposeAction(fs => fs.FileSystemDisposable?.Dispose()))
+{
+    fp.GetDirectoryContents("");
+
+    // Post pone dispose at end of using()
+    IDisposable belateDisposeHandle = fp.BelateDispose();
+    // Start concurrent work
+    Task.Run(() =>
+    {
+        // Do work
+        Thread.Sleep(100);
+        fp.GetDirectoryContents("");
+
+        // Release the belate dispose handle
+        // FileSystem is actually disposed here
+        // provided that the using block has exited
+        // in the main thread.
+        belateDisposeHandle.Dispose();
+    });
+
+    // using() exists here and starts the dispose fs
+}
+```
+
+The adapted *IFileProvider* can be used as any fileprovider that can *GetDirectoryContents()*, *GetFileInfo()*, and *Watch()*.
+
+```csharp
+IFileProvider fp = FileSystem.OS.ToFileProvider();
+foreach (var fi in fp.GetDirectoryContents(""))
+    Console.WriteLine(fi.Name);
+```
+
+<pre style="line-height:1.2;">
+C:
+D:
+E:
+</pre>
+
+**.Watch()** attaches a watcher.
+
+```csharp
+IChangeToken token = new FileSystem(@"c:").ToFileProvider().Watch("**");
+token.RegisterChangeCallback(o => Console.WriteLine("Changed"), null);
+```
+
+
