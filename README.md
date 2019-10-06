@@ -549,3 +549,110 @@ token.RegisterChangeCallback(o => Console.WriteLine("Changed"), null);
 ```
 
 
+# MemoryFileSystem
+
+**MemoryFileSystem** is an memory based filesystem.
+
+```csharp
+IFileSystem filesystem = new MemoryFileSystem();
+```
+
+Files are based on blocks. Maximum number of blocks is 2^31-1. The <i>blockSize</i> can be set in constructor. The default blocksize is 1024. 
+
+```csharp
+IFileSystem filesystem = new MemoryFileSystem(blockSize: 4096L);
+```
+
+Files can be browsed.
+
+```csharp
+foreach (var entry in filesystem.Browse(""))
+    Console.WriteLine(entry.Path);
+```
+
+Files can be opened for reading.
+
+```csharp
+using (Stream s = filesystem.Open("file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
+{
+    Console.WriteLine(s.Length);
+}
+```
+
+And for for writing.
+
+```csharp
+using (Stream s = filesystem.Open("file.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+{
+    s.WriteByte(32);
+}
+```
+
+Files and directories can be observed for changes.
+
+```csharp
+IObserver<IFileSystemEvent> observer = new Observer();
+using (IDisposable handle = filesystem.Observe("**", observer))
+{
+}
+```
+
+Directories can be created.
+
+```csharp
+filesystem.CreateDirectory("dir/");
+```
+
+Directories can be created recursively. 
+
+```csharp
+filesystem.CreateDirectory("dir1/dir2/dir3/");
+filesystem.PrintTo(Console.Out);
+```
+
+The root is "".
+<pre style="line-height:1.2;">
+""
+└──"dir1"
+   └──"dir2"
+      └──"dir3"
+</pre>
+
+*MemoryFileSystem* can create empty directory names. For example, a slash '/' at the start of a path refers to an empty directory right under the root.
+
+```csharp
+filesystem.CreateDirectory("/tmp/dir/");
+```
+
+<pre style="line-height:1.2;">
+""
+└──""
+   └──"tmp"
+      └──"dir"
+</pre>
+
+Path "file://" refers to three directories. The directory between two slashes "//" has empty name.
+
+```csharp
+filesystem.CreateDirectory("file://");
+```
+
+<pre style="line-height:1.2;">
+""
+└──"file:"
+   └──""
+</pre>
+
+Directories can be deleted.
+
+```csharp
+filesystem.Delete("dir/", recurse: true);
+```
+
+Files and directories can be renamed and moved.
+
+```csharp
+filesystem.CreateDirectory("dir/");
+filesystem.Move("dir/", "new-name/");
+```
+
