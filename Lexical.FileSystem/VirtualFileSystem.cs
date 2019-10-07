@@ -479,11 +479,6 @@ namespace Lexical.FileSystem
             StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
             // Take snapshot of observers
             ObserverHandle[] observers = this.Observers;
-            // Create decoration filesystem (or null)
-            FileSystemDecoration fs =
-                filesystems == null || filesystems.Length == 0 ? null :
-                filesystems.Length == 1 ? new FileSystemDecoration(this, path, filesystems[0].filesystem, filesystems[0].mountOption) :
-                new FileSystemDecoration(this, filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
 
             // Write Lock
             m_lock.AcquireWriterLock(int.MaxValue);
@@ -542,16 +537,20 @@ namespace Lexical.FileSystem
                 // New mount
                 if (cursor.mount == null)
                 {
-                    cursor.mount = fs;
-                    // TODO Events
-                } else
-                // Replace mount
-                {
-                    cursor.mount = fs;
+                    // Create decoration filesystem (or null)
+                    cursor.mount = 
+                        filesystems == null || filesystems.Length == 0 ? new FileSystemDecoration(filesystem: null, option: null) :
+                        filesystems.Length == 1 ? new FileSystemDecoration(this, path, filesystems[0].filesystem, filesystems[0].mountOption) :
+                        new FileSystemDecoration(this, filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
+
                     // TODO Events
                 }
-
-                
+                else
+                // Replace mount
+                {
+                    cursor.mount.SetDecorees(filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
+                    // TODO Events
+                }
             }
             finally
             {
@@ -644,6 +643,9 @@ namespace Lexical.FileSystem
                     // Remove from parent
                     cursor.parent.contents.Remove(new StringSegment(cursor.name));
                     cursor.parent.lastModified = now;
+                    // Dispose decoration
+                    cursor.mount?.Dispose();
+
                     // TODO events
 
                     // Move towards parent
@@ -671,6 +673,30 @@ namespace Lexical.FileSystem
         /// <param name="disposeErrors"></param>
         protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
         {
+            StructList12<FileSystemDecoration> decorations = new StructList12<FileSystemDecoration>();
+            m_lock.AcquireWriterLock(int.MaxValue);
+            try
+            {
+                foreach (var e in root.VisitTree())
+                    if (e.mount != null)
+                        decorations.Add(e.mount);
+                root.contents.Clear();
+            }
+            finally
+            {
+                m_lock.ReleaseWriterLock();
+            }
+
+            for(int i=0; i<decorations.Count; i++)
+            {
+                try
+                {
+                    decorations[i].Dispose();
+                } catch (Exception e)
+                {
+                    disposeErrors.Add(e);
+                }
+            }
         }
 
         /// <summary>

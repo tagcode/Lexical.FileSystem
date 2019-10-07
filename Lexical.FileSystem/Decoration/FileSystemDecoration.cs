@@ -37,17 +37,17 @@ namespace Lexical.FileSystem.Decoration
         static IFileSystemEntry[] noEntries = new IFileSystemEntry[0];
 
         /// <summary>Decorees.</summary>
-        protected internal IFileSystem[] filesystems;
+        protected internal IFileSystem[] decoreeFileSystems;
         /// <summary>FileSystem specific components.</summary>
-        protected internal Component[] components;
+        protected internal Component[] decorees;
         /// <summary>Union of options.</summary>
         protected internal Options Option;
         /// <summary>Count</summary>
-        public int Count => filesystems.Length;
+        public int Count => decoreeFileSystems.Length;
         /// <summary>The decorated filesystems.</summary>
-        public IFileSystem[] Decorees => filesystems;
+        public IFileSystem[] Decorees => decoreeFileSystems;
         /// <summary><see cref="IFileSystem"/> casted to <see cref="IDisposable"/>.</summary>
-        public IEnumerable<IDisposable> DisposableDecorees => filesystems.Where(fs => fs is IDisposable).Cast<IDisposable>();
+        public IEnumerable<IDisposable> DisposableDecorees => decoreeFileSystems.Where(fs => fs is IDisposable).Cast<IDisposable>();
 
         /// <inheritdoc/>
         public FileSystemCaseSensitivity CaseSensitivity => Option.CaseSensitivity;
@@ -93,7 +93,7 @@ namespace Lexical.FileSystem.Decoration
         /// is used as a component, such as <see cref="VirtualFileSystem"/> does, then
         /// returns the parent filesystem.
         /// </summary>
-        protected IFileSystem parentFileSystem;
+        protected IFileSystem sourceFileSystem;
 
         /// <summary>
         /// Create decorated filesystem.
@@ -109,10 +109,10 @@ namespace Lexical.FileSystem.Decoration
         public FileSystemDecoration(IFileSystem filesystem, IFileSystemOption option)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = new Component[] { new Component(null, filesystem, option) };
-            this.filesystems = new IFileSystem[] { filesystem };
-            this.Option = this.components[0].Option;
-            SetParentFileSystem(this);
+            this.decorees = new Component[] { new Component(null, filesystem, option) };
+            this.decoreeFileSystems = new IFileSystem[] { filesystem };
+            this.Option = this.decorees[0].Option;
+            SetSourceFileSystem(this);
         }
 
         /// <summary>
@@ -122,10 +122,10 @@ namespace Lexical.FileSystem.Decoration
         public FileSystemDecoration(params IFileSystem[] filesystems)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = filesystems.Select(fs => new Component(null, fs, null)).ToArray();
-            this.filesystems = filesystems.ToArray();
-            this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
-            SetParentFileSystem(this);
+            this.decorees = filesystems.Select(fs => new Component(null, fs, null)).ToArray();
+            this.decoreeFileSystems = filesystems.ToArray();
+            this.Option = Options.Read(FileSystemOption.Union(this.decorees.Select(s => s.Option)));
+            SetSourceFileSystem(this);
         }
 
         /// <summary>
@@ -141,10 +141,10 @@ namespace Lexical.FileSystem.Decoration
         public FileSystemDecoration(params (IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = filesystemsAndOptions.Select(p => new Component(null, p.filesystem, p.option)).ToArray();
-            this.filesystems = components.Select(c => c.FileSystem).ToArray();
-            this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
-            SetParentFileSystem(this);
+            this.decorees = filesystemsAndOptions.Select(p => new Component(null, p.filesystem, p.option)).ToArray();
+            this.decoreeFileSystems = decorees.Select(c => c.FileSystem).ToArray();
+            this.Option = Options.Read(FileSystemOption.Union(this.decorees.Select(s => s.Option)));
+            SetSourceFileSystem(this);
         }
 
         /// <summary>
@@ -160,10 +160,10 @@ namespace Lexical.FileSystem.Decoration
         public FileSystemDecoration(IFileSystem parentFileSystem, string parentPath, IFileSystem filesystem, IFileSystemOption option)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = new Component[] { new Component(parentPath, filesystem, option) };
-            this.filesystems = new IFileSystem[] { filesystem };
-            this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
-            SetParentFileSystem(parentFileSystem ?? this);
+            this.decorees = new Component[] { new Component(parentPath, filesystem, option) };
+            this.decoreeFileSystems = new IFileSystem[] { filesystem };
+            this.Option = Options.Read(FileSystemOption.Union(this.decorees.Select(s => s.Option)));
+            SetSourceFileSystem(parentFileSystem ?? this);
         }
 
         /// <summary>
@@ -177,23 +177,33 @@ namespace Lexical.FileSystem.Decoration
         public FileSystemDecoration(IFileSystem parentFileSystem, (string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.components = filesystemsAndOptions.Select(p => new Component(p.parentPath, p.filesystem, p.option)).ToArray();
-            this.filesystems = components.Select(c => c.FileSystem).ToArray();
-            this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
-            SetParentFileSystem(parentFileSystem ?? this);
+            this.decorees = filesystemsAndOptions.Select(p => new Component(p.parentPath, p.filesystem, p.option)).ToArray();
+            this.decoreeFileSystems = decorees.Select(c => c.FileSystem).ToArray();
+            this.Option = Options.Read(FileSystemOption.Union(this.decorees.Select(s => s.Option)));
+            SetSourceFileSystem(parentFileSystem ?? this);
         }
 
         /// <summary>
-        /// Sets the <see cref="IFileSystem"/> reference that is returned in the decorated <see cref="IFileSystemEntry"/>.
-        /// 
-        /// Sets <see cref="parentFileSystem"/> reference and <see cref="rootEntry"/>.
+        /// Set new decoree sources.
         /// </summary>
-        /// <param name="newParentFileSystem"></param>
-        protected void SetParentFileSystem(IFileSystem newParentFileSystem)
+        /// <param name="filesystemsAndOptions"></param>
+        protected internal void SetDecorees(params (string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
         {
-            this.parentFileSystem = newParentFileSystem ?? this;
+            this.decorees = filesystemsAndOptions.Select(p => new Component(p.parentPath, p.filesystem, p.option)).ToArray();
+            this.decoreeFileSystems = decorees.Select(c => c.FileSystem).ToArray();
+        }
+
+        /// <summary>
+        /// Sets the <see cref="IFileSystem"/> reference that is returned in the decorated <see cref="IFileSystemEntry"/> and <see cref="IFileSystemEvent"/> instances.
+        /// 
+        /// Updates <see cref="sourceFileSystem"/> reference and <see cref="rootEntry"/>.
+        /// </summary>
+        /// <param name="newSourceFileSystem"></param>
+        protected void SetSourceFileSystem(IFileSystem newSourceFileSystem)
+        {
+            this.sourceFileSystem = newSourceFileSystem ?? this;
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.rootEntry = new FileSystemEntryDirectory(newParentFileSystem, "", "", now, now, Option);
+            this.rootEntry = new FileSystemEntryDirectory(newSourceFileSystem, "", "", now, now, Option);
         }
 
         /// <summary>FileSystem (as component of composition) specific information</summary>
@@ -271,7 +281,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -306,7 +316,7 @@ namespace Lexical.FileSystem.Decoration
                         String parentPath;
                         if (!component.Path.ChildToParent(e.Path, out parentPath)) { /* Path conversion failed. Omit entry. Remove it later */ removedCount++; continue; }
                         // Decorate
-                        result[i] = CreateEntry(e, parentFileSystem, parentPath, component.Option);
+                        result[i] = CreateEntry(e, sourceFileSystem, parentPath, component.Option);
                     }
                     // Remove null entries
                     if (removedCount > 0)
@@ -368,7 +378,7 @@ namespace Lexical.FileSystem.Decoration
                             String/*Segment*/ parentPath;
                             if (!c.Path.ChildToParent(e.Path, out parentPath)) continue;
                             // Decorate
-                            IFileSystemEntry ee = CreateEntry(e, parentFileSystem, parentPath, c.Option);
+                            IFileSystemEntry ee = CreateEntry(e, sourceFileSystem, parentPath, c.Option);
                             // Add to result
                             result.Add(ee);
                         }
@@ -379,7 +389,7 @@ namespace Lexical.FileSystem.Decoration
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
                 return noEntries;
@@ -410,7 +420,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -443,7 +453,7 @@ namespace Lexical.FileSystem.Decoration
                     String/*Segment*/ parentPath;
                     if (!component.Path.ChildToParent(childEntry.Path, out parentPath)) return null;
                     // Decorate
-                    childEntry = CreateEntry(childEntry, parentFileSystem, parentPath, component.Option);
+                    childEntry = CreateEntry(childEntry, sourceFileSystem, parentPath, component.Option);
                     // Return
                     return childEntry;
                 }
@@ -490,7 +500,7 @@ namespace Lexical.FileSystem.Decoration
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
                 return null;
@@ -529,7 +539,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -582,7 +592,7 @@ namespace Lexical.FileSystem.Decoration
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(Open));
@@ -617,7 +627,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -665,7 +675,7 @@ namespace Lexical.FileSystem.Decoration
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(Open));
@@ -700,7 +710,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -754,7 +764,7 @@ namespace Lexical.FileSystem.Decoration
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, oldPath))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, oldPath))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(Open));
@@ -788,7 +798,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -837,7 +847,7 @@ namespace Lexical.FileSystem.Decoration
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(CreateDirectory));
@@ -865,7 +875,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -916,7 +926,7 @@ namespace Lexical.FileSystem.Decoration
                 return this;
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(Mount));
@@ -942,7 +952,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -993,7 +1003,7 @@ namespace Lexical.FileSystem.Decoration
                 return this;
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(Unmount));
@@ -1013,7 +1023,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                var components = this.components;
+                var components = this.decorees;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -1045,7 +1055,7 @@ namespace Lexical.FileSystem.Decoration
                         String parentPath;
                         if (!component.Path.ChildToParent(e.Path, out parentPath)) { /* Path conversion failed. Omit entry. Remove it later */ removedCount++; continue; }
                         // Decorate
-                        result[i] = (IFileSystemEntryMount)CreateEntry(e, parentFileSystem, parentPath, component.Option);
+                        result[i] = (IFileSystemEntryMount)CreateEntry(e, sourceFileSystem, parentPath, component.Option);
                     }
                     // Remove null entries
                     if (removedCount > 0)
@@ -1105,7 +1115,7 @@ namespace Lexical.FileSystem.Decoration
                             String parentPath;
                             if (!c.Path.ChildToParent(e.Path, out parentPath)) continue;
                             // Decorate
-                            IFileSystemEntryMount ee = (IFileSystemEntryMount)CreateEntry(e, parentFileSystem, parentPath, c.Option);
+                            IFileSystemEntryMount ee = (IFileSystemEntryMount)CreateEntry(e, sourceFileSystem, parentPath, c.Option);
                             // Add to result
                             result.Add(ee);
                         }
@@ -1117,7 +1127,7 @@ namespace Lexical.FileSystem.Decoration
 
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, null))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, null))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(ListMounts));
@@ -1150,7 +1160,7 @@ namespace Lexical.FileSystem.Decoration
             // Assert supported
             if (!Option.CanObserve) throw new NotSupportedException(nameof(Observe));
             // Get reference
-            var components = this.components;
+            var components = this.decorees;
             // Zero components
             if (components.Length == 0) throw new NotSupportedException(nameof(Observe));
 
@@ -1209,7 +1219,7 @@ namespace Lexical.FileSystem.Decoration
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, parentFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(Observe));
@@ -1283,7 +1293,7 @@ namespace Lexical.FileSystem.Decoration
         /// <returns>self</returns>
         public FileSystemDecoration AddSourceToBeDisposed()
         {
-            AddDisposables(filesystems);
+            AddDisposables(decoreeFileSystems);
             return this;
         }
 
@@ -1373,17 +1383,17 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <returns></returns>
         public IEnumerator<IFileSystem> GetEnumerator()
-            => ((IEnumerable<IFileSystem>)filesystems).GetEnumerator();
+            => ((IEnumerable<IFileSystem>)decoreeFileSystems).GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator()
-            => filesystems.GetEnumerator();
+            => decoreeFileSystems.GetEnumerator();
 
         /// <summary>
         /// Print info
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => GetType().Name + "(" + String.Join<IFileSystem>(", ", filesystems) + ")";
+            => GetType().Name + "(" + String.Join<IFileSystem>(", ", decoreeFileSystems) + ")";
 
         /// <summary>Flattened options for (slight) performance gain.</summary>
         protected internal class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionMountPath
