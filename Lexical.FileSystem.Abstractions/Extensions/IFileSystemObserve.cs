@@ -43,7 +43,7 @@ namespace Lexical.FileSystem
         /// Examples:
         ///   <list type="bullet">
         ///     <item>"**" is any file in any directory.</item>
-        ///     <item>"**/file.txt", to monitor "file.txt" in any subdirectory</item>
+        ///     <item>"**/file.txt", to monitor "file.txt" in any subdirectory (excluding root due to missing "/")</item>
         ///     <item>"*" is any set of characters file in one directory. For example "mydir/somefile*.txt"</item>
         ///     <item>"", to monitor changes to the root directory itself, but not its files</item>
         ///     <item>"dir", to monitor the dir itself, but not its files</item>
@@ -52,11 +52,8 @@ namespace Lexical.FileSystem
         ///     <item>"dir/*", to monitor files in a dir but not subdirectories</item>
         ///     <item>"dir/**", to monitor files in a dir and its subdirectories</item>
         ///   </list>
-        ///   
-        /// Note that observing a directory without a pattern observes nothing, for example "dir/" does not return any events.
         /// 
-        /// The very first event sent to <paramref name="observer"/> is an instance of <see cref="IFileSystemEventStart"/> that contains
-        /// the returned observer handle.
+        /// The implementation sends the reference to the observer handle in a <see cref="IFileSystemEventStart"/> event before this method returns to caller.
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="filter">glob pattern to filter events. "**" means any directory. For example "mydir/**/somefile.txt", or "**" for <paramref name="filter"/> and sub-directories</param>

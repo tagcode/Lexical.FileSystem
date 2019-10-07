@@ -3,10 +3,12 @@
 // Date:           28.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Decoration;
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -408,9 +410,6 @@ namespace Lexical.FileSystem
             public override string ToString() => Path;
         }
 
-        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption) => Mount(path, filesystem, mountOption);
-        IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
-
         /// <summary>
         /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
         /// 
@@ -423,8 +422,52 @@ namespace Lexical.FileSystem
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         public VirtualFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
+            => Mount(path, (filesystem, mountOption));
+
+        /// <summary>
+        /// Mount <paramref name="filesystems"/> at <paramref name="path"/> in the parent filesystem.
+        /// 
+        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="filesystems">filesystems and options</param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public VirtualFileSystem Mount(string path, params (IFileSystem filesystem, IFileSystemOption mountOption)[] filesystems)
         {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Create decoration filesystem
+            FileSystemDecoration fs = new FileSystemDecoration(this, filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
+            // Lock
+            m_lock.AcquireWriterLock(int.MaxValue);
+            try
+            {
+
+            } finally
+            {
+                m_lock.ReleaseWriterLock();
+            }
             return this;
+        }
+
+        /// <summary>
+        /// List all mounts
+        /// </summary>
+        /// <returns></returns>
+        public IFileSystemEntryMount[] ListMounts()
+        {
+            // Lock
+            m_lock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                return null;
+            }
+            finally
+            {
+                m_lock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -440,6 +483,9 @@ namespace Lexical.FileSystem
         {
             return this;
         }
+
+        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption) => Mount(path, (filesystem, mountOption));
+        IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
 
         /// <summary>
         /// Handle dispose
@@ -537,9 +583,5 @@ namespace Lexical.FileSystem
         public override string ToString()
             => GetType().Name;
 
-        public IFileSystemEntryMount[] ListMounts()
-        {
-            throw new NotImplementedException();
-        }
     }
 }

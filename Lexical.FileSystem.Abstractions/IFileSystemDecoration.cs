@@ -13,9 +13,9 @@ namespace Lexical.FileSystem
     public interface IFileSystemDecoration : IFileSystem
     {
         /// <summary>
-        /// (Optional) Original file system that is being decorated.
+        /// (Optional) Original file system(s) that have been decorated.
         /// </summary>
-        IFileSystem Original { get; }
+        IFileSystem[] Decorees { get; }
     }
     // </doc>
 

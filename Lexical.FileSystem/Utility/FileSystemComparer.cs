@@ -4,7 +4,6 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Decoration;
-using Lexical.FileSystem.FileProvider;
 using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Concurrent;

@@ -19,7 +19,7 @@ namespace Lexical.FileSystem
     /// In memory filesystem with file and directory structure.
     /// 
     /// Directory separator character is forward slash '/'.  All characters exept '/' are valid file names. Directories can have empty name "". 
-    /// Names "." and ".." are reserved.
+    /// Names "." and ".." are reserved for current and parent directories.
     /// 
     /// Maximum file length is <see cref="int.MaxValue"/>*<see cref="BlockSize"/>.
     /// The default blocksize is 1024 which allows 2TB - 1KB files.
