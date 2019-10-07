@@ -120,14 +120,14 @@ namespace Lexical.FileSystem
         bool IsMount { get; }
 
         /// <summary>
-        /// (optional) Mounted filesystem.
+        /// (optional) Mounted filesystem(s).
         /// </summary>
-        IFileSystem MountedFileSystem { get; }
+        //IFileSystem MountedFileSystem { get; }
 
         /// <summary>
         /// (optional) Mount options. The object reference that was passed to Mount() method.
         /// </summary>
-        IFileSystemOption MountOption { get; }
+        //IFileSystemOption MountOption { get; }
     }
     // </IFileSystemEntryMount>
 

@@ -186,4 +186,28 @@ namespace Lexical.FileSystem
         }
     }
 
+    /// <summary>
+    /// Mount directory entry.
+    /// </summary>
+    public class FileSystemEntryMount : FileSystemEntryDirectory, IFileSystemEntryMount
+    {
+        /// <summary>
+        /// Tests if entry represents a mount root.
+        /// </summary>
+        public bool IsMount => true;
+
+        /// <summary>
+        /// Create entry
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path"></param>
+        /// <param name="name"></param>
+        /// <param name="lastModified"></param>
+        /// <param name="lastAccess"></param>
+        /// <param name="options"></param>
+        public FileSystemEntryMount(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, options)
+        {
+        }
+    }
+
 }

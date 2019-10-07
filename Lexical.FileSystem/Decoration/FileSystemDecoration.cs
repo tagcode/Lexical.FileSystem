@@ -154,6 +154,25 @@ namespace Lexical.FileSystem.Decoration
         /// Also allows to configure what filesystem instance is exposed on decorated file entries and events.
         /// </summary>
         /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
+        /// <param name="parentPath"></param>
+        /// <param name="filesystem"></param>
+        /// <param name="option">mounting options</param>
+        public FileSystemDecoration(IFileSystem parentFileSystem, string parentPath, IFileSystem filesystem, IFileSystemOption option)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            this.components = new Component[] { new Component(parentPath, filesystem, option) };
+            this.filesystems = new IFileSystem[] { filesystem };
+            this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
+            SetParentFileSystem(parentFileSystem ?? this);
+        }
+
+        /// <summary>
+        /// Create composition of filesystems.
+        /// 
+        /// A constructor version that exposes its filesystem at a subpath parentPath. 
+        /// Also allows to configure what filesystem instance is exposed on decorated file entries and events.
+        /// </summary>
+        /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
         /// <param name="filesystemsAndOptions">child filesystem configurations</param>
         public FileSystemDecoration(IFileSystem parentFileSystem, (string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
         {

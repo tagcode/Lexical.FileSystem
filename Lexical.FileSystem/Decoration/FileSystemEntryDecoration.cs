@@ -69,9 +69,9 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsMount => Original.IsMount();
         /// <inheritdoc/>
-        public IFileSystem MountedFileSystem => Original.MountedFileSystem();
+        //public IFileSystem MountedFileSystem => Original.MountedFileSystem();
         /// <inheritdoc/>
-        public IFileSystemOption MountOption => Original.MountOption();
+        //public IFileSystemOption MountOption => Original.MountOption();
 
         /// <summary>
         /// Create decorated entry.

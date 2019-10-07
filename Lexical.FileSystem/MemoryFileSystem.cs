@@ -288,7 +288,7 @@ namespace Lexical.FileSystem
                             // Flush caches
                             directory.FlushChildEntries();
                             directory.FlushEntry();
-                            // Recurse into child
+                            // Move cursor to child
                             cursor = newDirectory;
                         }
                     }
