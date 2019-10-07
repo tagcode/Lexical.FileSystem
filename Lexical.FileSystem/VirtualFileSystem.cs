@@ -97,18 +97,27 @@ namespace Lexical.FileSystem
             if (path == null) throw new ArgumentNullException(nameof(path));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
-            // Read lock
+
+            // Stack of nodes that start with path and have a mounted filesystem
+            StructList4<FileSystemDecoration> mountPoints = new StructList4<FileSystemDecoration>();
+            // Snapshot of vfs entries
+            StructList4<IFileSystemEntry> vfsEntries = new StructList4<IFileSystemEntry>();
+            // Lock for the duration of tree traversal
             m_lock.AcquireReaderLock(int.MaxValue);
             try
             {
                 // Start
                 Directory cursor = root, finalDirectory = root;
-                // Stack of nodes that start with path and have a mounted filesystem
-                StructList2<FileSystemDecoration> mountPoints = new StructList2<FileSystemDecoration>();
                 // Path '/' splitter, enumerates name strings from root towards tail
                 PathEnumerator enumr = new PathEnumerator(path, true);
-                // Seach each node that start with path
-                while (enumr.MoveNext())
+                // Special case, root
+                if (path == "")
+                {
+                    // Add to stack
+                    if (cursor.mount != null) mountPoints.Add(cursor.mount);
+                }
+                // Traverse path in name parts
+                else while (enumr.MoveNext())
                 {
                     // Add to stack
                     if (cursor.mount!=null) mountPoints.Add(cursor.mount);
@@ -128,114 +137,120 @@ namespace Lexical.FileSystem
                     // Move final down
                     finalDirectory = cursor;
                 }
-                // Number of sources (to unify)
-                int sourceCount = mountPoints.Count + (finalDirectory == null ? 0 : 1);
-                // No mounted points were found, and no virtual directories.
-                if (sourceCount == 0) throw new DirectoryNotFoundException(path);
-                // One source, no unifying needed.
-                if (sourceCount == 1)
-                {
+                // Add vfs entries
+                if (finalDirectory!=null) foreach (var kp in finalDirectory.contents) vfsEntries.Add(kp.Value.Entry);
+            }
+            finally
+            {
+                m_lock.ReleaseReaderLock();
+            }
+            // Number of sources (to unify)
+            int sourceCount = mountPoints.Count + (vfsEntries.Count > 0 ? 1 : 0);
+            // No mounted points were found, and no virtual directories.
+            if (sourceCount == 0) throw new DirectoryNotFoundException(path);
+            // One source, no unifying needed.
+            if (sourceCount == 1)
+            {
+                // Return vfs contents
+                if (vfsEntries.Count > 0) return vfsEntries.ToArray();
+                // Return already decorated contents
+                return mountPoints[0].Browse(path);
+            }
 
-                }
-                else
-                // Create union of mountpoints and final directory. Remove overlapping content.
-                {
+            // Create union of mountpoints and final directory. Remove overlapping content if same name. Priority: vfs, filesystems
+            // Count entries
+            int entryCount = vfsEntries.Count;
+            // Browse each decoration
+            StructList4<IFileSystemEntry[]> entryArrays = new StructList4<IFileSystemEntry[]>();
+            for (int i = 0; i < mountPoints.Count; i++)
+            {
+                entryArrays.Add(mountPoints[i].Browse(path));
+                entryCount += entryArrays[i].Length;
+            }
 
+            // Create hashset for removing overlapping entry names
+            HashSet<string> filenames = new HashSet<string>();
+            // Container for result
+            List<IFileSystemEntry> entries = new List<IFileSystemEntry>(entryCount/*most likely count*/);
+            // Add vfs
+            for (int i=0; i<vfsEntries.Count; i++)
+            {
+                // Get mount entry
+                IFileSystemEntry e = vfsEntries[i];
+                // Remove already existing entry
+                if (filenames.Add(e.Name)) entries.Add(e);
+            }
+            // Add entries from mounted filesystems
+            for (int i = 0; i < entryArrays.Count; i++)
+            {
+                foreach (IFileSystemEntry e in entryArrays[i])
+                {
+                    // Remove already existing entry
+                    if (filenames != null && !filenames.Add(e.Name)) continue;
+                    // Add to list
+                    entries.Add(e);
                 }
+            }
+            // Return
+            return entries.ToArray();
+        }
+
+        /// <inheritdoc/>
+        public IFileSystemEntry GetEntry(string path)
+        {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert not disposed
+            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+
+            // Stack of nodes that start with path and have a mounted filesystem
+            StructList4<FileSystemDecoration> mountPoints = new StructList4<FileSystemDecoration>();
+            // Lock for the duration of tree traversal
+            m_lock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                // Special case, root
+                if (path == "") return root.Entry;
+                // Start
+                Directory cursor = root, finalDirectory = root;
+                // Path '/' splitter, enumerates name strings from root towards tail
+                PathEnumerator enumr = new PathEnumerator(path, true);
+                // Traverse path in name parts
+                while (enumr.MoveNext())
+                {
+                    // Add to stack
+                    if (cursor.mount != null) mountPoints.Add(cursor.mount);
+                    // Name
+                    StringSegment name = enumr.Current;
+                    // "."
+                    if (name.Equals(StringSegment.Dot)) continue;
+                    // ".."
+                    if (name.Equals(StringSegment.DotDot))
+                    {
+                        if (cursor.parent == null) throw new DirectoryNotFoundException(path);
+                        cursor = cursor.parent;
+                        continue;
+                    }
+                    // Failed to find child entry
+                    if (!cursor.contents.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
+                    // Move cursor
+                    finalDirectory = cursor;
+                }
+                // Return vfs entry
+                if (finalDirectory != null) return finalDirectory.Entry;
+                // Try to get entry from mounted filesystems
+                for (int i=0; i<mountPoints.Count; i++)
+                {
+                    IFileSystemEntry e = mountPoints[i].GetEntry(path);
+                    if (e != null) return e;
+                }
+                // Nothing
                 return null;
             }
             finally
             {
                 m_lock.ReleaseReaderLock();
             }
-        }
-
-        /// <inheritdoc/>
-        public IFileSystemEntry GetEntry(string path)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Get node by <paramref name="path"/>.
-        /// Caller must ensure that lock is acquired.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <returns>node or null</returns>
-        Directory GetNode(string path)
-        {
-            // "" refers to root
-            if (path == "") return root;
-            // Node cursor
-            Directory cursor = root;
-            // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator enumr = new PathEnumerator(path, true);
-            // Get next name from the path
-            while (enumr.MoveNext())
-            {
-                // Name
-                StringSegment name = enumr.Current;
-                // "."
-                if (name.Equals(StringSegment.Dot)) continue;
-                // ".."
-                if (name.Equals(StringSegment.DotDot))
-                {
-                    if (cursor.parent == null) return null;
-                    cursor = cursor.parent;
-                    continue;
-                }
-                // Failed to find child entry
-                if (!cursor.contents.TryGetValue(name, out cursor))
-                    return null;
-            }
-            return cursor;
-        }
-
-        /// <summary>
-        /// Split <paramref name="path"/> into <paramref name="parentPath"/> and <paramref name="name"/>.
-        /// 
-        /// Also searches for <paramref name="parent"/> directory node.
-        /// </summary>
-        /// <param name="path">path to parse</param>
-        /// <param name="parentPath">path to parent</param>
-        /// <param name="name"></param>
-        /// <param name="parent">(optional) parent object</param>
-        /// <returns>true parent was successfully found</returns>
-        bool GetParentAndName(string path, out StringSegment parentPath, out StringSegment name, out Directory parent)
-        {
-            // Special case for root
-            if (path == "") { parentPath = StringSegment.Empty; name = StringSegment.Empty; parent = root; return false; }
-            // Path '/' splitter, enumerates name strings from root towards tail
-            PathEnumerator enumr = new PathEnumerator(path, true);
-            // Path's name parts
-            StructList12<StringSegment> names = new StructList12<StringSegment>();
-            // Split path into names
-            while (enumr.MoveNext()) names.Add(enumr.Current);
-            // Unexpected error
-            if (names.Count == 0) { name = StringSegment.Empty; parentPath = StringSegment.Empty; parent = null; return false; }
-            // Separate to parentPath and name
-            if (names.Count == 1) { name = names[0]; parentPath = StringSegment.Empty; }
-            else { name = names[names.Count - 1]; parentPath = new StringSegment(path, names[0].Start, names[names.Count - 2].Start + names[names.Count - 2].Length); }
-            // Search parent directory
-            Directory cursor = root;
-            for (int i = 0; i < names.Count - 1; i++)
-            {
-                // Name
-                StringSegment cursorName = names[i];
-                // "."
-                if (cursorName.Equals(StringSegment.Dot)) continue;
-                // ".."
-                if (cursorName.Equals(StringSegment.DotDot))
-                {
-                    if (cursor.parent == null) { parent = null; return false; }
-                    cursor = cursor.parent;
-                    continue;
-                }
-                // Failed to find child entry
-                if (!cursor.contents.TryGetValue(cursorName, out cursor)) { parent = null; return false; }
-            }
-            parent = cursor;
-            return true;
         }
 
         /// <summary>
@@ -478,7 +493,8 @@ namespace Lexical.FileSystem
                 Directory cursor = root;
                 // Split path at '/' slashes
                 PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
-                while (enumr.MoveNext())
+                // Follow names
+                if (path != "") while (enumr.MoveNext())
                 {
                     // Name
                     StringSegment name = enumr.Current;
@@ -497,7 +513,8 @@ namespace Lexical.FileSystem
                         continue;
                     }
                     // Create node
-                    if (!cursor.contents.TryGetValue(name, out cursor))
+                    Directory child;
+                    if (!cursor.contents.TryGetValue(name, out child))
                     {
                         // Create child directory
                         Directory newDirectory = new Directory(this, cursor, name, now);
@@ -516,6 +533,9 @@ namespace Lexical.FileSystem
                         cursor.FlushEntry();
                         // Move cursor to child
                         cursor = newDirectory;
+                    } else
+                    {
+                        cursor = child;
                     }
                 }
 
@@ -596,7 +616,7 @@ namespace Lexical.FileSystem
                 Directory cursor = root;
                 // Split path at '/' slashes
                 PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
-                while (enumr.MoveNext())
+                if (path!="") while (enumr.MoveNext())
                 {
                     // Name
                     StringSegment name = enumr.Current;

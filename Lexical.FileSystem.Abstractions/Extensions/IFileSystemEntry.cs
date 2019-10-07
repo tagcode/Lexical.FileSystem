@@ -64,16 +64,16 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="entry"></param>
         /// <returns>mounted filesystem or null</returns>
-        public static IFileSystem MountedFileSystem(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryMount mount ? mount.MountedFileSystem : null;
+        //public static IFileSystem MountedFileSystem(this IFileSystemEntry entry)
+            //=> entry is IFileSystemEntryMount mount ? mount.MountedFileSystem : null;
 
         /// <summary>
         /// (optional) Mount options. The object reference that was passed to Mount() method.
         /// </summary>
         /// <param name="entry"></param>
         /// <returns>mount option or null</returns>
-        public static IFileSystemOption MountOption(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryMount mount ? mount.MountOption : null;
+        //public static IFileSystemOption MountOption(this IFileSystemEntry entry)
+            //=> entry is IFileSystemEntryMount mount ? mount.MountOption : null;
 
 
     }

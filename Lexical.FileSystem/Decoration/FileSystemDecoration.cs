@@ -191,9 +191,9 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="newParentFileSystem"></param>
         protected void SetParentFileSystem(IFileSystem newParentFileSystem)
         {
-            this.parentFileSystem = parentFileSystem ?? this;
+            this.parentFileSystem = newParentFileSystem ?? this;
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.rootEntry = new FileSystemEntryDirectory(parentFileSystem, "", "", now, now, Option);
+            this.rootEntry = new FileSystemEntryDirectory(newParentFileSystem, "", "", now, now, Option);
         }
 
         /// <summary>FileSystem (as component of composition) specific information</summary>
