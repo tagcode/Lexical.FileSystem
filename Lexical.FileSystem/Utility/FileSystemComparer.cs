@@ -290,7 +290,7 @@ namespace Lexical.FileSystem.Utility
             if (x is FileSystemDecoration xFileSystem && y is FileSystemDecoration yFileSystem)
             {
                 // Get filesystems
-                IFileSystem[] xFileSystems = xFileSystem.FileSystems, yFileSystems = yFileSystem.FileSystems;
+                IFileSystem[] xFileSystems = xFileSystem.Decorees, yFileSystems = yFileSystem.Decorees;
                 // Compare lengths
                 if (xFileSystems.Length != yFileSystems.Length) return false;
                 // Compare elements
@@ -316,7 +316,7 @@ namespace Lexical.FileSystem.Utility
             {
                 int hash = unchecked((int)2166136261);
                 // Apply elements
-                foreach (IFileSystem element in fs.FileSystems)
+                foreach (IFileSystem element in fs.Decorees)
                 {
                     hash ^= componentComparer.GetHashCode(element);
                     hash *= 16777619;
