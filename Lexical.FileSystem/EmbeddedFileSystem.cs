@@ -5,6 +5,7 @@
 // --------------------------------------------------------
 using Lexical.FileSystem.Utility;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -96,7 +97,7 @@ namespace Lexical.FileSystem
             IFileSystemEntry[] result = new IFileSystemEntry[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
-                result[i] = new FileSystemEntryFile(this, names[i], names[i], writetime, DateTimeOffset.MinValue, - 1L);
+                result[i] = new FileSystemEntryFile(this, names[i], names[i], writetime, DateTimeOffset.MinValue, -1L);
             }
             return result;
         }
@@ -215,7 +216,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns>filesystem</returns>
-        public EmbeddedFileSystem AddDisposables(IEnumerable<object> disposables)
+        public EmbeddedFileSystem AddDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).AddDisposables(disposables);
             return this;
@@ -237,7 +238,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns></returns>
-        public EmbeddedFileSystem RemoveDisposables(IEnumerable<object> disposables)
+        public EmbeddedFileSystem RemoveDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;

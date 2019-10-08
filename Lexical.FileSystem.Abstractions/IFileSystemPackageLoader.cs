@@ -181,14 +181,4 @@ namespace Lexical.FileSystem
         long Length { get; }
     }
     // </IPackageLoadInfo>
-
-    /// <summary>Option for auto-mounted packages.</summary>
-    [Operations(typeof(FileSystemOptionOperationPackageLoader))]
-    // <IFileSystemOptionPackageLoader>
-    public interface IFileSystemOptionPackageLoader : IFileSystemOption
-    {
-        /// <summary>Package loaders that can mount package files, such as .zip.</summary>
-        IFileSystemPackageLoader[] PackageLoaders { get; }
-    }
-    // </IFileSystemOptionPackageLoader>
 }

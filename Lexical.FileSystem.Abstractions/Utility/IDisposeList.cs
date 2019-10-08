@@ -4,7 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
-using System.Collections.Generic;
+using System.Collections;
 
 namespace Lexical.FileSystem.Utility
 {
@@ -46,7 +46,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="disposableObjects"></param>
         /// <returns>true if were added to list, false if were disposed immediately</returns>
-        bool AddDisposables(IEnumerable<object> disposableObjects);
+        bool AddDisposables(IEnumerable disposableObjects);
 
         /// <summary>
         /// Remove <paramref name="disposableObject"/> from the list. 
@@ -60,7 +60,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="disposableObjects"></param>
         /// <returns>true if was removed, false if it wasn't in the list.</returns>
-        bool RemoveDisposables(IEnumerable<object> disposableObjects);
+        bool RemoveDisposables(IEnumerable disposableObjects);
 
         /// <summary>
         /// Invoke <paramref name="disposeAction"/> on the dispose of the object.

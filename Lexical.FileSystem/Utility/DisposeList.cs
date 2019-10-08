@@ -5,7 +5,7 @@
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
 using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Threading;
 
 namespace Lexical.FileSystem.Utility
@@ -49,7 +49,7 @@ namespace Lexical.FileSystem.Utility
         public bool IsDisposeCalled => Interlocked.Read(ref disposing) >= 1L;
 
         /// <summary>
-        /// Has dispose started or completed.
+        /// Has dispose started or completed. Returns false, if Dispose() has been called but is postponed due to open belate handles.
         /// </summary>
         public bool IsDisposing => Interlocked.Read(ref disposing) >= 2L;
 
@@ -264,7 +264,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="disposableObject"></param>
         /// <returns>true if was added to list, false if was disposed right away</returns>
-        bool IDisposeList.AddDisposable(Object disposableObject)
+        bool IDisposeList.AddDisposable(object disposableObject)
         {
             // Argument error
             if (disposableObject == null) throw new ArgumentNullException(nameof(disposableObject));
@@ -363,7 +363,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="disposableObjects"></param>
         /// <returns></returns>
-        bool IDisposeList.AddDisposables(IEnumerable<Object> disposableObjects)
+        bool IDisposeList.AddDisposables(IEnumerable disposableObjects)
         {
             // Argument error
             if (disposableObjects == null) throw new ArgumentNullException(nameof(disposableObjects));
@@ -381,7 +381,7 @@ namespace Lexical.FileSystem.Utility
 
             // Add to list
             lock (m_disposelist_lock)
-                foreach (Object d in disposableObjects)
+                foreach (object d in disposableObjects)
                     if (d is IDisposable disposable)
                         disposeList.Add(disposable);
 
@@ -393,7 +393,7 @@ namespace Lexical.FileSystem.Utility
                 // Dispose now
                 DisposeAndCapture(disposableObjects, ref disposeErrors);
                 // Remove
-                lock (m_disposelist_lock) foreach (IDisposable d in disposableObjects) disposeList.Remove(d);
+                lock (m_disposelist_lock) foreach (object d in disposableObjects) if (d is IDisposable disp) disposeList.Remove(disp);
                 // Throw captured errors
                 if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
                 return false;
@@ -428,7 +428,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="disposableObjects"></param>
         /// <returns>true if was removed, false if it wasn't in the list.</returns>
-        bool IDisposeList.RemoveDisposables(IEnumerable<object> disposableObjects)
+        bool IDisposeList.RemoveDisposables(IEnumerable disposableObjects)
         {
             // Argument error
             if (disposableObjects == null) throw new ArgumentNullException(nameof(disposableObjects));
@@ -437,7 +437,7 @@ namespace Lexical.FileSystem.Utility
             lock (this)
             {
                 if (disposableObjects == null) return false;
-                foreach (Object disposableObject in disposableObjects)
+                foreach (object disposableObject in disposableObjects)
                     if (disposableObject is IDisposable disposable)
                         ok &= disposeList.Remove(disposable);
                 return ok;
@@ -449,12 +449,12 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="disposableObjects">list of disposables</param>
         /// <param name="disposeErrors">list to be created if errors occur</param>
-        public static void DisposeAndCapture(IEnumerable<object> disposableObjects, ref StructList4<Exception> disposeErrors)
+        public static void DisposeAndCapture(IEnumerable disposableObjects, ref StructList4<Exception> disposeErrors)
         {
             if (disposableObjects == null) return;
 
             // Dispose disposables
-            foreach (IDisposable disposableObject in disposableObjects)
+            foreach (object disposableObject in disposableObjects)
             {
                 if (disposableObject is IDisposable disposable)
                 {

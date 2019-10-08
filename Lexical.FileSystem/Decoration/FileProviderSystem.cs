@@ -8,6 +8,7 @@ using Lexical.FileSystem.Utility;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Security;
@@ -245,7 +246,8 @@ namespace Lexical.FileSystem.Decoration
                 {
                     name = Path.GetFileName(path);
                     path = path + "/";
-                } else
+                }
+                else
                 {
                     name = Path.GetDirectoryName(path);
                 }
@@ -641,7 +643,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns>filesystem</returns>
-        public FileProviderSystem AddDisposables(IEnumerable<object> disposables)
+        public FileProviderSystem AddDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).AddDisposables(disposables);
             return this;
@@ -663,7 +665,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns>filesystem</returns>
-        public FileProviderSystem RemoveDisposables(IEnumerable<object> disposables)
+        public FileProviderSystem RemoveDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;

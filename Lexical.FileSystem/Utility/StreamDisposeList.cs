@@ -5,6 +5,7 @@
 // --------------------------------------------------------
 using Lexical.FileSystem.Internal;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -308,7 +309,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="disposableObjects"></param>
         /// <returns></returns>
-        bool IDisposeList.AddDisposables(IEnumerable<Object> disposableObjects)
+        bool IDisposeList.AddDisposables(IEnumerable disposableObjects)
         {
             // Argument error
             if (disposableObjects == null) throw new ArgumentNullException(nameof(disposableObjects));
@@ -338,7 +339,7 @@ namespace Lexical.FileSystem.Utility
                 // Dispose now
                 DisposeList.DisposeAndCapture(disposableObjects, ref disposeErrors);
                 // Remove
-                lock (m_disposelist_lock) foreach (IDisposable d in disposableObjects) disposeList.Remove(d);
+                lock (m_disposelist_lock) foreach (object d in disposableObjects) if (d is IDisposable disp) disposeList.Remove(disp);
                 // Throw captured errors
                 if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
                 return false;
@@ -373,7 +374,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="disposableObjects"></param>
         /// <returns>true if was removed, false if it wasn't in the list.</returns>
-        bool IDisposeList.RemoveDisposables(IEnumerable<object> disposableObjects)
+        bool IDisposeList.RemoveDisposables(IEnumerable disposableObjects)
         {
             // Argument error
             if (disposableObjects == null) throw new ArgumentNullException(nameof(disposableObjects));

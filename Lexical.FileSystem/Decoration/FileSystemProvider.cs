@@ -401,7 +401,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns>self</returns>
-        public FileSystemProvider AddDisposables(IEnumerable<object> disposables)
+        public FileSystemProvider AddDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).AddDisposables(disposables);
             return this;
@@ -423,7 +423,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns></returns>
-        public FileSystemProvider RemoveDisposables(IEnumerable<object> disposables)
+        public FileSystemProvider RemoveDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;

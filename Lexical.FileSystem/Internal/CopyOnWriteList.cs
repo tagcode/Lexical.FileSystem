@@ -12,16 +12,14 @@ namespace Lexical.FileSystem.Internal
     /// <summary>
     /// Thread-safe <see cref="IList{T}"/> collection. 
     /// 
-    /// List is modified under mutually exclusive lock <see cref="m_lock"/>.
+    /// List is modified under mutually exclusive lock <see cref="SyncRoot"/>.
     /// 
     /// Enumeration creats an array snapshot which will not throw <see cref="InvalidOperationException"/> if 
     /// list is modified while being enumerated.
     /// </summary>
-    public class CopyOnWriteList<T> : IList<T>
+    public class CopyOnWriteList<T> : IList<T>, ICollection
     {
-        /// <summary>
-        /// Empty array
-        /// </summary>
+        /// <summary>Empty array of T</summary>
         static T[] EmptyArray = new T[0];
 
         /// <summary>
@@ -32,31 +30,22 @@ namespace Lexical.FileSystem.Internal
         public T this[int index]
         {
             get => Array[index];
-            set { lock (m_lock) { list[index] = value; snapshot = null; } }
+            set { lock (SyncRoot) { list[index] = value; snapshot = null; } }
         }
 
-        /// <summary>
-        /// Calculate the number of elements. 
-        /// </summary>
+        /// <summary>The number of elements.</summary>
         public int Count
         {
             get
             {
                 var _snaphost = snapshot;
                 if (_snaphost != null) return _snaphost.Length;
-                lock (m_lock) return list.Count;
+                lock (SyncRoot) return list.Count;
             }
         }
 
-        /// <summary>
-        /// Is in readonly state
-        /// </summary>
+        /// <summary>Is in readonly state</summary>
         public virtual bool IsReadOnly => false;
-
-        /// <summary>
-        /// Synchronize object
-        /// </summary>
-        protected internal object m_lock = new object();
 
         /// <summary>
         /// Last snapshot. This snapshot is cleared when internal <see cref="list"/> is modified.
@@ -68,21 +57,17 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         public T[] Array => snapshot ?? BuildArray();
 
-        /// <summary>
-        /// Internal list. Allocated lazily.
-        /// </summary>
+        /// <summary>Internal list. Lazy allocation.</summary>
         protected List<T> _list;
 
-        /// <summary>
-        /// Internal list. Allocated lazily.
-        /// </summary>
-        protected List<T> list
-        {
-            get
-            {
-                lock (m_lock) return _list ?? (_list = new List<T>());
-            }
-        }
+        /// <summary>Internal list. Lazy allocation.</summary>
+        protected List<T> list { get { lock (SyncRoot) return _list ?? (_list = new List<T>()); } }
+
+        /// <summary>Is synchronized</summary>
+        public bool IsSynchronized => true;
+
+        /// <summary>object that can be used to synchronize access</summary>
+        public object SyncRoot { get; protected set; } = new object();
 
         /// <summary>
         /// Create copy-on-write list
@@ -106,7 +91,7 @@ namespace Lexical.FileSystem.Internal
         /// <returns></returns>
         protected virtual T[] BuildArray()
         {
-            lock (m_lock)
+            lock (SyncRoot)
             {
                 return snapshot = list.Count == 0 ? EmptyArray : list.ToArray();
             }
@@ -126,7 +111,7 @@ namespace Lexical.FileSystem.Internal
         /// <param name="item"></param>
         public virtual void Add(T item)
         {
-            lock (m_lock)
+            lock (SyncRoot)
             {
                 list.Add(item);
                 ClearCache();
@@ -139,7 +124,7 @@ namespace Lexical.FileSystem.Internal
         /// <param name="items"></param>
         public virtual void AddRange(IEnumerable<T> items)
         {
-            lock (m_lock)
+            lock (SyncRoot)
             {
                 list.AddRange(items);
                 ClearCache();
@@ -151,7 +136,7 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         public virtual void Clear()
         {
-            lock (m_lock)
+            lock (SyncRoot)
             {
                 if (list.Count == 0) return;
                 list.Clear();
@@ -184,6 +169,17 @@ namespace Lexical.FileSystem.Internal
         }
 
         /// <summary>
+        /// Copy elements to array
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="arrayIndex"></param>
+        public void CopyTo(Array array, int arrayIndex)
+        {
+            var snapshot = Array;
+            System.Array.Copy(snapshot, 0, array, arrayIndex, snapshot.Length);
+        }
+
+        /// <summary>
         /// Index of element.
         /// </summary>
         /// <param name="item"></param>
@@ -203,7 +199,7 @@ namespace Lexical.FileSystem.Internal
         /// <param name="item"></param>
         public virtual void Insert(int index, T item)
         {
-            lock (m_lock)
+            lock (SyncRoot)
             {
                 list.Insert(index, item);
                 ClearCache();
@@ -216,7 +212,7 @@ namespace Lexical.FileSystem.Internal
         /// <param name="newContent"></param>
         public void CopyFrom(IEnumerable<T> newContent)
         {
-            lock (m_lock)
+            lock (SyncRoot)
             {
                 list.Clear();
                 list.AddRange(newContent);
@@ -231,7 +227,7 @@ namespace Lexical.FileSystem.Internal
         /// <returns></returns>
         public virtual bool Remove(T item)
         {
-            lock (m_lock)
+            lock (SyncRoot)
             {
                 bool wasRemoved = list.Remove(item);
                 if (wasRemoved) ClearCache();
@@ -245,7 +241,7 @@ namespace Lexical.FileSystem.Internal
         /// <param name="index"></param>
         public virtual void RemoveAt(int index)
         {
-            lock (m_lock)
+            lock (SyncRoot)
             {
                 list.RemoveAt(index);
                 ClearCache();
@@ -265,6 +261,5 @@ namespace Lexical.FileSystem.Internal
         /// <returns>enumerator</returns>
         public IEnumerator<T> GetEnumerator()
             => ((IEnumerable<T>)Array).GetEnumerator();
-
     }
 }

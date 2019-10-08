@@ -6,6 +6,7 @@
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Security;
@@ -453,7 +454,8 @@ namespace Lexical.FileSystem
                 StringSegment parentPath, newName;
                 Directory newParent;
                 if (!GetParentAndName(newPath, out parentPath, out newName, out newParent))
-                    /*New parent was not found*/ throw new DirectoryNotFoundException(parentPath);
+                    /*New parent was not found*/
+                    throw new DirectoryNotFoundException(parentPath);
                 // Nothing to do (check this after proper asserts)
                 if (oldParent == newParent && newName == node.name) return;
                 // Target file already exists
@@ -868,13 +870,14 @@ namespace Lexical.FileSystem
             // Snapshot of handles
             ObserverHandle[] observerArray = observers.Array;
             // Close each handle
-            foreach(ObserverHandle observerHandle in observerArray)
+            foreach (ObserverHandle observerHandle in observerArray)
             {
                 // Close handle
                 try
                 {
                     observerHandle.Dispose();
-                } catch (Exception)
+                }
+                catch (Exception)
                 {
                 }
             }
@@ -933,7 +936,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns>filesystem</returns>
-        public MemoryFileSystem AddDisposables(IEnumerable<object> disposables)
+        public MemoryFileSystem AddDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).AddDisposables(disposables);
             return this;
@@ -955,7 +958,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns></returns>
-        public MemoryFileSystem RemoveDisposables(IEnumerable<object> disposables)
+        public MemoryFileSystem RemoveDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;
@@ -976,7 +979,7 @@ namespace Lexical.FileSystem
             ObserverHandle handle = new ObserverHandle(this, filter, observer, state);
             observers.Add(handle);
             // Send IFileSystemEventStart
-            observer.OnNext(handle);            
+            observer.OnNext(handle);
             return handle;
         }
 
@@ -1349,8 +1352,9 @@ namespace Lexical.FileSystem
                     // Open stream
                     return _memoryFile.Open(fileAccess, fileShare);
                 }
-                catch (FileSystemException e) 
-                when ( /*Attach filesystem and path*/ e.Set(filesystem, Path)) { /*Never goes here*/ return null; }
+                catch (FileSystemException e)
+                when ( /*Attach filesystem and path*/ e.Set(filesystem, Path))
+                { /*Never goes here*/ return null; }
             }
 
             /// <summary>

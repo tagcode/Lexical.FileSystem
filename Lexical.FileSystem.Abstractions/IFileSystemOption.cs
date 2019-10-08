@@ -25,7 +25,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemOptionMount"/></item>
     ///     <item><see cref="IFileSystemOptionMountPath"/></item>
     ///     <item><see cref="IFileSystemOptionPath"/></item>
-    ///     <item><see cref="IFileSystemOptionPackageLoader"/></item>
+    ///     <item><see cref="IFileSystemOptionAutoMount"/></item>
     /// </list>
     /// 
     /// The options properties must be immutable in the implementing classes.

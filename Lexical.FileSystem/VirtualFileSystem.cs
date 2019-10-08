@@ -7,10 +7,10 @@ using Lexical.FileSystem.Decoration;
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -118,47 +118,41 @@ namespace Lexical.FileSystem
                 }
                 // Traverse path in name parts
                 else while (enumr.MoveNext())
-                {
-                    // Add to stack
-                    if (cursor.mount!=null) mountPoints.Add(cursor.mount);
-                    // Name
-                    StringSegment name = enumr.Current;
-                    // "."
-                    if (name.Equals(StringSegment.Dot)) continue;
-                    // ".."
-                    if (name.Equals(StringSegment.DotDot))
                     {
-                        if (cursor.parent == null) throw new DirectoryNotFoundException(path);
-                        cursor = cursor.parent;
-                        continue;
+                        // Add to stack
+                        if (cursor.mount != null) mountPoints.Add(cursor.mount);
+                        // Name
+                        StringSegment name = enumr.Current;
+                        // "."
+                        if (name.Equals(StringSegment.Dot)) continue;
+                        // ".."
+                        if (name.Equals(StringSegment.DotDot))
+                        {
+                            if (cursor.parent == null) throw new DirectoryNotFoundException(path);
+                            cursor = cursor.parent;
+                            continue;
+                        }
+                        // Failed to find child entry
+                        if (!cursor.contents.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
+                        // Move final down
+                        finalDirectory = cursor;
                     }
-                    // Failed to find child entry
-                    if (!cursor.contents.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
-                    // Move final down
-                    finalDirectory = cursor;
-                }
                 // Add vfs entries
-                if (finalDirectory!=null) foreach (var kp in finalDirectory.contents) vfsEntries.Add(kp.Value.Entry);
+                if (finalDirectory != null) foreach (var kp in finalDirectory.contents) vfsEntries.Add(kp.Value.Entry);
             }
             finally
             {
                 m_lock.ReleaseReaderLock();
             }
-            // Number of sources (to unify)
-            int sourceCount = mountPoints.Count + (vfsEntries.Count > 0 ? 1 : 0);
-            // No mounted points were found, and no virtual directories.
-            if (sourceCount == 0) throw new DirectoryNotFoundException(path);
-            // One source, no unifying needed.
-            if (sourceCount == 1)
-            {
-                // Return vfs contents
-                if (vfsEntries.Count > 0) return vfsEntries.ToArray();
-                // Return already decorated contents
-                return mountPoints[0].Browse(path);
-            }
+            // Found nothing.
+            if (mountPoints.Count == 0 && vfsEntries.Count == 0) throw new DirectoryNotFoundException(path);
+            // Return vfs contents
+            if (mountPoints.Count == 0 && vfsEntries.Count > 0) return vfsEntries.ToArray();
+            // Return already decorated contents
+            if (mountPoints.Count > 0 && vfsEntries.Count == 0) mountPoints[0].Browse(path);
 
-            // Create union of mountpoints and final directory. Remove overlapping content if same name. Priority: vfs, filesystems
-            // Count entries
+            // Create union of mountpoints and final directory. Remove overlapping content if same name. Priority: vfs, mountpoints
+            // Estimation of entry count
             int entryCount = vfsEntries.Count;
             // Browse each decoration
             StructList4<IFileSystemEntry[]> entryArrays = new StructList4<IFileSystemEntry[]>();
@@ -169,11 +163,11 @@ namespace Lexical.FileSystem
             }
 
             // Create hashset for removing overlapping entry names
-            HashSet<string> filenames = new HashSet<string>();
+            HashSet<string> filenames = new HashSet<string>(StringComparer.InvariantCulture);
             // Container for result
-            List<IFileSystemEntry> entries = new List<IFileSystemEntry>(entryCount/*most likely count*/);
+            List<IFileSystemEntry> entries = new List<IFileSystemEntry>(entryCount/*most likely count and max count*/);
             // Add vfs
-            for (int i=0; i<vfsEntries.Count; i++)
+            for (int i = 0; i < vfsEntries.Count; i++)
             {
                 // Get mount entry
                 IFileSystemEntry e = vfsEntries[i];
@@ -239,7 +233,7 @@ namespace Lexical.FileSystem
                 // Return vfs entry
                 if (finalDirectory != null) return finalDirectory.Entry;
                 // Try to get entry from mounted filesystems
-                for (int i=0; i<mountPoints.Count; i++)
+                for (int i = 0; i < mountPoints.Count; i++)
                 {
                     IFileSystemEntry e = mountPoints[i].GetEntry(path);
                     if (e != null) return e;
@@ -490,55 +484,56 @@ namespace Lexical.FileSystem
                 PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
                 // Follow names
                 if (path != "") while (enumr.MoveNext())
-                {
-                    // Name
-                    StringSegment name = enumr.Current;
-                    // Update last access
-                    cursor.lastAccess = now;
-                    // "."
-                    if (name.Equals(StringSegment.Dot)) continue;
-                    // ".."
-                    if (name.Equals(StringSegment.DotDot))
                     {
-                        // ".." -> exception
-                        if (cursor.parent == null) throw new DirectoryNotFoundException(path);
-                        // Go towards parent.
-                        cursor = cursor.parent;
-                        // Next path segment
-                        continue;
+                        // Name
+                        StringSegment name = enumr.Current;
+                        // Update last access
+                        cursor.lastAccess = now;
+                        // "."
+                        if (name.Equals(StringSegment.Dot)) continue;
+                        // ".."
+                        if (name.Equals(StringSegment.DotDot))
+                        {
+                            // ".." -> exception
+                            if (cursor.parent == null) throw new DirectoryNotFoundException(path);
+                            // Go towards parent.
+                            cursor = cursor.parent;
+                            // Next path segment
+                            continue;
+                        }
+                        // Create node
+                        Directory child;
+                        if (!cursor.contents.TryGetValue(name, out child))
+                        {
+                            // Create child directory
+                            Directory newDirectory = new Directory(this, cursor, name, now);
+                            // Add event about child being created
+                            if (observers != null /*&& GetEntry not yet implemented !this.Exists(path)*/)
+                                foreach (ObserverHandle observer in observers)
+                                {
+                                    if (observer.Qualify(newDirectory.Path)) events.Add(new FileSystemEventCreate(observer, now, newDirectory.Path));
+                                }
+                            // Update time of parent
+                            cursor.lastModified = now;
+                            // Add child to parent
+                            cursor.contents[enumr.Current] = newDirectory;
+                            // Flush caches
+                            cursor.FlushChildEntries();
+                            cursor.FlushEntry();
+                            // Move cursor to child
+                            cursor = newDirectory;
+                        }
+                        else
+                        {
+                            cursor = child;
+                        }
                     }
-                    // Create node
-                    Directory child;
-                    if (!cursor.contents.TryGetValue(name, out child))
-                    {
-                        // Create child directory
-                        Directory newDirectory = new Directory(this, cursor, name, now);
-                        // Add event about child being created
-                        if (observers != null /*&& GetEntry not yet implemented !this.Exists(path)*/)
-                            foreach (ObserverHandle observer in observers)
-                            {
-                                if (observer.Qualify(newDirectory.Path)) events.Add(new FileSystemEventCreate(observer, now, newDirectory.Path));
-                            }
-                        // Update time of parent
-                        cursor.lastModified = now;
-                        // Add child to parent
-                        cursor.contents[enumr.Current] = newDirectory;
-                        // Flush caches
-                        cursor.FlushChildEntries();
-                        cursor.FlushEntry();
-                        // Move cursor to child
-                        cursor = newDirectory;
-                    } else
-                    {
-                        cursor = child;
-                    }
-                }
 
                 // New mount
                 if (cursor.mount == null)
                 {
                     // Create decoration filesystem (or null)
-                    cursor.mount = 
+                    cursor.mount =
                         filesystems == null || filesystems.Length == 0 ? new FileSystemDecoration(filesystem: null, option: null) :
                         filesystems.Length == 1 ? new FileSystemDecoration(this, path, filesystems[0].filesystem, filesystems[0].mountOption) :
                         new FileSystemDecoration(this, filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
@@ -548,7 +543,7 @@ namespace Lexical.FileSystem
                 else
                 // Replace mount
                 {
-                    cursor.mount.SetDecorees(filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
+                    cursor.mount.SetComponents(filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
                     // TODO Events
                 }
             }
@@ -615,27 +610,27 @@ namespace Lexical.FileSystem
                 Directory cursor = root;
                 // Split path at '/' slashes
                 PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
-                if (path!="") while (enumr.MoveNext())
-                {
-                    // Name
-                    StringSegment name = enumr.Current;
-                    // Update last access
-                    cursor.lastAccess = now;
-                    // "."
-                    if (name.Equals(StringSegment.Dot)) continue;
-                    // ".."
-                    if (name.Equals(StringSegment.DotDot))
+                if (path != "") while (enumr.MoveNext())
                     {
-                        // ".." -> exception
-                        if (cursor.parent == null) throw new DirectoryNotFoundException(path);
-                        // Go towards parent.
-                        cursor = cursor.parent;
-                        // Next path segment
-                        continue;
+                        // Name
+                        StringSegment name = enumr.Current;
+                        // Update last access
+                        cursor.lastAccess = now;
+                        // "."
+                        if (name.Equals(StringSegment.Dot)) continue;
+                        // ".."
+                        if (name.Equals(StringSegment.DotDot))
+                        {
+                            // ".." -> exception
+                            if (cursor.parent == null) throw new DirectoryNotFoundException(path);
+                            // Go towards parent.
+                            cursor = cursor.parent;
+                            // Next path segment
+                            continue;
+                        }
+                        // Node was not found
+                        if (!cursor.contents.TryGetValue(name, out cursor)) throw new DirectoryNotFoundException(path.Substring(0, name.Length));
                     }
-                    // Node was not found
-                    if (!cursor.contents.TryGetValue(name, out cursor)) throw new DirectoryNotFoundException(path.Substring(0, name.Length));
-                }
 
                 // Disconnect from parent, if no children
                 while (cursor != null && cursor.contents.Count == 0 && cursor.parent != null)
@@ -687,12 +682,13 @@ namespace Lexical.FileSystem
                 m_lock.ReleaseWriterLock();
             }
 
-            for(int i=0; i<decorations.Count; i++)
+            for (int i = 0; i < decorations.Count; i++)
             {
                 try
                 {
                     decorations[i].Dispose();
-                } catch (Exception e)
+                }
+                catch (Exception e)
                 {
                     disposeErrors.Add(e);
                 }
@@ -752,7 +748,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns>filesystem</returns>
-        public VirtualFileSystem AddDisposables(IEnumerable<object> disposables)
+        public VirtualFileSystem AddDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).AddDisposables(disposables);
             return this;
@@ -774,7 +770,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns></returns>
-        public VirtualFileSystem RemoveDisposables(IEnumerable<object> disposables)
+        public VirtualFileSystem RemoveDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;

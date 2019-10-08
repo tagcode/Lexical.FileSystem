@@ -6,13 +6,13 @@
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
@@ -341,7 +341,8 @@ namespace Lexical.FileSystem
                     {
                         IFileSystemEntry e = new FileSystemEntryDirectory(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), this);
                         list.Add(e);
-                    } else if (fsi is FileInfo _fi)
+                    }
+                    else if (fsi is FileInfo _fi)
                     {
                         IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length);
                         list.Add(e);
@@ -384,7 +385,7 @@ namespace Lexical.FileSystem
             path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists) return new FileSystemEntryDirectory(this, path+"/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), this);
+            if (dir.Exists) return new FileSystemEntryDirectory(this, path + "/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), this);
 
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists) return new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length);
@@ -424,7 +425,7 @@ namespace Lexical.FileSystem
                 string name = path;
                 DirectoryInfo di = driveInfo.RootDirectory;
                 path = path + "/";
-                
+
                 IFileSystemEntry e =
                     driveInfo.IsReady ?
                     new FileSystemEntryDriveDirectory(this, path, name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), this) :
@@ -556,7 +557,7 @@ namespace Lexical.FileSystem
                 // Return handle
                 return handle;
             }
-            
+
         }
 
         /// <summary>
@@ -687,7 +688,7 @@ namespace Lexical.FileSystem
                 {
                     // Cut the relative path
                     int length = absolutePath.Length > FileSystemRootAbsolutePath.Length && absolutePath[FileSystemRootAbsolutePath.Length] == System.IO.Path.DirectorySeparatorChar ? absolutePath.Length - FileSystemRootAbsolutePath.Length - 1 : absolutePath.Length - FileSystemRootAbsolutePath.Length;
-                    string _relativePath = absolutePath.Substring(absolutePath.Length-length, length);
+                    string _relativePath = absolutePath.Substring(absolutePath.Length - length, length);
                     // Convert separator back-slash '\' into slash '/'.
                     if (System.IO.Path.DirectorySeparatorChar != '/') _relativePath = _relativePath.Replace(System.IO.Path.DirectorySeparatorChar, '/');
                     // Return
@@ -788,11 +789,11 @@ namespace Lexical.FileSystem
             /// <param name="absolutePathToPrefixPart">absolute path to prefix part of <paramref name="filterString"/>, for example "C:\Temp\Dir", if filter string is "dir/**" and <paramref name="filesystemRootAbsolutePath"/> is "C:\temp"</param>
             /// <param name="suffixPart">Suffix part of <paramref name="filterString"/>, for example "**" if filter string is "dir/**"</param>
             public PatternObserver(
-                IFileSystem filesystem, 
-                IObserver<IFileSystemEvent> observer, 
+                IFileSystem filesystem,
+                IObserver<IFileSystemEvent> observer,
                 object state,
                 string filterString,
-                string filesystemRootAbsolutePath, 
+                string filesystemRootAbsolutePath,
                 string relativePathToPrefixPartWithoutTrailingSeparator,
                 string absolutePathToPrefixPart,
                 string suffixPart)
@@ -872,7 +873,7 @@ namespace Lexical.FileSystem
                 if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/"+path)*/)) events.Add(new FileSystemEventCreate(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/" + path)*/)) events.Add(new FileSystemEventChange(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/" + path)*/)) events.Add(new FileSystemEventDelete(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re) 
+                if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re)
                 {
                     string oldPath = ConvertPath(re.OldFullPath);
                     if (isDirectory && oldPath != "") oldPath = oldPath + "/";
@@ -1006,7 +1007,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns>filesystem</returns>
-        public FileSystem AddDisposables(IEnumerable<object> disposables)
+        public FileSystem AddDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).AddDisposables(disposables);
             return this;
@@ -1028,7 +1029,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="disposables"></param>
         /// <returns></returns>
-        public FileSystem RemoveDisposables(IEnumerable<object> disposables)
+        public FileSystem RemoveDisposables(IEnumerable disposables)
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;
@@ -1054,7 +1055,8 @@ namespace Lexical.FileSystem
             try
             {
                 return fi.LastAccessTimeUtc;
-            } catch (Exception)
+            }
+            catch (Exception)
             {
                 return DateTimeOffset.MinValue;
             }

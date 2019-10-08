@@ -73,4 +73,14 @@ namespace Lexical.FileSystem
         String MountPath { get; }
     }
     // </IFileSystemOptionMountPath>
+
+    /// <summary>Option for auto-mounted packages.</summary>
+    [Operations(typeof(FileSystemOptionOperationAutoMount))]
+    // <IFileSystemOptionAutoMount>
+    public interface IFileSystemOptionAutoMount : IFileSystemOption
+    {
+        /// <summary>Package loaders that can mount package files, such as .zip.</summary>
+        IFileSystemPackageLoader[] PackageLoaders { get; }
+    }
+    // </IFileSystemOptionAutoMount>
 }
