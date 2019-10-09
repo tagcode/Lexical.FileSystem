@@ -11,6 +11,24 @@ using System.Threading.Tasks;
 namespace Lexical.FileSystem
 {
     /// <summary>
+    /// Interface for objects that can dispatch <see cref="IFileSystemEvent"/>s.
+    /// </summary>
+    public interface IFileSystemEventDispatchable
+    {
+        /// <summary>
+        /// Send <paramref name="events"/> to observers>.
+        /// </summary>
+        /// <param name="events"></param>
+        void SendEvents(ref StructList12<IFileSystemEvent> events);
+
+        /// <summary>
+        /// Send one <paramref name="event"/> to observers.
+        /// </summary>
+        /// <param name="event"></param>
+        void SendEvent(IFileSystemEvent @event);
+    }
+
+    /// <summary>
     /// Base implementation for <see cref="IFileSystem"/>. 
     /// 
     /// Disposables can be attached to be disposed along with <see cref="IFileSystem"/>.
@@ -18,7 +36,7 @@ namespace Lexical.FileSystem
     /// 
     /// Can send events to observers.
     /// </summary>
-    public abstract class FileSystemBase : DisposeList, IFileSystemDisposable, IFileSystemObserve
+    public abstract class FileSystemBase : DisposeList, IFileSystemDisposable, IFileSystemObserve, IFileSystemEventDispatchable
     {
         /// <summary>
         /// Has SetEventDispatcher() capability.
@@ -66,7 +84,7 @@ namespace Lexical.FileSystem
         /// If <see cref="eventHandler"/> is null, then sends events in the running thread.
         /// </summary>
         /// <param name="events"></param>
-        protected internal void SendEvents(ref StructList12<IFileSystemEvent> events)
+        public void SendEvents(ref StructList12<IFileSystemEvent> events)
         {
             // Don't send events anymore
             if (IsDisposing) return;
@@ -114,7 +132,7 @@ namespace Lexical.FileSystem
         /// If <see cref="eventHandler"/> is null, then sends events in the running thread.
         /// </summary>
         /// <param name="event"></param>
-        protected internal void SendEvent(IFileSystemEvent @event)
+        public void SendEvent(IFileSystemEvent @event)
         {
             // Don't send events anymore
             if (IsDisposing) return;

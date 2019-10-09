@@ -14,43 +14,54 @@ namespace Lexical.FileSystem.Internal
     /// First part contains all paths without any wildcards, and second part all paths with wildcards and filename.
     /// 
     /// For example "dir/**/file.txt" is split into "dir" and "**/file.txt".
+    /// 
+    /// Examples:
+    ///   Pattern=*.txt, Prefix=, Suffix=*.txt, SuffixDepth=0, HasWildcards=True, SuffixDepth=0
+    ///   Pattern=**.txt, Prefix=, Suffix=**.txt, SuffixDepth=2147483647, HasWildcards=True, SuffixDepth=2147483647
+    ///   Pattern=/*.txt, Prefix=/, Suffix=*.txt, SuffixDepth=0, HasWildcards=True, SuffixDepth=0
+    ///   Pattern=*/*.txt, Prefix=, Suffix=*/*.txt, SuffixDepth=1, HasWildcards=True, SuffixDepth=1
+    ///   Pattern=/**.txt, Prefix=/, Suffix=**.txt, SuffixDepth=2147483647, HasWildcards=True, SuffixDepth=2147483647
+    ///   Pattern=dir/dir/*/*.txt, Prefix=dir/dir/, Suffix=*/*.txt, SuffixDepth=1, HasWildcards=True, SuffixDepth=1
+    ///   Pattern=dir/dir?/*/*.txt, Prefix=dir/, Suffix=dir?/*/*.txt, SuffixDepth=2, HasWildcards=True, SuffixDepth=2
+    ///   Pattern=dir/dir/dir/*/*.txt, Prefix=dir/dir/dir/, Suffix=*/*.txt, SuffixDepth=1, HasWildcards=True, SuffixDepth=1
+    ///   Pattern=dir/dir/dir?/*/*.txt, Prefix=dir/dir/, Suffix=dir?/*/*.txt, SuffixDepth=2, HasWildcards=True, SuffixDepth=2
+    ///   Pattern=dir/dir/dir?/*/**.txt, Prefix=dir/dir/, Suffix=dir?/*/**.txt, SuffixDepth=2147483647, HasWildcards=True, SuffixDepth=2147483647
+    ///   
     /// </summary>
     public struct GlobPatternInfo
     {
         /// <summary>
         /// Source pattern string.
         /// </summary>
-        public readonly String Source;
+        public readonly String Pattern;
 
         /// <summary>
-        /// Path stem without any wildcards, before first "*", "**", or "?". 
+        /// Path stem without any wildcards, before first directory/file name part with wildcards "*", "**", or "?". 
         /// Separator character is "/". 
         /// </summary>
         public readonly String Prefix;
 
         /// <summary>
         /// Pattern part for file, or for directories wild cards and file.
-        /// 
-        /// For example: 
-        ///     "file.txt"
-        ///     "dir*/file.txt"
         /// </summary>
         public readonly String Suffix;
 
         /// <summary>
-        /// Does <see cref="Source"/> have any wildcard '?', '*', '**' characters.
+        /// Number of directory levels in <see cref="Suffix"/>.
+        /// 
+        /// Examples:
+        ///     Pattern="dir/dir/*.txt", Prefix="dir/dir/", Suffix="*.txt", depth = 0
+        ///     Pattern="dir/dir/*/*.txt", Prefix="dir/dir/", Suffix="*/*.txt", depth = 1
+        ///     Pattern="dir/dir/dir?/*/*.txt", Prefix="dir/dir/", Suffix="dir?/*/*.txt", depth = 2
+        ///     Pattern="dir/dir/**.txt", Prefix="dir/dir/", Suffix="**", depth = int.MaxValue
+        ///     
         /// </summary>
-        public readonly bool HasWildcards;
+        public readonly int SuffixDepth;
 
         /// <summary>
-        /// Does <see cref="Suffix"/> refer to subdirectories with wildcards.
-        /// 
-        /// For example:
-        ///     "**/myfile.txt" = true,
-        ///     "myfile*.txt" = false,
-        ///     "myfile**.txt" = false.
+        /// Does <see cref="Pattern"/> have any wildcard '?', '*', '**' characters.
         /// </summary>
-        public readonly bool Subdirectories;
+        public readonly bool HasWildcards;
 
         /// <summary>
         /// Create filter info.
@@ -62,11 +73,11 @@ namespace Lexical.FileSystem.Internal
         /// <param name="pattern">glob pattern, e.g. "dir/**.txt"</param>
         public GlobPatternInfo(string pattern)
         {
-            this.Source = pattern ?? throw new ArgumentNullException(nameof(pattern));
+            this.Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
 
             // Last separator (before wildcard) and first wildcard indices
             int ix_separator = -1, ix_wildcard = -1;
-            bool subdirectories = false;
+            long suffixDepth = 0;
             // Find last separator char before first pattern character
             char prevch = (char)0;
             for (int i = 0; i < pattern.Length; i++)
@@ -82,12 +93,12 @@ namespace Lexical.FileSystem.Internal
                 if (ch == '/')
                 {
                     // First separator before wildcard
-                    if (ix_wildcard < 0) ix_separator = i;
+                    if (ix_wildcard < 0) ix_separator = i+1;
                     // Separator after wildcard
-                    else subdirectories = true;
+                    else suffixDepth++;
                 }
-                //
-                if (ch == '*' && prevch == '*') subdirectories = true;
+                // "**"
+                if (prevch == '*' && ch == '*') suffixDepth = int.MaxValue;
                 prevch = ch;
             }
 
@@ -98,22 +109,15 @@ namespace Lexical.FileSystem.Internal
                 Suffix = pattern;
                 HasWildcards = ix_wildcard >= 0;
             }
-            else
-            // Starts with '/'
-            if (ix_separator == 0)
-            {
-                Prefix = "/";
-                Suffix = pattern.Substring(1);
-            }
             // 'xxx/zzz'
             else
             {
                 Prefix = pattern.Substring(0, ix_separator);
-                Suffix = pattern.Substring(ix_separator + 1);
+                Suffix = pattern.Substring(ix_separator);
             }
 
             HasWildcards = ix_wildcard >= 0;
-            Subdirectories = subdirectories;
+            this.SuffixDepth = (int)Math.Min(suffixDepth, int.MaxValue);
         }
 
         /// <summary>
@@ -121,6 +125,6 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => $"{nameof(Prefix)}={Prefix}, {nameof(Suffix)}={Suffix}, {nameof(HasWildcards)}={HasWildcards}, {nameof(Subdirectories)}={Subdirectories}";
+            => $"{nameof(Pattern)}={Pattern}, {nameof(Prefix)}={Prefix}, {nameof(Suffix)}={Suffix}, {nameof(SuffixDepth)}={SuffixDepth}, {nameof(HasWildcards)}={HasWildcards}, {nameof(SuffixDepth)}={SuffixDepth}";
     }
 }

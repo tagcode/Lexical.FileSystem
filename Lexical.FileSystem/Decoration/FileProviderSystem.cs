@@ -479,9 +479,9 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="observer"></param>
             /// <param name="state"></param>
             public PatternObserver(IFileSystem filesystem, GlobPatternInfo filterInfo, IObserver<IFileSystemEvent> observer, object state)
-                : base(filesystem, filterInfo.Source, observer, state)
+                : base(filesystem, filterInfo.Pattern, observer, state)
             {
-                this.changeToken = FileProvider.Watch(filterInfo.Source);
+                this.changeToken = FileProvider.Watch(filterInfo.Pattern);
                 this.previousSnapshot = ReadSnapshot();
                 this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
             }

@@ -55,7 +55,6 @@ namespace Lexical.FileSystem.Decoration
         /// then diposes this object and sends <see cref="IObserver{T}.OnCompleted"/> to <see cref="Observer"/>.</param>
         public ObserverDecorator(IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state, bool disposeWhenLastCompletes)
         {
-            if (sourceFileSystem is FileSystemBase == false) throw new ArgumentException($"This class is intended to be used with subclasses of {nameof(FileSystemBase)}.");
             this.FileSystem = sourceFileSystem;
             this.Filter = filter;
             this.Observer = observer;
@@ -103,7 +102,18 @@ namespace Lexical.FileSystem.Decoration
             // Try to decorate event
             @event = FileSystemEventDecoration.DecorateObserverAndPath(@event, this, newOldPath, newNewPath, false);
             // Send event forward
-            ((FileSystemBase)this.FileSystem).SendEvent(@event);
+            if (FileSystem is IFileSystemEventDispatchable dispatchable) dispatchable.SendEvent(@event);
+            else
+            {
+                try
+                {
+                    Observer.OnNext(@event);
+                }
+                catch (Exception error1)
+                {
+                    try { Observer.OnError(error1); } catch (Exception) {}
+                }
+            }
         }
 
         // Used when pushing self as IFileSystemEventStart
