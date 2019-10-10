@@ -285,13 +285,10 @@ namespace Lexical.FileSystem.Decoration
             IFileProvider fp = fileProvider;
             if (fp == null) return new DummyObserver(this, filter, observer, state);
             // Parse filter
-            GlobPatternInfo filterInfo = new GlobPatternInfo(filter);
+            GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
             // Monitor single file (or dir, we don't know "dir")
-            if (!filterInfo.HasWildcards)
+            if (patternInfo.SuffixDepth==0)
             {
-                // "dir/" observes nothing
-                if (filter.EndsWith("/")) return new DummyObserver(this, filter, observer, state);
-
                 // Create observer that watches one file
                 FileObserver handle = new FileObserver(this, filter, observer, state);
                 // Send handle
@@ -303,7 +300,7 @@ namespace Lexical.FileSystem.Decoration
             // Has wildcards, e.g. "**/file.txt"
             {
                 // Create handle
-                PatternObserver handle = new PatternObserver(this, filterInfo, observer, state);
+                PatternObserver handle = new PatternObserver(this, patternInfo, observer, state);
                 // Send handle
                 observer.OnNext(handle);
                 // Return handle
@@ -475,13 +472,13 @@ namespace Lexical.FileSystem.Decoration
             /// Create observer for one file.
             /// </summary>
             /// <param name="filesystem"></param>
-            /// <param name="filterInfo"></param>
+            /// <param name="patternInfo"></param>
             /// <param name="observer"></param>
             /// <param name="state"></param>
-            public PatternObserver(IFileSystem filesystem, GlobPatternInfo filterInfo, IObserver<IFileSystemEvent> observer, object state)
-                : base(filesystem, filterInfo.Pattern, observer, state)
+            public PatternObserver(IFileSystem filesystem, GlobPatternInfo patternInfo, IObserver<IFileSystemEvent> observer, object state)
+                : base(filesystem, patternInfo.Pattern, observer, state)
             {
-                this.changeToken = FileProvider.Watch(filterInfo.Pattern);
+                this.changeToken = FileProvider.Watch(patternInfo.Pattern);
                 this.previousSnapshot = ReadSnapshot();
                 this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
             }

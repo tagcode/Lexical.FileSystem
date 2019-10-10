@@ -22,54 +22,27 @@ namespace Lexical.FileSystem.Internal
         /// <returns>character</returns>
         public char this[int ix] => String[Start+ix];
 
-        /// <summary>
-        /// Empty string "".
-        /// </summary>
+        /// <summary>Empty string ""</summary>
         public static StringSegment Empty = new StringSegment("");
-
-        /// <summary>
-        /// String ".".
-        /// </summary>
+        /// <summary>String "."</summary>
         public static StringSegment Dot = new StringSegment(".");
-
-        /// <summary>
-        /// String "..".
-        /// </summary>
+        /// <summary>String ".."</summary>
         public static StringSegment DotDot = new StringSegment("..");
 
-        /// <summary>
-        /// Start index
-        /// </summary>
+        /// <summary>Start index</summary>
         public readonly int Start;
-
-        /// <summary>
-        /// Length
-        /// </summary>
+        /// <summary>Length</summary>
         public readonly int Length;
-
-        /// <summary>
-        /// String
-        /// </summary>
+        /// <summary>String</summary>
         public readonly string String;
 
-        /// <summary>
-        /// Hashcode
-        /// </summary>
+        /// <summary>Hashcode</summary>
         int hashcode;
 
-        /// <summary>
-        /// Implicit converter
-        /// </summary>
-        /// <param name="str"></param>
-        public static implicit operator String(StringSegment str)
-            => str.String.Substring(str.Start, str.Length);
-
-        /// <summary>
-        /// Implicit converter
-        /// </summary>
-        /// <param name="str"></param>
-        public static implicit operator StringSegment(String str)
-            => new StringSegment(str);
+        /// <summary>Implicit converter</summary>
+        public static implicit operator String(StringSegment str) => str.String.Substring(str.Start, str.Length);
+        /// <summary>Implicit converter</summary>
+        public static implicit operator StringSegment(String str) => new StringSegment(str);
 
         /// <summary>
         /// Create span of characters.
