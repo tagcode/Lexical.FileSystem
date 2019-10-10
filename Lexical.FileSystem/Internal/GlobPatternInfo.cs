@@ -36,28 +36,29 @@ namespace Lexical.FileSystem.Internal
     {
         /// <summary>Source pattern string.</summary>
         public readonly String Pattern;
-        /// <summary>The part from <see cref="Pattern"/> before first directory or file name with wildcard */**/?.</summary>
-        public readonly String Prefix;
-        /// <summary>The part from <see cref="Pattern"/> that contains first wildcard, starting from directory separator '/'.</summary>
-        public readonly String Suffix;
+        /// <summary>The part from <see cref="Pattern"/> that doesn't vary. The directories before first wildcard */**/?.</summary>
+        public readonly String Constant;
+        /// <summary>The part from <see cref="Pattern"/> that varies. The directories after first wildcard, starting from preceding directory separator '/'.</summary>
+        public readonly String Variable;
+
         /// <summary>
-        /// Number of directory levels in <see cref="Suffix"/>.
+        /// Number of directory levels in <see cref="Variable"/>.
         /// 
         /// Depth is 0 if there are no wildcard characters in <see cref="Pattern"/>.
         /// Depth is 1 if there are wildcard characters '?'/'*' in one directory.
-        /// Depth is n if there are wildcard characters '?'/'*' in n directories after <see cref="Prefix"/> part.
+        /// Depth is n if there are wildcard characters '?'/'*' in n directories after <see cref="Constant"/> part.
         /// Depth is <see cref="int.MaxValue"/>, if there is **' wildcards anywhere.
         /// 
         /// Examples:
-        ///     Pattern="dir/dir/file.txt", Prefix="dir/dir/file.txt", Suffix="", depth = 0
-        ///     Pattern="dir/dir/*.txt", Prefix="dir/dir/", Suffix="*.txt", depth = 1
-        ///     Pattern="dir/dir/*/*.txt", Prefix="dir/dir/", Suffix="*/*.txt", depth = 2
-        ///     Pattern="dir/dir/dir?/*/*.txt", Prefix="dir/dir/", Suffix="dir?/*/*.txt", depth = 3
-        ///     Pattern="dir/*/dir/dir/dir/file.txt", Prefix="dir/", Suffix="*/dir/dir/dir/file.txt", depth = 5
-        ///     Pattern="dir/dir/**.txt", Prefix="dir/dir/", Suffix="**", depth = int.MaxValue
+        ///     Pattern="dir/dir/file.txt", Constant="dir/dir/file.txt", Variable="", depth = 0
+        ///     Pattern="dir/dir/*.txt", Constant="dir/dir/", Variable="*.txt", depth = 1
+        ///     Pattern="dir/dir/*/*.txt", Constant="dir/dir/", Variable="*/*.txt", depth = 2
+        ///     Pattern="dir/dir/dir?/*/*.txt", Constant="dir/dir/", Variable="dir?/*/*.txt", depth = 3
+        ///     Pattern="dir/*/dir/dir/dir/file.txt", Constant="dir/", Variable="*/dir/dir/dir/file.txt", depth = 5
+        ///     Pattern="dir/dir/**.txt", Constant="dir/dir/", Variable="**", depth = int.MaxValue
         ///     
         /// </summary>
-        public readonly int SuffixDepth;
+        public readonly int VariableDepth;
 
         /// <summary>Implicit converter</summary>
         public static implicit operator String(GlobPatternInfo str) => str.Pattern;
@@ -110,29 +111,31 @@ namespace Lexical.FileSystem.Internal
             // There are no wildcard
             if (ix_wildcard<0)
             {
-                Prefix = pattern;
-                Suffix = "";
+                Constant = pattern;
+                Variable = "";
             }
             // There is no separator, but are wildcards
             else if (ix_separator < 0)
             {
-                Prefix = "";
-                Suffix = pattern;
+                Constant = "";
+                Variable = pattern;
             }
             // 'xxx/zzz'
             else
             {
-                Prefix = pattern.Substring(0, ix_separator);
-                Suffix = pattern.Substring(ix_separator);
+                Constant = pattern.Substring(0, ix_separator);
+                Variable = pattern.Substring(ix_separator);
             }
 
-            this.SuffixDepth = (int)Math.Min(suffixDepth, int.MaxValue);
+            this.VariableDepth = (int)Math.Min(suffixDepth, int.MaxValue);
         }
 
         /// <summary>
         /// Create intersection of the two subtrees that are described by this and <paramref name="other"/> pattern infos.
         /// 
         /// Returns true and <paramref name="intersection"/>, if there is an intersection of trees, otherwise a false.
+        /// 
+        /// This implementation is imperfect and returns broader pattern than whan is optimal.
         /// </summary>
         /// <param name="other"></param>
         /// <param name="intersection"></param>
@@ -143,7 +146,7 @@ namespace Lexical.FileSystem.Internal
             if (this.Pattern == other.Pattern) { intersection = this; return true; }
 
             // Follow prefixes of both as long as they yield same names
-            PathEnumerator p1 = new PathEnumerator(this.Prefix, false), p2 = new PathEnumerator(other.Prefix, false);
+            PathEnumerator p1 = new PathEnumerator(this.Constant, false), p2 = new PathEnumerator(other.Constant, false);
 
             // Index where common stem part ends (common stem = 0..stemEndIx)
             int stemEndIx = 0; bool diverged = false;
@@ -164,7 +167,7 @@ namespace Lexical.FileSystem.Internal
                     if (StringSegment.Comparer.Instance.Equals(p1.Current, p2.Current))
                     {
                         stemEndIx = p1.Current.Start + p1.Current.Length; // prefixes keep having common stem, move index
-                        if (this.Prefix.Length >= stemEndIx && other.Prefix.Length >= stemEndIx && this.Prefix[stemEndIx] == '/' && other.Prefix[stemEndIx] == '/') stemEndIx++;
+                        if (this.Constant.Length >= stemEndIx && other.Constant.Length >= stemEndIx && this.Constant[stemEndIx] == '/' && other.Constant[stemEndIx] == '/') stemEndIx++;
                     }
                     else
                         diverged = true; // prefixes diverge here
@@ -172,16 +175,16 @@ namespace Lexical.FileSystem.Internal
             }
 
             // How many characters are left in each .Prefix strings after their common stem part.
-            int prefix1Left = this.Prefix.Length - stemEndIx, prefix2Left = other.Prefix.Length - stemEndIx;
+            int prefix1Left = this.Constant.Length - stemEndIx, prefix2Left = other.Constant.Length - stemEndIx;
 
             // They have equal prefixes
             if (prefix1Left == 0 && prefix2Left == 0)
             {
-                if (this.Suffix == other.Suffix) { intersection = this; return true; }
+                if (this.Variable == other.Variable) { intersection = this; return true; }
 
                 // Intersection of depth
-                int depth = Math.Min(this.SuffixDepth, other.SuffixDepth);
-                intersection = new GlobPatternInfo(other.Prefix + Stars(depth));
+                int depth = Math.Min(this.VariableDepth, other.VariableDepth);
+                intersection = new GlobPatternInfo(other.Constant + Stars(depth));
                 return true;
             }
             else 
@@ -189,12 +192,12 @@ namespace Lexical.FileSystem.Internal
             if (prefix1Left == 0 && prefix2Left > 0)
             {
                 // Dive into prefix2
-                int s1depth = this.SuffixDepth-(p2depth-p1depth), s2depth = other.SuffixDepth;
+                int s1depth = this.VariableDepth-(p2depth-p1depth), s2depth = other.VariableDepth;
 
                 int depth = Math.Min(s1depth, s2depth);
                 if (depth < 0) { intersection = default; return false; }
-                if (depth > 100) intersection = new GlobPatternInfo(other.Prefix + "**");
-                else intersection = new GlobPatternInfo(other.Prefix + Stars(depth));
+                if (depth > 100) intersection = new GlobPatternInfo(other.Constant + "**");
+                else intersection = new GlobPatternInfo(other.Constant + Stars(depth));
                 return true;
             }
             else
@@ -202,12 +205,12 @@ namespace Lexical.FileSystem.Internal
             if (prefix1Left > 0 && prefix2Left == 0)
             {
                 // Dive into prefix2
-                int s1depth = this.SuffixDepth, s2depth = other.SuffixDepth - (p1depth - p2depth);
+                int s1depth = this.VariableDepth, s2depth = other.VariableDepth - (p1depth - p2depth);
 
                 int depth = Math.Min(s1depth, s2depth);
                 if (depth < 0) { intersection = default; return false; }
-                if (depth > 100) intersection = new GlobPatternInfo(this.Prefix + "**");
-                else intersection = new GlobPatternInfo(this.Prefix + Stars(depth));
+                if (depth > 100) intersection = new GlobPatternInfo(this.Constant + "**");
+                else intersection = new GlobPatternInfo(this.Constant + Stars(depth));
                 return true;
             }
             else
@@ -218,6 +221,30 @@ namespace Lexical.FileSystem.Internal
             }
         }
 
+        /// <summary>
+        /// Create intersection of two file/directory names of same level.
+        /// 
+        /// *) This implementation is imperfect and returns broader pattern than whan is optimal.
+        /// </summary>
+        /// <param name="name1"></param>
+        /// <param name="name2"></param>
+        /// <returns>Smallest* intertersection of <paramref name="name1"/> and <paramref name="name2"/>, and null if there is no intersection.</returns>
+        static string LevelIntersection(string name1, string name2)
+        {
+            if (name1 == name2) return name1;
+            return "*";
+        }
+
+        /// <summary>
+        /// Print <paramref name="depth"/> number of stars "*". Uses "/" as separator between.
+        /// 
+        /// For example, 
+        ///     depth = 1 is "*".
+        ///     depth = 2 is "*/*".
+        ///     depth = 3 is "*/*/*".
+        /// </summary>
+        /// <param name="depth"></param>
+        /// <returns></returns>
         static string Stars(int depth)
         {
             StringBuilder sb = new StringBuilder(depth * 2);
@@ -234,6 +261,6 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => $"{nameof(Pattern)}={Pattern}, {nameof(Prefix)}={Prefix}, {nameof(Suffix)}={Suffix}, {nameof(SuffixDepth)}={SuffixDepth}";
+            => $"{nameof(Pattern)}={Pattern}, {nameof(Constant)}={Constant}, {nameof(Variable)}={Variable}, {nameof(VariableDepth)}={VariableDepth}";
     }
 }

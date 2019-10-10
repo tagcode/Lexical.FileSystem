@@ -96,45 +96,15 @@ namespace Lexical.FileSystem.Utility
         {
             if (pattern == null) return this;
 
-            int ix_questionmark = pattern.IndexOf('?'), ix_asterix = pattern.IndexOf('*');
-            int ix_wildchar = ix_questionmark < 0 && ix_asterix < 0 ? -1 : ix_questionmark >= 0 ? (ix_asterix >= 0 ? Math.Min(ix_asterix, ix_questionmark) : ix_questionmark) : ix_asterix;
-
-            string name, path;
-
-            // Index of last separator before wildcard.
-            int ix_separator = ix_wildchar >= 0 ? pattern.LastIndexOf("/", ix_wildchar, StringComparison.InvariantCulture) : pattern.LastIndexOf("/", StringComparison.InvariantCulture);
-
-            // There is no separator
-            if (ix_separator < 0)
-            {
-                path = "";
-                name = pattern;
-            }
-            else
-            // Starts with '/'
-            if (ix_separator == 0)
-            {
-                path = "/";
-                name = pattern.Substring(1);
-            }
-            // 'xxx/zzz'
-            else
-            {
-                path = pattern.Substring(0, ix_separator);
-                name = pattern.Substring(ix_separator + 1);
-            }
-            if (name == "") return this;
+            GlobPatternInfo info = new GlobPatternInfo(pattern);
 
             // Add to pattern set
             PatternSet set;
-            if (!patterns.TryGetValue(path, out set)) patterns[path] = set = new PatternSet();
-            set.AddWildcard(PutTogetherPathAndName(path, name));
+            if (!patterns.TryGetValue(info.Constant, out set)) patterns[info.Constant] = set = new PatternSet();
+            set.AddWildcard(info, info.VariableDepth);
 
             return this;
         }
-
-        internal static string PutTogetherPathAndName(string path, string name)
-           => String.IsNullOrEmpty(path) ? name : (path.EndsWith("/", StringComparison.InvariantCulture) ? path + name : path + "/" + name);
 
         /// <summary>
         /// Adds glob pattern. 
@@ -148,38 +118,12 @@ namespace Lexical.FileSystem.Utility
         {
             if (pattern == null) return this;
 
-            int ix_questionmark = pattern.IndexOf('?'), ix_asterix = pattern.IndexOf('*');
-            int ix_wildchar = ix_questionmark < 0 && ix_asterix < 0 ? -1 : Math.Min(ix_questionmark < 0 ? int.MaxValue : ix_questionmark, ix_asterix < 0 ? int.MaxValue : ix_asterix);
-
-            string name, path;
-            // Index of last separator before wildcard.
-            int ix_separator = ix_wildchar >= 0 ? pattern.LastIndexOf("/", ix_wildchar, StringComparison.InvariantCulture) : pattern.LastIndexOf("/", StringComparison.InvariantCulture);
-
-            // There is no separator
-            if (ix_separator < 0)
-            {
-                path = "";
-                name = pattern;
-            }
-            else
-            // Starts with '/'
-            if (ix_separator == 0)
-            {
-                path = "/";
-                name = pattern.Substring(1);
-            }
-            // 'xxx/zzz'
-            else
-            {
-                path = pattern.Substring(0, ix_separator);
-                name = pattern.Substring(ix_separator + 1);
-            }
-            if (name == "") return this;
+            GlobPatternInfo info = new GlobPatternInfo(pattern);
 
             // Add to pattern set
             PatternSet set;
-            if (!patterns.TryGetValue(path, out set)) patterns[path] = set = new PatternSet();
-            set.AddGlobPattern(PutTogetherPathAndName(path, name));
+            if (!patterns.TryGetValue(info.Constant, out set)) patterns[info.Constant] = set = new PatternSet();
+            set.AddGlobPattern(info, info.VariableDepth);
 
             return this;
         }
@@ -194,7 +138,7 @@ namespace Lexical.FileSystem.Utility
         {
             PatternSet set;
             if (!patterns.TryGetValue(path, out set)) patterns[path] = set = new PatternSet();
-            set.AddRegex(pattern);
+            set.AddRegex(pattern, int.MaxValue);
             return this;
         }
 
@@ -269,14 +213,14 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <returns>FileScannerEnumerator</returns>
         IEnumerator<IFileSystemEntry> IEnumerable<IFileSystemEntry>.GetEnumerator()
-            => new PatternScanner(FileSystem, RootPrefix, patterns, TaskFactory, errors, DirectoryEvaluator, ReturnDirectories, ReturnFiles);
+            => new PatternScanner(FileSystem, RootPrefix, patterns.Select(kv=>(kv.Key, kv.Value, kv.Value.scanDepth)), TaskFactory, errors, DirectoryEvaluator, ReturnDirectories, ReturnFiles);
 
         /// <summary>
         /// Start multi-threaded scan operation.
         /// </summary>
         /// <returns>FileScannerEnumerator</returns>
         IEnumerator IEnumerable.GetEnumerator()
-            => new PatternScanner(FileSystem, RootPrefix, patterns, TaskFactory, errors, DirectoryEvaluator, ReturnDirectories, ReturnFiles);
+            => new PatternScanner(FileSystem, RootPrefix, patterns.Select(kv => (kv.Key, kv.Value, kv.Value.scanDepth)), TaskFactory, errors, DirectoryEvaluator, ReturnDirectories, ReturnFiles);
     }
 
     /// <summary>
@@ -289,7 +233,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         public IProducerConsumerCollection<Exception> errors;
         IFileSystem FileSystem;
-        List<KeyValuePair<string, PatternSet>> paths;
+        List<(string, PatternSet, int)> paths;
         ScanJob job;
         TaskFactory taskFactory;
         Func<IFileSystemEntry, bool> directoryEvaluator;
@@ -308,12 +252,12 @@ namespace Lexical.FileSystem.Utility
         /// <param name="directoryEvaluator"></param>
         /// <param name="returnDirectories"></param>
         /// <param name="returnFiles"></param>
-        public PatternScanner(IFileSystem FileSystem, string rootPrefix, IEnumerable<KeyValuePair<string, PatternSet>> patterns, TaskFactory taskFactory, IProducerConsumerCollection<Exception> errors, Func<IFileSystemEntry, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
+        public PatternScanner(IFileSystem FileSystem, string rootPrefix, IEnumerable<(string, PatternSet, int)> patterns, TaskFactory taskFactory, IProducerConsumerCollection<Exception> errors, Func<IFileSystemEntry, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
         {
             this.FileSystem = FileSystem;
             this.rootPrefix = rootPrefix;
             this.directoryEvaluator = directoryEvaluator;
-            this.paths = new List<KeyValuePair<string, PatternSet>>(patterns);
+            this.paths = new List<(string, PatternSet, int)>(patterns);
             this.job = new ScanJob(FileSystem, rootPrefix, paths, errors, taskFactory, directoryEvaluator, returnDirectories, returnFiles);
             this.taskFactory = taskFactory;
             this.returnDirectories = returnDirectories;
@@ -374,7 +318,7 @@ namespace Lexical.FileSystem.Utility
         IFileSystem FileSystem;
         string rootPrefix;
         IProducerConsumerCollection<Exception> errors;
-        List<KeyValuePair<string, PatternSet>> paths;
+        List<(string, PatternSet, int)> paths;
         BlockingCollection<IFileSystemEntry> resultQueue = new BlockingCollection<IFileSystemEntry>();
         CancellationTokenSource cancelSource = new CancellationTokenSource();
         Func<IFileSystemEntry, bool> directoryEvaluator;
@@ -385,9 +329,9 @@ namespace Lexical.FileSystem.Utility
         IFileSystemEntry current;
         int activeThreads, threads;
 
-        public ScanJob(IFileSystem FileSystem, string rootPrefix, IEnumerable<KeyValuePair<string, PatternSet>> patterns, IProducerConsumerCollection<Exception> errors, TaskFactory taskFactory, Func<IFileSystemEntry, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
+        public ScanJob(IFileSystem FileSystem, string rootPrefix, IEnumerable<(string, PatternSet, int)> patterns, IProducerConsumerCollection<Exception> errors, TaskFactory taskFactory, Func<IFileSystemEntry, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
         {
-            this.paths = new List<KeyValuePair<string, PatternSet>>(patterns);
+            this.paths = new List<(string, PatternSet, int)>(patterns);
             this.rootPrefix = rootPrefix;
             this.errors = errors;
             this.taskFactory = taskFactory;
@@ -409,7 +353,7 @@ namespace Lexical.FileSystem.Utility
             cancelSource.Dispose();
         }
 
-        void ProcessPath(KeyValuePair<string, PatternSet> path, List<IFileSystemEntry> threadLocalList)
+        void ProcessPath((string path, PatternSet pattern, int depth) line, List<IFileSystemEntry> threadLocalList)
         {
             // Directory entries
             threadLocalList.Clear();
@@ -417,20 +361,20 @@ namespace Lexical.FileSystem.Utility
             // Files
             try
             {
-                foreach (var entry in FileSystem.Browse(path.Key))
+                foreach (var entry in FileSystem.Browse(line.path))
                 {
                     if (entry.IsDirectory())
                     {
-                        if (directoryEvaluator(entry)) threadLocalList.Add(entry);
+                        if (line.depth>1 && directoryEvaluator(entry)) threadLocalList.Add(entry);
 
                         // Add directory to result, if it matches filter
                         if (returnDirectories)
                         {
-                            Match match = path.Value.MatcherFunc(entry.Path);
+                            Match match = line.pattern.MatcherFunc(entry.Path);
                             bool isMatch = match != null && match.Success;
                             if (!isMatch)
                             {
-                                match = path.Value.MatcherFunc("/"+entry.Path);
+                                match = line.pattern.MatcherFunc(/*"/"+*/entry.Path);
                                 isMatch = match != null && match.Success;
                             }
 
@@ -443,11 +387,11 @@ namespace Lexical.FileSystem.Utility
                         if (returnFiles)
                         {
                             // Add file to result, if it matches filter
-                            Match match = path.Value.MatcherFunc(entry.Path);
+                            Match match = line.pattern.MatcherFunc(entry.Path);
                             bool isMatch = match != null && match.Success;
                             if (!isMatch)
                             {
-                                match = path.Value.MatcherFunc("/" + entry.Path);
+                                match = line.pattern.MatcherFunc(/*"/" + */entry.Path);
                                 isMatch = match != null && match.Success;
                             }
 
@@ -464,8 +408,8 @@ namespace Lexical.FileSystem.Utility
             Monitor.Enter(monitor);
             try
             {
-                // Add to paths
-                paths.AddRange(threadLocalList.Select(dir => new KeyValuePair<string, PatternSet>(dir.Path, path.Value)));
+                // Add to paths                
+                paths.AddRange(threadLocalList.Select(dir => (dir.Path, line.pattern, line.depth-1)));
                 threadLocalList.Clear();
 
                 // Wakeup threads, after this monitor block
@@ -496,7 +440,7 @@ namespace Lexical.FileSystem.Utility
 
                 while (!cancelSource.Token.IsCancellationRequested)
                 {
-                    KeyValuePair<string, PatternSet> path = new KeyValuePair<string, PatternSet>(null, null);
+                    (string path, PatternSet pattern, int depth) line = (null, null, 0);
 
                     // Get next path
                     Monitor.Enter(monitor);
@@ -505,17 +449,17 @@ namespace Lexical.FileSystem.Utility
                         if (paths.Count > 0)
                         {
                             int ix = paths.Count - 1;
-                            path = paths[ix];
+                            line = paths[ix];
                             paths.RemoveAt(ix);
                         }
 
                         // Add to active threads
-                        if (path.Key != null && !isActive)
+                        if (line.path != null && !isActive)
                         {
                             isActive = true;
                             activeThreads++;
                         }
-                        else if (path.Key == null && isActive)
+                        else if (line.path == null && isActive)
                         {
                             isActive = false;
                             activeThreads--;
@@ -527,7 +471,7 @@ namespace Lexical.FileSystem.Utility
                                 break;
                             }
                         }
-                        else if (path.Key == null)
+                        else if (line.path == null)
                         {
                             if (activeThreads == 0)
                             {
@@ -543,7 +487,7 @@ namespace Lexical.FileSystem.Utility
                     }
 
                     // Process path
-                    if (path.Key != null) ProcessPath(path, threadLocalList);
+                    if (line.path != null) ProcessPath(line, threadLocalList);
                     // Wait until next path has been processed.
                     else
                     {

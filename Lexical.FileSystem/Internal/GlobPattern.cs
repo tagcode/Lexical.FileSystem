@@ -21,18 +21,24 @@ namespace Lexical.FileSystem.Internal
         static string MakeRegexPattern(string globPattern, string directorySeparatorCharacters)
             => "^" + GlobPatternFactory.Create(directorySeparatorCharacters).CreateRegexText(globPattern ?? throw new ArgumentNullException(nameof(globPattern))) + "$";
 
+        /// <summary>The glob pattern as a string.</summary>
+        public readonly String Pattern;
+
+        /// <summary>Directory separator characters, e.g. "/".</summary>
+        public readonly String DirectorySeparatorCharacters;
+
         /// <summary>
         /// Create glob pattern.
         /// </summary>
         /// <param name="globPattern"></param>
-        public GlobPattern(string globPattern) : base(MakeRegexPattern(globPattern, "/")) { }
+        public GlobPattern(string globPattern) : base(MakeRegexPattern(globPattern, "/")) { this.Pattern = globPattern; this.DirectorySeparatorCharacters = "/"; }
 
         /// <summary>
         /// Create glob pattern.
         /// </summary>
         /// <param name="globPattern"></param>
         /// <param name="directorySeparatorCharacters"></param>
-        public GlobPattern(string globPattern, string directorySeparatorCharacters) : base(MakeRegexPattern(globPattern, directorySeparatorCharacters)) { }
+        public GlobPattern(string globPattern, string directorySeparatorCharacters) : base(MakeRegexPattern(globPattern, directorySeparatorCharacters)) { this.Pattern = globPattern; this.DirectorySeparatorCharacters = directorySeparatorCharacters; }
 
         /// <summary>
         /// Create glob pattern with regexp options.
@@ -40,7 +46,7 @@ namespace Lexical.FileSystem.Internal
         /// <param name="globPattern"></param>
         /// <param name="directorySeparatorCharacters"></param>
         /// <param name="options"></param>
-        public GlobPattern(string globPattern, string directorySeparatorCharacters, RegexOptions options) : base(MakeRegexPattern(globPattern, directorySeparatorCharacters), options) { }
+        public GlobPattern(string globPattern, string directorySeparatorCharacters, RegexOptions options) : base(MakeRegexPattern(globPattern, directorySeparatorCharacters), options) { this.Pattern = globPattern; this.DirectorySeparatorCharacters = directorySeparatorCharacters; }
 
         /// <summary>
         /// Analyses whether <paramref name="patternText"/> is a glob-pattern.
@@ -143,7 +149,7 @@ namespace Lexical.FileSystem.Internal
             this.nonglobtextReplacer = nonglobtextReplacer ?? (m => Regex.Escape(m.Value));
             twoStarPattern = ".*";
             oneStarPattern = "[^" + Regex.Escape(directorySeparatorChars) + "]*";
-            questionMarkPattern = "[^" + Regex.Escape(directorySeparatorChars) + "]+";
+            questionMarkPattern = "[^" + Regex.Escape(directorySeparatorChars) + "]";
             matchEvaluator = MatchEvaluator;
         }
 

@@ -521,13 +521,13 @@ namespace Lexical.FileSystem
             GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
 
             // Monitor drive letters
-            if (patternInfo.Prefix == "" && Path == "")
+            if (patternInfo.Constant == "" && Path == "")
             {
                 throw new NotImplementedException();
             }
 
             // Monitor single file (or dir, we don't know "dir")
-            if (patternInfo.SuffixDepth == 0)
+            if (patternInfo.VariableDepth == 0)
             {
                 string concatenatedPath, absolutePath;
                 string path = ConcatenateAndAssertPath(filter, out concatenatedPath, out absolutePath);
@@ -545,10 +545,10 @@ namespace Lexical.FileSystem
                 // Concatenate paths and assert that path doesn't refer to parent of the constructed path
                 string concatenatedPath, absolutePathToPrefixPart;
 
-                string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(patternInfo.Prefix, out concatenatedPath, out absolutePathToPrefixPart);
+                string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(patternInfo.Constant, out concatenatedPath, out absolutePathToPrefixPart);
 
                 // Create observer object
-                PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Suffix);
+                PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Variable);
                 // Send IFileSystemEventStart
                 observer.OnNext(handle);
                 // Return handle

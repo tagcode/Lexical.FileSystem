@@ -287,7 +287,7 @@ namespace Lexical.FileSystem.Decoration
             // Parse filter
             GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
             // Monitor single file (or dir, we don't know "dir")
-            if (patternInfo.SuffixDepth==0)
+            if (patternInfo.VariableDepth==0)
             {
                 // Create observer that watches one file
                 FileObserver handle = new FileObserver(this, filter, observer, state);

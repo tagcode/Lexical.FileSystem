@@ -37,6 +37,11 @@ namespace Lexical.FileSystem.Internal
         public Func<string, Match> MatcherFunc => matcherFunc ?? (matcherFunc = BuildMatcherFunc());
 
         /// <summary>
+        /// Required scan depth.
+        /// </summary>
+        public int scanDepth = 0;
+
+        /// <summary>
         /// Build a function that matches all the wildcards and regular expressions.
         /// </summary>
         /// <returns></returns>
@@ -75,11 +80,13 @@ namespace Lexical.FileSystem.Internal
         /// Add wildcard pattern, for example "*.dll"
         /// </summary>
         /// <param name="wildcard"></param>
+        /// <param name="scanDepth">required scan depth</param>
         /// <returns></returns>
-        public PatternSet AddWildcard(string wildcard)
+        public PatternSet AddWildcard(string wildcard, int scanDepth = int.MaxValue)
         {
             patterns.Add("^" + (Regex.Escape(wildcard).Replace(@"\*", ".*").Replace(@"\?", ".")) + "$");
             matcherFunc = null;
+            this.scanDepth = Math.Max(this.scanDepth, scanDepth);
             return this;
         }
 
@@ -88,50 +95,13 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <param name="globPattern"></param>
         /// <param name="directorySeparatorChars"></param>
+        /// <param name="scanDepth">required scan depth</param>
         /// <returns>this</returns>
-        public PatternSet AddGlobPattern(string globPattern, string directorySeparatorChars = "/")
+        public PatternSet AddGlobPattern(string globPattern, int scanDepth = int.MaxValue, string directorySeparatorChars = "/")
         {
             patterns.Add("^" + GlobPatternFactory.Create(directorySeparatorChars).CreateRegexText(globPattern) + "$");
             matcherFunc = null;
-            return this;
-        }
-
-        /// <summary>
-        /// Add multiple wildcard patterns, for example "*.dll" "*.exe".
-        /// 
-        /// "*" denotes for anything, even paths.
-        /// </summary>
-        /// <param name="wildcards"></param>
-        /// <returns></returns>
-        public PatternSet AddWildcards(IEnumerable<string> wildcards)
-        {
-            foreach (var pattern in wildcards) AddWildcard(pattern);
-            return this;
-        }
-
-        /// <summary>
-        /// Add multiple regex patterns.
-        /// </summary>
-        /// <param name="regex_patterns"></param>
-        /// <returns></returns>
-        public PatternSet AddRegexes(IEnumerable<string> regex_patterns)
-        {
-            patterns.AddRange(regex_patterns);
-            matcherFunc = null;
-            return this;
-        }
-
-        /// <summary>
-        /// Add glob pattern, for example "**.zip/**.dll"
-        /// </summary>
-        /// <param name="globPatterns"></param>
-        /// <param name="directorySeparatorChars"></param>
-        /// <returns>this</returns>
-        public PatternSet AddGlobPatterns(IEnumerable<string> globPatterns, string directorySeparatorChars = "/")
-        {
-            GlobPatternFactory factory = GlobPatternFactory.Create(directorySeparatorChars);
-            patterns.AddRange(globPatterns.Select(globPattern => "^" + factory.CreateRegexText(globPattern) + "$"));
-            matcherFunc = null;
+            this.scanDepth = Math.Max(this.scanDepth, scanDepth);
             return this;
         }
 
@@ -139,23 +109,13 @@ namespace Lexical.FileSystem.Internal
         /// Add regex pattern.
         /// </summary>
         /// <param name="regex_pattern"></param>
+        /// <param name="scanDepth">required scan depth</param>
         /// <returns></returns>
-        public PatternSet AddRegex(string regex_pattern)
+        public PatternSet AddRegex(string regex_pattern, int scanDepth = int.MaxValue)
         {
             patterns.Add(regex_pattern);
             matcherFunc = null;
-            return this;
-        }
-
-        /// <summary>
-        /// Add regex objects.
-        /// </summary>
-        /// <param name="regex_patterns"></param>
-        /// <returns></returns>
-        public PatternSet AddRegexes(IEnumerable<Regex> regex_patterns)
-        {
-            this.regex_patterns.AddRange(regex_patterns);
-            matcherFunc = null;
+            this.scanDepth = Math.Max(this.scanDepth, scanDepth);
             return this;
         }
 
@@ -163,11 +123,13 @@ namespace Lexical.FileSystem.Internal
         /// Add regex object.
         /// </summary>
         /// <param name="regex_pattern"></param>
+        /// <param name="scanDepth">required scan depth</param>
         /// <returns></returns>
-        public PatternSet AddRegex(Regex regex_pattern)
+        public PatternSet AddRegex(Regex regex_pattern, int scanDepth = int.MaxValue)
         {
             this.regex_patterns.Add(regex_pattern);
             matcherFunc = null;
+            this.scanDepth = Math.Max(this.scanDepth, scanDepth);
             return this;
         }
 
