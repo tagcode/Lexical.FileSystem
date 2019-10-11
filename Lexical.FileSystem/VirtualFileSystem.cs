@@ -283,7 +283,7 @@ namespace Lexical.FileSystem
             public ObserverHandle(VirtualFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(filesystem, filter, observer, state)
             {
                 if (filter == "**") acceptAll = true;
-                else this.filterPattern = GlobPatternFactory.Slash.CreateRegex(filter);
+                else this.filterPattern = GlobPatternRegexFactory.Slash.CreateRegex(filter);
             }
 
             /// <summary>

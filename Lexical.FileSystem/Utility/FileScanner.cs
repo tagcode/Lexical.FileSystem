@@ -96,12 +96,12 @@ namespace Lexical.FileSystem.Utility
         {
             if (pattern == null) return this;
 
-            GlobPatternInfo info = new GlobPatternInfo(pattern);
+            GlobPattern.Info info = new GlobPattern.Info(pattern);
 
             // Add to pattern set
             PatternSet set;
-            if (!patterns.TryGetValue(info.Constant, out set)) patterns[info.Constant] = set = new PatternSet();
-            set.AddWildcard(info, info.VariableDepth);
+            if (!patterns.TryGetValue(info.Prefix, out set)) patterns[info.Prefix] = set = new PatternSet();
+            set.AddWildcard(info, info.SuffixDepth);
 
             return this;
         }
@@ -118,12 +118,12 @@ namespace Lexical.FileSystem.Utility
         {
             if (pattern == null) return this;
 
-            GlobPatternInfo info = new GlobPatternInfo(pattern);
+            GlobPattern.Info info = new GlobPattern.Info(pattern);
 
             // Add to pattern set
             PatternSet set;
-            if (!patterns.TryGetValue(info.Constant, out set)) patterns[info.Constant] = set = new PatternSet();
-            set.AddGlobPattern(info, info.VariableDepth);
+            if (!patterns.TryGetValue(info.Prefix, out set)) patterns[info.Prefix] = set = new PatternSet();
+            set.AddGlobPattern(info, info.SuffixDepth);
 
             return this;
         }

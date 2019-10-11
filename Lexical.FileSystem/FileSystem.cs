@@ -518,16 +518,16 @@ namespace Lexical.FileSystem
         public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
         {
             // Parse filter
-            GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
+            GlobPattern.Info patternInfo = new GlobPattern.Info(filter);
 
             // Monitor drive letters
-            if (patternInfo.Constant == "" && Path == "")
+            if (patternInfo.Prefix == "" && Path == "")
             {
                 throw new NotImplementedException();
             }
 
             // Monitor single file (or dir, we don't know "dir")
-            if (patternInfo.VariableDepth == 0)
+            if (patternInfo.SuffixDepth == 0)
             {
                 string concatenatedPath, absolutePath;
                 string path = ConcatenateAndAssertPath(filter, out concatenatedPath, out absolutePath);
@@ -545,10 +545,10 @@ namespace Lexical.FileSystem
                 // Concatenate paths and assert that path doesn't refer to parent of the constructed path
                 string concatenatedPath, absolutePathToPrefixPart;
 
-                string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(patternInfo.Constant, out concatenatedPath, out absolutePathToPrefixPart);
+                string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(patternInfo.Prefix, out concatenatedPath, out absolutePathToPrefixPart);
 
                 // Create observer object
-                PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Variable);
+                PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Suffix);
                 // Send IFileSystemEventStart
                 observer.OnNext(handle);
                 // Return handle
@@ -759,7 +759,7 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Filter info.
             /// </summary>
-            protected GlobPatternInfo filterInfo;
+            protected GlobPattern.Info filterInfo;
 
             /// <summary>
             /// Watcher
@@ -800,7 +800,7 @@ namespace Lexical.FileSystem
                 this.AbsolutePathToPrefixPart = absolutePathToPrefixPart ?? throw new ArgumentNullException(nameof(absolutePathToPrefixPart));
                 this.RelativePathToPrefixPartWithoutTrailingSeparatorRelativePath = relativePathToPrefixPartWithoutTrailingSeparator ?? throw new ArgumentNullException(nameof(relativePathToPrefixPartWithoutTrailingSeparator));
                 this.SuffixPart = suffixPart ?? throw new ArgumentNullException(nameof(suffixPart));
-                this.Pattern = GlobPatternFactory.Slash.CreateRegex(filterString ?? throw new ArgumentNullException(nameof(filterString)));
+                this.Pattern = GlobPatternRegexFactory.Slash.CreateRegex(filterString ?? throw new ArgumentNullException(nameof(filterString)));
                 fileWatcher = new FileSystemWatcher(AbsolutePathToPrefixPart);
                 fileWatcher.IncludeSubdirectories = true;
                 fileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size;

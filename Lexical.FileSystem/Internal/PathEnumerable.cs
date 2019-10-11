@@ -59,9 +59,7 @@ namespace Lexical.FileSystem.Internal
             Path = path;
         }
 
-        /// <summary>
-        /// Get enumerator
-        /// </summary>
+        /// <summary>Get enumerator</summary>
         /// <returns></returns>
         public PathEnumerator GetEnumerator()
             => new PathEnumerator(Path);
@@ -76,20 +74,12 @@ namespace Lexical.FileSystem.Internal
     /// </summary>
     public struct PathEnumerator : IEnumerator<StringSegment>
     {
-        /// <summary>
-        /// Path string.
-        /// </summary>
+        /// <summary>Path string.</summary>
         public readonly StringSegment Path;
-
-        /// <summary>
-        /// End index.
-        /// </summary>
-        int endIx;
-
-        /// <summary>
-        /// Start index.
-        /// </summary>
+        /// <summary>Start index.</summary>
         int startIx;
+        /// <summary>End index.</summary>
+        int endIx;
 
         /// <summary>
         /// Create path string separator.

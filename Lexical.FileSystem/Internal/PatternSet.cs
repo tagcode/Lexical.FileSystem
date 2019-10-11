@@ -99,7 +99,7 @@ namespace Lexical.FileSystem.Internal
         /// <returns>this</returns>
         public PatternSet AddGlobPattern(string globPattern, int scanDepth = int.MaxValue, string directorySeparatorChars = "/")
         {
-            patterns.Add("^" + GlobPatternFactory.Create(directorySeparatorChars).CreateRegexText(globPattern) + "$");
+            patterns.Add("^" + GlobPatternRegexFactory.Create(directorySeparatorChars).CreateRegexText(globPattern) + "$");
             matcherFunc = null;
             this.scanDepth = Math.Max(this.scanDepth, scanDepth);
             return this;
