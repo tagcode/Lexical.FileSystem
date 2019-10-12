@@ -16,6 +16,315 @@ namespace Lexical.FileSystem.Internal
     public struct GlobPatternSet
     {
         /// <summary>
+        /// Create union of <paramref name="leftPattern"/> and <paramref name="rightPattern"/>.
+        /// </summary>
+        /// <param name="leftPattern"></param>
+        /// <param name="rightPattern"></param>
+        /// <returns>union</returns>
+        public static string Union(string leftPattern, string rightPattern)
+        {
+            // Read in the literals
+            StructList24<Literal> leftLiterals = new StructList24<Literal>(), rightLiterals = new StructList24<Literal>();
+            Enumerator leftEnumerator = new Enumerator(leftPattern), rightEnumerator = new Enumerator(rightPattern);
+            while (leftEnumerator.MoveNext()) leftLiterals.Add(leftEnumerator.Current);
+            while (rightEnumerator.MoveNext()) rightLiterals.Add(rightEnumerator.Current);
+
+            // Queue of scenarios as index pairs and result so far.
+            List<Line> queue = new List<Line>();
+            // List of already yielded strings
+            HashSet<Line> visited = new HashSet<Line>();
+            // Queue the starting position
+            Queue(queue, visited, 0, 0, null);
+            // Process queue
+            while (queue.Count > 0)
+            {
+                // Take indices from queue
+                Line line = queue[queue.Count - 1];
+                int li = line.li, ri = line.ri; List<Literal> result = line.literals;
+                queue.RemoveAt(queue.Count - 1);
+                // Has more literals
+                bool leftHasMore = li < leftLiterals.Count, rightHasMore = ri < rightLiterals.Count;
+
+                // l = Left input, r = right input, _ = last in result
+                Literal l = leftHasMore ? leftLiterals[li] : (Literal)Literal.Type.None, r = rightHasMore ? rightLiterals[ri] : (Literal)Literal.Type.None, _ = result == null || result.Count == 0 ? (Literal)Literal.Type.None : result[result.Count - 1];
+
+                // End of literals on both streams
+                if (!leftHasMore && !rightHasMore)
+                {
+                    // Yield possible result
+                    return Print(result);
+                }
+                // left still has literals, right is at end
+                else if (leftHasMore && !rightHasMore)
+                {
+                    // _ == **
+                    if (_ == Literal.Type.StarStar)
+                    {
+                        Queue(queue, visited, li + 1, ri, result);
+                        continue;
+                    }
+
+                    // _ == *
+                    if (_ == Literal.Type.Star)
+                    {
+                        // l == /, upgrade * to **
+                        if (l == Literal.Type.Slash)
+                        {
+                            result[result.Count - 1] = Literal.Type.StarStar;
+                            Queue(queue, visited, li + 1, ri, result);
+                            continue;
+                        }
+                        // * takes in any other char
+                        Queue(queue, visited, li + 1, ri, result);
+                        continue;
+                    }
+
+                    // Append '*'
+                    Append(queue, visited, li + 1, ri, result, Literal.Type.Star);
+                }
+
+                // left is at end, right still has literals
+                else if (!leftHasMore && rightHasMore)
+                {
+                    // _ == **
+                    if (_ == Literal.Type.StarStar)
+                    {
+                        Queue(queue, visited, li, ri + 1, result);
+                        continue;
+                    }
+
+                    // _ == *
+                    if (_ == Literal.Type.Star)
+                    {
+                        // r == /, upgrade * to **
+                        if (r == Literal.Type.Slash)
+                        {
+                            result[result.Count - 1] = Literal.Type.StarStar;
+                            Queue(queue, visited, li, ri + 1, result);
+                            continue;
+                        }
+                        // * takes in any other char
+                        Queue(queue, visited, li, ri +1, result);
+                        continue;
+                    }
+
+                    // Append '*'
+                    Append(queue, visited, li, ri + 1, result, Literal.Type.Star);
+                }
+
+                // left and right have literals
+                if (leftHasMore && rightHasMore)
+                {
+                    // l == **
+                    if (l == Literal.Type.StarStar)
+                    {
+                        // Match one and more later
+                        CloneAndAppend(queue, visited, li, ri + 1, result, r);
+                        // Next scenario
+                        continue;
+                    }
+
+                    // r == **
+                    if (r == Literal.Type.StarStar)
+                    {
+                        // Match one and more later
+                        CloneAndAppend(queue, visited, li + 1, ri, result, l);
+                        // Next scenario
+                        continue;
+                    }
+
+                    // l == *
+                    if (l == Literal.Type.Star)
+                    {
+                        // r == /
+                        if (r == Literal.Type.Slash)
+                        {
+                            // Append * but match to nothing
+                            Append(queue, visited, li + 1, ri, result, l);
+                            continue;
+                        }
+                        // Match char
+                        Queue(queue, visited, li + 1, ri, result);
+                        // Next scenario
+                        continue;
+                    }
+
+                    // r == *
+                    if (r == Literal.Type.Star)
+                    {
+                        // l == /
+                        if (l == Literal.Type.Slash)
+                        {
+                            // Append * but match to nothing
+                            Append(queue, visited, li, ri + 1, result, r);
+                            continue;
+                        }
+                        // Match char
+                        Queue(queue, visited, li+1, ri, result);
+                        // Next scenario
+                        continue;
+                    }
+
+                    // l == /, r == /
+                    if (l == Literal.Type.Slash && r == Literal.Type.Slash)
+                    {
+                        Append(queue, visited, li + 1, ri + 1, result, l);
+                        // Next scenario
+                        continue;
+                    }
+
+                    // l == ?
+                    if (l == Literal.Type.QuestionMark && r != Literal.Type.Slash)
+                    {
+                        Append(queue, visited, li + 1, ri + 1, result, l);
+                        // Next scenario
+                        continue;
+                    }
+
+                    // r == ?
+                    if (r == Literal.Type.QuestionMark && l != Literal.Type.Slash)
+                    {
+                        Append(queue, visited, li + 1, ri + 1, result, r);
+                        // Next scenario
+                        continue;
+                    }
+
+                    // l == r
+                    if (l == r)
+                    {
+                        Append(queue, visited, li + 1, ri + 1, result, l);
+                        // Next scenario
+                        continue;
+                    }
+
+                    // Append '?' as failsafe
+                    Append(queue, visited, li + 1, ri + 1, result, Literal.Type.QuestionMark);
+                }
+            }
+
+            return null;
+            //Console.Write($" (visited={visited.Count}) ");
+        }
+
+        /// <summary>
+        /// Create unions of <paramref name="leftPattern"/> and <paramref name="rightPattern"/>.
+        /// </summary>
+        /// <param name="leftPattern"></param>
+        /// <param name="rightPattern"></param>
+        /// <returns>unions</returns>
+        public static IEnumerable<String> Unions(string leftPattern, string rightPattern)
+        {
+            // Read in the literals
+            StructList24<Literal> leftLiterals = new StructList24<Literal>(), rightLiterals = new StructList24<Literal>();
+            Enumerator leftEnumerator = new Enumerator(leftPattern), rightEnumerator = new Enumerator(rightPattern);
+            while (leftEnumerator.MoveNext()) leftLiterals.Add(leftEnumerator.Current);
+            while (rightEnumerator.MoveNext()) rightLiterals.Add(rightEnumerator.Current);
+
+            // Queue of scenarios as index pairs and result so far.
+            List<Line> queue = new List<Line>();
+            // List of already yielded strings
+            HashSet<Line> visited = new HashSet<Line>();
+            // Queue the starting position
+            Queue(queue, visited, 0, 0, null);
+            // Process queue
+            while (queue.Count > 0)
+            {
+                // Take indices from queue
+                Line line = queue[queue.Count - 1];
+                int li = line.li, ri = line.ri; List<Literal> result = line.literals;
+                queue.RemoveAt(queue.Count - 1);
+                // Has more literals
+                bool leftHasMore = li < leftLiterals.Count, rightHasMore = ri < rightLiterals.Count;
+
+                // End of literals on both streams
+                if (!leftHasMore && !rightHasMore)
+                {
+                    // Yield possible result
+                    if (result != null)
+                    {
+                        // Print to string
+                        string pattern = Print(result);
+                        // yield result
+                        yield return pattern;
+                    }
+                }
+
+                // left still has literals, right is at end
+                else if (leftHasMore && !rightHasMore)
+                {
+                    // Take literal
+                    Literal l = leftLiterals[li];
+                }
+
+                // left is at end, right still has literals
+                else if (!leftHasMore && rightHasMore)
+                {
+                    // Take literal and type
+                    Literal r = rightLiterals[ri];
+                }
+
+                // left and right have literals
+                if (leftHasMore && rightHasMore)
+                {
+                    // Take literals 
+                    Literal l = leftLiterals[li], r = rightLiterals[ri];
+
+                    // l == **
+                    if (l == Literal.Type.StarStar)
+                    {
+                        // Next scenario
+                        continue;
+                    }
+
+                    // r == **
+                    if (r == Literal.Type.StarStar)
+                    {
+                        // Next scenario
+                        continue;
+                    }
+
+                    // l == *
+                    if (l == Literal.Type.Star)
+                    {
+                        // Next scenario
+                        continue;
+                    }
+
+                    // r == *
+                    if (r == Literal.Type.Star)
+                    {
+                        // Next scenario
+                        continue;
+                    }
+
+                    // l == ?
+                    if (l == Literal.Type.QuestionMark)
+                    {
+                        // Next scenario
+                        continue;
+                    }
+
+                    // r == ?
+                    if (r == Literal.Type.QuestionMark)
+                    {
+                        // Next scenario
+                        continue;
+                    }
+
+                    // l == r
+                    if (l == r)
+                    {
+                        // Next scenario
+                        continue;
+                    }
+
+                }
+            }
+
+            //Console.Write($" (visited={visited.Count}) ");
+        }
+
+        /// <summary>
         /// Create intersection of <paramref name="pattern1"/> and <paramref name="pattern2"/>.
         /// </summary>
         /// <param name="pattern1"></param>
@@ -69,14 +378,10 @@ namespace Lexical.FileSystem.Internal
                 // End of literals on both streams
                 if (!leftHasMore && !rightHasMore)
                 {
-                    // Yield possible result
-                    if (result != null)
-                    {
-                        // Print to string
-                        string pattern = Print(result);
-                        // yield result
-                        yield return pattern;
-                    }
+                    // Print to string
+                    string pattern = Print(result);
+                    // yield result
+                    yield return pattern;
                 }
 
                 // left still has literals, right is at end
@@ -119,8 +424,6 @@ namespace Lexical.FileSystem.Internal
                         {
                             // Match to nothing
                             Queue(queue, visited, li + 1, ri, result);
-                            // Match one
-                            //CloneAndAppend(queue, visited, li + 1, ri + 1, result, r);
                         }
                         // Next scenario
                         continue;
@@ -141,8 +444,6 @@ namespace Lexical.FileSystem.Internal
                         {
                             // Match to nothing
                             Queue(queue, visited, li, ri + 1, result);
-                            // Match one 
-                            //CloneAndAppend(queue, visited, li + 1, ri + 1, result, l);
                         }
                         // Next scenario
                         continue;
@@ -169,8 +470,6 @@ namespace Lexical.FileSystem.Internal
                         {
                             // Match to nothing
                             Queue(queue, visited, li + 1, ri, result);
-                            // Match to one
-                            //CloneAndAppend(queue, visited, li + 1, ri + 1, result, r);
                         }
                         // Next scenario
                         continue;
@@ -197,8 +496,6 @@ namespace Lexical.FileSystem.Internal
                         {
                             // Match to nothing
                             Queue(queue, visited, li, ri + 1, result);
-                            // Match one
-                            //CloneAndAppend(queue, visited, li + 1, ri + 1, result, l);
                         }
                         // Next scenario
                         continue;
@@ -207,6 +504,8 @@ namespace Lexical.FileSystem.Internal
                     // l == ?
                     if (l == Literal.Type.QuestionMark)
                     {
+                        // ? & /
+                        if (r == Literal.Type.Slash) continue;
                         // Downgrade '*' and '**' to '?'
                         if (r.Kind == Literal.Type.Star || r.Kind == Literal.Type.StarStar) r = Literal.Type.QuestionMark;
                         // Append what ever is in right literal
@@ -218,6 +517,8 @@ namespace Lexical.FileSystem.Internal
                     // r == ?
                     if (r == Literal.Type.QuestionMark)
                     {
+                        // / & ?
+                        if (l == Literal.Type.Slash) continue;
                         // Downgrade '*' and '**' to '?'
                         if (l.Kind == Literal.Type.Star || l.Kind == Literal.Type.StarStar) l = Literal.Type.QuestionMark;
                         // Append what ever is in left literal
