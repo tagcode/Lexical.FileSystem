@@ -4,7 +4,6 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using static Lexical.FileSystem.Internal.GlobPattern;
@@ -25,8 +24,8 @@ namespace Lexical.FileSystem.Internal
         public static string Intersection(string pattern1, string pattern2)
         {
             StructList12<string> intersections = new StructList12<string>();
-            
-            foreach (var intersection in Intersections(pattern1, pattern2)) 
+
+            foreach (var intersection in Intersections(pattern1, pattern2))
                 intersections.Add(intersection);
 
             if (intersections.Count == 0) return null;
@@ -46,7 +45,7 @@ namespace Lexical.FileSystem.Internal
         public static IEnumerable<String> Intersections(string leftPattern, string rightPattern)
         {
             // Read in the literals
-            StructList24<Literal> leftLiterals = new StructList24<Literal>(), rightLiterals = new StructList24<Literal>();            
+            StructList24<Literal> leftLiterals = new StructList24<Literal>(), rightLiterals = new StructList24<Literal>();
             Enumerator leftEnumerator = new Enumerator(leftPattern), rightEnumerator = new Enumerator(rightPattern);
             while (leftEnumerator.MoveNext()) leftLiterals.Add(leftEnumerator.Current);
             while (rightEnumerator.MoveNext()) rightLiterals.Add(rightEnumerator.Current);
@@ -58,7 +57,7 @@ namespace Lexical.FileSystem.Internal
             // Queue the starting position
             Queue(queue, visited, 0, 0, null);
             // Process queue
-            while (queue.Count>0)
+            while (queue.Count > 0)
             {
                 // Take indices from queue
                 Line line = queue[queue.Count - 1];
@@ -76,7 +75,7 @@ namespace Lexical.FileSystem.Internal
                         // Print to string
                         string pattern = Print(result);
                         // yield result
-                        yield return pattern; 
+                        yield return pattern;
                     }
                 }
 
@@ -84,18 +83,18 @@ namespace Lexical.FileSystem.Internal
                 else if (leftHasMore && !rightHasMore)
                 {
                     // Take literal
-                    Literal left = leftLiterals[li]; 
+                    Literal l = leftLiterals[li];
                     // "*" and "**" matches against ""
-                    if (left.Type == Literal.Kind.Star || left.Type == Literal.Kind.StarStar) Queue(queue, visited, li + 1, ri, result);
+                    if (l == Literal.Type.Star || l == Literal.Type.StarStar) Queue(queue, visited, li + 1, ri, result);
                 }
 
                 // left is at end, right still has literals
-                else if (leftHasMore && !rightHasMore)
+                else if (!leftHasMore && rightHasMore)
                 {
                     // Take literal and type
-                    Literal right = rightLiterals[ri];
+                    Literal r = rightLiterals[ri];
                     // "" matches against "*" and "**"
-                    if (right.Type == Literal.Kind.Star || right.Type == Literal.Kind.StarStar) Queue(queue, visited, li, ri + 1, result);
+                    if (r == Literal.Type.Star || r == Literal.Type.StarStar) Queue(queue, visited, li, ri + 1, result);
                 }
 
                 // left and right have literals
@@ -104,74 +103,131 @@ namespace Lexical.FileSystem.Internal
                     // Take literals 
                     Literal l = leftLiterals[li], r = rightLiterals[ri];
 
-                    // l == "**" matches against anything on the right
-                    if (l.Type == Literal.Kind.StarStar)
+                    // l == **
+                    if (l == Literal.Type.StarStar)
                     {
-                        // Branch into scenarios 
-                        // B) both indices proceed - right is equally or more restrictive than left, append it
-                        CloneAndAppend(queue, visited, li + 1, ri + 1, result, r);
-                        // C) left remains on "**" literal, right proceeds. Right restricts more
-                        Append(queue, visited, li, ri + 1, result, r);
+                        // Match one and more later
+                        CloneAndAppend(queue, visited, li, ri + 1, result, r);
+                        // r = *, r = **
+                        if (r == Literal.Type.Star || r == Literal.Type.StarStar)
+                        {
+                            //
+                            Append(queue, visited, li + 1, ri, result, r);
+                        }
+                        else
+                        // r = x
+                        {
+                            // Match to nothing
+                            Queue(queue, visited, li + 1, ri, result);
+                            // Match one
+                            //CloneAndAppend(queue, visited, li + 1, ri + 1, result, r);
+                        }
                         // Next scenario
                         continue;
                     }
 
-                    // any literal on left matches aginst "**" on the right
-                    if (r.Type == Literal.Kind.StarStar)
+                    // r == **
+                    if (r == Literal.Type.StarStar)
                     {
-                        // Branch into scenarios 
-                        // B) both indices proceed
-                        CloneAndAppend(queue, visited, li + 1, ri + 1, result, l);
-                        // C) left proceeds and right remains on "**" literal
-                        Append(queue, visited, li +1, ri, result, l);
+                        // Match one and more later
+                        CloneAndAppend(queue, visited, li + 1, ri, result, l);
+                        // l = *, l = **
+                        if (l == Literal.Type.Star || l == Literal.Type.StarStar)
+                        {
+                            //
+                            Append(queue, visited, li, ri + 1, result, l);
+                        }
+                        else
+                        {
+                            // Match to nothing
+                            Queue(queue, visited, li, ri + 1, result);
+                            // Match one 
+                            //CloneAndAppend(queue, visited, li + 1, ri + 1, result, l);
+                        }
                         // Next scenario
                         continue;
                     }
 
-                    // l == "*" matches against anything on the right except "/"
-                    if (l.Type == Literal.Kind.Star && r.Type != Literal.Kind.Slash)
+                    // l == *
+                    if (l == Literal.Type.Star)
                     {
-                        // Branch into scenarios 
-                        // B) both indices proceed
-                        CloneAndAppend(queue, visited, li + 1, ri + 1, result, r);
-                        // C) left remains on "*" literal and right proceeds
-                        Append(queue, visited, li, ri + 1, result, r);
+                        // * & /
+                        if (r == Literal.Type.Slash)
+                        {
+                            // Match / to nothing
+                            Queue(queue, visited, li + 1, ri, result);
+                            continue;
+                        }
+                        // Match to one and more later
+                        CloneAndAppend(queue, visited, li, ri + 1, result, r);
+                        // Match to r = *
+                        if (r == Literal.Type.Star)
+                        {
+                            Append(queue, visited, li + 1, ri, result, r);
+                        }
+                        else
+                        {
+                            // Match to nothing
+                            Queue(queue, visited, li + 1, ri, result);
+                            // Match to one
+                            //CloneAndAppend(queue, visited, li + 1, ri + 1, result, r);
+                        }
                         // Next scenario
                         continue;
                     }
 
-                    // anything but "/" on the left matches to "*" on the right
-                    if (l.Type != Literal.Kind.Slash && r.Type == Literal.Kind.Star)
+                    // r == *
+                    if (r == Literal.Type.Star)
                     {
-                        // Branch into scenarios 
-                        // B) both indices proceed as-is
-                        CloneAndAppend(queue, visited, li + 1, ri + 1, result, l);
-                        // C) left proceeds and right remains on "*" literal
-                        Append(queue, visited, li +1, ri, result, l);
+                        // / & *
+                        if (l == Literal.Type.Slash)
+                        {
+                            // Match / to nothing
+                            Queue(queue, visited, li, ri + 1, result);
+                            continue;
+                        }
+
+                        // Match one, and more later
+                        CloneAndAppend(queue, visited, li + 1, ri, result, l);
+                        if (l == Literal.Type.Star)
+                        {
+                            Append(queue, visited, li, ri + 1, result, l);
+                        }
+                        else
+                        {
+                            // Match to nothing
+                            Queue(queue, visited, li, ri + 1, result);
+                            // Match one
+                            //CloneAndAppend(queue, visited, li + 1, ri + 1, result, l);
+                        }
                         // Next scenario
                         continue;
                     }
 
-                    // l == "?" and r !='*' and r != '**'
-                    if (l.Type == Literal.Kind.QuestionMark && (r.Type != Literal.Kind.Star && r.Type != Literal.Kind.StarStar))
+                    // l == ?
+                    if (l == Literal.Type.QuestionMark)
                     {
+                        // Downgrade '*' and '**' to '?'
+                        if (r.Kind == Literal.Type.Star || r.Kind == Literal.Type.StarStar) r = Literal.Type.QuestionMark;
                         // Append what ever is in right literal
                         Append(queue, visited, li + 1, ri + 1, result, r);
                         // Next scenario
                         continue;
                     }
 
-                    // l !='*' and l != '**' and r == "?"
-                    if ((l.Type != Literal.Kind.Star && l.Type != Literal.Kind.StarStar) && r.Type == Literal.Kind.QuestionMark)
+                    // r == ?
+                    if (r == Literal.Type.QuestionMark)
                     {
+                        // Downgrade '*' and '**' to '?'
+                        if (l.Kind == Literal.Type.Star || l.Kind == Literal.Type.StarStar) l = Literal.Type.QuestionMark;
                         // Append what ever is in left literal
                         Append(queue, visited, li + 1, ri + 1, result, l);
                         // Next scenario
                         continue;
                     }
 
-                    // l1 == l2 (except "*" and "**")
-                    if (l == r && (l.Type != Literal.Kind.Star && l.Type != Literal.Kind.StarStar))
+                    // l == r
+                    if (l == r)
                     {
                         // Append, move indices and queue.
                         Append(queue, visited, li + 1, ri + 1, result, l);
@@ -181,6 +237,8 @@ namespace Lexical.FileSystem.Internal
 
                 }
             }
+
+            //Console.Write($" (visited={visited.Count}) ");
         }
 
         static void Queue(List<Line> queue, HashSet<Line> visited, int li, int ri, List<Literal> result)
@@ -212,6 +270,7 @@ namespace Lexical.FileSystem.Internal
         /// <returns></returns>
         static String Print(List<Literal> literals)
         {
+            if (literals == null) return "";
             StringBuilder sb = new StringBuilder(literals.Count + 4);
             foreach (var l in literals) l.AppendTo(sb);
             return sb.ToString();
@@ -247,7 +306,7 @@ namespace Lexical.FileSystem.Internal
         {
             int xc = x == null ? 0 : x.Count, yc = y == null ? 0 : y.Count;
             if (xc != yc) return false;
-            for (int i = 0; i<xc; i++) if (x[i] != y[i]) return false;
+            for (int i = 0; i < xc; i++) if (x[i] != y[i]) return false;
             return true;
         }
 

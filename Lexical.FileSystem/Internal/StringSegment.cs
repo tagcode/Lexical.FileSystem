@@ -5,6 +5,7 @@
 // --------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Lexical.FileSystem.Internal
 {
@@ -36,9 +37,6 @@ namespace Lexical.FileSystem.Internal
         /// <summary>String</summary>
         public readonly string String;
 
-        /// <summary>Hashcode</summary>
-        int hashcode;
-
         /// <summary>Implicit converter</summary>
         public static implicit operator String(StringSegment str) => str.String.Substring(str.Start, str.Length);
         /// <summary>Implicit converter</summary>
@@ -53,16 +51,6 @@ namespace Lexical.FileSystem.Internal
             this.String = str ?? throw new ArgumentNullException(nameof(str));
             this.Start = 0;
             this.Length = str.Length;
-            this.hashcode = str.GetHashCode();
-
-            // Calculate hashcode from content
-            int hash = unchecked((int)2166136261);
-            for (int i = 0; i < Length; i++)
-            {
-                hash ^= (int)String[i + Start];
-                hash *= 16777619;
-            }
-            this.hashcode = hash;
         }
 
         /// <summary>
@@ -78,15 +66,6 @@ namespace Lexical.FileSystem.Internal
             if (length < 0 || start + length > str.Length) throw new ArgumentOutOfRangeException(nameof(length));
             this.Start = start;
             this.Length = length;
-
-            // Hash
-            int hash = unchecked((int)2166136261);
-            for (int i = 0; i < Length; i++)
-            {
-                hash ^= (int)String[i + Start];
-                hash *= 16777619;
-            }
-            this.hashcode = hash;
         }
 
         /// <inheritdoc/>
@@ -94,7 +73,8 @@ namespace Lexical.FileSystem.Internal
         {
             if (obj is StringSegment ss)
             {
-                if (ss.hashcode == hashcode && ss.String == String && ss.Start == Start && ss.Length == Length) return true;
+                if (ss.String == String && ss.Start == Start && ss.Length == Length) return true;
+                //if (ss.hashcode != hashcode) return false;
                 if (ss.Length != Length) return false;
                 for (int i = 0; i < Length; i++)
                 {
@@ -108,7 +88,20 @@ namespace Lexical.FileSystem.Internal
 
         /// <inheritdoc/>
         public override int GetHashCode()
-            => hashcode;
+        {
+            // Calculate hashcode from content
+            int hash = unchecked((int)2166136261);
+            for (int i = 0; i < Length; i++)
+            {
+                hash ^= (int)String[i + Start];
+                hash *= 16777619;
+            }
+            return hash;
+        }
+
+        /// <summary>Append to string builder</summary>
+        public void AppendTo(StringBuilder sb) 
+            => sb.Append(String, Start, Length);
 
         /// <inheritdoc/>
         public override string ToString()
@@ -138,8 +131,11 @@ namespace Lexical.FileSystem.Internal
             /// <returns></returns>
             public bool Equals(StringSegment x, StringSegment y)
             {
-                // Compare hash
-                if (x.hashcode == y.hashcode && x.String == y.String && x.Start == y.Start && x.Length == y.Length) return true;
+                // Check for content equality
+                if (x.String == y.String && x.Start == y.Start && x.Length == y.Length) return true;
+
+                // Compare hashcode
+                //if (x.hashcode != y.hashcode) return false;
 
                 // Compare lengths
                 if (x.Length != y.Length) return false;
@@ -160,7 +156,7 @@ namespace Lexical.FileSystem.Internal
             /// <param name="obj"></param>
             /// <returns></returns>
             public int GetHashCode(StringSegment obj)
-                => obj.hashcode;
+                => obj.GetHashCode();
         }
     }
 }

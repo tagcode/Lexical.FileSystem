@@ -216,10 +216,10 @@ namespace Lexical.FileSystem.Internal
                 // Choose literal
                 switch (ch)
                 {
-                    case '/': current = new Literal(Literal.Kind.Slash, '/'); break;
-                    case '?': current = new Literal(Literal.Kind.QuestionMark, '?'); break;
-                    case '*': if (index < Pattern.Length && Pattern[index] == '*') { current = new Literal(Literal.Kind.StarStar, '*'); index++; } else current = new Literal(Literal.Kind.Star, '*'); break;
-                    default: current = new Literal(Literal.Kind.Char, ch); break;
+                    case '/': current = Literal.Type.Slash; break;
+                    case '?': current = Literal.Type.QuestionMark; break;
+                    case '*': if (index < Pattern.Length && Pattern[index] == '*') { current = Literal.Type.StarStar; index++; } else current = Literal.Type.Star; break;
+                    default: current = ch; break;
                 }
                 return true;
             }
@@ -238,10 +238,19 @@ namespace Lexical.FileSystem.Internal
         public struct Literal : IEquatable<Literal>
         {
             /// <summary>Non-content literal</summary>
-            public static readonly Literal None = new Literal(Kind.None, '\0');
+            public static readonly Literal None = new Literal(Type.None);
+
+            /// <summary>Implicit conversion</summary>
+            public static implicit operator Type(Literal l) => l.Kind;
+            /// <summary>Implicit conversion</summary>
+            public static implicit operator char(Literal l) => l.Char;
+            /// <summary>Implicit conversion</summary>
+            public static implicit operator Literal(Type k) => new Literal(k);
+            /// <summary>Implicit conversion</summary>
+            public static implicit operator Literal(Char c) => new Literal(c);
 
             /// <summary>Literal used by <see cref="GlobPattern.Enumerator"/></summary>
-            public enum Kind
+            public enum Type
             {
                 /// <summary>not initialized</summary>
                 None,
@@ -258,42 +267,55 @@ namespace Lexical.FileSystem.Internal
             }
 
             /// <summary>Literal type</summary>
-            public Kind Type;
+            public Type Kind;
             /// <summary>Characters</summary>
             public char Char;
             /// <summary>Create record of literal</summary>
-            public Literal(Kind type, char _char)
+            public Literal(Type type)
             {
-                Type = type;
+                Kind = type;
+                switch(type)
+                {
+                    case Type.QuestionMark: Char = '?'; break;
+                    case Type.Slash: Char = '/'; break;
+                    case Type.Star: Char = '*'; break;
+                    case Type.StarStar: Char = '*'; break;
+                    default: Char = '\0'; break;
+                }
+            }
+            /// <summary>Create record of literal</summary>
+            public Literal(char _char)
+            {
+                Kind = Type.Char;
                 Char = _char;
             }
 
             /// <summary>Compare equality.</summary>
-            public static bool operator ==(Literal l, Literal r) => l.Type == r.Type && (l.Type != Kind.Char || l.Char == r.Char);
+            public static bool operator ==(Literal l, Literal r) => l.Kind == r.Kind && (l.Kind != Type.Char || l.Char == r.Char);
             /// <summary>Compare inequality.</summary>
-            public static bool operator !=(Literal l, Literal r) => l.Type != r.Type || l.Char != r.Char;
+            public static bool operator !=(Literal l, Literal r) => l.Kind != r.Kind || l.Char != r.Char;
             /// <summary>Compare equality.</summary>
-            public bool Equals(Literal other) => Type == other.Type && (Type != Kind.Char || Char == other.Char);
+            public bool Equals(Literal other) => Kind == other.Kind && (Kind != Type.Char || Char == other.Char);
             /// <summary>Compare equality.</summary>
-            public override bool Equals(Object other_) => other_ is Literal other ? Type == other.Type && (Type != Kind.Char || Char == other.Char) : false;
+            public override bool Equals(Object other_) => other_ is Literal other ? Kind == other.Kind && (Kind != Type.Char || Char == other.Char) : false;
             /// <summary>Get hashcode.</summary>
-            public override int GetHashCode() => Type == Kind.Char ? Char.GetHashCode() : Type.GetHashCode();
+            public override int GetHashCode() => Kind == Type.Char ? Char.GetHashCode() : Kind.GetHashCode();
             /// <summary>Append to string builder</summary>
             public void AppendTo(StringBuilder sb)
             {
-                switch(Type)
+                switch(Kind)
                 {
-                    case Kind.None: break;
-                    case Kind.Slash: sb.Append('/'); break;
-                    case Kind.QuestionMark: sb.Append('?'); break;
-                    case Kind.Star: sb.Append('*'); break;
-                    case Kind.StarStar: sb.Append('*'); sb.Append('*'); break;
-                    case Kind.Char: sb.Append(Char); break;
+                    case Type.None: break;
+                    case Type.Slash: sb.Append('/'); break;
+                    case Type.QuestionMark: sb.Append('?'); break;
+                    case Type.Star: sb.Append('*'); break;
+                    case Type.StarStar: sb.Append('*'); sb.Append('*'); break;
+                    case Type.Char: sb.Append(Char); break;
                 }
             }
 
             /// <summary>Print info</summary>
-            public override string ToString() => Type == Kind.StarStar ? "**" : Char.ToString();
+            public override string ToString() => Kind == Type.StarStar ? "**" : Char.ToString();
         }
 
 
