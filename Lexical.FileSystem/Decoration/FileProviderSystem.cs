@@ -285,7 +285,7 @@ namespace Lexical.FileSystem.Decoration
             IFileProvider fp = fileProvider;
             if (fp == null) return new DummyObserver(this, filter, observer, state);
             // Parse filter
-            GlobPattern.Info patternInfo = new GlobPattern.Info(filter);
+            GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
             // Monitor single file (or dir, we don't know "dir")
             if (patternInfo.SuffixDepth==0)
             {
@@ -475,7 +475,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="patternInfo"></param>
             /// <param name="observer"></param>
             /// <param name="state"></param>
-            public PatternObserver(IFileSystem filesystem, GlobPattern.Info patternInfo, IObserver<IFileSystemEvent> observer, object state)
+            public PatternObserver(IFileSystem filesystem, GlobPatternInfo patternInfo, IObserver<IFileSystemEvent> observer, object state)
                 : base(filesystem, patternInfo.Pattern, observer, state)
             {
                 this.changeToken = FileProvider.Watch(patternInfo.Pattern);

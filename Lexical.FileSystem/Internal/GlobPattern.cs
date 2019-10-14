@@ -13,7 +13,7 @@ namespace Lexical.FileSystem.Internal
     /// <summary>
     /// Glob pattern string info
     /// </summary>
-    public struct GlobPattern : IEnumerable<GlobPattern.Literal>
+    public struct GlobPattern : IEnumerable<GlobPattern.Token>
     {
         /// <summary>Implicit conversion</summary>
         public static implicit operator String(GlobPattern str) => str.Pattern;
@@ -30,140 +30,6 @@ namespace Lexical.FileSystem.Internal
             Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
         }
 
-        /// <summary>Separate non-wildcard and wildcard parts.</summary>
-        public Info GetInfo() => new Info(Pattern);
-
-        /// <summary>
-        /// Separates wildcard pattern string into two parts.
-        /// 
-        /// First part contains directory levels without any wilcards.
-        /// Second parts contains all the directory levels after first wildcard.
-        /// 
-        /// Used for estimating the location and size of subtree a pattern represents.
-        /// 
-        /// For example "dir/**/file.txt" is split into "dir/" and "**/file.txt".
-        /// 
-        /// Examples:
-        ///   Pattern=dir/dir/file.txt, Prefix=dir/dir/file.txt, Suffix=, SuffixDepth=0
-        ///   Pattern=*.txt, Prefix=, Suffix=*.txt, SuffixDepth=1
-        ///   Pattern=**.txt, Prefix=, Suffix=**.txt, SuffixDepth=2147483647
-        ///   Pattern=/*.txt, Prefix=/, Suffix=*.txt, SuffixDepth=1
-        ///   Pattern=*/*.txt, Prefix=, Suffix=*/*.txt, SuffixDepth=2
-        ///   Pattern=/**.txt, Prefix=/, Suffix=**.txt, SuffixDepth=2147483647
-        ///   Pattern=dir/dir/*/*.txt, Prefix=dir/dir/, Suffix=*/*.txt, SuffixDepth=2
-        ///   Pattern=dir/dir?/*/*.txt, Prefix=dir/, Suffix=dir?/*/*.txt, SuffixDepth=3
-        ///   Pattern=dir/dir/dir/*/*.txt, Prefix=dir/dir/dir/, Suffix=*/*.txt, SuffixDepth=2
-        ///   Pattern=dir/dir/dir?/*/*.txt, Prefix=dir/dir/, Suffix=dir?/*/*.txt, SuffixDepth=3
-        ///   Pattern=dir/dir/dir?/*/**.txt, Prefix=dir/dir/, Suffix=dir?/*/**.txt, SuffixDepth=2147483647
-        ///   Pattern=dir/*/dir/dir/dir/file.txt, Prefix=dir/, Suffix=*/dir/dir/dir/file.txt, SuffixDepth=5
-        ///   
-        /// </summary>
-        public struct Info
-        {
-            /// <summary>Full pattern string.</summary>
-            public readonly String Pattern;
-            /// <summary>The stem part of <see cref="Pattern"/> that doesn't have wild cards. The directories and filename before first entry with a wildcard character '*'/'**'/'?'.</summary>
-            public readonly String Prefix;
-            /// <summary>The latter part of <see cref="Pattern"/> after first directory or filename that has wildcards, starting from preceding directory separator '/'.</summary>
-            public readonly String Suffix;
-
-            /// <summary>
-            /// Number of directory levels in <see cref="Suffix"/>.
-            /// 
-            /// Depth is 0 if there are no wildcard characters in <see cref="Pattern"/>.
-            /// Depth is 1 if there are wildcard characters '?'/'*' in one directory.
-            /// Depth is n if there are wildcard characters '?'/'*' in n directories after <see cref="Prefix"/> part.
-            /// Depth is <see cref="int.MaxValue"/>, if there is **' wildcards anywhere.
-            /// 
-            /// Examples:
-            ///     Pattern="dir/dir/file.txt", Constant="dir/dir/file.txt", Variable="", depth = 0
-            ///     Pattern="dir/dir/*.txt", Constant="dir/dir/", Variable="*.txt", depth = 1
-            ///     Pattern="dir/dir/*/*.txt", Constant="dir/dir/", Variable="*/*.txt", depth = 2
-            ///     Pattern="dir/dir/dir?/*/*.txt", Constant="dir/dir/", Variable="dir?/*/*.txt", depth = 3
-            ///     Pattern="dir/*/dir/dir/dir/file.txt", Constant="dir/", Variable="*/dir/dir/dir/file.txt", depth = 5
-            ///     Pattern="dir/dir/**.txt", Constant="dir/dir/", Variable="**", depth = int.MaxValue
-            ///     
-            /// </summary>
-            public readonly int SuffixDepth;
-
-            /// <summary>Implicit conversion</summary>
-            public static implicit operator String(Info str) => str.Pattern;
-            /// <summary>Implicit conversion</summary>
-            public static implicit operator Info(String str) => new Info(str);
-
-            /// <summary>
-            /// Create filter info.
-            /// 
-            /// If <paramref name="pattern"/> is null, then monitors any file in the path, but not subdirectories.
-            /// <paramref name="pattern"/> is "**" then monitors any file in subdirectories.
-            /// 
-            /// </summary>
-            /// <param name="pattern">glob pattern, e.g. "dir/**.txt"</param>
-            public Info(string pattern)
-            {
-                this.Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
-
-                // Last separator (before wildcard) and first wildcard indices
-                int ix_separator = -1, ix_wildcard = -1;
-                long suffixDepth = 0;
-                // Find last separator char before first pattern character
-                char prevch = (char)0;
-                for (int i = 0; i < pattern.Length; i++)
-                {
-                    char ch = pattern[i];
-                    // Wildcard
-                    if (ch == '?' || ch == '*')
-                    {
-                        // First wild card
-                        if (ix_wildcard < 0)
-                        {
-                            ix_wildcard = i;
-                            suffixDepth++;
-                        }
-                    }
-                    // Separator
-                    if (ch == '/')
-                    {
-                        // First separator before wildcard
-                        if (ix_wildcard < 0) ix_separator = i + 1;
-                        // Separator after wildcard
-                        else suffixDepth++;
-                    }
-                    // "**"
-                    if (prevch == '*' && ch == '*') suffixDepth = int.MaxValue;
-                    prevch = ch;
-                }
-
-                // There are no wildcard
-                if (ix_wildcard < 0)
-                {
-                    Prefix = pattern;
-                    Suffix = "";
-                }
-                // There is no separator, but are wildcards
-                else if (ix_separator < 0)
-                {
-                    Prefix = "";
-                    Suffix = pattern;
-                }
-                // 'xxx/zzz'
-                else
-                {
-                    Prefix = pattern.Substring(0, ix_separator);
-                    Suffix = pattern.Substring(ix_separator);
-                }
-
-                this.SuffixDepth = (int)Math.Min(suffixDepth, int.MaxValue);
-            }
-
-            /// <summary>
-            /// Info
-            /// </summary>
-            /// <returns></returns>
-            public override string ToString()
-                => $"{nameof(Pattern)}={Pattern}, {nameof(Prefix)}={Prefix}, {nameof(Suffix)}={Suffix}, {nameof(SuffixDepth)}={SuffixDepth}";
-        }
-
 
         /// <summary>Get enumerator</summary>
         /// <returns></returns>
@@ -171,13 +37,13 @@ namespace Lexical.FileSystem.Internal
             => new Enumerator(Pattern);
         IEnumerator IEnumerable.GetEnumerator()
             => new Enumerator(Pattern);
-        IEnumerator<Literal> IEnumerable<Literal>.GetEnumerator()
+        IEnumerator<Token> IEnumerable<Token>.GetEnumerator()
             => new Enumerator(Pattern);
 
         /// <summary>
         /// Enumerates glob pattern literals
         /// </summary>
-        public struct Enumerator : IEnumerator<Literal>
+        public struct Enumerator : IEnumerator<Token>
         {
             /// <summary>Glob pattern string</summary>
             public readonly string Pattern;
@@ -186,7 +52,7 @@ namespace Lexical.FileSystem.Internal
             int index;
 
             /// <summary>Current literal.</summary>
-            Literal current;
+            Token current;
 
             /// <summary>Create glob pattern enumerable.</summary>
             /// <param name="pattern"></param>
@@ -194,11 +60,11 @@ namespace Lexical.FileSystem.Internal
             {
                 Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
                 index = 0;
-                current = Literal.None;
+                current = Token.None;
             }
 
             /// <summary>Current literal.</summary>
-            public Literal Current => current;
+            public Token Current => current;
             object IEnumerator.Current => current;
 
             /// <summary></summary>
@@ -208,7 +74,7 @@ namespace Lexical.FileSystem.Internal
             public bool MoveNext()
             {
                 // Out of index
-                if (index >= Pattern.Length) { current = Literal.None; return false; }
+                if (index >= Pattern.Length) { current = Token.None; return false; }
 
                 // Read char
                 char ch = Pattern[index++];
@@ -216,9 +82,9 @@ namespace Lexical.FileSystem.Internal
                 // Choose literal
                 switch (ch)
                 {
-                    case '/': current = Literal.Type.Slash; break;
-                    case '?': current = Literal.Type.QuestionMark; break;
-                    case '*': if (index < Pattern.Length && Pattern[index] == '*') { current = Literal.Type.StarStar; index++; } else current = Literal.Type.Star; break;
+                    case '/': current = Token.Type.Slash; break;
+                    case '?': current = Token.Type.QuestionMark; break;
+                    case '*': if (index < Pattern.Length && Pattern[index] == '*') { current = Token.Type.StarStar; index++; } else current = Token.Type.Star; break;
                     default: current = ch; break;
                 }
                 return true;
@@ -228,26 +94,26 @@ namespace Lexical.FileSystem.Internal
             public void Reset()
             {
                 index = 0;
-                current = Literal.None;
+                current = Token.None;
             }
         }
 
         /// <summary>
         /// Glob pattern literal
         /// </summary>
-        public struct Literal : IEquatable<Literal>
+        public struct Token : IEquatable<Token>
         {
             /// <summary>Non-content literal</summary>
-            public static readonly Literal None = new Literal(Type.None);
+            public static readonly Token None = new Token(Type.None);
 
             /// <summary>Implicit conversion</summary>
-            public static implicit operator Type(Literal l) => l.Kind;
+            public static implicit operator Type(Token l) => l.Kind;
             /// <summary>Implicit conversion</summary>
-            public static implicit operator char(Literal l) => l.Char;
+            public static implicit operator char(Token l) => l.Char;
             /// <summary>Implicit conversion</summary>
-            public static implicit operator Literal(Type k) => new Literal(k);
+            public static implicit operator Token(Type k) => new Token(k);
             /// <summary>Implicit conversion</summary>
-            public static implicit operator Literal(Char c) => new Literal(c);
+            public static implicit operator Token(Char c) => new Token(c);
 
             /// <summary>Literal used by <see cref="GlobPattern.Enumerator"/></summary>
             public enum Type
@@ -271,7 +137,7 @@ namespace Lexical.FileSystem.Internal
             /// <summary>Characters</summary>
             public char Char;
             /// <summary>Create record of literal</summary>
-            public Literal(Type type)
+            public Token(Type type)
             {
                 Kind = type;
                 switch(type)
@@ -284,20 +150,20 @@ namespace Lexical.FileSystem.Internal
                 }
             }
             /// <summary>Create record of literal</summary>
-            public Literal(char _char)
+            public Token(char _char)
             {
                 Kind = Type.Char;
                 Char = _char;
             }
 
             /// <summary>Compare equality.</summary>
-            public static bool operator ==(Literal l, Literal r) => l.Kind == r.Kind && (l.Kind != Type.Char || l.Char == r.Char);
+            public static bool operator ==(Token l, Token r) => l.Kind == r.Kind && (l.Kind != Type.Char || l.Char == r.Char);
             /// <summary>Compare inequality.</summary>
-            public static bool operator !=(Literal l, Literal r) => l.Kind != r.Kind || l.Char != r.Char;
+            public static bool operator !=(Token l, Token r) => l.Kind != r.Kind || l.Char != r.Char;
             /// <summary>Compare equality.</summary>
-            public bool Equals(Literal other) => Kind == other.Kind && (Kind != Type.Char || Char == other.Char);
+            public bool Equals(Token other) => Kind == other.Kind && (Kind != Type.Char || Char == other.Char);
             /// <summary>Compare equality.</summary>
-            public override bool Equals(Object other_) => other_ is Literal other ? Kind == other.Kind && (Kind != Type.Char || Char == other.Char) : false;
+            public override bool Equals(Object other_) => other_ is Token other ? Kind == other.Kind && (Kind != Type.Char || Char == other.Char) : false;
             /// <summary>Get hashcode.</summary>
             public override int GetHashCode() => Kind == Type.Char ? Char.GetHashCode() : Kind.GetHashCode();
             /// <summary>Append to string builder</summary>

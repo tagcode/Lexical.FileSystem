@@ -518,7 +518,7 @@ namespace Lexical.FileSystem
         public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
         {
             // Parse filter
-            GlobPattern.Info patternInfo = new GlobPattern.Info(filter);
+            GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
 
             // Monitor drive letters
             if (patternInfo.Prefix == "" && Path == "")
@@ -759,7 +759,7 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Filter info.
             /// </summary>
-            protected GlobPattern.Info filterInfo;
+            protected GlobPatternInfo filterInfo;
 
             /// <summary>
             /// Watcher

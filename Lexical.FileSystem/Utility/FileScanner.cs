@@ -96,7 +96,7 @@ namespace Lexical.FileSystem.Utility
         {
             if (pattern == null) return this;
 
-            GlobPattern.Info info = new GlobPattern.Info(pattern);
+            GlobPatternInfo info = new GlobPatternInfo(pattern);
 
             // Add to pattern set
             PatternSet set;
@@ -118,7 +118,7 @@ namespace Lexical.FileSystem.Utility
         {
             if (pattern == null) return this;
 
-            GlobPattern.Info info = new GlobPattern.Info(pattern);
+            GlobPatternInfo info = new GlobPatternInfo(pattern);
 
             // Add to pattern set
             PatternSet set;

@@ -4,9 +4,9 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using static Lexical.FileSystem.Internal.GlobPattern;
 
 namespace Lexical.FileSystem.Internal
 {
@@ -20,14 +20,14 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <param name="leftPattern"></param>
         /// <param name="rightPattern"></param>
-        /// <returns>union</returns>
+        /// <returns>union that contains <paramref name="leftPattern"/> and <paramref name="rightPattern"/>, may also return broader union that minimum due to lack of expression of glob pattern.</returns>
         public static string Union(string leftPattern, string rightPattern)
         {
-            // Read in the literals
-            StructList24<Literal> leftLiterals = new StructList24<Literal>(), rightLiterals = new StructList24<Literal>();
-            Enumerator leftEnumerator = new Enumerator(leftPattern), rightEnumerator = new Enumerator(rightPattern);
-            while (leftEnumerator.MoveNext()) leftLiterals.Add(leftEnumerator.Current);
-            while (rightEnumerator.MoveNext()) rightLiterals.Add(rightEnumerator.Current);
+            // Read in the tokens
+            StructList24<Token> leftTokens = new StructList24<Token>(), rightTokens = new StructList24<Token>();
+            Token.Enumerator leftEnumerator = new Token.Enumerator(leftPattern), rightEnumerator = new Token.Enumerator(rightPattern);
+            while (leftEnumerator.MoveNext()) leftTokens.Add(leftEnumerator.Current);
+            while (rightEnumerator.MoveNext()) rightTokens.Add(rightEnumerator.Current);
 
             // Queue of scenarios as index pairs and result so far.
             List<Line> queue = new List<Line>();
@@ -35,157 +35,61 @@ namespace Lexical.FileSystem.Internal
             HashSet<Line> visited = new HashSet<Line>();
             // Queue the starting position
             Queue(queue, visited, 0, 0, null);
+            // Final result
+            List<Token> finalresult = null; int finalscore = int.MinValue;
             // Process queue
             while (queue.Count > 0)
             {
                 // Take indices from queue
                 Line line = queue[queue.Count - 1];
-                int li = line.li, ri = line.ri; List<Literal> result = line.literals;
+                int li = line.li, ri = line.ri; List<Token> result = line.tokens;
                 queue.RemoveAt(queue.Count - 1);
-                // Has more literals
-                bool leftHasMore = li < leftLiterals.Count, rightHasMore = ri < rightLiterals.Count;
+                // Has more tokens
+                bool leftHasMore = li < leftTokens.Count, rightHasMore = ri < rightTokens.Count;
 
                 // l = Left input, r = right input, _ = last in result
-                Literal l = leftHasMore ? leftLiterals[li] : (Literal)Literal.Type.None, r = rightHasMore ? rightLiterals[ri] : (Literal)Literal.Type.None, _ = result == null || result.Count == 0 ? (Literal)Literal.Type.None : result[result.Count - 1];
+                Token l = leftHasMore ? leftTokens[li] : (Token)Token.Type.None, r = rightHasMore ? rightTokens[ri] : (Token)Token.Type.None, _ = result == null || result.Count == 0 ? (Token)Token.Type.None : result[result.Count - 1];
 
-                // End of literals on both streams
+                // End of tokens on both streams
                 if (!leftHasMore && !rightHasMore)
                 {
-                    // Yield possible result
-                    return Print(result);
-                }
-                // left still has literals, right is at end
-                else if (leftHasMore && !rightHasMore)
-                {
-                    // _ == **
-                    if (_ == Literal.Type.StarStar)
-                    {
-                        Queue(queue, visited, li + 1, ri, result);
-                        continue;
-                    }
-
-                    // _ == *
-                    if (_ == Literal.Type.Star)
-                    {
-                        // l == /, upgrade * to **
-                        if (l == Literal.Type.Slash)
-                        {
-                            result[result.Count - 1] = Literal.Type.StarStar;
-                            Queue(queue, visited, li + 1, ri, result);
-                            continue;
-                        }
-                        // * takes in any other char
-                        Queue(queue, visited, li + 1, ri, result);
-                        continue;
-                    }
-
-                    // Append '*'
-                    Append(queue, visited, li + 1, ri, result, Literal.Type.Star);
+                    int score = Score(result);
+                    if (score > finalscore) { finalresult = result; finalscore = score; }
+                    continue;
                 }
 
-                // left is at end, right still has literals
-                else if (!leftHasMore && rightHasMore)
-                {
-                    // _ == **
-                    if (_ == Literal.Type.StarStar)
-                    {
-                        Queue(queue, visited, li, ri + 1, result);
-                        continue;
-                    }
-
-                    // _ == *
-                    if (_ == Literal.Type.Star)
-                    {
-                        // r == /, upgrade * to **
-                        if (r == Literal.Type.Slash)
-                        {
-                            result[result.Count - 1] = Literal.Type.StarStar;
-                            Queue(queue, visited, li, ri + 1, result);
-                            continue;
-                        }
-                        // * takes in any other char
-                        Queue(queue, visited, li, ri +1, result);
-                        continue;
-                    }
-
-                    // Append '*'
-                    Append(queue, visited, li, ri + 1, result, Literal.Type.Star);
-                }
-
-                // left and right have literals
-                if (leftHasMore && rightHasMore)
+                // left or right have tokens
+                if (leftHasMore || rightHasMore)
                 {
                     // l == **
-                    if (l == Literal.Type.StarStar)
+                    if (l == Token.Type.StarStar)
                     {
-                        // Match one and more later
-                        CloneAndAppend(queue, visited, li, ri + 1, result, r);
-                        // Next scenario
+                        if (_ == Token.Type.StarStar) Queue(queue, visited, li + 1, ri, result);
+                        else Append(queue, visited, li + 1, ri, result, l);
                         continue;
                     }
 
                     // r == **
-                    if (r == Literal.Type.StarStar)
+                    if (r == Token.Type.StarStar)
                     {
-                        // Match one and more later
-                        CloneAndAppend(queue, visited, li + 1, ri, result, l);
-                        // Next scenario
+                        if (_ == Token.Type.StarStar) Queue(queue, visited, li, ri + 1, result);
+                        else Append(queue, visited, li, ri + 1, result, r);
                         continue;
                     }
 
                     // l == *
-                    if (l == Literal.Type.Star)
+                    if (l == Token.Type.Star)
                     {
-                        // r == /
-                        if (r == Literal.Type.Slash)
-                        {
-                            // Append * but match to nothing
-                            Append(queue, visited, li + 1, ri, result, l);
-                            continue;
-                        }
-                        // Match char
-                        Queue(queue, visited, li + 1, ri, result);
-                        // Next scenario
+                        if (_ == Token.Type.Star || _ == Token.Type.StarStar) Queue(queue, visited, li + 1, ri, result);
+                        else Append(queue, visited, li + 1, ri, result, l);
                         continue;
                     }
 
                     // r == *
-                    if (r == Literal.Type.Star)
+                    if (r == Token.Type.Star)
                     {
-                        // l == /
-                        if (l == Literal.Type.Slash)
-                        {
-                            // Append * but match to nothing
-                            Append(queue, visited, li, ri + 1, result, r);
-                            continue;
-                        }
-                        // Match char
-                        Queue(queue, visited, li+1, ri, result);
-                        // Next scenario
-                        continue;
-                    }
-
-                    // l == /, r == /
-                    if (l == Literal.Type.Slash && r == Literal.Type.Slash)
-                    {
-                        Append(queue, visited, li + 1, ri + 1, result, l);
-                        // Next scenario
-                        continue;
-                    }
-
-                    // l == ?
-                    if (l == Literal.Type.QuestionMark && r != Literal.Type.Slash)
-                    {
-                        Append(queue, visited, li + 1, ri + 1, result, l);
-                        // Next scenario
-                        continue;
-                    }
-
-                    // r == ?
-                    if (r == Literal.Type.QuestionMark && l != Literal.Type.Slash)
-                    {
-                        Append(queue, visited, li + 1, ri + 1, result, r);
-                        // Next scenario
+                        if (_ == Token.Type.Star || _ == Token.Type.StarStar) Queue(queue, visited, li, ri + 1, result);
+                        else Append(queue, visited, li, ri + 1, result, r);
                         continue;
                     }
 
@@ -193,17 +97,83 @@ namespace Lexical.FileSystem.Internal
                     if (l == r)
                     {
                         Append(queue, visited, li + 1, ri + 1, result, l);
-                        // Next scenario
                         continue;
                     }
 
-                    // Append '?' as failsafe
-                    Append(queue, visited, li + 1, ri + 1, result, Literal.Type.QuestionMark);
+                    // l == ? && r == c
+                    if (l == Token.Type.QuestionMark && r.Kind == Token.Type.Char)
+                    {
+                        Append(queue, visited, li + 1, ri + 1, result, l);
+                        continue;
+                    }
+
+                    // l == c && r == ?
+                    if (l.Kind == Token.Type.Char && r == Token.Type.QuestionMark)
+                    {
+                        Append(queue, visited, li + 1, ri + 1, result, l);
+                        continue;
+                    }
+
+                    // l == c || r == c
+                    if (l.Kind == Token.Type.Char || r.Kind == Token.Type.Char)
+                    {
+                        // Add ?
+                        if (l.Kind == Token.Type.Char && r.Kind == Token.Type.Char) CloneAndAppend(queue, visited, li + 1, ri + 1, result, Token.Type.QuestionMark);
+                        // Add *
+                        if (_ != Token.Type.Star && _ != Token.Type.StarStar)
+                        {
+                            if (l.Kind == Token.Type.Char) CloneAndAppend(queue, visited, li + 1, ri, result, Token.Type.Star);
+                            if (r.Kind == Token.Type.Char) Append(queue, visited, li, ri + 1, result, Token.Type.Star);
+                        }
+                        else
+                        // Use previous *
+                        {
+                            if (l.Kind == Token.Type.Char) CloneAndAppend(queue, visited, li + 1, ri, result, Token.Type.None);
+                            if (r.Kind == Token.Type.Char) Queue(queue, visited, li, ri + 1, result);
+                        }
+                        continue;
+                    }
+
+                    {
+                        // Replace * with **
+                        if (_ == Token.Type.Star)
+                        {
+                            result[result.Count - 1] = Token.Type.StarStar;
+                            if (l != Token.Type.None) CloneAndAppend(queue, visited, li + 1, ri, result, Token.Type.None);
+                            if (r != Token.Type.None) Queue(queue, visited, li, ri + 1, result);
+                        }
+                        // Add **
+                        else if (_ != Token.Type.StarStar)
+                        {
+                            if (l != Token.Type.None) CloneAndAppend(queue, visited, li + 1, ri, result, Token.Type.StarStar);
+                            if (r != Token.Type.None) Append(queue, visited, li, ri + 1, result, Token.Type.StarStar);
+                        }
+                        else
+                        // Use previous **
+                        {
+                            if (l != Token.Type.None) CloneAndAppend(queue, visited, li + 1, ri, result, Token.Type.None);
+                            if (r != Token.Type.None) Queue(queue, visited, li, ri + 1, result);
+                        }
+                    }
                 }
             }
-
-            return null;
             //Console.Write($" (visited={visited.Count}) ");
+
+            return Print(finalresult);
+
+            // Heuristic score
+            int Score(List<Token> result)
+            {
+                if (result == null) return int.MinValue;
+                int x = 0;
+                foreach (Token t in result)
+                    if (t.Kind == Token.Type.Char) x += 256;
+                    else if (t.Kind == Token.Type.QuestionMark) x += 16;
+                    else if (t.Kind == Token.Type.Slash) x += 1024;
+                    else if (t.Kind == Token.Type.Star) x -= 4;
+                    else if (t.Kind == Token.Type.StarStar) x -= 16;
+                return x;
+            }
         }
 
         /// <summary>
@@ -214,11 +184,13 @@ namespace Lexical.FileSystem.Internal
         /// <returns>unions</returns>
         public static IEnumerable<String> Unions(string leftPattern, string rightPattern)
         {
-            // Read in the literals
-            StructList24<Literal> leftLiterals = new StructList24<Literal>(), rightLiterals = new StructList24<Literal>();
-            Enumerator leftEnumerator = new Enumerator(leftPattern), rightEnumerator = new Enumerator(rightPattern);
-            while (leftEnumerator.MoveNext()) leftLiterals.Add(leftEnumerator.Current);
-            while (rightEnumerator.MoveNext()) rightLiterals.Add(rightEnumerator.Current);
+            throw new NotImplementedException();
+            /*
+            // Read in the tokens
+            StructList24<Token> leftTokens = new StructList24<Token>(), rightTokens = new StructList24<Token>();
+            Token.Enumerator leftEnumerator = new Token.Enumerator(leftPattern), rightEnumerator = new Token.Enumerator(rightPattern);
+            while (leftEnumerator.MoveNext()) leftTokens.Add(leftEnumerator.Current);
+            while (rightEnumerator.MoveNext()) rightTokens.Add(rightEnumerator.Current);
 
             // Queue of scenarios as index pairs and result so far.
             List<Line> queue = new List<Line>();
@@ -231,12 +203,12 @@ namespace Lexical.FileSystem.Internal
             {
                 // Take indices from queue
                 Line line = queue[queue.Count - 1];
-                int li = line.li, ri = line.ri; List<Literal> result = line.literals;
+                int li = line.li, ri = line.ri; List<Token> result = line.tokens;
                 queue.RemoveAt(queue.Count - 1);
-                // Has more literals
-                bool leftHasMore = li < leftLiterals.Count, rightHasMore = ri < rightLiterals.Count;
+                // Has more tokens
+                bool leftHasMore = li < leftTokens.Count, rightHasMore = ri < rightTokens.Count;
 
-                // End of literals on both streams
+                // End of tokens on both streams
                 if (!leftHasMore && !rightHasMore)
                 {
                     // Yield possible result
@@ -249,63 +221,63 @@ namespace Lexical.FileSystem.Internal
                     }
                 }
 
-                // left still has literals, right is at end
+                // left still has tokens, right is at end
                 else if (leftHasMore && !rightHasMore)
                 {
-                    // Take literal
-                    Literal l = leftLiterals[li];
+                    // Take token
+                    Token l = leftTokens[li];
                 }
 
-                // left is at end, right still has literals
+                // left is at end, right still has tokens
                 else if (!leftHasMore && rightHasMore)
                 {
-                    // Take literal and type
-                    Literal r = rightLiterals[ri];
+                    // Take token and type
+                    Token r = rightTokens[ri];
                 }
 
-                // left and right have literals
+                // left and right have tokens
                 if (leftHasMore && rightHasMore)
                 {
-                    // Take literals 
-                    Literal l = leftLiterals[li], r = rightLiterals[ri];
+                    // Take tokens 
+                    Token l = leftTokens[li], r = rightTokens[ri];
 
                     // l == **
-                    if (l == Literal.Type.StarStar)
+                    if (l == Token.Type.StarStar)
                     {
                         // Next scenario
                         continue;
                     }
 
                     // r == **
-                    if (r == Literal.Type.StarStar)
+                    if (r == Token.Type.StarStar)
                     {
                         // Next scenario
                         continue;
                     }
 
                     // l == *
-                    if (l == Literal.Type.Star)
+                    if (l == Token.Type.Star)
                     {
                         // Next scenario
                         continue;
                     }
 
                     // r == *
-                    if (r == Literal.Type.Star)
+                    if (r == Token.Type.Star)
                     {
                         // Next scenario
                         continue;
                     }
 
                     // l == ?
-                    if (l == Literal.Type.QuestionMark)
+                    if (l == Token.Type.QuestionMark)
                     {
                         // Next scenario
                         continue;
                     }
 
                     // r == ?
-                    if (r == Literal.Type.QuestionMark)
+                    if (r == Token.Type.QuestionMark)
                     {
                         // Next scenario
                         continue;
@@ -322,6 +294,7 @@ namespace Lexical.FileSystem.Internal
             }
 
             //Console.Write($" (visited={visited.Count}) ");
+            */
         }
 
         /// <summary>
@@ -332,17 +305,13 @@ namespace Lexical.FileSystem.Internal
         /// <returns>intersection or null if patterns do not intersect.</returns>
         public static string Intersection(string pattern1, string pattern2)
         {
-            StructList12<string> intersections = new StructList12<string>();
-
-            foreach (var intersection in Intersections(pattern1, pattern2))
-                intersections.Add(intersection);
-
-            if (intersections.Count == 0) return null;
-            if (intersections.Count == 1) return intersections[0];
-            // TODO create union 
-            //throw new NotImplementedException();
-            // for debugging
-            return string.Join(", ", intersections.ToArray());
+            string result = null;
+            foreach (string intersection in Intersections(pattern1, pattern2))
+            {
+                if (result == null) result = intersection;
+                else result = Union(result, intersection);
+            }
+            return result;
         }
 
         /// <summary>
@@ -353,11 +322,11 @@ namespace Lexical.FileSystem.Internal
         /// <returns>intersections</returns>
         public static IEnumerable<String> Intersections(string leftPattern, string rightPattern)
         {
-            // Read in the literals
-            StructList24<Literal> leftLiterals = new StructList24<Literal>(), rightLiterals = new StructList24<Literal>();
-            Enumerator leftEnumerator = new Enumerator(leftPattern), rightEnumerator = new Enumerator(rightPattern);
-            while (leftEnumerator.MoveNext()) leftLiterals.Add(leftEnumerator.Current);
-            while (rightEnumerator.MoveNext()) rightLiterals.Add(rightEnumerator.Current);
+            // Read in the tokens
+            StructList24<Token> leftTokens = new StructList24<Token>(), rightTokens = new StructList24<Token>();
+            Token.Enumerator leftEnumerator = new Token.Enumerator(leftPattern), rightEnumerator = new Token.Enumerator(rightPattern);
+            while (leftEnumerator.MoveNext()) leftTokens.Add(leftEnumerator.Current);
+            while (rightEnumerator.MoveNext()) rightTokens.Add(rightEnumerator.Current);
 
             // Queue of scenarios as index pairs and result so far.
             List<Line> queue = new List<Line>();
@@ -370,12 +339,12 @@ namespace Lexical.FileSystem.Internal
             {
                 // Take indices from queue
                 Line line = queue[queue.Count - 1];
-                int li = line.li, ri = line.ri; List<Literal> result = line.literals;
+                int li = line.li, ri = line.ri; List<Token> result = line.tokens;
                 queue.RemoveAt(queue.Count - 1);
-                // Has more literals
-                bool leftHasMore = li < leftLiterals.Count, rightHasMore = ri < rightLiterals.Count;
+                // Has more tokens
+                bool leftHasMore = li < leftTokens.Count, rightHasMore = ri < rightTokens.Count;
 
-                // End of literals on both streams
+                // End of tokens on both streams
                 if (!leftHasMore && !rightHasMore)
                 {
                     // Print to string
@@ -384,37 +353,37 @@ namespace Lexical.FileSystem.Internal
                     yield return pattern;
                 }
 
-                // left still has literals, right is at end
+                // left still has tokens, right is at end
                 else if (leftHasMore && !rightHasMore)
                 {
-                    // Take literal
-                    Literal l = leftLiterals[li];
+                    // Take token
+                    Token l = leftTokens[li];
                     // "*" and "**" matches against ""
-                    if (l == Literal.Type.Star || l == Literal.Type.StarStar) Queue(queue, visited, li + 1, ri, result);
+                    if (l == Token.Type.Star || l == Token.Type.StarStar) Queue(queue, visited, li + 1, ri, result);
                 }
 
-                // left is at end, right still has literals
+                // left is at end, right still has tokens
                 else if (!leftHasMore && rightHasMore)
                 {
-                    // Take literal and type
-                    Literal r = rightLiterals[ri];
+                    // Take token and type
+                    Token r = rightTokens[ri];
                     // "" matches against "*" and "**"
-                    if (r == Literal.Type.Star || r == Literal.Type.StarStar) Queue(queue, visited, li, ri + 1, result);
+                    if (r == Token.Type.Star || r == Token.Type.StarStar) Queue(queue, visited, li, ri + 1, result);
                 }
 
-                // left and right have literals
+                // left and right have tokens
                 if (leftHasMore && rightHasMore)
                 {
-                    // Take literals 
-                    Literal l = leftLiterals[li], r = rightLiterals[ri];
+                    // Take tokens 
+                    Token l = leftTokens[li], r = rightTokens[ri];
 
                     // l == **
-                    if (l == Literal.Type.StarStar)
+                    if (l == Token.Type.StarStar)
                     {
                         // Match one and more later
                         CloneAndAppend(queue, visited, li, ri + 1, result, r);
                         // r = *, r = **
-                        if (r == Literal.Type.Star || r == Literal.Type.StarStar)
+                        if (r == Token.Type.Star || r == Token.Type.StarStar)
                         {
                             //
                             Append(queue, visited, li + 1, ri, result, r);
@@ -430,12 +399,12 @@ namespace Lexical.FileSystem.Internal
                     }
 
                     // r == **
-                    if (r == Literal.Type.StarStar)
+                    if (r == Token.Type.StarStar)
                     {
                         // Match one and more later
                         CloneAndAppend(queue, visited, li + 1, ri, result, l);
                         // l = *, l = **
-                        if (l == Literal.Type.Star || l == Literal.Type.StarStar)
+                        if (l == Token.Type.Star || l == Token.Type.StarStar)
                         {
                             //
                             Append(queue, visited, li, ri + 1, result, l);
@@ -450,10 +419,10 @@ namespace Lexical.FileSystem.Internal
                     }
 
                     // l == *
-                    if (l == Literal.Type.Star)
+                    if (l == Token.Type.Star)
                     {
                         // * & /
-                        if (r == Literal.Type.Slash)
+                        if (r == Token.Type.Slash)
                         {
                             // Match / to nothing
                             Queue(queue, visited, li + 1, ri, result);
@@ -462,7 +431,7 @@ namespace Lexical.FileSystem.Internal
                         // Match to one and more later
                         CloneAndAppend(queue, visited, li, ri + 1, result, r);
                         // Match to r = *
-                        if (r == Literal.Type.Star)
+                        if (r == Token.Type.Star)
                         {
                             Append(queue, visited, li + 1, ri, result, r);
                         }
@@ -476,10 +445,10 @@ namespace Lexical.FileSystem.Internal
                     }
 
                     // r == *
-                    if (r == Literal.Type.Star)
+                    if (r == Token.Type.Star)
                     {
                         // / & *
-                        if (l == Literal.Type.Slash)
+                        if (l == Token.Type.Slash)
                         {
                             // Match / to nothing
                             Queue(queue, visited, li, ri + 1, result);
@@ -488,7 +457,7 @@ namespace Lexical.FileSystem.Internal
 
                         // Match one, and more later
                         CloneAndAppend(queue, visited, li + 1, ri, result, l);
-                        if (l == Literal.Type.Star)
+                        if (l == Token.Type.Star)
                         {
                             Append(queue, visited, li, ri + 1, result, l);
                         }
@@ -502,26 +471,26 @@ namespace Lexical.FileSystem.Internal
                     }
 
                     // l == ?
-                    if (l == Literal.Type.QuestionMark)
+                    if (l == Token.Type.QuestionMark)
                     {
                         // ? & /
-                        if (r == Literal.Type.Slash) continue;
+                        if (r == Token.Type.Slash) continue;
                         // Downgrade '*' and '**' to '?'
-                        if (r.Kind == Literal.Type.Star || r.Kind == Literal.Type.StarStar) r = Literal.Type.QuestionMark;
-                        // Append what ever is in right literal
+                        if (r.Kind == Token.Type.Star || r.Kind == Token.Type.StarStar) r = Token.Type.QuestionMark;
+                        // Append what ever is in right token
                         Append(queue, visited, li + 1, ri + 1, result, r);
                         // Next scenario
                         continue;
                     }
 
                     // r == ?
-                    if (r == Literal.Type.QuestionMark)
+                    if (r == Token.Type.QuestionMark)
                     {
                         // / & ?
-                        if (l == Literal.Type.Slash) continue;
+                        if (l == Token.Type.Slash) continue;
                         // Downgrade '*' and '**' to '?'
-                        if (l.Kind == Literal.Type.Star || l.Kind == Literal.Type.StarStar) l = Literal.Type.QuestionMark;
-                        // Append what ever is in left literal
+                        if (l.Kind == Token.Type.Star || l.Kind == Token.Type.StarStar) l = Token.Type.QuestionMark;
+                        // Append what ever is in left token
                         Append(queue, visited, li + 1, ri + 1, result, l);
                         // Next scenario
                         continue;
@@ -542,88 +511,260 @@ namespace Lexical.FileSystem.Internal
             //Console.Write($" (visited={visited.Count}) ");
         }
 
-        static void Queue(List<Line> queue, HashSet<Line> visited, int li, int ri, List<Literal> result)
+        static void Queue(List<Line> queue, HashSet<Line> visited, int li, int ri, List<Token> result)
         {
             Line line = new Line(li, ri, result);
             if (visited.Add(line)) queue.Add(line);
         }
 
-        static void Append(List<Line> queue, HashSet<Line> visited, int li, int ri, List<Literal> result, Literal literal)
+        static void Append(List<Line> queue, HashSet<Line> visited, int li, int ri, List<Token> result, Token token)
         {
-            if (result == null) result = new List<Literal>(10);
-            result.Add(literal);
+            if (result == null) result = new List<Token>(10);
+            if (token != Token.Type.None) result.Add(token);
             Line line = new Line(li, ri, result);
             if (visited.Add(line)) queue.Add(line);
         }
 
-        static void CloneAndAppend(List<Line> list, HashSet<Line> visited, int li, int ri, List<Literal> result, Literal literal)
+        static void CloneAndAppend(List<Line> list, HashSet<Line> visited, int li, int ri, List<Token> result, Token token)
         {
-            result = result == null ? new List<Literal>(10) : new List<Literal>(result);
-            result.Add(literal);
+            result = result == null ? new List<Token>(10) : new List<Token>(result);
+            if (token != Token.Type.None) result.Add(token);
             Line line = new Line(li, ri, result);
             if (visited.Add(line)) list.Add(line);
         }
 
         /// <summary>
-        /// Print <paramref name="literals"/> to string.
+        /// Print <paramref name="tokens"/> to string.
         /// </summary>
-        /// <param name="literals"></param>
+        /// <param name="tokens"></param>
         /// <returns></returns>
-        static String Print(List<Literal> literals)
+        static String Print(List<Token> tokens)
         {
-            if (literals == null) return "";
-            StringBuilder sb = new StringBuilder(literals.Count + 4);
-            foreach (var l in literals) l.AppendTo(sb);
+            if (tokens == null) return "";
+            StringBuilder sb = new StringBuilder(tokens.Count + 4);
+            foreach (var l in tokens) l.AppendTo(sb);
             return sb.ToString();
         }
 
         struct Line : IEquatable<Line>
         {
-            /// <summary>Left and right literal indices</summary>
+            /// <summary>Left and right token indices</summary>
             public readonly int li, ri;
-            /// <summary>(optional)List of literals</summary>
-            public readonly List<Literal> literals;
+            /// <summary>(optional)List of tokens</summary>
+            public readonly List<Token> tokens;
 
-            public Line(int li, int ri, List<Literal> literals)
+            public Line(int li, int ri, List<Token> tokens)
             {
                 this.li = li;
                 this.ri = ri;
-                this.literals = literals;
+                this.tokens = tokens;
             }
 
-            public bool Equals(Line other) => li == other.li && ri == other.ri && LiteralListComparer.Instance.Equals(literals, other.literals);
-            public override bool Equals(object other_) => other_ is Line other ? li == other.li && ri == other.ri && LiteralListComparer.Instance.Equals(literals, other.literals) : false;
-            public override int GetHashCode() => 3 * li + 5 * ri * 7 * LiteralListComparer.Instance.GetHashCode(literals);
-            public override string ToString() => $"{li}, {ri}, {Print(literals)}";
-        }
-    }
-
-    class LiteralListComparer : IEqualityComparer<List<Literal>>
-    {
-        static LiteralListComparer instance = new LiteralListComparer();
-        public static LiteralListComparer Instance => instance;
-
-        public bool Equals(List<Literal> x, List<Literal> y)
-        {
-            int xc = x == null ? 0 : x.Count, yc = y == null ? 0 : y.Count;
-            if (xc != yc) return false;
-            for (int i = 0; i < xc; i++) if (x[i] != y[i]) return false;
-            return true;
+            public bool Equals(Line other) => li == other.li && ri == other.ri && TokenListComparer.Instance.Equals(tokens, other.tokens);
+            public override bool Equals(object other_) => other_ is Line other ? li == other.li && ri == other.ri && TokenListComparer.Instance.Equals(tokens, other.tokens) : false;
+            public override int GetHashCode() => 3 * li + 5 * ri * 7 * TokenListComparer.Instance.GetHashCode(tokens);
+            public override string ToString() => $"{li}, {ri}, {Print(tokens)}";
         }
 
-        public int GetHashCode(List<Literal> list)
+        /// <summary>
+        /// Glob pattern token
+        /// </summary>
+        public struct Token : IEquatable<Token>
         {
-            int hash = unchecked((int)2166136261);
-            if (list != null)
+            /// <summary>Non-content token</summary>
+            public static readonly Token None = new Token(Type.None);
+
+            /// <summary>Implicit conversion</summary>
+            public static implicit operator Type(Token l) => l.Kind;
+            /// <summary>Implicit conversion</summary>
+            public static implicit operator char(Token l) => l.Char;
+            /// <summary>Implicit conversion</summary>
+            public static implicit operator Token(Type k) => new Token(k);
+            /// <summary>Implicit conversion</summary>
+            public static implicit operator Token(Char c) => new Token(c);
+
+            /// <summary>Token type</summary>
+            public enum Type
             {
-                foreach (var l in list)
+                /// <summary>not initialized</summary>
+                None,
+                /// <summary>"/"</summary>
+                Slash,
+                /// <summary>"?"</summary>
+                QuestionMark,
+                /// <summary>"*"</summary>
+                Star,
+                /// <summary>"**"</summary>
+                StarStar,
+                /// <summary>any other character</summary>
+                Char
+            }
+
+            /// <summary>Literal type</summary>
+            public Type Kind;
+            /// <summary>Characters</summary>
+            public char Char;
+            /// <summary>Create record of token</summary>
+            public Token(Type type)
+            {
+                Kind = type;
+                switch (type)
                 {
-                    hash ^= l.GetHashCode();
-                    hash *= 16777619;
+                    case Type.QuestionMark: Char = '?'; break;
+                    case Type.Slash: Char = '/'; break;
+                    case Type.Star: Char = '*'; break;
+                    case Type.StarStar: Char = '*'; break;
+                    default: Char = '\0'; break;
                 }
             }
-            return hash;
+            /// <summary>Create record of token</summary>
+            public Token(char _char)
+            {
+                Kind = Type.Char;
+                Char = _char;
+            }
+
+            /// <summary>Compare equality.</summary>
+            public static bool operator ==(Token l, Token r) => l.Kind == r.Kind && (l.Kind != Type.Char || l.Char == r.Char);
+            /// <summary>Compare inequality.</summary>
+            public static bool operator !=(Token l, Token r) => l.Kind != r.Kind || l.Char != r.Char;
+            /// <summary>Compare equality.</summary>
+            public bool Equals(Token other) => Kind == other.Kind && (Kind != Type.Char || Char == other.Char);
+            /// <summary>Compare equality.</summary>
+            public override bool Equals(Object other_) => other_ is Token other ? Kind == other.Kind && (Kind != Type.Char || Char == other.Char) : false;
+            /// <summary>Get hashcode.</summary>
+            public override int GetHashCode() => Kind == Type.Char ? Char.GetHashCode() : Kind.GetHashCode();
+            /// <summary>Append to string builder</summary>
+            public void AppendTo(StringBuilder sb)
+            {
+                switch (Kind)
+                {
+                    case Type.None: break;
+                    case Type.Slash: sb.Append('/'); break;
+                    case Type.QuestionMark: sb.Append('?'); break;
+                    case Type.Star: sb.Append('*'); break;
+                    case Type.StarStar: sb.Append('*'); sb.Append('*'); break;
+                    case Type.Char: sb.Append(Char); break;
+                }
+            }
+
+            /// <summary>Print info</summary>
+            public override string ToString() => Kind == Type.StarStar ? "**" : Char.ToString();
+
+            /// <summary>
+            /// Glob pattern token enumerable
+            /// </summary>
+            public struct Enumerable : IEnumerable<Token>
+            {
+                /// <summary>Glob pattern string</summary>
+                public readonly string Pattern;
+
+                /// <summary>Create glob pattern enumerable.</summary>
+                /// <param name="pattern"></param>
+                public Enumerable(string pattern)
+                {
+                    Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
+                }
+
+                /// <summary>Get enumerator</summary>
+                /// <returns></returns>
+                public Enumerator GetEnumerator()
+                    => new Enumerator(Pattern);
+                IEnumerator IEnumerable.GetEnumerator()
+                    => new Enumerator(Pattern);
+                IEnumerator<Token> IEnumerable<Token>.GetEnumerator()
+                    => new Enumerator(Pattern);
+            }
+
+            /// <summary>
+            /// Glob pattern token enumerator
+            /// </summary>
+            public struct Enumerator : IEnumerator<Token>
+            {
+                /// <summary>Glob pattern string</summary>
+                public readonly string Pattern;
+
+                /// <summary>Character index.</summary>
+                int index;
+
+                /// <summary>Current token.</summary>
+                Token current;
+
+                /// <summary>Create glob pattern token enumerable.</summary>
+                /// <param name="pattern"></param>
+                public Enumerator(string pattern)
+                {
+                    Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
+                    index = 0;
+                    current = Token.None;
+                }
+
+                /// <summary>Current token.</summary>
+                public Token Current => current;
+                object IEnumerator.Current => current;
+
+                /// <summary></summary>
+                public void Dispose() { }
+
+                /// <summary>Move to next token</summary>
+                public bool MoveNext()
+                {
+                    // Out of index
+                    if (index >= Pattern.Length) { current = Token.None; return false; }
+
+                    // Read char
+                    char ch = Pattern[index++];
+
+                    // Choose token
+                    switch (ch)
+                    {
+                        case '/': current = Token.Type.Slash; break;
+                        case '?': current = Token.Type.QuestionMark; break;
+                        case '*': if (index < Pattern.Length && Pattern[index] == '*') { current = Token.Type.StarStar; index++; } else current = Token.Type.Star; break;
+                        default: current = ch; break;
+                    }
+                    return true;
+                }
+
+                /// <summary>Start from beginning.</summary>
+                public void Reset()
+                {
+                    index = 0;
+                    current = Token.None;
+                }
+            }
+
         }
+
+        class TokenListComparer : IEqualityComparer<List<Token>>
+        {
+            static TokenListComparer instance = new TokenListComparer();
+            public static TokenListComparer Instance => instance;
+
+            public bool Equals(List<Token> x, List<Token> y)
+            {
+                int xc = x == null ? 0 : x.Count, yc = y == null ? 0 : y.Count;
+                if (xc != yc) return false;
+                for (int i = 0; i < xc; i++) if (x[i] != y[i]) return false;
+                return true;
+            }
+
+            public int GetHashCode(List<Token> list)
+            {
+                int hash = unchecked((int)2166136261);
+                if (list != null)
+                {
+                    foreach (var l in list)
+                    {
+                        hash ^= l.GetHashCode();
+                        hash *= 16777619;
+                    }
+                }
+                return hash;
+            }
+        }
+
     }
+
 
 }
