@@ -335,7 +335,7 @@ namespace Lexical.FileSystem
             /// Enumerate self and subtree.
             /// </summary>
             /// <returns></returns>
-            public IEnumerable<Directory> VisitTree()
+            public IEnumerable<Directory> VisitDecedents()
             {
                 Queue<Directory> queue = new Queue<Directory>();
                 queue.Enqueue(this);
@@ -360,6 +360,18 @@ namespace Lexical.FileSystem
                     yield return cursor;
                     cursor = cursor.parent;
                 }
+            }
+
+            /// <summary>
+            /// Tests this <paramref name="lowerDirectory"/> is child of this directory.
+            /// </summary>
+            /// <param name="lowerDirectory"></param>
+            /// <returns></returns>
+            public bool IsParentOf(Directory lowerDirectory)
+            {
+                for (Directory cursor = lowerDirectory; cursor != null; cursor = cursor.parent)
+                    if (cursor == this) return true;
+                return false;
             }
 
             /// <summary>
@@ -538,7 +550,7 @@ namespace Lexical.FileSystem
                         }
 
                     // Test if any mount in child tree intersects with filter
-                    foreach (Directory d in finalCursor.VisitTree().Concat(finalCursor.VisitParents()))
+                    foreach (Directory d in finalCursor.VisitDecedents().Concat(finalCursor.VisitParents()))
                     {
                         // No mounts
                         if (d.mount == null) continue;
@@ -547,7 +559,7 @@ namespace Lexical.FileSystem
                         // No components
                         if (components.Length == 0) continue;
                         // Test if filter intersects with the mount
-                        string intersection = GlobPatternSet.Intersection(d.Path + "**", filter);
+                        string intersection = finalCursor.IsParentOf(d) ? GlobPatternSet.Intersection(d.Path + "**", filter) : filter;
                         // No intersection
                         if (intersection == null) continue;
 
@@ -823,7 +835,7 @@ namespace Lexical.FileSystem
             try
             {
                 List<IFileSystemEntryMount> result = new List<IFileSystemEntryMount>();
-                foreach (Directory node in root.VisitTree()) result.Add(node.Entry);
+                foreach (Directory node in root.VisitDecedents()) result.Add(node.Entry);
                 return result.ToArray();
             }
             finally
@@ -924,7 +936,7 @@ namespace Lexical.FileSystem
             vfsLock.AcquireWriterLock(int.MaxValue);
             try
             {
-                foreach (var e in root.VisitTree())
+                foreach (var e in root.VisitDecedents())
                     if (e.mount != null)
                         decorations.Add(e.mount);
                 root.contents.Clear();
