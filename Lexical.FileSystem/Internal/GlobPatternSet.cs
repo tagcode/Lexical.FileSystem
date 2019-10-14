@@ -20,7 +20,7 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <param name="leftPattern"></param>
         /// <param name="rightPattern"></param>
-        /// <returns>union that contains <paramref name="leftPattern"/> and <paramref name="rightPattern"/>, may also return broader union that minimum due to lack of expression of glob pattern.</returns>
+        /// <returns>union that contains <paramref name="leftPattern"/> and <paramref name="rightPattern"/>. May return broader union that minimal due to lack of expression capability to hold in a single pattern string.</returns>
         public static string Union(string leftPattern, string rightPattern)
         {
             // Read in the tokens
@@ -302,7 +302,7 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <param name="pattern1"></param>
         /// <param name="pattern2"></param>
-        /// <returns>intersection or null if patterns do not intersect.</returns>
+        /// <returns>intersection or null if patterns do not intersect. May return broader intersection that minimal due to lack of expression capability to hold in a single pattern string.</returns>
         public static string Intersection(string pattern1, string pattern2)
         {
             string result = null;
