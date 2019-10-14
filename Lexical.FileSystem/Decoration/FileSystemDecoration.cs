@@ -1154,23 +1154,23 @@ namespace Lexical.FileSystem.Decoration
         /// Attach an <paramref name="observer"/> on to a single file or directory. 
         /// Observing a directory will observe the whole subtree.
         /// </summary>
-        /// <param name="path">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+        /// <param name="filter">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
         /// <returns>dispose handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
-        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="filter"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="filter"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support observe</exception>
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
-        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public override IFileSystemObserver Observe(string path, IObserver<IFileSystemEvent> observer, object state = null)
+        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
         {
             // Assert argument
-            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (filter == null) throw new ArgumentNullException(nameof(filter));
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
             // Assert supported
@@ -1182,60 +1182,37 @@ namespace Lexical.FileSystem.Decoration
 
             try
             {
-                // One component
-                if (components.Length == 1)
+                // Create adapter
+                ObserverDecorator adapter = new ObserverDecorator(this, filter, observer, state, true);
+
+                // Observe each component
+                foreach (Component component in components)
                 {
-                    // Get reference
-                    var component = components[0];
-                    // Assert supported
-                    if (!component.Option.CanObserve) throw new NotSupportedException(nameof(Observe));
-                    // Create adapter
-                    ObserverDecorator adapter = new ObserverDecorator(this, path, observer, state, true);
+                    // Assert can observe
+                    if (!component.Option.CanObserve) continue;
                     // Convert Path
-                    String childPath;
-                    if (component.Path.ParentToChild(path, out childPath))
+                    String childPath, stem;
+                    if (!component.Path.ParentToChild(filter, out childPath) || !component.Path.ParentToChild(new GlobPatternInfo(filter).Stem, out stem)) continue;
+                    try
                     {
-                        // Observe and attach to adapter
+                        // Entry doesn't exist.
+                        //if (component.FileSystem.CanGetEntry() && !component.FileSystem.Exists(childPath)) continue;
+                        // Try Observe
                         IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component));
                         // Attach disposable
                         ((IDisposeList)adapter).AddDisposable(disposable);
-                        // Send IFileSystemEventStart
-                        observer.OnNext(adapter);
                     }
-                    // Return adapter
-                    return adapter;
+                    catch (NotSupportedException) { }
+                    catch (ArgumentException) { } // FileSystem.PatternObserver throws directory is not found, TODO create contract for proper exception
                 }
 
-                // Many components
-                else
-                {
-                    // Crate adapter
-                    ObserverDecorator adapter = new ObserverDecorator(this, path, observer, state, true);
-                    // Observe each component
-                    foreach (Component component in components)
-                    {
-                        // Assert can observe
-                        if (!component.FileSystem.CanObserve()) continue;
-                        // Convert Path
-                        String childPath;
-                        if (!component.Path.ParentToChild(path, out childPath)) continue;
-                        try
-                        {
-                            // Try Observe
-                            IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component));
-                            // Attach disposable
-                            ((IDisposeList)adapter).AddDisposable(disposable);
-                        }
-                        catch (NotSupportedException) { }
-                    }
-                    // Send IFileSystemEventStart
-                    observer.OnNext(adapter);
-                    // Return adapter
-                    return adapter;
-                }
+                // Send IFileSystemEventStart
+                observer.OnNext(adapter);
+                // Return adapter
+                return adapter;
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, filter))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(Observe));

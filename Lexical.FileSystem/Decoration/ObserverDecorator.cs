@@ -49,7 +49,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="sourceFileSystem">File system to show as the source of forwarded events (in <see cref="IFileSystemEvent.Observer"/>)</param>
         /// <param name="filter"></param>
-        /// <param name="observer">The observer were decorated events are forwarded to</param>
+        /// <param name="observer">The IObserver from caller were the decorated events are forwarded to</param>
         /// <param name="state"></param>
         /// <param name="disposeWhenLastCompletes">if true, when last attached observer sends <see cref="IObserver{T}.OnCompleted"/> event, 
         /// then diposes this object and sends <see cref="IObserver{T}.OnCompleted"/> to <see cref="Observer"/>.</param>

@@ -23,6 +23,9 @@ namespace Lexical.FileSystem.Internal
         /// <returns>union that contains <paramref name="leftPattern"/> and <paramref name="rightPattern"/>. May return broader union that minimal due to lack of expression capability to hold in a single pattern string.</returns>
         public static string Union(string leftPattern, string rightPattern)
         {
+            // Same pattern
+            if (leftPattern == rightPattern) return leftPattern;
+
             // Read in the tokens
             StructList24<Token> leftTokens = new StructList24<Token>(), rightTokens = new StructList24<Token>();
             Token.Enumerator leftEnumerator = new Token.Enumerator(leftPattern), rightEnumerator = new Token.Enumerator(rightPattern);
@@ -305,12 +308,18 @@ namespace Lexical.FileSystem.Internal
         /// <returns>intersection or null if patterns do not intersect. May return broader intersection that minimal due to lack of expression capability to hold in a single pattern string.</returns>
         public static string Intersection(string pattern1, string pattern2)
         {
+            // Same pattern
+            if (pattern1 == pattern2) return pattern1;
+
+            // Iterate results
             string result = null;
             foreach (string intersection in Intersections(pattern1, pattern2))
             {
                 if (result == null) result = intersection;
                 else result = Union(result, intersection);
             }
+
+            // Return 
             return result;
         }
 

@@ -100,7 +100,7 @@ namespace Lexical.FileSystem.Utility
 
             // Add to pattern set
             PatternSet set;
-            if (!patterns.TryGetValue(info.Prefix, out set)) patterns[info.Prefix] = set = new PatternSet();
+            if (!patterns.TryGetValue(info.Stem, out set)) patterns[info.Stem] = set = new PatternSet();
             set.AddWildcard(info, info.SuffixDepth);
 
             return this;
@@ -122,7 +122,7 @@ namespace Lexical.FileSystem.Utility
 
             // Add to pattern set
             PatternSet set;
-            if (!patterns.TryGetValue(info.Prefix, out set)) patterns[info.Prefix] = set = new PatternSet();
+            if (!patterns.TryGetValue(info.Stem, out set)) patterns[info.Stem] = set = new PatternSet();
             set.AddGlobPattern(info, info.SuffixDepth);
 
             return this;

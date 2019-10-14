@@ -21,18 +21,18 @@ namespace Lexical.FileSystem.Internal
     /// For example "dir/**/file.txt" is split into "dir/" and "**/file.txt".
     /// 
     /// Examples:
-    ///   Pattern=dir/dir/file.txt, Prefix=dir/dir/file.txt, Suffix=, SuffixDepth=0
-    ///   Pattern=*.txt, Prefix=, Suffix=*.txt, SuffixDepth=1
-    ///   Pattern=**.txt, Prefix=, Suffix=**.txt, SuffixDepth=2147483647
-    ///   Pattern=/*.txt, Prefix=/, Suffix=*.txt, SuffixDepth=1
-    ///   Pattern=*/*.txt, Prefix=, Suffix=*/*.txt, SuffixDepth=2
-    ///   Pattern=/**.txt, Prefix=/, Suffix=**.txt, SuffixDepth=2147483647
-    ///   Pattern=dir/dir/*/*.txt, Prefix=dir/dir/, Suffix=*/*.txt, SuffixDepth=2
-    ///   Pattern=dir/dir?/*/*.txt, Prefix=dir/, Suffix=dir?/*/*.txt, SuffixDepth=3
-    ///   Pattern=dir/dir/dir/*/*.txt, Prefix=dir/dir/dir/, Suffix=*/*.txt, SuffixDepth=2
-    ///   Pattern=dir/dir/dir?/*/*.txt, Prefix=dir/dir/, Suffix=dir?/*/*.txt, SuffixDepth=3
-    ///   Pattern=dir/dir/dir?/*/**.txt, Prefix=dir/dir/, Suffix=dir?/*/**.txt, SuffixDepth=2147483647
-    ///   Pattern=dir/*/dir/dir/dir/file.txt, Prefix=dir/, Suffix=*/dir/dir/dir/file.txt, SuffixDepth=5
+    ///   Pattern=dir/dir/file.txt, Stem=dir/dir/file.txt, Suffix=, SuffixDepth=0
+    ///   Pattern=*.txt, Stem=, Suffix=*.txt, SuffixDepth=1
+    ///   Pattern=**.txt, Stem=, Suffix=**.txt, SuffixDepth=2147483647
+    ///   Pattern=/*.txt, Stem=/, Suffix=*.txt, SuffixDepth=1
+    ///   Pattern=*/*.txt, Stem=, Suffix=*/*.txt, SuffixDepth=2
+    ///   Pattern=/**.txt, Stem=/, Suffix=**.txt, SuffixDepth=2147483647
+    ///   Pattern=dir/dir/*/*.txt, Stem=dir/dir/, Suffix=*/*.txt, SuffixDepth=2
+    ///   Pattern=dir/dir?/*/*.txt, Stem=dir/, Suffix=dir?/*/*.txt, SuffixDepth=3
+    ///   Pattern=dir/dir/dir/*/*.txt, Stem=dir/dir/dir/, Suffix=*/*.txt, SuffixDepth=2
+    ///   Pattern=dir/dir/dir?/*/*.txt, Stem=dir/dir/, Suffix=dir?/*/*.txt, SuffixDepth=3
+    ///   Pattern=dir/dir/dir?/*/**.txt, Stem=dir/dir/, Suffix=dir?/*/**.txt, SuffixDepth=2147483647
+    ///   Pattern=dir/*/dir/dir/dir/file.txt, Stem=dir/, Suffix=*/dir/dir/dir/file.txt, SuffixDepth=5
     ///   
     /// </summary>
     public struct GlobPatternInfo
@@ -40,8 +40,8 @@ namespace Lexical.FileSystem.Internal
         /// <summary>Full pattern string.</summary>
         public readonly String Pattern;
         /// <summary>The stem part of <see cref="Pattern"/> that doesn't have wild cards. The directories and filename before first entry with a wildcard character '*'/'**'/'?'.</summary>
-        public readonly String Prefix;
-        /// <summary>The latter part of <see cref="Pattern"/> after first directory or filename that has wildcards, starting from preceding directory separator '/'.</summary>
+        public readonly String Stem;
+        /// <summary>The latter part of <see cref="Pattern"/>, the string after first directory that has wildcards.</summary>
         public readonly String Suffix;
 
         /// <summary>
@@ -49,16 +49,16 @@ namespace Lexical.FileSystem.Internal
         /// 
         /// Depth is 0 if there are no wildcard characters in <see cref="Pattern"/>.
         /// Depth is 1 if there are wildcard characters '?'/'*' in one directory.
-        /// Depth is n if there are wildcard characters '?'/'*' in n directories after <see cref="Prefix"/> part.
+        /// Depth is n if there are wildcard characters '?'/'*' in n directories after <see cref="Stem"/> part.
         /// Depth is <see cref="int.MaxValue"/>, if there is **' wildcards anywhere.
         /// 
         /// Examples:
-        ///     Pattern="dir/dir/file.txt", Constant="dir/dir/file.txt", Variable="", depth = 0
-        ///     Pattern="dir/dir/*.txt", Constant="dir/dir/", Variable="*.txt", depth = 1
-        ///     Pattern="dir/dir/*/*.txt", Constant="dir/dir/", Variable="*/*.txt", depth = 2
-        ///     Pattern="dir/dir/dir?/*/*.txt", Constant="dir/dir/", Variable="dir?/*/*.txt", depth = 3
-        ///     Pattern="dir/*/dir/dir/dir/file.txt", Constant="dir/", Variable="*/dir/dir/dir/file.txt", depth = 5
-        ///     Pattern="dir/dir/**.txt", Constant="dir/dir/", Variable="**", depth = int.MaxValue
+        ///     Pattern="dir/dir/file.txt", Stem="dir/dir/file.txt", Suffix="", depth = 0
+        ///     Pattern="dir/dir/*.txt", Stem="dir/dir/", Suffix="*.txt", depth = 1
+        ///     Pattern="dir/dir/*/*.txt", Stem="dir/dir/", Suffix="*/*.txt", depth = 2
+        ///     Pattern="dir/dir/dir?/*/*.txt", Stem="dir/dir/", Suffix="dir?/*/*.txt", depth = 3
+        ///     Pattern="dir/*/dir/dir/dir/file.txt", Stem="dir/", Suffix="*/dir/dir/dir/file.txt", depth = 5
+        ///     Pattern="dir/dir/**.txt", Stem="dir/dir/", Suffix="**", depth = int.MaxValue
         ///     
         /// </summary>
         public readonly int SuffixDepth;
@@ -114,19 +114,19 @@ namespace Lexical.FileSystem.Internal
             // There are no wildcard
             if (ix_wildcard < 0)
             {
-                Prefix = pattern;
+                Stem = pattern;
                 Suffix = "";
             }
             // There is no separator, but are wildcards
             else if (ix_separator < 0)
             {
-                Prefix = "";
+                Stem = "";
                 Suffix = pattern;
             }
             // 'xxx/zzz'
             else
             {
-                Prefix = pattern.Substring(0, ix_separator);
+                Stem = pattern.Substring(0, ix_separator);
                 Suffix = pattern.Substring(ix_separator);
             }
 
@@ -138,6 +138,6 @@ namespace Lexical.FileSystem.Internal
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => $"{nameof(Pattern)}={Pattern}, {nameof(Prefix)}={Prefix}, {nameof(Suffix)}={Suffix}, {nameof(SuffixDepth)}={SuffixDepth}";
+            => $"{nameof(Pattern)}={Pattern}, {nameof(Stem)}={Stem}, {nameof(Suffix)}={Suffix}, {nameof(SuffixDepth)}={SuffixDepth}";
     }
 }

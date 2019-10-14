@@ -4,6 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.Text;
 
 namespace Lexical.FileSystem
 {
@@ -53,7 +54,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"{GetType().Name}({Observer?.FileSystem}, {EventTime})" : $"{GetType().Name}({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"Event({Observer?.FileSystem}, {EventTime})" : $"{GetType().Name}({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>

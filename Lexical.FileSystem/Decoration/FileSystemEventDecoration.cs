@@ -111,7 +111,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => Path == null ? $"{GetType().Name}({Observer?.FileSystem}, {EventTime})" : $"{GetType().Name}({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"Event({Observer?.FileSystem}, {EventTime})" : $"{GetType().Name}({Observer?.FileSystem}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
         public class NewObserver : FileSystemEventDecoration
