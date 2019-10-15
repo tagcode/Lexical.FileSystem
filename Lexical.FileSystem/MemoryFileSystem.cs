@@ -306,7 +306,7 @@ namespace Lexical.FileSystem
             }
 
             // Send events
-            if (events.Count > 0) SendEvents(ref events);
+            if (events.Count > 0) DispatchEvents(ref events);
         }
 
         /// <summary>
@@ -406,7 +406,7 @@ namespace Lexical.FileSystem
             }
 
             // Send events
-            if (events.Count > 0) SendEvents(ref events);
+            if (events.Count > 0) DispatchEvents(ref events);
         }
 
         /// <summary>
@@ -532,7 +532,7 @@ namespace Lexical.FileSystem
             }
 
             // Send events
-            if (events.Count > 0) SendEvents(ref events);
+            if (events.Count > 0) DispatchEvents(ref events);
         }
 
         /// <summary>
@@ -748,7 +748,7 @@ namespace Lexical.FileSystem
                 m_lock.ReleaseReaderLock();
 
                 // Send events
-                if (events.Count > 0) SendEvents(ref events);
+                if (events.Count > 0) DispatchEvents(ref events);
             }
 
         }
@@ -1325,7 +1325,7 @@ namespace Lexical.FileSystem
                         if (observer.Qualify(Path)) events.Add(new FileSystemEventChange(observer, value.Time, Path));
                     }
                     // Send events
-                    if (events.Count > 0) filesystem.SendEvents(ref events);
+                    if (events.Count > 0) filesystem.DispatchEvents(ref events);
                 }
             }
 

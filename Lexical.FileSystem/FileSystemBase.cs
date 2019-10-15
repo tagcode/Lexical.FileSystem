@@ -19,13 +19,13 @@ namespace Lexical.FileSystem
         /// Send <paramref name="events"/> to observers>.
         /// </summary>
         /// <param name="events"></param>
-        void SendEvents(ref StructList12<IFileSystemEvent> events);
+        void DispatchEvents(ref StructList12<IFileSystemEvent> events);
 
         /// <summary>
         /// Send one <paramref name="event"/> to observers.
         /// </summary>
         /// <param name="event"></param>
-        void SendEvent(IFileSystemEvent @event);
+        void DispatchEvent(IFileSystemEvent @event);
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ namespace Lexical.FileSystem
         /// If <see cref="eventHandler"/> is null, then sends events in the running thread.
         /// </summary>
         /// <param name="events"></param>
-        public void SendEvents(ref StructList12<IFileSystemEvent> events)
+        public void DispatchEvents(ref StructList12<IFileSystemEvent> events)
         {
             // Don't send events anymore
             if (IsDisposing) return;
@@ -132,7 +132,7 @@ namespace Lexical.FileSystem
         /// If <see cref="eventHandler"/> is null, then sends events in the running thread.
         /// </summary>
         /// <param name="event"></param>
-        public void SendEvent(IFileSystemEvent @event)
+        public void DispatchEvent(IFileSystemEvent @event)
         {
             // Don't send events anymore
             if (IsDisposing) return;

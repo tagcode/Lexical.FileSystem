@@ -212,11 +212,15 @@ namespace Lexical.FileSystem.Decoration
         /// Set new list components. Recycles previous components if path, filesystem and option matches.
         /// </summary>
         /// <param name="filesystemsAndOptions"></param>
-        protected internal void SetComponents(params (string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
+        /// <param name="componentsAdded">list of components added</param>
+        /// <param name="componentsRemoved">list of components removed</param>
+        /// <param name="componentsReused">list of previous components that were reused</param>
+        protected internal void SetComponents(ref StructList2<Component> componentsAdded, ref StructList2<Component> componentsRemoved , ref StructList2<Component> componentsReused, params(string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
         {
             lock (this.componentList.SyncRoot)
             {
-                var oldComponents = componentList.ToDictionary(c => new Triple<string, IFileSystem, Options>(c.Path.ParentPath, c.FileSystem, c.Option), componentTupleComparer);
+                var oldComponents = componentList.ToArray();
+                var oldComponentLineMap = componentList.ToDictionary(c => new Triple<string, IFileSystem, Options>(c.Path.ParentPath, c.FileSystem, c.Option), componentTupleComparer);
                 componentList.Clear();
                 foreach((string parentPath, IFileSystem filesystem, IFileSystemOption option) line in filesystemsAndOptions)
                 {
@@ -224,15 +228,24 @@ namespace Lexical.FileSystem.Decoration
                     Options consolidatedOptions = Options.Read(line.option == null ? line.filesystem : FileSystemOption.Intersection(line.filesystem, line.option));
 
                     // Reuse previous component
-                    Component prevComponent;
-                    if (oldComponents.TryGetValue(new Triple<string, IFileSystem, Options>(line.parentPath, line.filesystem, consolidatedOptions), out prevComponent))
+                    Component reusedComponent;
+                    if (oldComponentLineMap.TryGetValue(new Triple<string, IFileSystem, Options>(line.parentPath, line.filesystem, consolidatedOptions), out reusedComponent))
                     {
-                        this.componentList.Add(prevComponent);
+                        this.componentList.Add(reusedComponent);
+                        componentsAdded.Add(reusedComponent);
                     } else
                     // Create new component
                     {
-                        this.componentList.Add(new Component(line.parentPath, line.filesystem, consolidatedOptions));
+                        Component newComponent = new Component(line.parentPath, line.filesystem, consolidatedOptions);
+                        this.componentList.Add(newComponent);
+                        componentsAdded.Add(newComponent);
                     }
+                }
+
+                // Removed components
+                foreach (var oldComponent in oldComponents)
+                {
+                    if (!this.componentList.Contains(oldComponent)) componentsRemoved.Add(oldComponent);
                 }
             }
         }
@@ -1180,10 +1193,12 @@ namespace Lexical.FileSystem.Decoration
             // Zero components
             if (components.Length == 0) throw new NotSupportedException(nameof(Observe));
 
+            // Create adapter
+            ObserverDecorator adapter = new ObserverDecorator(this, filter, observer, state, true);
             try
             {
-                // Create adapter
-                ObserverDecorator adapter = new ObserverDecorator(this, filter, observer, state, true);
+                // Send IFileSystemEventStart, must be sent before subscribing forwarders
+                observer.OnNext(new FileSystemEventStart(adapter, DateTimeOffset.UtcNow));
 
                 // Observe each component
                 foreach (Component component in components)
@@ -1204,8 +1219,6 @@ namespace Lexical.FileSystem.Decoration
                     catch (ArgumentException) { } // FileSystem.PatternObserver throws directory is not found, TODO create contract for proper exception
                 }
 
-                // Send IFileSystemEventStart
-                observer.OnNext( new FileSystemEventStart(adapter, DateTimeOffset.UtcNow) );
                 // Return adapter
                 return adapter;
             }
@@ -1215,6 +1228,8 @@ namespace Lexical.FileSystem.Decoration
                 // Never goes here
                 throw new NotSupportedException(nameof(Observe));
             }
+            catch (Exception) when (DisposeObserver(adapter)) { /*Never goes here*/ throw new Exception(); }
+            bool DisposeObserver(ObserverDecorator handle) { handle?.Dispose(); return false; }
         }
 
         /// <summary>

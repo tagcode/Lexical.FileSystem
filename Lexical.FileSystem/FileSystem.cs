@@ -632,7 +632,7 @@ namespace Lexical.FileSystem
                 // Create event
                 IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath);
                 // Forward error as event object.
-                ((FileSystemBase)this.FileSystem).SendEvent(@event);
+                ((FileSystemBase)this.FileSystem).DispatchEvent(@event);
             }
 
             /// <summary>
@@ -672,7 +672,7 @@ namespace Lexical.FileSystem
                 }
 
                 // Dispatch events.
-                ((FileSystemBase)this.FileSystem).SendEvents(ref events);
+                ((FileSystemBase)this.FileSystem).DispatchEvents(ref events);
             }
 
             /// <summary>
@@ -837,7 +837,7 @@ namespace Lexical.FileSystem
                 // Forward error as event object.
                 IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), null);
                 // Forward error as event object.
-                ((FileSystemBase)this.FileSystem).SendEvent(@event);
+                ((FileSystemBase)this.FileSystem).DispatchEvent(@event);
             }
 
             /// <summary>
@@ -881,7 +881,7 @@ namespace Lexical.FileSystem
                     }
                 }
                 // Dispatch events.
-                ((FileSystemBase)this.FileSystem).SendEvents(ref events);
+                ((FileSystemBase)this.FileSystem).DispatchEvents(ref events);
             }
 
             /// <summary>

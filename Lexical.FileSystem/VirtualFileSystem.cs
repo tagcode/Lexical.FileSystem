@@ -1,6 +1,6 @@
 ﻿// --------------------------------------------------------
 // Copyright:      Toni Kalajainen
-// Date:           28.9.2019
+// Date:           15.10.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using Lexical.FileSystem.Decoration;
@@ -29,7 +29,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Root node
         /// </summary>
-        Directory root;
+        Directory vfsRoot;
 
         /// <inheritdoc/>
         public FileSystemCaseSensitivity CaseSensitivity => FileSystemCaseSensitivity.Inconsistent;
@@ -67,7 +67,7 @@ namespace Lexical.FileSystem
         /// </summary>
         public VirtualFileSystem() : base()
         {
-            root = new Directory(this, null, "", DateTimeOffset.UtcNow);
+            vfsRoot = new Directory(this, null, "", DateTimeOffset.UtcNow);
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Lexical.FileSystem
             try
             {
                 // Start
-                Directory cursor = root, finalDirectory = root;
+                Directory cursor = vfsRoot, finalDirectory = vfsRoot;
                 // Path '/' splitter, enumerates name strings from root towards tail
                 PathEnumerator enumr = new PathEnumerator(path, true);
                 // Special case, root
@@ -152,7 +152,7 @@ namespace Lexical.FileSystem
                 {
                     entryArrays.Add(mountPoints[i].Browse(path));
                     entryCount += entryArrays[i].Length;
-                } catch (DirectoryNotFoundException fnf)
+                } catch (DirectoryNotFoundException)
                 {
                     // Continue
                 }
@@ -200,9 +200,9 @@ namespace Lexical.FileSystem
             try
             {
                 // Special case, root
-                if (path == "") return root.Entry;
+                if (path == "") return vfsRoot.Entry;
                 // Start
-                Directory cursor = root, finalDirectory = root;
+                Directory cursor = vfsRoot, finalDirectory = vfsRoot;
                 // Path '/' splitter, enumerates name strings from root towards tail
                 PathEnumerator enumr = new PathEnumerator(path, true);
                 // Traverse path in name parts
@@ -243,6 +243,15 @@ namespace Lexical.FileSystem
             }
         }
 
+        /* Vfs maintains a tree of virtual directory nodes. 
+         * One FileSystemDecoration can be mounted to each node, though, however, multiple IFileSystems can be assigned to on FileSystemDecoration.
+         * 
+         * ""                                                       <- vfsRoot
+         * ├──"C:"                                                  <- vfs Directory
+         * │  ├──"Users" - FileSystemDecoration(IMemoryFileSystem)  <- mounted vfs directory
+         * 
+         * 
+         */
 
         /// <summary>
         /// Virtual directory in virtual filesystem.
@@ -334,31 +343,38 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Enumerate self and subtree.
             /// </summary>
+            /// <param name="parents">visit parent nodes</param>
+            /// <param name="self">visit this node</param>
+            /// <param name="decendents">visit children and thier decendents</param>
             /// <returns></returns>
-            public IEnumerable<Directory> VisitDecedents()
+            public IEnumerable<Directory> Visit(bool parents, bool self, bool decendents)
             {
-                Queue<Directory> queue = new Queue<Directory>();
-                queue.Enqueue(this);
-                while (queue.Count > 0)
+                // Visit parents
+                if (parents)
                 {
-                    Directory n = queue.Dequeue();
-                    yield return n;
-                    foreach (Directory c in n.children.Values)
-                        queue.Enqueue(c);
+                    Directory cursor = parent;
+                    while (cursor != null)
+                    {
+                        yield return cursor;
+                        cursor = cursor.parent;
+                    }
                 }
-            }
 
-            /// <summary>
-            /// Visits parents, excluding self.
-            /// </summary>
-            /// <returns></returns>
-            public IEnumerable<Directory> VisitParents()
-            {
-                Directory cursor = parent;
-                while (cursor != null)
+                // Visit self
+                if (self) yield return this;
+
+                // Visit decedents
+                if (decendents && children.Count>0)
                 {
-                    yield return cursor;
-                    cursor = cursor.parent;
+                    Queue<Directory> queue = new Queue<Directory>();
+                    foreach(Directory child in children.Values) queue.Enqueue(child);
+                    while (queue.Count > 0)
+                    {
+                        Directory n = queue.Dequeue();
+                        yield return n;
+                        foreach (Directory c in n.children.Values)
+                            queue.Enqueue(c);
+                    }
                 }
             }
 
@@ -381,7 +397,6 @@ namespace Lexical.FileSystem
             {
                 this.isDeleted = true;
             }
-
 
             /// <summary>Flush cached entry info.</summary>
             public void FlushEntry() => entry = null;
@@ -417,12 +432,12 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Reader writer lock for modifying observer tree.
         /// </summary>
-        ReaderWriterLock observerLock = new ReaderWriterLock();
+        protected ReaderWriterLock observerLock = new ReaderWriterLock();
 
         /// <summary>
         /// Observer tree root. Read and modified only under <see cref="observerLock"/>.
         /// </summary>
-        ObserverNode observerRoot = new ObserverNode(null, "");
+        protected ObserverNode observerRoot = new ObserverNode(null, "");
 
         /// <summary>
         /// Get or create observer node.
@@ -431,12 +446,19 @@ namespace Lexical.FileSystem
         /// <param name="handleToAdd">(optional) Observer handle to add while in lock</param>
         /// <returns>observer node</returns>
         /// <exception cref="DirectoryNotFoundException">if refers beyond parent with ".."</exception>
-        ObserverNode GetOrCreateObserverNode(string observerPath, ObserverHandle handleToAdd)
+        protected ObserverNode GetOrCreateObserverNode(string observerPath, ObserverHandle handleToAdd)
         {
             // Assert arguments
             if (observerPath == null) throw new ArgumentNullException(nameof(observerPath));
             // Special case, root
-            if (observerPath == "") return observerRoot;
+            if (observerPath == "")
+            {
+                if (handleToAdd != null) {
+                    observerRoot.observers.Add(handleToAdd);
+                    handleToAdd.observerNode = observerRoot;
+                }
+                return observerRoot;
+            }
             // Start from root
             ObserverNode cursor = observerRoot;
             // Path '/' splitter, enumerates name strings from root towards tail
@@ -495,6 +517,106 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Get ObserverNode at <paramref name="path"/>.
+        /// 
+        /// If ObserverNode is found at <paramref name="path"/>, then returns true and the the node in <paramref name="result"/>,
+        /// if not then returns the closest found node in <paramref name="result"/> and false.
+        /// 
+        /// The caller should have <see cref="observerLock"/> before calling, in order to be able to use the result ObserverNode.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="result"></param>
+        /// <returns>true if observer node was found at <paramref name="path"/></returns>
+        protected bool GetObserverNode(string path, out ObserverNode result)
+        {
+            // Assert arguments
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Special case, root
+            if (path == "") { result = observerRoot; return true; }
+            // Start from root
+            ObserverNode cursor = observerRoot;
+            // Path '/' splitter, enumerates name strings from root towards tail
+            PathEnumerator enumr = new PathEnumerator(path, true);
+            // Get read lock
+            observerLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                // Traverse path in name parts
+                while (enumr.MoveNext())
+                {
+                    // Name
+                    StringSegment name = enumr.Current;
+                    // "."
+                    if (name.Equals(StringSegment.Dot)) continue;
+                    // ".."
+                    if (name.Equals(StringSegment.DotDot))
+                    {
+                        if (cursor.parent == null) { result = cursor; return false; }
+                        cursor = cursor.parent;
+                        continue;
+                    }
+                    // Failed to find child entry
+                    ObserverNode child;
+                    if (cursor.children.TryGetValue(name, out child))
+                    {
+                        cursor = child;
+                    }
+                    else
+                    {
+                        result = cursor; return false;
+                    }
+                }
+                // Return node at cursor
+                result = cursor;
+                return true;
+            }
+            finally
+            {
+                // Release read lock
+                observerLock.ReleaseReaderLock();
+            }
+        }
+
+        /// <summary>
+        /// Get observer handles.
+        /// 
+        /// If <paramref name="atThis"/> is true, then return observers at <paramref name="path"/>.
+        /// If <paramref name="atParents"/> is true, then observers before <paramref name="path"/>,
+        /// and if <paramref name="atDecendents"/> is true, then observers after <paramref name="path"/>.
+        /// </summary>
+        /// <param name="path">Path to search from</param>
+        /// <param name="atParents">If true, then add handles that are parent to <paramref name="path"/></param>
+        /// <param name="atThis">If true, then add handles at <paramref name="path"/></param>
+        /// <param name="atDecendents">If true, then add handles that are decendents at <paramref name="path"/></param>
+        /// <param name="observers">Record to place results</param>
+        protected void GetObserverHandles(string path, bool atParents, bool atThis, bool atDecendents, ref StructList12<ObserverHandle> observers)
+        {
+            // Create list of intersecting observers
+            observerLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                // Get observer node
+                ObserverNode observerNode;
+                bool foundAtPath = GetObserverNode(path, out observerNode);
+
+                // Add at observerNode
+                if ((foundAtPath && atThis) || (!foundAtPath && atParents)) foreach (ObserverHandle h in observerNode.observers) observers.Add(h);
+
+                if (atParents)
+                    foreach (ObserverNode n in observerNode.Visit(true, false, false))
+                        foreach (ObserverHandle h in observerNode.observers) observers.Add(h);
+
+                if (foundAtPath && atDecendents)
+                    foreach (ObserverNode n in observerNode.Visit(false, false, true))
+                        foreach (ObserverHandle h in observerNode.observers) observers.Add(h);
+            }
+            finally
+            {
+                observerLock.ReleaseReaderLock();
+            }
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="filter"></param>
@@ -516,7 +638,9 @@ namespace Lexical.FileSystem
             // Create handle
             ObserverHandle adapter = new ObserverHandle(this, null /*set below*/, this, filter, observer, state);
             // Add to observer tree
-            ObserverNode node = GetOrCreateObserverNode(info.Stem, adapter);
+            GetOrCreateObserverNode(info.Stem, adapter);
+            // Send IFileSystemEventStart, must be sent before subscribing forwarders
+            observer.OnNext(new FileSystemEventStart(adapter, DateTimeOffset.UtcNow));
 
             try
             {
@@ -526,11 +650,12 @@ namespace Lexical.FileSystem
                 try
                 {
                     // Start
-                    Directory cursor = root, finalCursor = root;
+                    Directory cursor = vfsRoot, finalCursor = vfsRoot;
                     // Path '/' splitter, enumerates name strings from root towards tail
                     PathEnumerator enumr = new PathEnumerator(info.Stem, true);
                     // Traverse path in name parts
-                    if (info.Stem != "") while (enumr.MoveNext())
+                    if (info.Stem != "") 
+                        while (enumr.MoveNext())
                         {
                             // Name
                             StringSegment name = enumr.Current;
@@ -549,8 +674,8 @@ namespace Lexical.FileSystem
                             finalCursor = cursor;
                         }
 
-                    // Test if any mount in child tree intersects with filter
-                    foreach (Directory d in finalCursor.VisitDecedents().Concat(finalCursor.VisitParents()))
+                    // Test if any existing mount in vfs tree intersects with observer's filter
+                    foreach (Directory d in finalCursor.Visit(true, true, true))
                     {
                         // No mounts
                         if (d.mount == null) continue;
@@ -559,7 +684,7 @@ namespace Lexical.FileSystem
                         // No components
                         if (components.Length == 0) continue;
                         // Test if filter intersects with the mount
-                        string intersection = finalCursor.IsParentOf(d) ? GlobPatternSet.Intersection(d.Path + "**", filter) : filter;
+                        string intersection = GlobPatternSet.Intersection(d.Path + "**", filter);
                         // No intersection
                         if (intersection == null) continue;
 
@@ -583,8 +708,6 @@ namespace Lexical.FileSystem
                         }
                     }
 
-                    // Send IFileSystemEventStart
-                    observer.OnNext(new FileSystemEventStart(adapter, DateTimeOffset.UtcNow));
                     // Return
                     return adapter;
                 }
@@ -600,16 +723,9 @@ namespace Lexical.FileSystem
                 throw new NotSupportedException(nameof(Observe));
             }
             catch (Exception) when (DisposeObserver(adapter)) { /*Never goes here*/ throw new Exception(); }
-            finally
-            {
-            }
+            bool DisposeObserver(ObserverHandle handle) { handle?.Dispose(); return false; }
         }
 
-        static bool DisposeObserver(ObserverHandle handle)
-        {
-            handle?.Dispose();
-            return false;
-        }
 
         /// <summary>
         /// Observer
@@ -669,18 +785,14 @@ namespace Lexical.FileSystem
                     _vfs.observerLock.AcquireWriterLock(int.MaxValue);
                     try
                     {
-
                         ObserverNode cursor = _observerNode;
                         // Disconnect from parent, if no children
                         while (cursor != null && cursor.children.Count == 0 && cursor.parent != null)
                         {
-                            var _cursor = cursor;
                             // Disconnect from parent
                             cursor.parent.children.Remove(cursor.name);
                             // Move towards parent
                             cursor = cursor.parent;
-                            // Remove parent reference
-                            _cursor.parent = null;
                         }
                     } finally
                     {
@@ -688,23 +800,24 @@ namespace Lexical.FileSystem
                     }
                     vfs = null;
                 }
-
             }
 
             /// <summary>Print info</summary>
             public override string ToString() => $"VirtualFileSystem.Observer({Filter})";
         }
 
-
         /// <summary>
-        /// Node for observers. Node represents a path structure of the glob pattern.
-        /// Observer is placed on a node that represents the the stem part of <see cref="GlobPatternInfo"/>.
-        /// Root node represents "" stem.
+        /// Observer tree node. Node represents all the observers placed in a path. Path represents the stem part of <see cref="GlobPatternInfo"/>.
+        /// Root node represents "" path. 
         /// 
-        /// Observer tree is read and modified only under <see cref="observerLock"/>.
+        /// Observers can be placed before mounting, or after mounting. 
+        /// 
+        /// Observer tree is read and modified under <see cref="observerLock"/>.
         /// </summary>
         protected internal class ObserverNode
         {
+            /// <summary>Cached path.</summary>
+            protected internal string path;
             /// <summary>Name of the node.</summary>
             protected internal string name;
             /// <summary>Parent node</summary>
@@ -713,7 +826,23 @@ namespace Lexical.FileSystem
             protected internal Dictionary<StringSegment, ObserverNode> children = new Dictionary<StringSegment, ObserverNode>();
             /// <summary>Observers that are on this node.</summary>
             protected internal CopyOnWriteList<ObserverHandle> observers = new CopyOnWriteList<ObserverHandle>();
-
+            /// <summary>Path</summary>
+            public string Path
+            {
+                get
+                {
+                    // Get reference of previous cached value
+                    string _path = path;
+                    // Return previous cached value
+                    if (_path != null) return _path;
+                    // Get reference of parent
+                    ObserverNode _parent = parent;
+                    // Case for root
+                    if (_parent == null) return path = "";
+                    // k2nd+ level paths
+                    return _parent.Path + name + "/";
+                }
+            }
             /// <summary>
             /// Crate observer node.
             /// </summary>
@@ -723,6 +852,44 @@ namespace Lexical.FileSystem
             {
                 this.parent = parent;
                 this.name = name;
+            }
+
+            /// <summary>
+            /// Enumerate self and subtree.
+            /// </summary>
+            /// <param name="parents">visit parent nodes</param>
+            /// <param name="self">visit this node</param>
+            /// <param name="decendents">visit children and thier decendents</param>
+            /// <returns></returns>
+            public IEnumerable<ObserverNode> Visit(bool parents, bool self, bool decendents)
+            {
+                // Visit parents
+                if (parents)
+                {
+                    ObserverNode cursor = parent;
+                    while (cursor != null)
+                    {
+                        yield return cursor;
+                        cursor = cursor.parent;
+                    }
+                }
+
+                // Visit self
+                if (self) yield return this;
+
+                // Visit decedents
+                if (decendents && children.Count > 0)
+                {
+                    Queue<ObserverNode> queue = new Queue<ObserverNode>();
+                    foreach (ObserverNode child in children.Values) queue.Enqueue(child);
+                    while (queue.Count > 0)
+                    {
+                        ObserverNode n = queue.Dequeue();
+                        yield return n;
+                        foreach (ObserverNode c in n.children.Values)
+                            queue.Enqueue(c);
+                    }
+                }
             }
         }
 
@@ -759,17 +926,19 @@ namespace Lexical.FileSystem
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            // Queue of events
-            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            // vfs directories created, for events
+            StructList4<string> vfsDirectoriesCreated = new StructList4<string>();
             // Take snapshot of observers
-            ObserverHandle[] observers = new ObserverHandle[0]; // <- TODO UPdate to new observer tree
+            StructList2<FileSystemDecoration.Component> componentsAdded = new StructList2<FileSystemDecoration.Component>();
+            StructList2<FileSystemDecoration.Component> componentsRemoved = new StructList2<FileSystemDecoration.Component>();
+            StructList2<FileSystemDecoration.Component> componentsReused = new StructList2<FileSystemDecoration.Component>();
 
             // Write Lock
             vfsLock.AcquireWriterLock(int.MaxValue);
             try
             {
                 // Follow path and get-or-create nodes
-                Directory cursor = root;
+                Directory cursor = vfsRoot;
                 // Split path at '/' slashes
                 PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
                 // Follow names
@@ -797,12 +966,8 @@ namespace Lexical.FileSystem
                         {
                             // Create child directory
                             Directory newDirectory = new Directory(this, cursor, name, now);
-                            // Add event about child being created
-                            if (observers != null /*&& GetEntry not yet implemented !this.Exists(path)*/)
-                                foreach (ObserverHandle observer in observers)
-                                {
-                                    if (observer.Qualify(newDirectory.Path)) events.Add(new FileSystemEventCreate(observer, now, newDirectory.Path));
-                                }
+                            // Add up for events later
+                            vfsDirectoriesCreated.Add(newDirectory.Path);
                             // Update time of parent
                             cursor.lastModified = now;
                             // Add child to parent
@@ -819,31 +984,98 @@ namespace Lexical.FileSystem
                         }
                     }
 
-                // New mount
-                if (cursor.mount == null)
-                {
-                    // Create decoration filesystem (or null)
-                    cursor.mount =
-                        filesystems == null || filesystems.Length == 0 ? new FileSystemDecoration(filesystem: null, option: null) :
-                        filesystems.Length == 1 ? new FileSystemDecoration(this, path, filesystems[0].filesystem, filesystems[0].mountOption) :
-                        new FileSystemDecoration(this, filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
-
-                    // TODO Events
-                }
-                else
-                // Replace mount
-                {
-                    cursor.mount.SetComponents(filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
-                    // TODO Events
-                }
+                // Create container for components.
+                if (cursor.mount == null) cursor.mount = new FileSystemDecoration(this, new (string, IFileSystem, IFileSystemOption)[0]);
+                // Set components
+                cursor.mount.SetComponents(ref componentsAdded, ref componentsRemoved, ref componentsReused, filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
             }
             finally
             {
                 vfsLock.ReleaseWriterLock();
             }
 
-            // Send events
-            if (events.Count > 0) SendEvents(ref events);
+            // Process events
+            if (vfsDirectoriesCreated.Count > 0 || componentsAdded.Count > 0 || componentsRemoved.Count > 0)
+            {
+                // Datetime
+                now = DateTimeOffset.UtcNow;
+                StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+                StructList12<ObserverHandle> observers = new StructList12<ObserverHandle>();
+
+                // VFS Directory create events
+                if (vfsDirectoriesCreated.Count > 0)
+                {
+                    GetObserverHandles(path, true, true, false, ref observers);
+
+                    // Find cross-section of added dirs and interested nodes
+                    for (int i = 0; i < vfsDirectoriesCreated.Count; i++)
+                    {
+                        string newVfsPath = vfsDirectoriesCreated[i];
+                        for (int j = 0; j < observers.Count; j++)
+                        {
+                            // Qualify
+                            if (!observers[j].Qualify(newVfsPath)) continue;
+                            // Create event
+                            IFileSystemEvent e = new FileSystemEventCreate(observers[j], now, newVfsPath);
+                            // Add to be dispatched
+                            events.Add(e);
+                        }
+                    }
+
+                    observers.Clear();
+                }
+
+                if (componentsAdded.Count>0 || componentsRemoved.Count > 0)
+                {
+                    GetObserverHandles(path, true, true, true, ref observers);
+                    for (int i=0; i<observers.Count; i++)
+                    {
+                        ObserverHandle observer = observers[i];
+
+                        // Added filesystems
+                        for (int j=0; j<componentsAdded.Count; j++)
+                        {
+                            FileSystemDecoration.Component c = componentsAdded[j];
+
+                            string intersection = GlobPatternSet.Intersection(observer.Filter, c.Path.ParentPath + "**");
+                            if (intersection == null) continue;
+
+                            string childFilter;
+                            if (!c.Path.ParentToChild(intersection, out childFilter)) continue;
+
+                            foreach (var entry in new FileScanner(c.FileSystem).AddGlobPattern(childFilter))
+                            {
+                                string parentPath;
+                                if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
+                                IFileSystemEvent e = new FileSystemEventCreate(observer, now, parentPath);
+                                events.Add(e);
+                            }
+                        }
+
+                        // Removed filesystems
+                        for (int j = 0; j < componentsRemoved.Count; j++)
+                        {
+                            FileSystemDecoration.Component c = componentsRemoved[j];
+                            string intersection = GlobPatternSet.Intersection(observer.Filter, c.Path.ParentPath + "**");
+                            if (intersection == null) continue;
+
+                            string childFilter;
+                            if (!c.Path.ParentToChild(intersection, out childFilter)) continue;
+
+                            foreach (var entry in new FileScanner(c.FileSystem).AddGlobPattern(childFilter))
+                            {
+                                string parentPath;
+                                if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
+                                IFileSystemEvent e = new FileSystemEventDelete(observer, now, parentPath);
+                                events.Add(e);
+                            }
+                        }
+                    }
+                }
+
+                // Dispatch events
+                if (events.Count > 0) DispatchEvents(ref events);
+            }
 
             return this;
         }
@@ -860,9 +1092,7 @@ namespace Lexical.FileSystem
             vfsLock.AcquireReaderLock(int.MaxValue);
             try
             {
-                List<IFileSystemEntryMount> result = new List<IFileSystemEntryMount>();
-                foreach (Directory node in root.VisitDecedents()) result.Add(node.Entry);
-                return result.ToArray();
+                return vfsRoot.Visit(false, true, true).Select(n => n.Entry).ToArray();
             }
             finally
             {
@@ -897,7 +1127,7 @@ namespace Lexical.FileSystem
             try
             {
                 // Follow path and get-or-create nodes
-                Directory cursor = root;
+                Directory cursor = vfsRoot;
                 // Split path at '/' slashes
                 PathEnumerator enumr = new PathEnumerator(path, ignoreTrailingSlash: true);
                 if (path != "") while (enumr.MoveNext())
@@ -944,7 +1174,7 @@ namespace Lexical.FileSystem
             }
 
             // Send events
-            if (events.Count > 0) SendEvents(ref events);
+            if (events.Count > 0) DispatchEvents(ref events);
 
             return this;
         }
@@ -962,10 +1192,10 @@ namespace Lexical.FileSystem
             vfsLock.AcquireWriterLock(int.MaxValue);
             try
             {
-                foreach (var e in root.VisitDecedents())
+                foreach (var e in vfsRoot.Visit(false, true, true))
                     if (e.mount != null)
                         decorations.Add(e.mount);
-                root.children.Clear();
+                vfsRoot.children.Clear();
             }
             finally
             {

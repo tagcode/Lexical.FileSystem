@@ -398,7 +398,7 @@ namespace Lexical.FileSystem.Decoration
                 previousEntry = currentEntry;
 
                 // Send event
-                if (_event != null) ((FileSystemBase)this.FileSystem).SendEvent(_event);
+                if (_event != null) ((FileSystemBase)this.FileSystem).DispatchEvent(_event);
 
                 // Start watching again
                 if (!IsDisposing) this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
@@ -540,7 +540,7 @@ namespace Lexical.FileSystem.Decoration
                 previousSnapshot = newSnapshot;
 
                 // Dispatch events
-                if (events.Count > 0) ((FileSystemBase)this.FileSystem).SendEvents(ref events);
+                if (events.Count > 0) ((FileSystemBase)this.FileSystem).DispatchEvents(ref events);
 
                 // Start watching again
                 if (!IsDisposing) this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
