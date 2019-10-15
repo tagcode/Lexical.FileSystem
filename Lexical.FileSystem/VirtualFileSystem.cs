@@ -641,7 +641,7 @@ namespace Lexical.FileSystem
             ObserverHandle adapter = new ObserverHandle(this, null /*set below*/, this, filter, observer, state);
             // Add to observer tree
             GetOrCreateObserverNode(info.Stem, adapter);
-            // Send IFileSystemEventStart, must be sent before subscribing forwarders
+            // Send IFileSystemEventStart, must be sent before subscribing forwardees
             observer.OnNext(new FileSystemEventStart(adapter, DateTimeOffset.UtcNow));
 
             try
@@ -724,6 +724,7 @@ namespace Lexical.FileSystem
                 // Never goes here
                 throw new NotSupportedException(nameof(Observe));
             }
+            // Dispose handle if something goes wrong, but let exception fly
             catch (Exception) when (DisposeObserver(adapter)) { /*Never goes here*/ throw new Exception(); }
             bool DisposeObserver(ObserverHandle handle) { handle?.Dispose(); return false; }
         }

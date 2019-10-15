@@ -1197,7 +1197,7 @@ namespace Lexical.FileSystem.Decoration
             ObserverDecorator adapter = new ObserverDecorator(this, filter, observer, state, true);
             try
             {
-                // Send IFileSystemEventStart, must be sent before subscribing forwarders
+                // Send IFileSystemEventStart, must be sent before subscribing forwardees
                 observer.OnNext(new FileSystemEventStart(adapter, DateTimeOffset.UtcNow));
 
                 // Observe each component
