@@ -19,7 +19,7 @@ namespace Lexical.FileSystem.Decoration
     ///     <item><see cref="FileSystemEventDecorationError"/></item>
     /// </list>
     /// </summary>
-    public abstract class FileSystemEventDecoration : IFileSystemEventDecoration
+    public class FileSystemEventDecoration : IFileSystemEventDecoration
     {
         /// <summary>
         /// Decorate <paramref name="event"/> with <paramref name="newObserver"/>.
@@ -28,7 +28,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="newObserver">overriding observer</param>
         /// <param name="throwIfUnknown">
         ///     If true, throws exception if <paramref name="event"/> is not recognized. 
-        ///     If false, returns <paramref name="event"/> as-is undecorated.
+        ///     If false, returns <see cref="FileSystemEventDecoration"/> that has reference to undecorated event, but does not pass the interfaces from the source.
         /// </param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If the interface of <paramref name="event"/> is not supported.</exception>
@@ -44,7 +44,7 @@ namespace Lexical.FileSystem.Decoration
                 case IFileSystemEventError  ee: return new FileSystemEventDecorationError.NewObserver(@event, newObserver);
                 default:
                     if (throwIfUnknown) throw new NotSupportedException(@event.GetType().FullName);
-                    else return @event;
+                    else return new FileSystemEventDecoration.NewObserver(@event, newObserver);
             }
         }
 
@@ -57,7 +57,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="newNewPath">overriding NewPath for <see cref="IFileSystemEventRename"/> events</param>
         /// <param name="throwIfUnknown">
         ///     If true, throws exception if <paramref name="event"/> is not recognized. 
-        ///     If false, returns <paramref name="event"/> as-is undecorated.
+        ///     If false, returns <see cref="FileSystemEventDecoration"/> that has reference to undecorated event, but does not pass the interfaces from the source.
         /// </param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If the interface of <paramref name="event"/> is not supported.</exception>
@@ -73,7 +73,7 @@ namespace Lexical.FileSystem.Decoration
                 case IFileSystemEventError ee: return new FileSystemEventDecorationError.NewObserverAndPath(@event, newObserver, newPath);
                 default:
                     if (throwIfUnknown) throw new NotSupportedException(@event.GetType().FullName);
-                    else return @event;
+                    else return new FileSystemEventDecoration.NewObserverAndPath(@event, newObserver, newPath);
             }
         }
 
@@ -101,7 +101,7 @@ namespace Lexical.FileSystem.Decoration
         /// Create event.
         /// </summary>
         /// <param name="original">original event to be decorated</param>
-        protected FileSystemEventDecoration(IFileSystemEvent original)
+        public FileSystemEventDecoration(IFileSystemEvent original)
         {
             this.Original = original ?? throw new ArgumentNullException(nameof(original));
         }

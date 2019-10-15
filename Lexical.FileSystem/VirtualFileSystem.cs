@@ -454,8 +454,10 @@ namespace Lexical.FileSystem
             if (observerPath == "")
             {
                 if (handleToAdd != null) {
+                    LockCookie writeLock_ = observerLock.UpgradeToWriterLock(int.MaxValue);
                     observerRoot.observers.Add(handleToAdd);
                     handleToAdd.observerNode = observerRoot;
+                    observerLock.DowngradeFromWriterLock(ref writeLock_);
                 }
                 return observerRoot;
             }
@@ -604,11 +606,11 @@ namespace Lexical.FileSystem
 
                 if (atParents)
                     foreach (ObserverNode n in observerNode.Visit(true, false, false))
-                        foreach (ObserverHandle h in observerNode.observers) observers.Add(h);
+                        foreach (ObserverHandle h in n.observers) observers.Add(h);
 
                 if (foundAtPath && atDecendents)
                     foreach (ObserverNode n in observerNode.Visit(false, false, true))
-                        foreach (ObserverHandle h in observerNode.observers) observers.Add(h);
+                        foreach (ObserverHandle h in n.observers) observers.Add(h);
             }
             finally
             {
@@ -928,6 +930,7 @@ namespace Lexical.FileSystem
             DateTimeOffset now = DateTimeOffset.UtcNow;
             // vfs directories created, for events
             StructList4<string> vfsDirectoriesCreated = new StructList4<string>();
+            StructList4<string> vfsDirectoriesRemoved = new StructList4<string>();
             // Take snapshot of observers
             StructList2<FileSystemDecoration.Component> componentsAdded = new StructList2<FileSystemDecoration.Component>();
             StructList2<FileSystemDecoration.Component> componentsRemoved = new StructList2<FileSystemDecoration.Component>();
@@ -995,109 +998,9 @@ namespace Lexical.FileSystem
             }
 
             // Process events
-            if (vfsDirectoriesCreated.Count > 0 || componentsAdded.Count > 0 || componentsRemoved.Count > 0)
-            {
-                // Datetime
-                now = DateTimeOffset.UtcNow;
-                StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
-                StructList12<ObserverHandle> observers = new StructList12<ObserverHandle>();
-
-                // VFS Directory create events
-                if (vfsDirectoriesCreated.Count > 0)
-                {
-                    GetObserverHandles(path, true, true, false, ref observers);
-
-                    // Find cross-section of added dirs and interested nodes
-                    for (int i = 0; i < vfsDirectoriesCreated.Count; i++)
-                    {
-                        string newVfsPath = vfsDirectoriesCreated[i];
-                        for (int j = 0; j < observers.Count; j++)
-                        {
-                            // Qualify
-                            if (!observers[j].Qualify(newVfsPath)) continue;
-                            // Create event
-                            IFileSystemEvent e = new FileSystemEventCreate(observers[j], now, newVfsPath);
-                            // Add to be dispatched
-                            events.Add(e);
-                        }
-                    }
-
-                    observers.Clear();
-                }
-
-                if (componentsAdded.Count>0 || componentsRemoved.Count > 0)
-                {
-                    GetObserverHandles(path, true, true, true, ref observers);
-                    for (int i=0; i<observers.Count; i++)
-                    {
-                        ObserverHandle observer = observers[i];
-
-                        // Added filesystems
-                        for (int j=0; j<componentsAdded.Count; j++)
-                        {
-                            FileSystemDecoration.Component c = componentsAdded[j];
-
-                            string intersection = GlobPatternSet.Intersection(observer.Filter, c.Path.ParentPath + "**");
-                            if (intersection == null) continue;
-
-                            string childFilter;
-                            if (!c.Path.ParentToChild(intersection, out childFilter)) continue;
-
-                            foreach (var entry in new FileScanner(c.FileSystem).AddGlobPattern(childFilter))
-                            {
-                                string parentPath;
-                                if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
-                                IFileSystemEvent e = new FileSystemEventCreate(observer, now, parentPath);
-                                events.Add(e);
-                            }
-                        }
-
-                        // Removed filesystems
-                        for (int j = 0; j < componentsRemoved.Count; j++)
-                        {
-                            FileSystemDecoration.Component c = componentsRemoved[j];
-                            string intersection = GlobPatternSet.Intersection(observer.Filter, c.Path.ParentPath + "**");
-                            if (intersection == null) continue;
-
-                            string childFilter;
-                            if (!c.Path.ParentToChild(intersection, out childFilter)) continue;
-
-                            foreach (var entry in new FileScanner(c.FileSystem).AddGlobPattern(childFilter))
-                            {
-                                string parentPath;
-                                if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
-                                IFileSystemEvent e = new FileSystemEventDelete(observer, now, parentPath);
-                                events.Add(e);
-                            }
-                        }
-                    }
-                }
-
-                // Dispatch events
-                if (events.Count > 0) DispatchEvents(ref events);
-            }
+            ProcessMountEvents(path, ref vfsDirectoriesCreated, ref vfsDirectoriesRemoved, ref componentsAdded, ref componentsRemoved);
 
             return this;
-        }
-
-        /// <summary>
-        /// List all mounts
-        /// </summary>
-        /// <returns></returns>
-        public IFileSystemEntryMount[] ListMounts()
-        {
-            // Assert not disposed
-            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
-            // Lock
-            vfsLock.AcquireReaderLock(int.MaxValue);
-            try
-            {
-                return vfsRoot.Visit(false, true, true).Select(n => n.Entry).ToArray();
-            }
-            finally
-            {
-                vfsLock.ReleaseReaderLock();
-            }
         }
 
         /// <summary>
@@ -1117,10 +1020,13 @@ namespace Lexical.FileSystem
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            // Queue of events
-            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            // vfs directories created, for events
+            StructList4<string> vfsDirectoriesCreated = new StructList4<string>();
+            StructList4<string> vfsDirectoriesRemoved = new StructList4<string>();
             // Take snapshot of observers
-            ObserverHandle[] observers = new ObserverHandle[0]; // <- TODO UPdate to new observer tree
+            StructList2<FileSystemDecoration.Component> componentsAdded = new StructList2<FileSystemDecoration.Component>();
+            StructList2<FileSystemDecoration.Component> componentsRemoved = new StructList2<FileSystemDecoration.Component>();
+            StructList2<FileSystemDecoration.Component> componentsReused = new StructList2<FileSystemDecoration.Component>();
 
             // Write Lock
             vfsLock.AcquireWriterLock(int.MaxValue);
@@ -1152,35 +1058,173 @@ namespace Lexical.FileSystem
                         if (!cursor.children.TryGetValue(name, out cursor)) throw new DirectoryNotFoundException(path.Substring(0, name.Length));
                     }
 
+                // Remove components
+                if (cursor.mount != null) cursor.mount.SetComponents(ref componentsAdded, ref componentsRemoved, ref componentsReused);
+
                 // Disconnect from parent, if no children
                 while (cursor != null && cursor.children.Count == 0 && cursor.parent != null)
                 {
+                    // Mark for events
+                    vfsDirectoriesRemoved.Add(cursor.Path);
                     // Remove from parent
                     cursor.parent.children.Remove(new StringSegment(cursor.name));
                     cursor.parent.lastModified = now;
                     // Dispose decoration
                     cursor.mount?.Dispose();
-
-                    // TODO events
-
                     // Move towards parent
                     cursor = cursor.parent;
                 }
-
             }
             finally
             {
                 vfsLock.ReleaseWriterLock();
             }
 
-            // Send events
-            if (events.Count > 0) DispatchEvents(ref events);
+            // Process events
+            ProcessMountEvents(path, ref vfsDirectoriesCreated, ref vfsDirectoriesRemoved, ref componentsAdded, ref componentsRemoved);
 
             return this;
         }
 
+        /// <summary>
+        /// Helper function for Mount and Unmount, processes changes to events, and dispatches them.
+        /// </summary>
+        /// <param name="path">Mount path</param>
+        /// <param name="vfsDirectoriesCreated"></param>
+        /// <param name="vfsDirectoriesRemoved"></param>
+        /// <param name="componentsAdded"></param>
+        /// <param name="componentsRemoved"></param>
+        protected internal void ProcessMountEvents(string path, ref StructList4<string> vfsDirectoriesCreated, ref StructList4<string> vfsDirectoriesRemoved, ref StructList2<FileSystemDecoration.Component> componentsAdded, ref StructList2<FileSystemDecoration.Component> componentsRemoved)
+        {
+            // Nothing to do
+            if (vfsDirectoriesCreated.Count == 0 && vfsDirectoriesRemoved.Count == 0 && componentsAdded.Count == 0 && componentsRemoved.Count == 0) return;
+            // Datetime
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            // Gather events here
+            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            // Gather observers here
+            StructList12<ObserverHandle> observers = new StructList12<ObserverHandle>();
+
+            // Vfs Directory create events
+            if (vfsDirectoriesCreated.Count > 0)
+            {
+                GetObserverHandles(path, true, true, false, ref observers);
+
+                // Find cross-section of added dirs and interested nodes
+                for (int i = 0; i < vfsDirectoriesCreated.Count; i++)
+                {
+                    string newVfsPath = vfsDirectoriesCreated[i];
+                    for (int j = 0; j < observers.Count; j++)
+                    {
+                        // Qualify
+                        if (!observers[j].Qualify(newVfsPath)) continue;
+                        // Create event
+                        IFileSystemEvent e = new FileSystemEventCreate(observers[j], now, newVfsPath);
+                        // Add to be dispatched
+                        events.Add(e);
+                    }
+                }
+                observers.Clear();
+            }
+
+            // VFS Directory create events
+            if (vfsDirectoriesRemoved.Count > 0)
+            {
+                GetObserverHandles(path, true, true, false, ref observers);
+
+                // Find cross-section of added dirs and interested nodes
+                for (int i = 0; i < vfsDirectoriesRemoved.Count; i++)
+                {
+                    string newVfsPath = vfsDirectoriesRemoved[i];
+                    for (int j = 0; j < observers.Count; j++)
+                    {
+                        // Qualify
+                        if (!observers[j].Qualify(newVfsPath)) continue;
+                        // Create event
+                        IFileSystemEvent e = new FileSystemEventDelete(observers[j], now, newVfsPath);
+                        // Add to be dispatched
+                        events.Add(e);
+                    }
+                }
+                observers.Clear();
+            }
+
+            // Process added and removed filesystems
+            if (componentsAdded.Count > 0 || componentsRemoved.Count > 0)
+            {
+                GetObserverHandles(path, true, true, true, ref observers);
+                for (int i = 0; i < observers.Count; i++)
+                {
+                    ObserverHandle observer = observers[i];
+
+                    // Added filesystems
+                    for (int j = 0; j < componentsAdded.Count; j++)
+                    {
+                        FileSystemDecoration.Component c = componentsAdded[j];
+
+                        string intersection = GlobPatternSet.Intersection(observer.Filter, c.Path.ParentPath + "**");
+                        if (intersection == null) continue;
+
+                        string childFilter;
+                        if (!c.Path.ParentToChild(intersection, out childFilter)) continue;
+
+                        foreach (var entry in new FileScanner(c.FileSystem).AddGlobPattern(childFilter))
+                        {
+                            string parentPath;
+                            if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
+                            IFileSystemEvent e = new FileSystemEventCreate(observer, now, parentPath);
+                            events.Add(e);
+                        }
+                    }
+
+                    // Removed filesystems
+                    for (int j = 0; j < componentsRemoved.Count; j++)
+                    {
+                        FileSystemDecoration.Component c = componentsRemoved[j];
+                        string intersection = GlobPatternSet.Intersection(observer.Filter, c.Path.ParentPath + "**");
+                        if (intersection == null) continue;
+
+                        string childFilter;
+                        if (!c.Path.ParentToChild(intersection, out childFilter)) continue;
+
+                        foreach (var entry in new FileScanner(c.FileSystem).AddGlobPattern(childFilter))
+                        {
+                            string parentPath;
+                            if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
+                            IFileSystemEvent e = new FileSystemEventDelete(observer, now, parentPath);
+                            events.Add(e);
+                        }
+                    }
+                }
+            }
+
+            // Dispatch events
+            if (events.Count > 0) DispatchEvents(ref events);
+        }
+
         IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption) => Mount(path, (filesystem, mountOption));
         IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
+
+        /// <summary>
+        /// List all mounts
+        /// </summary>
+        /// <returns></returns>
+        public IFileSystemEntryMount[] ListMounts()
+        {
+            // Assert not disposed
+            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+            // Lock
+            vfsLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                return vfsRoot.Visit(false, true, true).Select(n => n.Entry).ToArray();
+            }
+            finally
+            {
+                vfsLock.ReleaseReaderLock();
+            }
+        }
+
 
         /// <summary>
         /// Handle dispose

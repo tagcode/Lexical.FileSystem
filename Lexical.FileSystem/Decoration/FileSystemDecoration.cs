@@ -177,7 +177,7 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>FileSystem (as component of composition) specific information</summary>
-        protected internal class Component
+        public class Component
         {
             /// <summary>FileSystem component</summary>
             public IFileSystem FileSystem;
@@ -1341,7 +1341,7 @@ namespace Lexical.FileSystem.Decoration
             => GetType().Name + "(" + String.Join<IFileSystem>(", ", Decorees) + ")";
 
         /// <summary>Flattened options for (slight) performance gain.</summary>
-        protected internal class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionMountPath
+        public class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionMountPath
         {
             // TODO Implement Hash-Equals //
             // TODO Implement Union & Intersection //

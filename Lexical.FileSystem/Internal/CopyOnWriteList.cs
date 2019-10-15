@@ -261,5 +261,8 @@ namespace Lexical.FileSystem.Internal
         /// <returns>enumerator</returns>
         public IEnumerator<T> GetEnumerator()
             => ((IEnumerable<T>)Array).GetEnumerator();
+
+        /// <summary>Print info</summary>
+        public override string ToString() => $"CopyOnWriteList(Count={Count})";
     }
 }

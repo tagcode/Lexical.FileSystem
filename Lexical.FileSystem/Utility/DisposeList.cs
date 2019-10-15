@@ -174,9 +174,9 @@ namespace Lexical.FileSystem.Utility
         protected virtual void ProcessDispose()
         {
             // Set state IsDisposing=2, but let only one thread continue.
-            bool thisThreadChangedStateToIsDispose = (Interlocked.CompareExchange(ref disposing, 2L, 0L) == 0L) || (Interlocked.CompareExchange(ref disposing, 2L, 1L) == 1L);
+            bool thisThreadChangedStateToDispose = (Interlocked.CompareExchange(ref disposing, 2L, 0L) == 0L) || (Interlocked.CompareExchange(ref disposing, 2L, 1L) == 1L);
             // Not for this thread.
-            if (!thisThreadChangedStateToIsDispose) return;
+            if (!thisThreadChangedStateToDispose) return;
 
             // Extract snapshot, clear array
             StructList2<IDisposable> toDispose = default;
