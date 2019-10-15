@@ -292,7 +292,7 @@ namespace Lexical.FileSystem.Decoration
                 // Create observer that watches one file
                 FileObserver handle = new FileObserver(this, filter, observer, state);
                 // Send handle
-                observer.OnNext(handle);
+                observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle
                 return handle;
             }
@@ -302,7 +302,7 @@ namespace Lexical.FileSystem.Decoration
                 // Create handle
                 PatternObserver handle = new PatternObserver(this, patternInfo, observer, state);
                 // Send handle
-                observer.OnNext(handle);
+                observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle
                 return handle;
             }
@@ -311,7 +311,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Single file observer.
         /// </summary>
-        public class FileObserver : FileSystemObserverHandleBase, IFileSystemEventStart
+        public class FileObserver : FileSystemObserverHandleBase
         {
             /// <summary>
             /// Filesystem
@@ -425,10 +425,6 @@ namespace Lexical.FileSystem.Decoration
                     }
                 }
             }
-
-            IFileSystemObserver IFileSystemEvent.Observer => this;
-            DateTimeOffset IFileSystemEvent.EventTime => startTime;
-            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>
@@ -438,7 +434,7 @@ namespace Lexical.FileSystem.Decoration
         /// this observer implementation reads a whole snapshot of the whole file provider, in 
         /// order to determine the changes.
         /// </summary>
-        public class PatternObserver : FileSystemObserverHandleBase, IFileSystemEventStart
+        public class PatternObserver : FileSystemObserverHandleBase
         {
             /// <summary>
             /// Filesystem
@@ -571,10 +567,6 @@ namespace Lexical.FileSystem.Decoration
                     }
                 }
             }
-
-            IFileSystemObserver IFileSystemEvent.Observer => this;
-            DateTimeOffset IFileSystemEvent.EventTime => startTime;
-            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>

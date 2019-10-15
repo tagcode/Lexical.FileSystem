@@ -538,7 +538,7 @@ namespace Lexical.FileSystem
                 // Create observer object
                 FileObserver handle = new FileObserver(this, path, observer, state, AbsolutePath, absolutePath);
                 // Send IFileSystemEventStart
-                observer.OnNext(handle);
+                observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow) );
                 // Return handle
                 return handle;
             }
@@ -553,7 +553,7 @@ namespace Lexical.FileSystem
                 // Create observer object
                 PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Suffix);
                 // Send IFileSystemEventStart
-                observer.OnNext(handle);
+                observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle
                 return handle;
             }
@@ -563,7 +563,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Single file observer.
         /// </summary>
-        protected internal class FileObserver : FileSystemObserverHandleBase, IFileSystemEventStart
+        protected internal class FileObserver : FileSystemObserverHandleBase
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -721,17 +721,13 @@ namespace Lexical.FileSystem
                     }
                 }
             }
-
-            IFileSystemObserver IFileSystemEvent.Observer => this;
-            DateTimeOffset IFileSystemEvent.EventTime => startTime;
-            string IFileSystemEvent.Path => null;
         }
 
 
         /// <summary>
         /// Watches a group of files using a pattern.
         /// </summary>
-        protected internal class PatternObserver : FileSystemObserverHandleBase, IFileSystemEventStart
+        protected internal class PatternObserver : FileSystemObserverHandleBase
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -948,10 +944,6 @@ namespace Lexical.FileSystem
                     }
                 }
             }
-
-            IFileSystemObserver IFileSystemEvent.Observer => this;
-            DateTimeOffset IFileSystemEvent.EventTime => startTime;
-            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>

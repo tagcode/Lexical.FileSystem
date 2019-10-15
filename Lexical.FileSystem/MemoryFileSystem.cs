@@ -117,7 +117,7 @@ namespace Lexical.FileSystem
                 try
                 {
                     // Clear root
-                    this.root.contents.Clear();
+                    this.root.children.Clear();
                     // Touch
                     this.root.lastAccess = this.root.lastModified = DateTimeOffset.UtcNow;
                 }
@@ -272,7 +272,7 @@ namespace Lexical.FileSystem
                             continue;
                         }
                         // No child was found by name
-                        if (!directory.contents.TryGetValue(name, out cursor))
+                        if (!directory.children.TryGetValue(name, out cursor))
                         {
                             // Create child directory
                             Directory newDirectory = new Directory(this, directory, name, now);
@@ -285,7 +285,7 @@ namespace Lexical.FileSystem
                             // Update time of parent
                             directory.lastModified = now;
                             // Add child to parent
-                            directory.contents[enumr.Current] = newDirectory;
+                            directory.children[enumr.Current] = newDirectory;
                             // Flush caches
                             directory.FlushChildEntries();
                             directory.FlushEntry();
@@ -354,10 +354,10 @@ namespace Lexical.FileSystem
                 // Parent not found?
                 if (parent == null) throw new FileNotFoundException(path);
                 // Delete file or empty dir
-                if ((node is File) || (node is Directory directory && directory.contents.Count == 0))
+                if ((node is File) || (node is Directory directory && directory.children.Count == 0))
                 {
                     // Remove from parent
-                    parent.contents.Remove(new StringSegment(node.name));
+                    parent.children.Remove(new StringSegment(node.name));
                     // Update parent datetime
                     parent.lastModified = now;
                     // Create delete event
@@ -387,7 +387,7 @@ namespace Lexical.FileSystem
                         n.FlushEntry();
                     }
                     // Remove from parent
-                    parent.contents.Remove(new StringSegment(node.name));
+                    parent.children.Remove(new StringSegment(node.name));
                     // Update parent datetime
                     parent.lastModified = now;
                     // Flush caches
@@ -460,22 +460,22 @@ namespace Lexical.FileSystem
                 if (oldParent == newParent && newName == node.name) return;
                 // Target file already exists
                 Node previouslyExistingNode;
-                if (newParent.contents.TryGetValue(newName, out previouslyExistingNode))
+                if (newParent.children.TryGetValue(newName, out previouslyExistingNode))
                     throw previouslyExistingNode is File ? new FileSystemExceptionFileExists(this, newPath) : (Exception)new FileSystemExceptionDirectoryExists(this, newPath);
 
                 // Single file or empty dir
-                if (node is File || (node is Directory dir_ && dir_.contents.Count == 0))
+                if (node is File || (node is Directory dir_ && dir_.children.Count == 0))
                 {
                     // prev path
                     string c_oldPath = node.Path;
                     // Disconnect from previous parent
-                    node.parent.contents.Remove(new StringSegment(node.name));
+                    node.parent.children.Remove(new StringSegment(node.name));
                     // Rename
                     node.name = newName;
                     // Move folder to new parent
                     node.parent = newParent;
                     // Connect to new parent
-                    newParent.contents[new StringSegment(newName)] = node;
+                    newParent.children[new StringSegment(newName)] = node;
                     // Flush cached path
                     node.path = null;
                     node.FlushPath();
@@ -497,13 +497,13 @@ namespace Lexical.FileSystem
                     // Visit tree and capture old path
                     foreach (Node c in node.VisitTree()) list.Add((c, c.Path));
                     // Disconnect from previous parent
-                    node.parent.contents.Remove(new StringSegment(node.name));
+                    node.parent.children.Remove(new StringSegment(node.name));
                     // Rename
                     node.name = newName;
                     // Move folder to new parent
                     node.parent = newParent;
                     // Connect to new parent
-                    newParent.contents[new StringSegment(newName)] = node;
+                    newParent.children[new StringSegment(newName)] = node;
                     // Visit list again
                     for (int i = 0; i < list.Count; i++)
                     {
@@ -611,7 +611,7 @@ namespace Lexical.FileSystem
                         // Open stream
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
-                        parent.contents[name] = f;
+                        parent.children[name] = f;
                         parent.lastModified = now;
                         parent.FlushEntry();
                         parent.FlushChildEntries();
@@ -646,7 +646,7 @@ namespace Lexical.FileSystem
                         if (node is Directory) throw new FileSystemExceptionDirectoryExists(this, parentPath);
 
                         // Previous file is unlinked
-                        if (node is File && parent.contents.Remove(name))
+                        if (node is File && parent.children.Remove(name))
                         {
                             // Create event
                             if (observers != null)
@@ -660,7 +660,7 @@ namespace Lexical.FileSystem
                         // Open stream
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
-                        parent.contents[name] = f;
+                        parent.children[name] = f;
                         parent.lastModified = now;
                         parent.FlushEntry();
                         parent.FlushChildEntries();
@@ -723,7 +723,7 @@ namespace Lexical.FileSystem
                         // Open stream
                         stream = f.Open(fileAccess, fileShare);
                         // Attach to parent
-                        parent.contents[name] = f;
+                        parent.children[name] = f;
                         parent.lastModified = now;
                         parent.FlushEntry();
                         parent.FlushChildEntries();
@@ -789,7 +789,7 @@ namespace Lexical.FileSystem
                         continue;
                     }
                     // Failed to find child entry
-                    if (!directory.contents.TryGetValue(name, out cursor))
+                    if (!directory.children.TryGetValue(name, out cursor))
                         return null;
                 }
                 else
@@ -849,7 +849,7 @@ namespace Lexical.FileSystem
                         continue;
                     }
                     // Failed to find child entry
-                    if (!directory.contents.TryGetValue(cursorName, out cursor)) { parent = null; return false; }
+                    if (!directory.children.TryGetValue(cursorName, out cursor)) { parent = null; return false; }
                 }
                 else
                 {
@@ -979,14 +979,14 @@ namespace Lexical.FileSystem
             ObserverHandle handle = new ObserverHandle(this, filter, observer, state);
             observers.Add(handle);
             // Send IFileSystemEventStart
-            observer.OnNext(handle);
+            observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
             return handle;
         }
 
         /// <summary>
         /// Observer
         /// </summary>
-        class ObserverHandle : FileSystemObserverHandleBase, IFileSystemEventStart
+        class ObserverHandle : FileSystemObserverHandleBase
         {
             /// <summary>Filter pattern that is used for filtering events by path.</summary>
             Regex filterPattern;
@@ -1027,10 +1027,6 @@ namespace Lexical.FileSystem
                 base.InnerDispose(ref errors);
                 (this.FileSystem as MemoryFileSystem).observers.Remove(this);
             }
-
-            IFileSystemObserver IFileSystemEvent.Observer => this;
-            DateTimeOffset IFileSystemEvent.EventTime => startTime;
-            string IFileSystemEvent.Path => null;
         }
 
         /// <summary>
@@ -1163,7 +1159,7 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Files and directories. Lazy construction. Modified under m_lock.
             /// </summary>
-            protected internal Dictionary<StringSegment, Node> contents = new Dictionary<StringSegment, Node>();
+            protected internal Dictionary<StringSegment, Node> children = new Dictionary<StringSegment, Node>();
 
             /// <summary>
             /// Cached child entries
@@ -1178,10 +1174,10 @@ namespace Lexical.FileSystem
                 get
                 {
                     if (childEntries != null) return childEntries;
-                    int c = contents.Count;
+                    int c = children.Count;
                     IFileSystemEntry[] array = new IFileSystemEntry[c];
                     int i = 0;
-                    foreach (Node e in contents.Values) array[i++] = e.Entry;
+                    foreach (Node e in children.Values) array[i++] = e.Entry;
                     return childEntries = array;
                 }
             }
@@ -1245,7 +1241,7 @@ namespace Lexical.FileSystem
                     Node n = queue.Dequeue();
                     yield return n;
                     if (n is Directory dir)
-                        foreach (Node c in dir.contents.Values)
+                        foreach (Node c in dir.children.Values)
                             queue.Enqueue(c);
                 }
             }

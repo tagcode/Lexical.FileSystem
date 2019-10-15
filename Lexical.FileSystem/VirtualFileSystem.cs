@@ -123,12 +123,12 @@ namespace Lexical.FileSystem
                             continue;
                         }
                         // Failed to find child entry
-                        if (!cursor.contents.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
+                        if (!cursor.children.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
                         // Move final down
                         finalDirectory = cursor;
                     }
                 // Add vfs entries
-                if (finalDirectory != null) foreach (var kp in finalDirectory.contents) vfsEntries.Add(kp.Value.Entry);
+                if (finalDirectory != null) foreach (var kp in finalDirectory.children) vfsEntries.Add(kp.Value.Entry);
             }
             finally
             {
@@ -222,7 +222,7 @@ namespace Lexical.FileSystem
                         continue;
                     }
                     // Failed to find child entry
-                    if (!cursor.contents.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
+                    if (!cursor.children.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
                     // Move cursor
                     finalDirectory = cursor;
                 }
@@ -270,7 +270,7 @@ namespace Lexical.FileSystem
             /// <summary>Get or create entry.</summary>
             public IFileSystemEntryMount Entry => entry ?? (entry = CreateEntry());
             /// <summary>Files and directories. Lazy construction. Reads and modifications under parent's m_lock.</summary>
-            protected internal Dictionary<StringSegment, Directory> contents = new Dictionary<StringSegment, Directory>();
+            protected internal Dictionary<StringSegment, Directory> children = new Dictionary<StringSegment, Directory>();
             /// <summary>Cached child entries</summary>
             protected IFileSystemEntry[] childEntries;
             /// <summary>The mounted filesystem.</summary>
@@ -281,10 +281,10 @@ namespace Lexical.FileSystem
                 get
                 {
                     if (childEntries != null) return childEntries;
-                    int c = contents.Count;
+                    int c = children.Count;
                     IFileSystemEntry[] array = new IFileSystemEntry[c];
                     int i = 0;
-                    foreach (Directory e in contents.Values) array[i++] = e.Entry;
+                    foreach (Directory e in children.Values) array[i++] = e.Entry;
                     return childEntries = array;
                 }
             }
@@ -343,7 +343,7 @@ namespace Lexical.FileSystem
                 {
                     Directory n = queue.Dequeue();
                     yield return n;
-                    foreach (Directory c in n.contents.Values)
+                    foreach (Directory c in n.children.Values)
                         queue.Enqueue(c);
                 }
             }
@@ -514,7 +514,7 @@ namespace Lexical.FileSystem
             // Parse filter
             GlobPatternInfo info = new GlobPatternInfo(filter);
             // Create handle
-            ObserverHandle adapter = new ObserverHandle(null /*set below*/, this, filter, observer, state);
+            ObserverHandle adapter = new ObserverHandle(this, null /*set below*/, this, filter, observer, state);
             // Add to observer tree
             ObserverNode node = GetOrCreateObserverNode(info.Stem, adapter);
 
@@ -544,7 +544,7 @@ namespace Lexical.FileSystem
                                 continue;
                             }
                             // Failed to find child entry
-                            if (!cursor.contents.TryGetValue(name, out cursor)) break;
+                            if (!cursor.children.TryGetValue(name, out cursor)) break;
                             // Move finalCursor
                             finalCursor = cursor;
                         }
@@ -569,12 +569,10 @@ namespace Lexical.FileSystem
                             // Assert can observe
                             if (!component.Option.CanObserve) continue;
                             // Convert Path
-                            String childPath, stem;
-                            if (!component.Path.ParentToChild(intersection, out childPath) || !component.Path.ParentToChild(new GlobPatternInfo(intersection).Stem, out stem)) continue;
+                            String childPath;
+                            if (!component.Path.ParentToChild(intersection, out childPath)) continue;
                             try
                             {
-                                // Entry doesn't exist.
-                                //if (component.FileSystem.CanGetEntry() && !component.FileSystem.Exists(stem)) continue;
                                 // Try Observe
                                 IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component));
                                 // Attach disposable
@@ -586,7 +584,7 @@ namespace Lexical.FileSystem
                     }
 
                     // Send IFileSystemEventStart
-                    observer.OnNext(adapter);
+                    observer.OnNext(new FileSystemEventStart(adapter, DateTimeOffset.UtcNow));
                     // Return
                     return adapter;
                 }
@@ -620,27 +618,27 @@ namespace Lexical.FileSystem
         {
             /// <summary>Filter pattern that is used for filtering events by path.</summary>
             protected internal Regex filterPattern;
-
             /// <summary>Accept all pattern "**".</summary>
             protected internal bool acceptAll;
-
             /// <summary>Time when observing started.</summary>
             protected internal DateTimeOffset startTime = DateTimeOffset.UtcNow;
-
             /// <summary>Place where observer is held in observer tree.</summary>
             protected internal ObserverNode observerNode;
+            /// <summary>Parent object.</summary>
+            protected internal VirtualFileSystem vfs;
 
             /// <summary>
             /// Create adapter observer.
             /// </summary>
+            /// <param name="vfs">parent object</param>
             /// <param name="observerNode">(optional) node where handle is placed in the tree. Can be assigned later</param>
             /// <param name="sourceFileSystem">File system to show as the source of forwarded events (in <see cref="IFileSystemEvent.Observer"/>)</param>
             /// <param name="filter"></param>
             /// <param name="observer">The observer were decorated events are forwarded to</param>
             /// <param name="state"></param>
-            /// then diposes this object and sends <see cref="IObserver{T}.OnCompleted"/> to <see cref="Observer"/>.</param>
-            public ObserverHandle(ObserverNode observerNode, IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(sourceFileSystem, filter, observer, state, false)
+            public ObserverHandle(VirtualFileSystem vfs, ObserverNode observerNode, IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(sourceFileSystem, filter, observer, state, false)
             {
+                this.vfs = vfs;
                 this.observerNode = observerNode;
                 if (filter == "**") acceptAll = true;
                 else this.filterPattern = GlobPatternRegexFactory.Slash.CreateRegex(filter);
@@ -660,13 +658,41 @@ namespace Lexical.FileSystem
             /// <param name="errors"></param>
             protected override void InnerDispose(ref StructList4<Exception> errors)
             {
+                var _vfs = vfs;
                 var _observerNode = Interlocked.CompareExchange(ref observerNode, null, observerNode);
                 if (_observerNode!=null) _observerNode.observers.Remove(this);
                 base.InnerDispose(ref errors);
 
-                // TODO Prune observer tree from leafs
+                // Prune observer node from tree
+                if (_vfs != null && _observerNode != null)
+                {
+                    _vfs.observerLock.AcquireWriterLock(int.MaxValue);
+                    try
+                    {
+
+                        ObserverNode cursor = _observerNode;
+                        // Disconnect from parent, if no children
+                        while (cursor != null && cursor.children.Count == 0 && cursor.parent != null)
+                        {
+                            var _cursor = cursor;
+                            // Disconnect from parent
+                            cursor.parent.children.Remove(cursor.name);
+                            // Move towards parent
+                            cursor = cursor.parent;
+                            // Remove parent reference
+                            _cursor.parent = null;
+                        }
+                    } finally
+                    {
+                        _vfs.observerLock.ReleaseWriterLock();
+                    }
+                    vfs = null;
+                }
+
             }
 
+            /// <summary>Print info</summary>
+            public override string ToString() => $"VirtualFileSystem.Observer({Filter})";
         }
 
 
@@ -675,7 +701,7 @@ namespace Lexical.FileSystem
         /// Observer is placed on a node that represents the the stem part of <see cref="GlobPatternInfo"/>.
         /// Root node represents "" stem.
         /// 
-        /// Observer tree is read and modified only under <see cref="observerLock".
+        /// Observer tree is read and modified only under <see cref="observerLock"/>.
         /// </summary>
         protected internal class ObserverNode
         {
@@ -767,7 +793,7 @@ namespace Lexical.FileSystem
                         }
                         // Create node
                         Directory child;
-                        if (!cursor.contents.TryGetValue(name, out child))
+                        if (!cursor.children.TryGetValue(name, out child))
                         {
                             // Create child directory
                             Directory newDirectory = new Directory(this, cursor, name, now);
@@ -780,7 +806,7 @@ namespace Lexical.FileSystem
                             // Update time of parent
                             cursor.lastModified = now;
                             // Add child to parent
-                            cursor.contents[enumr.Current] = newDirectory;
+                            cursor.children[enumr.Current] = newDirectory;
                             // Flush caches
                             cursor.FlushChildEntries();
                             cursor.FlushEntry();
@@ -893,14 +919,14 @@ namespace Lexical.FileSystem
                             continue;
                         }
                         // Node was not found
-                        if (!cursor.contents.TryGetValue(name, out cursor)) throw new DirectoryNotFoundException(path.Substring(0, name.Length));
+                        if (!cursor.children.TryGetValue(name, out cursor)) throw new DirectoryNotFoundException(path.Substring(0, name.Length));
                     }
 
                 // Disconnect from parent, if no children
-                while (cursor != null && cursor.contents.Count == 0 && cursor.parent != null)
+                while (cursor != null && cursor.children.Count == 0 && cursor.parent != null)
                 {
                     // Remove from parent
-                    cursor.parent.contents.Remove(new StringSegment(cursor.name));
+                    cursor.parent.children.Remove(new StringSegment(cursor.name));
                     cursor.parent.lastModified = now;
                     // Dispose decoration
                     cursor.mount?.Dispose();
@@ -939,7 +965,7 @@ namespace Lexical.FileSystem
                 foreach (var e in root.VisitDecedents())
                     if (e.mount != null)
                         decorations.Add(e.mount);
-                root.contents.Clear();
+                root.children.Clear();
             }
             finally
             {

@@ -1191,12 +1191,10 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can observe
                     if (!component.Option.CanObserve) continue;
                     // Convert Path
-                    String childPath, stem;
-                    if (!component.Path.ParentToChild(filter, out childPath) || !component.Path.ParentToChild(new GlobPatternInfo(filter).Stem, out stem)) continue;
+                    String childPath;
+                    if (!component.Path.ParentToChild(filter, out childPath)) continue;
                     try
                     {
-                        // Entry doesn't exist.
-                        //if (component.FileSystem.CanGetEntry() && !component.FileSystem.Exists(childPath)) continue;
                         // Try Observe
                         IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component));
                         // Attach disposable
@@ -1207,7 +1205,7 @@ namespace Lexical.FileSystem.Decoration
                 }
 
                 // Send IFileSystemEventStart
-                observer.OnNext(adapter);
+                observer.OnNext( new FileSystemEventStart(adapter, DateTimeOffset.UtcNow) );
                 // Return adapter
                 return adapter;
             }

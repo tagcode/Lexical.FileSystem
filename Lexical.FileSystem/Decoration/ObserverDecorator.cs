@@ -15,7 +15,7 @@ namespace Lexical.FileSystem.Decoration
     /// 
     /// When this object is disposed, it forwards <see cref="IObserver{T}.OnCompleted"/> event.
     /// </summary>
-    public class ObserverDecorator : DisposeList, IFileSystemObserver, IObserver<IFileSystemEvent>, IFileSystemEventStart
+    public class ObserverDecorator : DisposeList, IFileSystemObserver, IObserver<IFileSystemEvent>
     {
         /// <summary>Parent filesystem to use in decorated events.</summary>
         public IFileSystem FileSystem { get; protected set; }
@@ -116,12 +116,6 @@ namespace Lexical.FileSystem.Decoration
             }
         }
 
-        // Used when pushing self as IFileSystemEventStart
-        IFileSystemObserver IFileSystemEvent.Observer => this;
-        DateTimeOffset IFileSystemEvent.EventTime => startTime;
-        string IFileSystemEvent.Path => null;
-        //
-
         /// <summary>
         /// Handle dispose, forwards OnCompleted event.
         /// </summary>
@@ -160,6 +154,9 @@ namespace Lexical.FileSystem.Decoration
                 this.state = state;
             }
         }
+
+        /// <summary>Print info</summary>
+        public override string ToString() => $"Observer({Filter})";
     }
 
 }
