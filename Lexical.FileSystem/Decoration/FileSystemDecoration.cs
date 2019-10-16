@@ -123,7 +123,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>Intersection of option in <see cref="FileSystem"/> and option that was provided in constructor.</summary>
             public Options Option;
             /// <summary>Tool that converts paths.</summary>
-            public PathDecoration Path;
+            public IPathConverter Path;
 
             /// <summary>Create component info.</summary>
             /// <param name="parentPath">The subpath the filesystem starts at</param>
@@ -132,7 +132,7 @@ namespace Lexical.FileSystem.Decoration
             {
                 this.Assignment = assignment;
                 this.Option = Options.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
-                this.Path = new PathDecoration(parentPath ?? "", assignment.Option.SubPath() ?? "");
+                this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
             }
 
             /// <summary>Create component info.</summary>
@@ -143,7 +143,7 @@ namespace Lexical.FileSystem.Decoration
             {
                 this.Assignment = assignment;
                 this.Option = option;
-                this.Path = new PathDecoration(parentPath ?? "", assignment.Option.SubPath() ?? "");
+                this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
             }
         }
 

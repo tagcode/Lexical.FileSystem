@@ -86,18 +86,18 @@ namespace Lexical.FileSystem.Decoration
 
             // Get child's state object
             StateInfo state = @event.Observer.State as StateInfo;
-            PathDecoration pathDecorator = state?.pathDecoration;
+            IPathConverter pathConverter = state?.pathConverter;
             // Convert paths
             string newOldPath, newNewPath = null;
-            if (pathDecorator == null)
+            if (pathConverter == null)
             {
                 newOldPath = @event.Path;
                 if (@event is IFileSystemEventRename re) newNewPath = re.NewPath;
             }
             else
             {
-                if (!pathDecorator.ChildToParent(@event.Path, out newOldPath)) return;
-                if (@event is IFileSystemEventRename re) if (!pathDecorator.ChildToParent(re.NewPath, out newNewPath)) return;
+                if (!pathConverter.ChildToParent(@event.Path, out newOldPath)) return;
+                if (@event is IFileSystemEventRename re) if (!pathConverter.ChildToParent(re.NewPath, out newNewPath)) return;
             }
             // Try to decorate event
             @event = FileSystemEventDecoration.DecorateObserverAndPath(@event, this, newOldPath, newNewPath, false);
@@ -138,7 +138,7 @@ namespace Lexical.FileSystem.Decoration
         public class StateInfo
         {
             /// <summary>Path converter</summary>
-            public PathDecoration pathDecoration;
+            public IPathConverter pathConverter;
 
             /// <summary>3rd party object</summary>
             public Object state;
@@ -146,11 +146,11 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>
             /// Create state info.
             /// </summary>
-            /// <param name="pathDecoration"></param>
+            /// <param name="pathConverter"></param>
             /// <param name="state"></param>
-            public StateInfo(PathDecoration pathDecoration, object state)
+            public StateInfo(IPathConverter pathConverter, object state)
             {
-                this.pathDecoration = pathDecoration;
+                this.pathConverter = pathConverter;
                 this.state = state;
             }
         }

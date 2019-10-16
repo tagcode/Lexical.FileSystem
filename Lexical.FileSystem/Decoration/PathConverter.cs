@@ -13,27 +13,16 @@ namespace Lexical.FileSystem.Decoration
     /// 
     /// This tool is used by <see cref="IFileSystem"/> implementations that support <see cref="IFileSystemOptionSubPath"/> option.
     /// </summary>
-    public class PathDecoration
+    public class PathConverter : IPathConverter
     {
-        /// <summary>
-        /// Expected parent path
-        /// </summary>
-        public readonly StringSegment ParentPathSegment;
-
-        /// <summary>
-        /// Expected parent path
-        /// </summary>
-        public readonly String ParentPath;
-
-        /// <summary>
-        /// Added prefix on child filesystem.
-        /// </summary>
-        public readonly StringSegment ChildPathSegment;
-
-        /// <summary>
-        /// Added prefix on child filesystem.
-        /// </summary>
-        public readonly String ChildPath;
+        /// <summary>Path stem on parent filesystem</summary>
+        public StringSegment ParentPathSegment { get; protected set; }
+        /// <summary>Path stem on parent filesystem</summary>
+        public String ParentPath { get; protected set; }
+        /// <summary>Path stem on child filesystem</summary>
+        public StringSegment ChildPathSegment { get; protected set; }
+        /// <summary>Path stem on child filesystem</summary>
+        public String ChildPath { get; protected set; }
 
         /// <summary>
         /// If <see cref="ParentPathSegment"/> and <see cref="ChildPathSegment"/> are equal, then 
@@ -42,11 +31,11 @@ namespace Lexical.FileSystem.Decoration
         bool equals;
 
         /// <summary>
-        /// Create conversion tool.
+        /// Create path conversion.
         /// </summary>
         /// <param name="parentPath"></param>
         /// <param name="childPath"></param>
-        public PathDecoration(string parentPath, string childPath)
+        public PathConverter(string parentPath, string childPath)
         {
             this.ParentPathSegment = new StringSegment(parentPath);
             this.ChildPathSegment = new StringSegment(childPath);
@@ -56,10 +45,7 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>
-        /// Convert input <paramref name="parentPath"/> of parent filesystem to 
-        /// suitable path of child filesystem.
-        /// 
-        /// This method is used in most methods in parent filesystem implementation for converting input path to suitable for child filesystem, such as Browse, GetEntry, Open, CreateDirectory, Move.
+        /// Convert input <paramref name="parentPath"/> of parent filesystem to path of child filesystem.
         /// </summary>
         /// <param name="parentPath"></param>
         /// <param name="childPath"></param>
@@ -119,10 +105,7 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>
-        /// Convert input <paramref name="parentPath"/> of parent filesystem to 
-        /// suitable path of child filesystem.
-        /// 
-        /// This method is used in most methods in parent filesystem implementation for converting input path to suitable for child filesystem, such as Browse, GetEntry, Open, CreateDirectory, Move.
+        /// Convert <paramref name="parentPath"/> of parent filesystem to path of child filesystem.
         /// 
         /// If <paramref name="childPath"/> is null then <paramref name="parentPath"/> is placed null as well.
         /// </summary>
@@ -186,9 +169,7 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>
-        /// Converts input from an event in child filesystem to compatible path in parent filesystem.
-        /// 
-        /// This method is called observer decorations that convert paths from child filesystem such as events entries from GetEntry and Browse.
+        /// Converts path in child filesystem to path in parent filesystem.
         /// </summary>
         /// <param name="childPath"></param>
         /// <param name="parentPath"></param>
@@ -248,9 +229,7 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>
-        /// Converts input from an event in child filesystem to compatible path in parent filesystem.
-        /// 
-        /// This method is called observer decorations that convert paths from child filesystem such as events entries from GetEntry and Browse.
+        /// Converts path from child filesystem to path in parent filesystem.
         /// 
         /// If <paramref name="childPath"/> is null then <paramref name="parentPath"/> is placed null as well.
         /// </summary>

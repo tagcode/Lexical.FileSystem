@@ -209,9 +209,10 @@ namespace Lexical.FileSystem
                             output.Append(info.FileSystem);
                             if (info.Option!=null)
                             {
-                                output.Append(" (");
+                                //output.Append(" [");
+                                output.Append(" ");
                                 output.Append(info.Option);
-                                output.Append(")");
+                                //output.Append("]");
                             }
                         }
                         output.Append(']');
@@ -284,9 +285,10 @@ namespace Lexical.FileSystem
                             output.Write(info.FileSystem);
                             if (info.Option != null)
                             {
-                                output.Write(" (");
+                                //output.Write(" [");
+                                output.Write(" ");
                                 output.Write(info.Option);
-                                output.Write(")");
+                                //output.Write("]");
                             }
                         }
                         output.Write(']');
