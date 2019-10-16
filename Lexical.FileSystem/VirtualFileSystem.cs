@@ -11,6 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -19,7 +20,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Virtual filesystem.
     /// </summary>
-    public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath, IFileSystemMount, IFileSystemBrowse//, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IFileSystemMount
+    public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath, IFileSystemMount, IFileSystemBrowse, IFileSystemOpen, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemDelete, IFileSystemMove
     {
         /// <summary>
         /// Reader writer lock for modifying vfs directory structure. 
@@ -89,79 +90,47 @@ namespace Lexical.FileSystem
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
 
             // Stack of nodes that start with path and have a mounted filesystem
-            StructList4<FileSystemDecoration> mountPoints = new StructList4<FileSystemDecoration>();
+            StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
             // Snapshot of vfs entries
             StructList4<IFileSystemEntry> vfsEntries = new StructList4<IFileSystemEntry>();
             // Lock for the duration of tree traversal
             vfsLock.AcquireReaderLock(int.MaxValue);
             try
             {
-                // Start
-                Directory cursor = vfsRoot, finalDirectory = vfsRoot;
-                // Path '/' splitter, enumerates name strings from root towards tail
-                PathEnumerator enumr = new PathEnumerator(path, true);
-                // Special case, root
-                if (path == "")
-                {
-                    // Add to stack
-                    if (cursor.mount != null) mountPoints.Add(cursor.mount);
-                }
-                // Traverse path in name parts
-                else
-                {
-                    // Add to stack
-                    if (cursor.mount != null) mountPoints.Add(cursor.mount);
-                    // Follow path
-                    while (enumr.MoveNext())
-                    {
-                        // Name
-                        StringSegment name = enumr.Current;
-                        // "."
-                        if (name.Equals(StringSegment.Dot)) continue;
-                        // ".."
-                        if (name.Equals(StringSegment.DotDot))
-                        {
-                            if (cursor.parent == null) throw new DirectoryNotFoundException(path);
-                            cursor = cursor.parent;
-                            continue;
-                        }
-                        // Failed to find child entry
-                        if (!cursor.children.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
-                        // Move final down
-                        finalDirectory = cursor;
-                        // Add to stack
-                        if (cursor.mount != null) mountPoints.Add(cursor.mount);
-                    }
-                }
-                // Add vfs directory's child mountpoint entries
-                if (finalDirectory != null && finalDirectory.children.Count>0) foreach(var c in finalDirectory.children) vfsEntries.Add(c.Value.Entry);
+                // Vfs Node
+                Directory directory;
+                // Search for vfs node
+                bool directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints);
+                // Browse the vfs directory at path
+                if (directoryAtPath && directory.children.Count>0) foreach(var c in directory.children) vfsEntries.Add(c.Value.Entry);
             }
             finally
             {
                 vfsLock.ReleaseReaderLock();
             }
             // Found nothing.
-            if (mountPoints.Count == 0 && vfsEntries.Count == 0) throw new DirectoryNotFoundException(path);
+            if (mountpoints.Count == 0 && vfsEntries.Count == 0) throw new DirectoryNotFoundException(path);
             // Return vfs contents
-            if (mountPoints.Count == 0 && vfsEntries.Count > 0) return vfsEntries.ToArray();
+            if (mountpoints.Count == 0 && vfsEntries.Count > 0) return vfsEntries.ToArray();
             // Return already decorated contents
-            if (mountPoints.Count > 0 && vfsEntries.Count == 0) mountPoints[0].Browse(path);
+            if (mountpoints.Count > 0 && vfsEntries.Count == 0) mountpoints[0].Browse(path);
 
             // Create union of mountpoints and final directory. Remove overlapping content if same name. Priority: vfs, mountpoints
             // Estimation of entry count
             int entryCount = vfsEntries.Count;
             // Browse each decoration
             StructList4<IFileSystemEntry[]> entryArrays = new StructList4<IFileSystemEntry[]>();
-            for (int i = 0; i < mountPoints.Count; i++)
+            for (int i = 0; i < mountpoints.Count; i++)
             {
+                var fs = mountpoints[i];
+                if (!fs.CanBrowse()) continue;
                 try
                 {
-                    entryArrays.Add(mountPoints[i].Browse(path));
+                    entryArrays.Add(fs.Browse(path));
                     entryCount += entryArrays[i].Length;
-                } catch (DirectoryNotFoundException)
-                {
-                    // Continue
                 }
+                catch (DirectoryNotFoundException) { }
+                catch (NotSupportedException) { }
             }
 
             // Create hashset for removing overlapping entry names
@@ -200,47 +169,28 @@ namespace Lexical.FileSystem
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
 
             // Stack of nodes that start with path and have a mounted filesystem
-            StructList4<FileSystemDecoration> mountPoints = new StructList4<FileSystemDecoration>();
+            StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
             // Lock for the duration of tree traversal
             vfsLock.AcquireReaderLock(int.MaxValue);
             try
             {
-                // Special case, root
-                if (path == "") return vfsRoot.Entry;
-                // Start
-                Directory cursor = vfsRoot, finalDirectory = vfsRoot;
-                // Path '/' splitter, enumerates name strings from root towards tail
-                PathEnumerator enumr = new PathEnumerator(path, true);
-                // Add to stack
-                if (cursor.mount != null) mountPoints.Add(cursor.mount);
-                // Traverse path in name parts
-                while (enumr.MoveNext())
-                {
-                    // Name
-                    StringSegment name = enumr.Current;
-                    // "."
-                    if (name.Equals(StringSegment.Dot)) continue;
-                    // ".."
-                    if (name.Equals(StringSegment.DotDot))
-                    {
-                        if (cursor.parent == null) throw new DirectoryNotFoundException(path);
-                        cursor = cursor.parent;
-                        continue;
-                    }
-                    // Failed to find child entry
-                    if (!cursor.children.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
-                    // Move cursor
-                    finalDirectory = cursor;
-                    // Add to stack
-                    if (cursor.mount != null) mountPoints.Add(cursor.mount);
-                }
-                // Return vfs entry
-                if (finalDirectory != null) return finalDirectory.Entry;
+                // Vfs Node
+                Directory directory;
+                // Search for vfs node
+                bool directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints);
+                // Browse the vfs directory at path
+                if (directoryAtPath) return directory.Entry;
                 // Try to get entry from mounted filesystems
-                for (int i = 0; i < mountPoints.Count; i++)
+                for (int i = 0; i < mountpoints.Count; i++)
                 {
-                    IFileSystemEntry e = mountPoints[i].GetEntry(path);
-                    if (e != null) return e;
+                    var fs = mountpoints[i];
+                    if (!fs.CanGetEntry()) continue;
+                    try
+                    {
+                        IFileSystemEntry e = fs.GetEntry(path);
+                        if (e != null) return e;
+                    }
+                    catch (NotSupportedException) { }
                 }
                 // Nothing
                 return null;
@@ -249,6 +199,53 @@ namespace Lexical.FileSystem
             {
                 vfsLock.ReleaseReaderLock();
             }
+        }
+
+        /// <summary>
+        /// Traverse vfs directory tree along <paramref name="path"/>, and return the <see cref="Directory"/> instance.
+        /// 
+        /// If <paramref name="path"/> cannot be found, returns false and the last <see cref="Directory"/> that was found.
+        /// Adds each mountpoint along the way to <paramref name="mountpoints"/> collection.
+        /// 
+        /// The caller must have <see cref="vfsLock"/> read or write lock.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="directory"></param>
+        /// <param name="mountpoints"></param>
+        /// <returns>true if directory was found at <paramref name="path"/>, else false and the last directory that was found</returns>
+        bool GetVfsDirectory(string path, out Directory directory, ref StructList4<FileSystemDecoration> mountpoints)
+        {
+            // Special case root
+            if (path == "") { if (vfsRoot.mount != null) mountpoints.Add(vfsRoot.mount); directory = vfsRoot; return true; }
+            // Start
+            Directory cursor = vfsRoot; directory = vfsRoot;
+            // Path '/' splitter, enumerates name strings from root towards tail
+            PathEnumerator enumr = new PathEnumerator(path, true);
+            // Add to collection
+            if (cursor.mount != null) mountpoints.Add(cursor.mount);
+            // Traverse path in name parts
+            while (enumr.MoveNext())
+            {
+                // Name
+                StringSegment name = enumr.Current;
+                // "."
+                if (name.Equals(StringSegment.Dot)) continue;
+                // ".."
+                if (name.Equals(StringSegment.DotDot))
+                {
+                    if (cursor.parent == null) throw new DirectoryNotFoundException(path);
+                    cursor = cursor.parent;
+                    continue;
+                }
+                // Failed to find child entry
+                else if (!cursor.children.TryGetValue(name, out cursor)) return false;
+                // Add to collection
+                if (cursor.mount != null) mountpoints.Add(cursor.mount);
+                // Update result 
+                directory = cursor;
+            }
+            // Path was matched with vfs directory
+            return true;
         }
 
         /* Vfs maintains a tree of virtual directory nodes. 
@@ -349,7 +346,7 @@ namespace Lexical.FileSystem
             {
                 FileSystemAssignment[] mounts = null;
                 var _mount = mount;
-                if (_mount != null) mounts = _mount.componentList.Array.Select(c => c.Assignment).ToArray();                    
+                if (_mount != null) mounts = _mount.components.Array.Select(c => c.Assignment).ToArray();                    
                 return new FileSystemEntryMount(filesystem, Path, name, lastModified, lastAccess, filesystem, mounts);
             }
 
@@ -685,7 +682,7 @@ namespace Lexical.FileSystem
                         // No mounts
                         if (d.mount == null) continue;
                         // Get component filesystems
-                        FileSystemDecoration.Component[] components = d.mount.componentList.Array;
+                        FileSystemDecoration.Component[] components = d.mount.components.Array;
                         // No components
                         if (components.Length == 0) continue;
                         // Test if filter intersects with the mount
@@ -1246,6 +1243,221 @@ namespace Lexical.FileSystem
             }
         }
 
+        /// <summary>
+        /// Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="FileMode.Create"/> or <see cref="FileMode.CreateNew"/>.
+        /// </summary>
+        /// <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
+        /// <param name="fileMode">determines whether to open or to create the file</param>
+        /// <param name="fileAccess">how to access the file, read, write or read and write</param>
+        /// <param name="fileShare">how the file will be shared by processes</param>
+        /// <returns>open file stream</returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support opening files</exception>
+        /// <exception cref="FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
+        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
+        {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert not disposed
+            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+
+            // Stack of nodes that start with path and have a mounted filesystem
+            StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
+            // Lock for the duration of tree traversal
+            vfsLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                // Vfs Node
+                Directory directory;
+                // Search for vfs node
+                GetVfsDirectory(path, out directory, ref mountpoints);
+                // Try to get entry from mounted filesystems
+                for (int i = 0; i < mountpoints.Count; i++)
+                {
+                    var fs = mountpoints[i];
+                    // Get fs option
+                    var option = fs.As<IFileSystemOptionOpen>();
+                    // No feature
+                    if (option == null) continue;
+                    // fs cannot open
+                    if (!option.CanOpen) continue;
+                    // fs cannot read
+                    if (!option.CanRead && (fileAccess & FileAccess.Read) != 0) continue;
+                    // fs cannot write
+                    if (!option.CanWrite && (fileAccess & FileAccess.Write) != 0) continue;
+                    // fs cannot create
+                    if (!option.CanCreateFile && (fileMode & (FileMode.Append|FileMode.Create|FileMode.CreateNew|FileMode.OpenOrCreate)) != 0) continue;
+
+                    try
+                    {
+                        return fs.Open(path, fileMode, fileAccess, fileShare);
+                    }
+                    catch (NotSupportedException) { }
+                }
+                throw new NotSupportedException(nameof(Open));
+            }
+            finally
+            {
+                vfsLock.ReleaseReaderLock();
+            }
+        }
+
+        /// <summary>
+        /// Create a directory, or multiple cascading directories.
+        /// 
+        /// If directory at <paramref name="path"/> already exists, then returns without exception.
+        /// <paramref name="path"/> should end with directory separator character '/'.
+        /// </summary>
+        /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+        /// <returns>true if directory exists after the method, false if directory doesn't exist</returns>
+        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support create directory</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public void CreateDirectory(string path)
+        {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert not disposed
+            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+
+            // Stack of nodes that start with path and have a mounted filesystem
+            StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
+            // Lock for the duration of tree traversal
+            vfsLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                // Vfs Node
+                Directory directory;
+                // Search for vfs node
+                GetVfsDirectory(path, out directory, ref mountpoints);
+                // Try to get entry from mounted filesystems
+                for (int i = 0; i < mountpoints.Count; i++)
+                {
+                    var fs = mountpoints[i];
+                    // fs cannot open
+                    if (!fs.CanCreateDirectory()) continue;
+                    try
+                    {
+                        fs.CreateDirectory(path);
+                        return;
+                    }
+                    catch (NotSupportedException) { }
+                }
+                throw new NotSupportedException(nameof(CreateDirectory));
+            }
+            finally
+            {
+                vfsLock.ReleaseReaderLock();
+            }
+        }
+
+        /// <summary>
+        /// Delete a file or directory.
+        /// 
+        /// If <paramref name="path"/> is directory, then it should end with directory separator character '/', for example "dir/".
+        /// 
+        /// If <paramref name="recurse"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="IOException"/> is thrown.
+        /// If <paramref name="recurse"/> is true, then any file or directory in <paramref name="path"/> is deleted as well.
+        /// </summary>
+        /// <param name="path">path to a file or directory</param>
+        /// <param name="recurse">if path refers to directory, recurse into sub directories</param>
+        /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
+        /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recurse"/> is false, or trying to delete root when not allowed</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support deleting files</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public void Delete(string path, bool recurse = false)
+        {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert not disposed
+            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+
+            // Stack of nodes that start with path and have a mounted filesystem
+            StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
+            // Lock for the duration of tree traversal
+            vfsLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                // Vfs Node
+                Directory directory;
+                // Search for vfs node
+                GetVfsDirectory(path, out directory, ref mountpoints);
+
+            }
+            finally
+            {
+                vfsLock.ReleaseReaderLock();
+            }
+
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Try to move/rename a file or directory.
+        /// 
+        /// If <paramref name="oldPath"/> and <paramref name="newPath"/> refers to a directory, then the path names 
+        /// should end with directory separator character '/'.
+        /// </summary>
+        /// <param name="oldPath">old path of a file or directory</param>
+        /// <param name="newPath">new path of a file or directory</param>
+        /// <exception cref="FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException">path is null</exception>
+        /// <exception cref="ArgumentException">path is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support renaming/moving files</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public void Move(string oldPath, string newPath)
+        {
+            // Assert arguments
+            if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
+            if (newPath == null) throw new ArgumentNullException(nameof(newPath));
+            // Assert not disposed
+            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+
+            // Stack of nodes that start with path and have a mounted filesystem
+            StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
+            // Lock for the duration of tree traversal
+            vfsLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                // Vfs Node
+                Directory directory;
+                // Search for vfs node
+                GetVfsDirectory(oldPath, out directory, ref mountpoints);
+            }
+            finally
+            {
+                vfsLock.ReleaseReaderLock();
+            }
+
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Handle dispose

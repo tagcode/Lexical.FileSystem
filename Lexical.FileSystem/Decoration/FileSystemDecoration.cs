@@ -38,15 +38,15 @@ namespace Lexical.FileSystem.Decoration
         static IFileSystemEntry[] noEntries = new IFileSystemEntry[0];
 
         /// <summary>FileSystem specific components.</summary>
-        protected internal CopyOnWriteList<Component> componentList = new CopyOnWriteList<Component>();
+        protected internal CopyOnWriteList<Component> components = new CopyOnWriteList<Component>();
         /// <summary>Union of options.</summary>
         protected internal Options Option;
         /// <summary>Count</summary>
-        public int Count => componentList.Count;
+        public int Count => components.Count;
         /// <summary>The decorated filesystems.</summary>
-        public IFileSystem[] Decorees => componentList.Array.Select(c=>c.FileSystem).ToArray();
+        public IFileSystem[] Decorees => components.Array.Select(c=>c.FileSystem).ToArray();
         /// <summary><see cref="IFileSystem"/> casted to <see cref="IDisposable"/>.</summary>
-        public IEnumerable<IDisposable> DisposableDecorees => componentList.Array.Where(fs => fs is IDisposable).Cast<IDisposable>();
+        public IEnumerable<IDisposable> DisposableDecorees => components.Array.Where(fs => fs is IDisposable).Cast<IDisposable>();
 
         /// <inheritdoc/>
         public FileSystemCaseSensitivity CaseSensitivity => Option.CaseSensitivity;
@@ -69,7 +69,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool CanDelete => Option.CanDelete;
         /// <inheritdoc/>
-        public virtual bool CanMove => Option.CanMove();
+        public virtual bool CanMove => Option.CanMove;
         /// <inheritdoc/>
         public virtual bool CanCreateDirectory => Option.CanCreateDirectory;
         /// <inheritdoc/>
@@ -106,11 +106,11 @@ namespace Lexical.FileSystem.Decoration
         public FileSystemDecoration(IFileSystem parentFileSystem, string parentPath, params FileSystemAssignment[] assignments)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.componentList.AddRange( assignments.Select(a=> new Component(parentPath, a)) );
-            this.Option = Options.Read(FileSystemOption.Union(this.componentList.Select(s => s.Option)));
+            this.components.AddRange( assignments.Select(a=> new Component(parentPath, a)) );
+            this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
 
             this.sourceFileSystem = parentFileSystem ?? this;
-            this.rootEntry = new FileSystemEntryMount(this.sourceFileSystem, "", "", now, now, Option, this.componentList.Select(c=>c.Assignment).ToArray());
+            this.rootEntry = new FileSystemEntryMount(this.sourceFileSystem, "", "", now, now, Option, this.components.Select(c=>c.Assignment).ToArray());
         }
 
         /// <summary>FileSystem (as component of composition) specific information</summary>
@@ -160,11 +160,11 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="assignments"></param>
         protected internal void SetComponents(ref StructList2<Component> componentsAdded, ref StructList2<Component> componentsRemoved , ref StructList2<Component> componentsReused, string parentPath, params FileSystemAssignment[] assignments)
         {
-            lock (this.componentList.SyncRoot)
+            lock (this.components.SyncRoot)
             {
-                var oldComponents = componentList.Array;
-                var oldComponentLineMap = componentList.ToDictionary(c => new Triple<string, IFileSystem, Options>(c.Path.ParentPath, c.FileSystem, c.Option), componentTupleComparer);
-                componentList.Clear();
+                var oldComponents = components.Array;
+                var oldComponentLineMap = components.ToDictionary(c => new Triple<string, IFileSystem, Options>(c.Path.ParentPath, c.FileSystem, c.Option), componentTupleComparer);
+                components.Clear();
                 foreach(FileSystemAssignment assignment in assignments)
                 {
                     // Take intersection and consolidate options
@@ -174,13 +174,13 @@ namespace Lexical.FileSystem.Decoration
                     Component reusedComponent;
                     if (oldComponentLineMap.TryGetValue(new Triple<string, IFileSystem, Options>(parentPath, assignment.FileSystem, consolidatedOptions), out reusedComponent))
                     {
-                        this.componentList.Add(reusedComponent);
+                        this.components.Add(reusedComponent);
                         componentsAdded.Add(reusedComponent);
                     } else
                     // Create new component
                     {
                         Component newComponent = new Component(parentPath, assignment, consolidatedOptions);
-                        this.componentList.Add(newComponent);
+                        this.components.Add(newComponent);
                         componentsAdded.Add(newComponent);
                     }
                 }
@@ -188,12 +188,14 @@ namespace Lexical.FileSystem.Decoration
                 // Removed components
                 foreach (var oldComponent in oldComponents)
                 {
-                    if (!this.componentList.Contains(oldComponent)) componentsRemoved.Add(oldComponent);
+                    if (!this.components.Contains(oldComponent)) componentsRemoved.Add(oldComponent);
                 }
 
                 // Update root entry
                 DateTimeOffset now = DateTimeOffset.UtcNow;
-                this.rootEntry = new FileSystemEntryMount(this.sourceFileSystem, "", "", now, now, Option, this.componentList.Array.Select(c => c.Assignment).ToArray());
+                this.rootEntry = new FileSystemEntryMount(this.sourceFileSystem, "", "", now, now, Option, this.components.Array.Select(c => c.Assignment).ToArray());
+                // Update options
+                this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
             }
         }
 
@@ -236,7 +238,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -377,7 +379,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -494,7 +496,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -582,7 +584,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -665,7 +667,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -753,7 +755,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -820,7 +822,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -898,7 +900,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -969,7 +971,7 @@ namespace Lexical.FileSystem.Decoration
             try
             {
                 // Get reference
-                Component[] components = this.componentList.Array;
+                Component[] components = this.components.Array;
                 // Zero components
                 if (components.Length == 0)
                 {
@@ -1106,7 +1108,7 @@ namespace Lexical.FileSystem.Decoration
             // Assert supported
             if (!Option.CanObserve) throw new NotSupportedException(nameof(Observe));
             // Get reference
-            Component[] components = this.componentList.Array;
+            Component[] components = this.components.Array;
             // Zero components
             if (components.Length == 0) throw new NotSupportedException(nameof(Observe));
 

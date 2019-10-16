@@ -1032,7 +1032,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => Path;
+            => Path == "" ? "OS" : Path;
     }
 
     internal static class FileSystemInfoExtensions
