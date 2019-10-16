@@ -193,6 +193,31 @@ namespace Lexical.FileSystem
                     if (column++ > 0) output.Append(" ");
                     output.Append(Entry.Path);
                 }
+
+                // Print mountpoint
+                if (format.HasFlag(Format.Mount) && Entry.IsMountPoint())
+                {
+                    FileSystemAssignment[] mounts = Entry.Mounts();
+                    if (mounts != null)
+                    {
+                        if (column++ > 0) output.Append(" ");
+                        output.Append('[');
+                        for (int i=0; i<mounts.Length; i++)
+                        {
+                            FileSystemAssignment info = mounts[i];
+                            if (i > 0) output.Append(", ");
+                            output.Append(info.FileSystem);
+                            if (info.Option!=null)
+                            {
+                                output.Append(" (");
+                                output.Append(info.Option);
+                                output.Append(")");
+                            }
+                        }
+                        output.Append(']');
+                    }
+                }
+
                 // Print length
                 if (format.HasFlag(Format.Length) && Entry.IsFile())
                 {
@@ -243,6 +268,31 @@ namespace Lexical.FileSystem
                     if (column++ > 0) output.Write(" ");
                     output.Write(Entry.Path);
                 }
+
+                // Print mountpoint
+                if (format.HasFlag(Format.Mount) && Entry.IsMountPoint())
+                {
+                    FileSystemAssignment[] mounts = Entry.Mounts();
+                    if (mounts != null)
+                    {
+                        if (column++ > 0) output.Write(" ");
+                        output.Write('[');
+                        for (int i = 0; i < mounts.Length; i++)
+                        {
+                            FileSystemAssignment info = mounts[i];
+                            if (i > 0) output.Write(", ");
+                            output.Write(info.FileSystem);
+                            if (info.Option != null)
+                            {
+                                output.Write(" (");
+                                output.Write(info.Option);
+                                output.Write(")");
+                            }
+                        }
+                        output.Write(']');
+                    }
+                }
+
                 // Print length
                 if (format.HasFlag(Format.Length) && Entry.IsFile())
                 {

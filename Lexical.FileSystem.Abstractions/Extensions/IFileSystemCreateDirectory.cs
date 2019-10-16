@@ -73,5 +73,8 @@ namespace Lexical.FileSystem
         {
             CanCreateDirectory = canCreateDirectory;
         }
+
+        /// <inheritdoc/>
+        public override string ToString() => CanCreateDirectory ? "CanCreateDirectory" : "NoCreateDirectory";
     }
 }

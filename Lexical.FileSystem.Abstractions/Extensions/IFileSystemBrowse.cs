@@ -127,6 +127,9 @@ namespace Lexical.FileSystem
             CanBrowse = canBrowse;
             CanGetEntry = canGetEntry;
         }
+
+        /// <inheritdoc/>
+        public override string ToString() => (CanBrowse ? "CanBrowse" : "NoBrowse") + "," + (CanGetEntry ? "CanGetEntry" : "NoGetEntry");
     }
 
 }

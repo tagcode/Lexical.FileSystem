@@ -27,6 +27,14 @@ namespace Lexical.FileSystem
             if (option is IFileSystemOptionAdaptable adaptable && adaptable.GetOption(typeof(T)) is T casted_) return casted_;
             return default;
         }
+
+        /// <summary>
+        /// Get sub-path option.
+        /// <param name="filesystemOption"></param>
+        /// </summary>
+        /// <returns>mount path or null</returns>
+        public static String SubPath(this IFileSystemOption filesystemOption)
+            => filesystemOption.As<IFileSystemOptionSubPath>() is IFileSystemOptionSubPath mp ? mp.SubPath : null;
     }
 
 }

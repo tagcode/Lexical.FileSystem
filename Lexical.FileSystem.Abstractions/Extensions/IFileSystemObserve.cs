@@ -117,6 +117,9 @@ namespace Lexical.FileSystem
             CanObserve = canObserve;
             CanSetEventDispatcher = canSetEventDispatcher;
         }
+
+        /// <inheritdoc/>
+        public override string ToString() => (CanObserve ? "CanObserve" : "NoObserve") + "," + (CanSetEventDispatcher ? "CanSetEventDispatcher" : "NoSetEventDispatcher");
     }
 
 }

@@ -117,17 +117,12 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Tests if entry represents a mount root.
         /// </summary>
-        bool IsMount { get; }
+        bool IsMountPoint { get; }
 
         /// <summary>
         /// (optional) Mounted filesystem(s).
         /// </summary>
-        //IFileSystem MountedFileSystem { get; }
-
-        /// <summary>
-        /// (optional) Mount options. The object reference that was passed to Mount() method.
-        /// </summary>
-        //IFileSystemOption MountOption { get; }
+        FileSystemAssignment[] Mounts { get; }
     }
     // </IFileSystemEntryMount>
 

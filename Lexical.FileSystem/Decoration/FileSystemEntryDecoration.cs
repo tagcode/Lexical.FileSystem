@@ -67,11 +67,9 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsDrive => Original.IsDrive();
         /// <inheritdoc/>
-        public virtual bool IsMount => Original.IsMount();
+        public virtual bool IsMountPoint => Original.IsMountPoint();
         /// <inheritdoc/>
-        //public IFileSystem MountedFileSystem => Original.MountedFileSystem();
-        /// <inheritdoc/>
-        //public IFileSystemOption MountOption => Original.MountOption();
+        public virtual FileSystemAssignment[] Mounts => Original.Mounts();
 
         /// <summary>
         /// Create decorated entry.

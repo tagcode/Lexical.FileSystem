@@ -74,5 +74,8 @@ namespace Lexical.FileSystem
         {
             CanMove = canMove;
         }
+
+        /// <inheritdoc/>
+        public override string ToString() => CanMove ? "CanMove" : "NoMove";
     }
 }

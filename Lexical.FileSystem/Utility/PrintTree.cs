@@ -56,14 +56,14 @@ namespace Lexical.FileSystem
             /// Print entry path.
             /// 
             /// ├──/
-            /// │  ├──/mnt
-            /// │  ├──/tmp
+            /// │  ├──/mnt/
+            /// │  ├──/tmp/
             /// │  │  └──/tmp/helloworld.txt
-            /// │  └──/usr
-            /// │     └──/usr/lex
+            /// │  └──/usr/
+            /// │     └──/usr/myuser/
             /// └──c:
-            ///    └──c:/dir
-            ///       └──c:/dir/dir
+            ///    └──c:/dir/
+            ///       └──c:/dir/dir/
             /// </summary>
             Path = 1 << 9,
 
@@ -71,19 +71,31 @@ namespace Lexical.FileSystem
             /// Print length on files
             /// 
             /// ├──/
-            /// │  ├──/mnt
-            /// │  ├──/tmp
+            /// │  ├──/mnt/
+            /// │  ├──/tmp/
             /// │  │  └──/tmp/helloworld.txt 128
-            /// │  └──/usr
-            /// │     └──/usr/lex
+            /// │  └──/usr/
+            /// │     └──/usr/myuser/
             /// </summary>
             Length = 1 << 12,
+
+            /// <summary>
+            /// Print mount info on mountpoints.
+            /// 
+            /// ├──/
+            /// │  ├──/application/ [C:\Program Files (x86)\MyApplication]
+            /// │  ├──/assembly/ [AssemblyFileSystem]
+            /// │  ├──/tmp/ [MemoryFileSystem]
+            /// │  ├──/docs/ [C:\Users\myuser\MyDocuments]
+            /// │  └──/home/ [C:\Users\myuser]
+            /// </summary>
+            Mount = 1 << 14,
 
             /// <summary>
             /// Print error on files
             /// 
             /// ├──/
-            /// │  └──/tmp IOException: File not found.
+            /// │  └──/tmp/ IOException: File not found.
             /// </summary>
             Error = 1 << 16,
 

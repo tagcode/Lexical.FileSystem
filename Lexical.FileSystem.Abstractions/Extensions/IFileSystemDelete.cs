@@ -74,5 +74,8 @@ namespace Lexical.FileSystem
         {
             CanDelete = canDelete;
         }
+
+        /// <inheritdoc/>
+        public override string ToString() => CanDelete ? "CanDelete" : "NoDelete";
     }
 }

@@ -60,7 +60,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanUnmount => true;
         /// <inheritdoc/>
-        public virtual bool CanListMounts => true;
+        public virtual bool CanListMountPoints => true;
 
         /// <summary>
         /// Create virtual filesystem.
@@ -107,10 +107,13 @@ namespace Lexical.FileSystem
                     if (cursor.mount != null) mountPoints.Add(cursor.mount);
                 }
                 // Traverse path in name parts
-                else while (enumr.MoveNext())
+                else
+                {
+                    // Add to stack
+                    if (cursor.mount != null) mountPoints.Add(cursor.mount);
+                    // Follow path
+                    while (enumr.MoveNext())
                     {
-                        // Add to stack
-                        if (cursor.mount != null) mountPoints.Add(cursor.mount);
                         // Name
                         StringSegment name = enumr.Current;
                         // "."
@@ -126,9 +129,12 @@ namespace Lexical.FileSystem
                         if (!cursor.children.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
                         // Move final down
                         finalDirectory = cursor;
+                        // Add to stack
+                        if (cursor.mount != null) mountPoints.Add(cursor.mount);
                     }
-                // Add vfs entries
-                if (finalDirectory != null) foreach (var kp in finalDirectory.children) vfsEntries.Add(kp.Value.Entry);
+                }
+                // Add vfs directory's child mountpoint entries
+                if (finalDirectory != null && finalDirectory.children.Count>0) foreach(var c in finalDirectory.children) vfsEntries.Add(c.Value.Entry);
             }
             finally
             {
@@ -205,11 +211,11 @@ namespace Lexical.FileSystem
                 Directory cursor = vfsRoot, finalDirectory = vfsRoot;
                 // Path '/' splitter, enumerates name strings from root towards tail
                 PathEnumerator enumr = new PathEnumerator(path, true);
+                // Add to stack
+                if (cursor.mount != null) mountPoints.Add(cursor.mount);
                 // Traverse path in name parts
                 while (enumr.MoveNext())
                 {
-                    // Add to stack
-                    if (cursor.mount != null) mountPoints.Add(cursor.mount);
                     // Name
                     StringSegment name = enumr.Current;
                     // "."
@@ -225,6 +231,8 @@ namespace Lexical.FileSystem
                     if (!cursor.children.TryGetValue(name, out cursor)) { finalDirectory = null; break; }
                     // Move cursor
                     finalDirectory = cursor;
+                    // Add to stack
+                    if (cursor.mount != null) mountPoints.Add(cursor.mount);
                 }
                 // Return vfs entry
                 if (finalDirectory != null) return finalDirectory.Entry;
@@ -338,7 +346,12 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <returns></returns>
             public IFileSystemEntryMount CreateEntry()
-                => new FileSystemEntryMount(filesystem, Path, name, lastModified, lastAccess, filesystem);
+            {
+                FileSystemAssignment[] mounts = null;
+                var _mount = mount;
+                if (_mount != null) mounts = _mount.componentList.Array.Select(c => c.Assignment).ToArray();                    
+                return new FileSystemEntryMount(filesystem, Path, name, lastModified, lastAccess, filesystem, mounts);
+            }
 
             /// <summary>
             /// Enumerate self and subtree.
@@ -390,25 +403,15 @@ namespace Lexical.FileSystem
                 return false;
             }
 
-            /// <summary>
-            /// Delete node
-            /// </summary>
-            public virtual void Dispose()
-            {
-                this.isDeleted = true;
-            }
-
+            /// <summary>Delete node</summary>
+            public virtual void Dispose() { this.isDeleted = true; }
             /// <summary>Flush cached entry info.</summary>
             public void FlushEntry() => entry = null;
             /// <summary>Flush cached array of child entries.</summary>
             public void FlushChildEntries() => childEntries = null;
             /// <summary>Flush cached path string and entry</summary>
             public void FlushPath() { path = null; entry = null; }
-
-            /// <summary>
-            /// Print info
-            /// </summary>
-            /// <returns></returns>
+            /// <summary>Print info</summary>
             public override string ToString() => Path;
         }
 
@@ -908,20 +911,20 @@ namespace Lexical.FileSystem
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         public VirtualFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
-            => Mount(path, (filesystem, mountOption));
+            => Mount(path, new FileSystemAssignment(filesystem, mountOption));
 
         /// <summary>
-        /// Mount <paramref name="filesystems"/> at <paramref name="path"/> in the parent filesystem.
+        /// Mount <paramref name="mounts"/> at <paramref name="path"/> in the parent filesystem.
         /// 
         /// If <paramref name="path"/> is already mounted, then replaces previous mount.
         /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
         /// </summary>
-        /// <param name="path">path to the directory where to mount <paramref name="filesystems"/></param>
-        /// <param name="filesystems">(optional)filesystems and options</param>
+        /// <param name="path">path to the directory where to mount <paramref name="mounts"/></param>
+        /// <param name="mounts">(optional)filesystems and options</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         /// <exception cref="DirectoryNotFoundException">If <paramref name="path"/> refers beyond root with ".."</exception>
-        public VirtualFileSystem Mount(string path, params (IFileSystem filesystem, IFileSystemOption mountOption)[] filesystems)
+        public VirtualFileSystem Mount(string path, params FileSystemAssignment[] mounts)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -989,9 +992,13 @@ namespace Lexical.FileSystem
                     }
 
                 // Create container for components.
-                if (cursor.mount == null) cursor.mount = new FileSystemDecoration(this, new (string, IFileSystem, IFileSystemOption)[0]);
+                if (cursor.mount == null) cursor.mount = new FileSystemDecoration(this, cursor.Path);
                 // Set components
-                cursor.mount.SetComponents(ref componentsAdded, ref componentsRemoved, ref componentsReused, filesystems.Select(p => (path, p.filesystem, p.mountOption)).ToArray());
+                cursor.mount.SetComponents(ref componentsAdded, ref componentsRemoved, ref componentsReused, cursor.Path, mounts);
+                // Root entry changed
+                cursor.FlushEntry();
+                // Change relative ".." path to absolute, so that events in ProcessMountEvents will have better paths.
+                path = cursor.Path;
             }
             finally
             {
@@ -1060,7 +1067,13 @@ namespace Lexical.FileSystem
                     }
 
                 // Remove components
-                if (cursor.mount != null) cursor.mount.SetComponents(ref componentsAdded, ref componentsRemoved, ref componentsReused);
+                if (cursor.mount != null) cursor.mount.SetComponents(ref componentsAdded, ref componentsRemoved, ref componentsReused, cursor.Path);
+
+                // Just in case some other thread uses.
+                cursor.FlushEntry();
+
+                // Change relative ".." path to absolute, so that events in ProcessMountEvents will have better paths.
+                path = cursor.Path;
 
                 // Disconnect from parent, if no children
                 while (cursor != null && cursor.children.Count == 0 && cursor.parent != null)
@@ -1163,6 +1176,9 @@ namespace Lexical.FileSystem
                     {
                         FileSystemDecoration.Component c = componentsAdded[j];
 
+                        // FileSystem is not observed
+                        if (!c.Option.CanObserve) continue;
+
                         string intersection = GlobPatternSet.Intersection(observer.Filter, c.Path.ParentPath + "**");
                         if (intersection == null) continue;
 
@@ -1182,6 +1198,10 @@ namespace Lexical.FileSystem
                     for (int j = 0; j < componentsRemoved.Count; j++)
                     {
                         FileSystemDecoration.Component c = componentsRemoved[j];
+
+                        // FileSystem is not observed
+                        if (!c.Option.CanObserve) continue;
+
                         string intersection = GlobPatternSet.Intersection(observer.Filter, c.Path.ParentPath + "**");
                         if (intersection == null) continue;
 
@@ -1203,14 +1223,14 @@ namespace Lexical.FileSystem
             if (events.Count > 0) DispatchEvents(ref events);
         }
 
-        IFileSystem IFileSystemMount.Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption) => Mount(path, (filesystem, mountOption));
+        IFileSystem IFileSystemMount.Mount(string path, params FileSystemAssignment[] mounts) => Mount(path, mounts);
         IFileSystem IFileSystemMount.Unmount(string path) => Unmount(path);
 
         /// <summary>
         /// List all mounts
         /// </summary>
         /// <returns></returns>
-        public IFileSystemEntryMount[] ListMounts()
+        public IFileSystemEntryMount[] ListMountPoints()
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);

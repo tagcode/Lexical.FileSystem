@@ -1102,52 +1102,20 @@ namespace Lexical.FileSystem
                 this.lastAccess = time;
             }
 
-            /// <summary>
-            /// Create entry snapshot.
-            /// </summary>
-            /// <returns></returns>
+            /// <summary>Create entry snapshot.</summary>
             public abstract IFileSystemEntry CreateEntry();
-
-            /// <summary>
-            /// Visit self and subtree.
-            /// </summary>
-            /// <returns></returns>
+            /// <summary>Visit self and subtree.</summary>
             public abstract IEnumerable<Node> VisitTree();
 
-            /// <summary>
-            /// Flush cached path info
-            /// </summary>
-            public void FlushPath()
-            {
-                path = null;
-                entry = null;
-            }
-
-            /// <summary>
-            /// Flush cached entry info.
-            /// </summary>
-            public void FlushEntry()
-            {
-                entry = null;
-            }
-
-            /// <summary>
-            /// Flush child entries
-            /// </summary>
+            /// <summary>Flush cached path info</summary>
+            public void FlushPath() { path = null; entry = null; }
+            /// <summary>Flush cached entry info.</summary>
+            public void FlushEntry() => entry = null;
+            /// <summary>Flush child entries</summary>
             public virtual void FlushChildEntries() { }
-
-            /// <summary>
-            /// Delete node
-            /// </summary>
-            public virtual void Dispose()
-            {
-                this.isDeleted = true;
-            }
-
-            /// <summary>
-            /// Print info
-            /// </summary>
-            /// <returns></returns>
+            /// <summary>Delete node</summary>
+            public virtual void Dispose() => this.isDeleted = true;
+            /// <summary>Print info</summary>
             public override string ToString() => Path;
         }
 

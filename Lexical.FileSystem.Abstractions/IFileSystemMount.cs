@@ -16,8 +16,8 @@ namespace Lexical.FileSystem
         bool CanMount { get; }
         /// <summary>Is filesystem allowed to unmount a mount.</summary>
         bool CanUnmount { get; }
-        /// <summary>Is filesystem allowed to list mounts.</summary>
-        bool CanListMounts { get; }
+        /// <summary>Is filesystem allowed to list mountpoints.</summary>
+        bool CanListMountPoints { get; }
     }
     // </IFileSystemOptionMount>
 
@@ -28,27 +28,32 @@ namespace Lexical.FileSystem
     public interface IFileSystemMount : IFileSystem, IFileSystemOptionMount
     {
         /// <summary>
-        /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
+        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IFileSystemOption"/> in the parent filesystem.
         /// 
-        /// The <paramref name="path"/> should end at directory separator character '/', unless root directory "" is mounted.
+        /// If no mounts are provided, then creates empty virtual directory.
+        /// If one mount is provided, then mounts that to parent filesystem, with possible mount option.
+        /// If multiple mounts are provided, then mounts a composition of all the filesystem, with the precedence of the order in the provided array.
         /// 
-        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
-        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// If previous mounts exist at the <paramref name="path"/>, then replaces them with new configuration.
         /// 
-        /// If <paramref name="filesystem"/> is null, then an empty directory is created into the parent filesystem.
+        /// If parent filesystem had observers monitoring the <paramref name="path"/>, then observers are notified with new emerged files from the mounted filesystems.
+        /// 
+        /// The <paramref name="path"/> parameter must end with directory separator character '/', unless root directory "" is mounted.
+        /// 
+        /// If there is an open stream to a mounted filesystem, then the file is unlinked from the parent filesystem, but stream maintains open.
         /// </summary>
         /// <param name="path"></param>
-        /// <param name="filesystem">(optional) filesystem to be mounted</param>
-        /// <param name="mountOption">(optional) mount options</param>
+        /// <param name="mounts">(optional) filesystem and option infos</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null);
+        IFileSystem Mount(string path, params FileSystemAssignment[] mounts);
 
         /// <summary>
         /// Unmount a filesystem at <paramref name="path"/>.
         /// 
         /// If there is no mount at <paramref name="path"/>, then does nothing.
-        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// If there is an open stream to previously mounted filesystem, that the file is unlinked, but stream remains open.
+        /// If there are observers monitoring <paramref name="path"/> in the parent filesystem, then the unmounted files are notified as being deleted.
         /// </summary>
         /// <param name="path"></param>
         /// <returns>this (parent filesystem)</returns>
@@ -60,24 +65,24 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystemEntryMount[] ListMounts();
+        IFileSystemEntryMount[] ListMountPoints();
     }
 
-    /// <summary>The mount parameters.</summary>
-    public partial struct FileSystemMountInfo
+    /// <summary>The filesystem and option assignment.</summary>
+    public partial struct FileSystemAssignment
     {
-        /// <summary>The mounted filesystem.</summary>
+        /// <summary>Filesystem.</summary>
         public readonly IFileSystem FileSystem;
-        /// <summary>The mounte options.</summary>
-        public readonly IFileSystemOption MountOption;
+        /// <summary>Overriding option assignment.</summary>
+        public readonly IFileSystemOption Option;
 
-        /// <summary>Create mount info.</summary>
-        /// <param name="fileSystem">file system to mount</param>
-        /// <param name="mountOption">(optional) mount options</param>
-        public FileSystemMountInfo(IFileSystem fileSystem, IFileSystemOption mountOption)
+        /// <summary>Create filesystem and option assignment.</summary>
+        /// <param name="fileSystem">file system</param>
+        /// <param name="option">(optional) overriding option assignment</param>
+        public FileSystemAssignment(IFileSystem fileSystem, IFileSystemOption option)
         {
             FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-            MountOption = mountOption;
+            Option = option;
         }
     }
     // </doc>
@@ -89,35 +94,8 @@ namespace Lexical.FileSystem
     public interface IFileSystemOptionAutoMount : IFileSystemOption
     {
         /// <summary>Package loaders that can mount package files, such as .zip.</summary>
-        IFileSystemPackageLoader[] PackageLoaders { get; }
+        IFileSystemPackageLoader[] AutoMounters { get; }
     }
     // </IFileSystemOptionAutoMount>
-
-    /// <summary>The mount parameters.</summary>
-    public partial struct FileSystemMountInfo : IEquatable<FileSystemMountInfo>
-    {
-        /// <summary>Implicit conversion</summary>
-        public static implicit operator (IFileSystem, IFileSystemOption)(FileSystemMountInfo info) => (info.FileSystem, info.MountOption);
-        /// <summary>Implicit conversion</summary>
-        public static implicit operator FileSystemMountInfo((IFileSystem, IFileSystemOption) info) => new FileSystemMountInfo(info.Item1, info.Item2);
-        /// <summary>Compare infos</summary>
-        public static bool operator ==(FileSystemMountInfo left, FileSystemMountInfo right)
-            => right.FileSystem.Equals(left.FileSystem) && ((left.MountOption == null) == (right.MountOption == null) || (left.MountOption != null && left.MountOption.Equals(right.MountOption)));
-        /// <summary>Compare infos</summary>
-        public static bool operator !=(FileSystemMountInfo left, FileSystemMountInfo right)
-            => !right.FileSystem.Equals(left.FileSystem) || ((left.MountOption == null) != (right.MountOption == null)) || (left.MountOption != null && !left.MountOption.Equals(right.MountOption));
-        /// <summary>Compare infos</summary>
-        public bool Equals(FileSystemMountInfo other)
-            => other.FileSystem.Equals(FileSystem) && ((MountOption == null) == (other.MountOption == null) || (MountOption != null && MountOption.Equals(other.MountOption)));
-        /// <summary>Compare infos</summary>
-        public override bool Equals(object obj)
-            => obj is FileSystemMountInfo other ? other.FileSystem.Equals(FileSystem) && ((MountOption == null) == (other.MountOption == null) || (MountOption != null && MountOption.Equals(other.MountOption))) : false;
-        /// <summary>Info hashcode</summary>
-        public override int GetHashCode()
-            => 3 * FileSystem.GetHashCode() + (MountOption == null ? 0 : 7 * MountOption.GetHashCode());
-        /// <summary>Print info</summary>
-        public override string ToString()
-            => MountOption == null ? FileSystem.ToString() : $"{FileSystem}({MountOption})";
-    }
 
 }

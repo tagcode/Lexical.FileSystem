@@ -194,7 +194,12 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Tests if entry represents a mount root.
         /// </summary>
-        public bool IsMount => true;
+        public bool IsMountPoint => true;
+
+        /// <summary>
+        /// Mounts
+        /// </summary>
+        public FileSystemAssignment[] Mounts { get; protected set; }
 
         /// <summary>
         /// Create entry
@@ -205,8 +210,10 @@ namespace Lexical.FileSystem
         /// <param name="lastModified"></param>
         /// <param name="lastAccess"></param>
         /// <param name="options"></param>
-        public FileSystemEntryMount(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, options)
+        /// <param name="mounts"></param>
+        public FileSystemEntryMount(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options, FileSystemAssignment[] mounts) : base(filesystem, path, name, lastModified, lastAccess, options)
         {
+            this.Mounts = mounts;
         }
     }
 

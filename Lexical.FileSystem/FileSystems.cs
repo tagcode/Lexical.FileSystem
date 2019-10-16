@@ -23,7 +23,7 @@ namespace Lexical.FileSystem
         /// <param name="anotherFileSystem"></param>
         /// <returns></returns>
         public static FileSystemDecoration Concat(this IFileSystem filesystem, IFileSystem anotherFileSystem)
-            => new FileSystemDecoration(filesystem, anotherFileSystem);
+            => new FileSystemDecoration(null, "", new FileSystemAssignment(filesystem), new FileSystemAssignment(anotherFileSystem));
 
         /// <summary>
         /// Concatenate <paramref name="filesystem"/> and <paramref name="otherFileSystems"/> into composition filesystem.
@@ -32,7 +32,7 @@ namespace Lexical.FileSystem
         /// <param name="otherFileSystems"></param>
         /// <returns></returns>
         public static FileSystemDecoration Concat(this IFileSystem filesystem, params IFileSystem[] otherFileSystems)
-            => new FileSystemDecoration(Enumerable.Repeat(filesystem, 1).Concat(otherFileSystems));
+            => new FileSystemDecoration(null, "", Enumerable.Repeat(new FileSystemAssignment(filesystem), 1).Concat(otherFileSystems.Select(f => new FileSystemAssignment(f))).ToArray());
 
         /// <summary>
         /// Concatenate <paramref name="filesystem"/> and <paramref name="otherFileSystems"/> into composition filesystem.
@@ -41,7 +41,7 @@ namespace Lexical.FileSystem
         /// <param name="otherFileSystems"></param>
         /// <returns></returns>
         public static FileSystemDecoration Concat(this IFileSystem filesystem, IEnumerable<IFileSystem> otherFileSystems)
-            => new FileSystemDecoration(Enumerable.Repeat(filesystem, 1).Concat(otherFileSystems));
+            => new FileSystemDecoration(null, "", Enumerable.Repeat(new FileSystemAssignment(filesystem), 1).Concat(otherFileSystems.Select(f => new FileSystemAssignment(f))).ToArray());
 
         /// <summary>
         /// Concatenate <paramref name="filesystems"/> into a composition filesystem.
@@ -49,7 +49,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystems"></param>
         /// <returns></returns>
         public static FileSystemDecoration Concat(params IFileSystem[] filesystems)
-            => new FileSystemDecoration(filesystems);
+            => new FileSystemDecoration(null, "", filesystems.Select(f => new FileSystemAssignment(f)).ToArray());
 
         /// <summary>
         /// Concatenate <paramref name="filesystems"/> into a composition filesystem.
@@ -57,7 +57,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystems"></param>
         /// <returns></returns>
         public static FileSystemDecoration Concat(IEnumerable<IFileSystem> filesystems)
-            => new FileSystemDecoration(filesystems);
+            => new FileSystemDecoration(null, "", filesystems.Select(f => new FileSystemAssignment(f)).ToArray());
 
         /// <summary>
         /// Concatenate <paramref name="filesystemsAndOptions"/> into one composition filesystem.
@@ -65,7 +65,15 @@ namespace Lexical.FileSystem
         /// <param name="filesystemsAndOptions"></param>
         /// <returns></returns>
         public static FileSystemDecoration Concat(params (IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
-            => new FileSystemDecoration(filesystemsAndOptions);
+            => new FileSystemDecoration(null, "", filesystemsAndOptions.Select(t=>new FileSystemAssignment(t.filesystem, t.option)).ToArray());
+
+        /// <summary>
+        /// Concatenate <paramref name="filesystemsAndOptions"/> into one composition filesystem.
+        /// </summary>
+        /// <param name="filesystemsAndOptions"></param>
+        /// <returns></returns>
+        public static FileSystemDecoration Concat(params FileSystemAssignment[] filesystemsAndOptions)
+            => new FileSystemDecoration(null, "", filesystemsAndOptions);
 
         /// <summary>
         /// Creates a new filesystem decoration that reduces the permissions of <paramref name="filesystem"/> by 
@@ -75,7 +83,7 @@ namespace Lexical.FileSystem
         /// <param name="option"></param>
         /// <returns></returns>
         public static FileSystemDecoration Decorate(this IFileSystem filesystem, IFileSystemOption option)
-            => new FileSystemDecoration(filesystem, option);
+            => new FileSystemDecoration(null, "", new FileSystemAssignment(filesystem, option));
 
         /// <summary>
         /// Creates a new filesystem decoration that reduces the permissions of <paramref name="filesystem"/> to readonly.
@@ -83,7 +91,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <returns></returns>
         public static FileSystemDecoration AsReadOnly(this IFileSystem filesystem)
-            => new FileSystemDecoration(filesystem, FileSystemOption.ReadOnly);
+            => new FileSystemDecoration(null, "", new FileSystemAssignment(filesystem, FileSystemOption.ReadOnly));
 
     }
 }

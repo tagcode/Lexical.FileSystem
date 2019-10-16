@@ -140,5 +140,8 @@ namespace Lexical.FileSystem
             CanWrite = canWrite;
             CanCreateFile = canCreateFile;
         }
+
+        /// <inheritdoc/>
+        public override string ToString() => (CanOpen ? "CanOpen" : "NoOpen") + "," + (CanRead ? "CanRead" : "NoRead") + "," + (CanWrite ? "CanWrite" : "NoWrite") + "," + (CanCreateFile ? "CanCreateFile" : "NoCreateFile");
     }
 }

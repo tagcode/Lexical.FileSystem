@@ -65,27 +65,27 @@ namespace Lexical.FileSystem
         /// <summary>The option type that this class has operations for.</summary>
         public Type OptionType => typeof(IFileSystemOptionAutoMount);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionAutoMount c ? o is FileSystemOptionPackageLoader ? /*already flattened*/o : /*new instance*/new FileSystemOptionPackageLoader(c.PackageLoaders) : throw new InvalidCastException($"{typeof(IFileSystemOptionAutoMount)} expected.");
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionAutoMount c ? o is FileSystemOptionPackageLoader ? /*already flattened*/o : /*new instance*/new FileSystemOptionPackageLoader(c.AutoMounters) : throw new InvalidCastException($"{typeof(IFileSystemOptionAutoMount)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
         public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2)
         {
             IFileSystemOptionAutoMount p1 = (IFileSystemOptionAutoMount)o1, p2 = (IFileSystemOptionAutoMount)o2;
-            if (p1.PackageLoaders == null) return p2;
-            if (p2.PackageLoaders == null) return p1;
+            if (p1.AutoMounters == null) return p2;
+            if (p2.AutoMounters == null) return p1;
 
-            IFileSystemPackageLoader[] list = p1.PackageLoaders.Where(pl => p2.PackageLoaders.Contains(pl)).ToArray();
+            IFileSystemPackageLoader[] list = p1.AutoMounters.Where(pl => p2.AutoMounters.Contains(pl)).ToArray();
             return new FileSystemOptionPackageLoader(list);
         }
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
         public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2)
         {
             IFileSystemOptionAutoMount p1 = (IFileSystemOptionAutoMount)o1, p2 = (IFileSystemOptionAutoMount)o2;
-            if (p1.PackageLoaders == null) return p2;
-            if (p2.PackageLoaders == null) return p1;
-            if (p1.PackageLoaders.Length == 0) return p2;
-            if (p2.PackageLoaders.Length == 0) return p1;
+            if (p1.AutoMounters == null) return p2;
+            if (p2.AutoMounters == null) return p1;
+            if (p1.AutoMounters.Length == 0) return p2;
+            if (p2.AutoMounters.Length == 0) return p1;
             Dictionary<string, IFileSystemPackageLoader> byExtension = new Dictionary<string, IFileSystemPackageLoader>(StringComparer.OrdinalIgnoreCase);
-            foreach (var pl in p1.PackageLoaders.Concat(p2.PackageLoaders))
+            foreach (var pl in p1.AutoMounters.Concat(p2.AutoMounters))
             {
                 foreach (string extension in pl.GetExtensions())
                 {
@@ -102,9 +102,9 @@ namespace Lexical.FileSystem
     public class FileSystemOptionPackageLoader : IFileSystemOptionAutoMount
     {
         /// <summary>Package loaders that can mount package files, such as .zip.</summary>
-        public IFileSystemPackageLoader[] PackageLoaders { get; protected set; }
+        public IFileSystemPackageLoader[] AutoMounters { get; protected set; }
         /// <summary>Create option for auto-mounted packages.</summary>
-        public FileSystemOptionPackageLoader(IFileSystemPackageLoader[] packageLoaders) { PackageLoaders = packageLoaders; }
+        public FileSystemOptionPackageLoader(IFileSystemPackageLoader[] packageLoaders) { AutoMounters = packageLoaders; }
     }
 
 }

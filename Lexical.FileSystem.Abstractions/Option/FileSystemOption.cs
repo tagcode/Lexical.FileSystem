@@ -30,7 +30,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public bool CanUnmount => false;
         /// <inheritdoc/>
-        public bool CanListMounts => true;
+        public bool CanListMountPoints => true;
         /// <inheritdoc/>
         public bool CanBrowse => true;
         /// <inheritdoc/>
@@ -39,6 +39,8 @@ namespace Lexical.FileSystem
         public bool CanObserve => true;
         /// <inheritdoc/>
         public bool CanSetEventDispatcher => false;
+        /// <inheritdoc/>
+        public override string ToString() => "ReadOnly";
     }
 
     /// <summary>No options of <see cref="IFileSystemOption"/>.</summary>
@@ -48,6 +50,8 @@ namespace Lexical.FileSystem
         static IFileSystemOption noOptions = new FileSystemOptionNone();
         /// <summary>No options</summary>
         public static IFileSystemOption NoOptions => noOptions;
+        /// <inheritdoc/>
+        public override string ToString() => "None";
     }
 
 }

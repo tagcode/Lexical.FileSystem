@@ -30,8 +30,9 @@ namespace Lexical.FileSystem.Decoration
     ///     <item><see cref="IFileSystemOptionSubPath"/> </item>
     /// </list>
     /// 
+    /// See extension methods in <see cref="FileSystems"/> to create decorations, or use <see cref="VirtualFileSystem"/>.
     /// </summary>
-    public class FileSystemDecoration : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemMount, IFileSystemOptionPath, IFileSystemDecoration
+    public class FileSystemDecoration : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemMount, IFileSystemOptionPath
     {
         /// <summary>Zero entries</summary>
         static IFileSystemEntry[] noEntries = new IFileSystemEntry[0];
@@ -76,7 +77,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool CanUnmount => Option.CanUnmount;
         /// <inheritdoc/>
-        public virtual bool CanListMounts => Option.CanListMounts;
+        public virtual bool CanListMountPoints => Option.CanListMountPoints;
 
         /// <summary>
         /// Root entry
@@ -94,115 +95,56 @@ namespace Lexical.FileSystem.Decoration
         protected IFileSystem sourceFileSystem;
 
         /// <summary>
-        /// Create decorated filesystem.
-        /// 
-        /// Modifies the permissions of <paramref name="filesystem"/>. 
-        /// The effective options will be an intersection of option in <paramref name="filesystem"/> and <paramref name="option"/>.
-        /// 
-        /// <see cref="IFileSystemOptionSubPath"/> exposes a subpath of <paramref name="filesystem"/>.
-        /// <see cref="FileSystemOption.ReadOnly"/> decorates filesystem in readonly mode.
-        /// </summary>
-        /// <param name="filesystem"></param>
-        /// <param name="option">(optional) decoration option</param>
-        public FileSystemDecoration(IFileSystem filesystem, IFileSystemOption option)
-        {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.componentList.Add( new Component(null, filesystem, option) );
-            this.Option = this.componentList[0].Option;
-            SetSourceFileSystem(this);
-        }
-
-        /// <summary>
-        /// Create composition of filesystems
-        /// </summary>
-        /// <param name="filesystems"></param>
-        public FileSystemDecoration(params IFileSystem[] filesystems)
-        {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.componentList.AddRange( filesystems.Select(fs => new Component(null, fs, null)) );
-            this.Option = Options.Read(FileSystemOption.Union(this.componentList.Select(s => s.Option)));
-            SetSourceFileSystem(this);
-        }
-
-        /// <summary>
-        /// Create composition of filesystems.
-        /// 
-        /// Optional FileSystem specific options can be given for each filesystem. 
-        /// An intersection of filesystem and option are used, so the option reduces 
-        /// the options of the filesystem.
-        /// 
-        /// <see cref="IFileSystemOptionSubPath"/> option can be used to use subpath of <see cref="IFileSystem"/>.
-        /// </summary>
-        /// <param name="filesystemsAndOptions"></param>
-        public FileSystemDecoration(params (IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
-        {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.componentList.AddRange( filesystemsAndOptions.Select(p => new Component(null, p.filesystem, p.option)) );
-            this.Option = Options.Read(FileSystemOption.Union(this.componentList.Select(s => s.Option)));
-            SetSourceFileSystem(this);
-        }
-
-        /// <summary>
         /// Create composition of filesystems.
         /// 
         /// A constructor version that exposes its filesystem at a subpath parentPath. 
         /// Also allows to configure what filesystem instance is exposed on decorated file entries and events.
         /// </summary>
         /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
-        /// <param name="parentPath"></param>
-        /// <param name="filesystem"></param>
-        /// <param name="option">mounting options</param>
-        public FileSystemDecoration(IFileSystem parentFileSystem, string parentPath, IFileSystem filesystem, IFileSystemOption option)
+        /// <param name="parentPath">(optional) path in parent filesyste, use "" if there is no parent filesystem (vfs)</param>
+        /// <param name="assignments"></param>
+        public FileSystemDecoration(IFileSystem parentFileSystem, string parentPath, params FileSystemAssignment[] assignments)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.componentList.Add( new Component(parentPath, filesystem, option) );
+            this.componentList.AddRange( assignments.Select(a=> new Component(parentPath, a)) );
             this.Option = Options.Read(FileSystemOption.Union(this.componentList.Select(s => s.Option)));
-            SetSourceFileSystem(parentFileSystem ?? this);
-        }
 
-        /// <summary>
-        /// Create composition of filesystems.
-        /// 
-        /// A constructor version that exposes its filesystem at a subpath parentPath. 
-        /// Also allows to configure what filesystem instance is exposed on decorated file entries and events.
-        /// </summary>
-        /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
-        /// <param name="filesystemsAndOptions">child filesystem configurations</param>
-        public FileSystemDecoration(IFileSystem parentFileSystem, (string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
-        {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.componentList.AddRange( filesystemsAndOptions.Select(p => new Component(p.parentPath, p.filesystem, p.option)) );
-            this.Option = Options.Read(FileSystemOption.Union(this.componentList.Select(s => s.Option)));
-            SetSourceFileSystem(parentFileSystem ?? this);
+            this.sourceFileSystem = parentFileSystem ?? this;
+            this.rootEntry = new FileSystemEntryMount(this.sourceFileSystem, "", "", now, now, Option, this.componentList.Select(c=>c.Assignment).ToArray());
         }
 
         /// <summary>FileSystem (as component of composition) specific information</summary>
         public class Component
         {
+            /// <summary>FileSystem and option assignment</summary>
+            public FileSystemAssignment Assignment;
             /// <summary>FileSystem component</summary>
-            public IFileSystem FileSystem;
-
+            public IFileSystem FileSystem => Assignment.FileSystem;
             /// <summary>Intersection of option in <see cref="FileSystem"/> and option that was provided in constructor.</summary>
             public Options Option;
-
-            /// <summary>(optional) The option parameter that was provided in construction</summary>
-            public IFileSystemOption OptionParameter;
-
             /// <summary>Tool that converts paths.</summary>
             public PathDecoration Path;
 
             /// <summary>Create component info.</summary>
             /// <param name="parentPath">The subpath the filesystem starts at</param>
-            /// <param name="filesystem">child filesystem</param>
-            /// <param name="option">(optional) <paramref name="filesystem"/> mount options</param>
-            public Component(string parentPath, IFileSystem filesystem, IFileSystemOption option)
+            /// <param name="assignment">filesystem and option</param>
+            public Component(string parentPath, FileSystemAssignment assignment)
             {
-                this.OptionParameter = option;
-                this.Option = Options.Read(option == null ? filesystem : FileSystemOption.Intersection(filesystem, option));
-                this.FileSystem = filesystem;
-                this.Path = new PathDecoration(parentPath ?? "", option.MountPath() ?? "");
+                this.Assignment = assignment;
+                this.Option = Options.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
+                this.Path = new PathDecoration(parentPath ?? "", assignment.Option.SubPath() ?? "");
             }
 
+            /// <summary>Create component info.</summary>
+            /// <param name="parentPath">The subpath the filesystem starts at</param>
+            /// <param name="assignment">filesystem and option</param>
+            /// <param name="option">consolidated options</param>
+            public Component(string parentPath, FileSystemAssignment assignment, Options option)
+            {
+                this.Assignment = assignment;
+                this.Option = option;
+                this.Path = new PathDecoration(parentPath ?? "", assignment.Option.SubPath() ?? "");
+            }
         }
 
         /// <summary>Comparer that <see cref="SetComponents"/> uses.</summary>
@@ -211,32 +153,33 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Set new list components. Recycles previous components if path, filesystem and option matches.
         /// </summary>
-        /// <param name="filesystemsAndOptions"></param>
         /// <param name="componentsAdded">list of components added</param>
         /// <param name="componentsRemoved">list of components removed</param>
         /// <param name="componentsReused">list of previous components that were reused</param>
-        protected internal void SetComponents(ref StructList2<Component> componentsAdded, ref StructList2<Component> componentsRemoved , ref StructList2<Component> componentsReused, params(string parentPath, IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
+        /// <param name="parentPath">Path in parent (vfs) filesystem, "" if there is vfs</param>
+        /// <param name="assignments"></param>
+        protected internal void SetComponents(ref StructList2<Component> componentsAdded, ref StructList2<Component> componentsRemoved , ref StructList2<Component> componentsReused, string parentPath, params FileSystemAssignment[] assignments)
         {
             lock (this.componentList.SyncRoot)
             {
-                var oldComponents = componentList.ToArray();
+                var oldComponents = componentList.Array;
                 var oldComponentLineMap = componentList.ToDictionary(c => new Triple<string, IFileSystem, Options>(c.Path.ParentPath, c.FileSystem, c.Option), componentTupleComparer);
                 componentList.Clear();
-                foreach((string parentPath, IFileSystem filesystem, IFileSystemOption option) line in filesystemsAndOptions)
+                foreach(FileSystemAssignment assignment in assignments)
                 {
                     // Take intersection and consolidate options
-                    Options consolidatedOptions = Options.Read(line.option == null ? line.filesystem : FileSystemOption.Intersection(line.filesystem, line.option));
+                    Options consolidatedOptions = Options.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
 
                     // Reuse previous component
                     Component reusedComponent;
-                    if (oldComponentLineMap.TryGetValue(new Triple<string, IFileSystem, Options>(line.parentPath, line.filesystem, consolidatedOptions), out reusedComponent))
+                    if (oldComponentLineMap.TryGetValue(new Triple<string, IFileSystem, Options>(parentPath, assignment.FileSystem, consolidatedOptions), out reusedComponent))
                     {
                         this.componentList.Add(reusedComponent);
                         componentsAdded.Add(reusedComponent);
                     } else
                     // Create new component
                     {
-                        Component newComponent = new Component(line.parentPath, line.filesystem, consolidatedOptions);
+                        Component newComponent = new Component(parentPath, assignment, consolidatedOptions);
                         this.componentList.Add(newComponent);
                         componentsAdded.Add(newComponent);
                     }
@@ -247,20 +190,11 @@ namespace Lexical.FileSystem.Decoration
                 {
                     if (!this.componentList.Contains(oldComponent)) componentsRemoved.Add(oldComponent);
                 }
-            }
-        }
 
-        /// <summary>
-        /// Sets the <see cref="IFileSystem"/> reference that is returned in the decorated <see cref="IFileSystemEntry"/> and <see cref="IFileSystemEvent"/> instances.
-        /// 
-        /// Updates <see cref="sourceFileSystem"/> reference and <see cref="rootEntry"/>.
-        /// </summary>
-        /// <param name="newSourceFileSystem"></param>
-        protected void SetSourceFileSystem(IFileSystem newSourceFileSystem)
-        {
-            this.sourceFileSystem = newSourceFileSystem ?? this;
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            this.rootEntry = new FileSystemEntryDirectory(newSourceFileSystem, "", "", now, now, Option);
+                // Update root entry
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+                this.rootEntry = new FileSystemEntryMount(this.sourceFileSystem, "", "", now, now, Option, this.componentList.Array.Select(c => c.Assignment).ToArray());
+            }
         }
 
         /// <summary>
@@ -275,14 +209,6 @@ namespace Lexical.FileSystem.Decoration
         {
             ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
             return this;
-        }
-
-        /// <summary>
-        /// Create colletion of file systems
-        /// </summary>
-        /// <param name="filesystemsEnumrable"></param>
-        public FileSystemDecoration(IEnumerable<IFileSystem> filesystemsEnumrable) : this(filesystems: filesystemsEnumrable.ToArray())
-        {
         }
 
         /// <summary>
@@ -445,6 +371,8 @@ namespace Lexical.FileSystem.Decoration
             if (path == null) throw new ArgumentNullException(nameof(path));
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+            // Return root
+            if (path == "") return rootEntry;
 
             try
             {
@@ -455,8 +383,6 @@ namespace Lexical.FileSystem.Decoration
                 {
                     // Assert can get entry
                     if (!this.Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
-                    // Return root
-                    if (path == "") return rootEntry;
                     // No match
                     return null;
                 }
@@ -883,18 +809,8 @@ namespace Lexical.FileSystem.Decoration
             }
         }
 
-        /// <summary>
-        /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
-        /// 
-        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
-        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="filesystem"></param>
-        /// <param name="mountOption">(optional)</param>
-        /// <returns>this (parent filesystem)</returns>
-        /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public IFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
+        /// <inheritdoc/>
+        public IFileSystem Mount(string path, params FileSystemAssignment[] mounts)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -925,7 +841,7 @@ namespace Lexical.FileSystem.Decoration
                     String childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
                     // Mount
-                    component.FileSystem.Mount(childPath, filesystem, mountOption);
+                    component.FileSystem.Mount(childPath, mounts);
                 }
 
                 // Many components
@@ -942,8 +858,9 @@ namespace Lexical.FileSystem.Decoration
                         if (!component.Path.ParentToChild(path, out childPath)) continue;
                         try
                         {
-                            component.FileSystem.Mount(childPath, filesystem, mountOption);
+                            component.FileSystem.Mount(childPath, mounts);
                             ok = true; supported = true;
+                            break; // one ok is enough
                         }
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
@@ -1044,7 +961,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public IFileSystemEntryMount[] ListMounts()
+        public IFileSystemEntryMount[] ListMountPoints()
         {
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
@@ -1057,7 +974,7 @@ namespace Lexical.FileSystem.Decoration
                 if (components.Length == 0)
                 {
                     // Assert can 
-                    if (!this.Option.CanListMounts) throw new NotSupportedException(nameof(ListMounts));
+                    if (!this.Option.CanListMountPoints) throw new NotSupportedException(nameof(ListMountPoints));
                     // No filesystem mounts
                     return new IFileSystemEntryMount[0];
                 }
@@ -1068,9 +985,9 @@ namespace Lexical.FileSystem.Decoration
                     // Get reference
                     var component = components[0];
                     // Assert can create
-                    if (!component.Option.CanListMounts) throw new NotSupportedException(nameof(ListMounts));
+                    if (!component.Option.CanListMountPoints) throw new NotSupportedException(nameof(ListMountPoints));
                     // List
-                    IFileSystemEntryMount[] childEntries = component.FileSystem.ListMounts();
+                    IFileSystemEntryMount[] childEntries = component.FileSystem.ListMountPoints();
                     // Result array to be filled
                     IFileSystemEntryMount[] result = new IFileSystemEntryMount[childEntries.Length];
                     // Is result array filled with null enties
@@ -1113,12 +1030,12 @@ namespace Lexical.FileSystem.Decoration
                     foreach (Component component in components)
                     {
                         // Assert component can browse
-                        if (!component.Option.CanListMounts) continue;
+                        if (!component.Option.CanListMountPoints) continue;
                         // Catch NotSupported
                         try
                         {
                             // Browse
-                            IFileSystemEntryMount[] component_entries = component.FileSystem.ListMounts();
+                            IFileSystemEntryMount[] component_entries = component.FileSystem.ListMountPoints();
                             entryArrays.Add((component, component_entries));
                             entryCount += component_entries.Length;
                             supported = true;
@@ -1126,7 +1043,7 @@ namespace Lexical.FileSystem.Decoration
                         catch (DirectoryNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
-                    if (!supported) throw new NotSupportedException(nameof(ListMounts));
+                    if (!supported) throw new NotSupportedException(nameof(ListMountPoints));
 
                     // Create list for result
                     List<IFileSystemEntryMount> result = new List<IFileSystemEntryMount>(entryCount);
@@ -1159,7 +1076,7 @@ namespace Lexical.FileSystem.Decoration
             catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, null))
             {
                 // Never goes here
-                throw new NotSupportedException(nameof(ListMounts));
+                throw new NotSupportedException(nameof(ListMountPoints));
             }
         }
 
@@ -1373,7 +1290,7 @@ namespace Lexical.FileSystem.Decoration
             /// <inheritdoc/>
             public bool CanUnmount { get; set; }
             /// <inheritdoc/>
-            public bool CanListMounts { get; set; }
+            public bool CanListMountPoints { get; set; }
             /// <inheritdoc/>
             public FileSystemCaseSensitivity CaseSensitivity { get; set; }
             /// <inheritdoc/>
@@ -1405,8 +1322,8 @@ namespace Lexical.FileSystem.Decoration
                 result.CanCreateDirectory = option.CanCreateDirectory();
                 result.CanMount = option.CanMount();
                 result.CanUnmount = option.CanUnmount();
-                result.CanListMounts = option.CanListMounts();
-                result.SubPath = option.MountPath();
+                result.CanListMountPoints = option.CanListMountPoints();
+                result.SubPath = option.SubPath();
                 return result;
             }
 
@@ -1435,8 +1352,8 @@ namespace Lexical.FileSystem.Decoration
                 result.CanCreateDirectory = this.CanCreateDirectory | option.CanCreateDirectory();
                 result.CanMount = this.CanMount | option.CanMount();
                 result.CanUnmount = this.CanUnmount | option.CanUnmount();
-                result.CanListMounts = this.CanListMounts | option.CanListMounts();
-                result.SubPath = this.SubPath ?? option.MountPath();
+                result.CanListMountPoints = this.CanListMountPoints | option.CanListMountPoints();
+                result.SubPath = this.SubPath ?? option.SubPath();
                 return result;
             }
         }
