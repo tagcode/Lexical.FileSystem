@@ -23,7 +23,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemOptionCreateDirectory"/></item>
     ///     <item><see cref="IFileSystemOptionDelete"/></item>
     ///     <item><see cref="IFileSystemOptionMount"/></item>
-    ///     <item><see cref="IFileSystemOptionMountPath"/></item>
+    ///     <item><see cref="IFileSystemOptionSubPath"/></item>
     ///     <item><see cref="IFileSystemOptionPath"/></item>
     ///     <item><see cref="IFileSystemOptionAutoMount"/></item>
     /// </list>
@@ -50,4 +50,14 @@ namespace Lexical.FileSystem
         IFileSystemOption GetOption(Type optionInterfaceType);
     }
     // </IFileSystemOptionAdaptable>
+
+    /// <summary>Option for mount path. Use with decorator.</summary>
+    [Operations(typeof(FileSystemOptionOperationSubPath))]
+    // <IFileSystemOptionSubPath>
+    public interface IFileSystemOptionSubPath : IFileSystemOption
+    {
+        /// <summary>Sub-path.</summary>
+        String SubPath { get; }
+    }
+    // </IFileSystemOptionSubPath>
 }

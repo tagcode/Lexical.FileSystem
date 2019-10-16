@@ -4,8 +4,6 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 
-using System;
-
 namespace Lexical.FileSystem
 {
     /// <summary>
@@ -76,7 +74,7 @@ namespace Lexical.FileSystem
         internal static IFileSystemOptionObserve observe = new FileSystemOptionObserve(true, true);
         internal static IFileSystemOptionObserve observeCannotSetEventDispatch = new FileSystemOptionObserve(true, false);
         internal static IFileSystemOptionObserve noObserve = new FileSystemOptionObserve(false, false);
-        internal static IFileSystemOptionMountPath noMountPath = new FileSystemOptionMountPath(null);
+        internal static IFileSystemOptionSubPath noSubPath = new FileSystemOptionSubPath(null);
         internal static IFileSystemOption _readonly = new FileSystemOptionReadOnly();
     }
 }

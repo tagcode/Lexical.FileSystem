@@ -62,17 +62,26 @@ namespace Lexical.FileSystem
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         IFileSystemEntryMount[] ListMounts();
     }
+
+    /// <summary>The mount parameters.</summary>
+    public partial struct FileSystemMountInfo
+    {
+        /// <summary>The mounted filesystem.</summary>
+        public readonly IFileSystem FileSystem;
+        /// <summary>The mounte options.</summary>
+        public readonly IFileSystemOption MountOption;
+
+        /// <summary>Create mount info.</summary>
+        /// <param name="fileSystem">file system to mount</param>
+        /// <param name="mountOption">(optional) mount options</param>
+        public FileSystemMountInfo(IFileSystem fileSystem, IFileSystemOption mountOption)
+        {
+            FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+            MountOption = mountOption;
+        }
+    }
     // </doc>
 
-    /// <summary>Option for mount path. Use with decorator.</summary>
-    [Operations(typeof(FileSystemOptionOperationMountPath))]
-    // <IFileSystemOptionMountPath>
-    public interface IFileSystemOptionMountPath : IFileSystemOption
-    {
-        /// <summary>Mount path.</summary>
-        String MountPath { get; }
-    }
-    // </IFileSystemOptionMountPath>
 
     /// <summary>Option for auto-mounted packages.</summary>
     [Operations(typeof(FileSystemOptionOperationAutoMount))]
@@ -83,4 +92,32 @@ namespace Lexical.FileSystem
         IFileSystemPackageLoader[] PackageLoaders { get; }
     }
     // </IFileSystemOptionAutoMount>
+
+    /// <summary>The mount parameters.</summary>
+    public partial struct FileSystemMountInfo : IEquatable<FileSystemMountInfo>
+    {
+        /// <summary>Implicit conversion</summary>
+        public static implicit operator (IFileSystem, IFileSystemOption)(FileSystemMountInfo info) => (info.FileSystem, info.MountOption);
+        /// <summary>Implicit conversion</summary>
+        public static implicit operator FileSystemMountInfo((IFileSystem, IFileSystemOption) info) => new FileSystemMountInfo(info.Item1, info.Item2);
+        /// <summary>Compare infos</summary>
+        public static bool operator ==(FileSystemMountInfo left, FileSystemMountInfo right)
+            => right.FileSystem.Equals(left.FileSystem) && ((left.MountOption == null) == (right.MountOption == null) || (left.MountOption != null && left.MountOption.Equals(right.MountOption)));
+        /// <summary>Compare infos</summary>
+        public static bool operator !=(FileSystemMountInfo left, FileSystemMountInfo right)
+            => !right.FileSystem.Equals(left.FileSystem) || ((left.MountOption == null) != (right.MountOption == null)) || (left.MountOption != null && !left.MountOption.Equals(right.MountOption));
+        /// <summary>Compare infos</summary>
+        public bool Equals(FileSystemMountInfo other)
+            => other.FileSystem.Equals(FileSystem) && ((MountOption == null) == (other.MountOption == null) || (MountOption != null && MountOption.Equals(other.MountOption)));
+        /// <summary>Compare infos</summary>
+        public override bool Equals(object obj)
+            => obj is FileSystemMountInfo other ? other.FileSystem.Equals(FileSystem) && ((MountOption == null) == (other.MountOption == null) || (MountOption != null && MountOption.Equals(other.MountOption))) : false;
+        /// <summary>Info hashcode</summary>
+        public override int GetHashCode()
+            => 3 * FileSystem.GetHashCode() + (MountOption == null ? 0 : 7 * MountOption.GetHashCode());
+        /// <summary>Print info</summary>
+        public override string ToString()
+            => MountOption == null ? FileSystem.ToString() : $"{FileSystem}({MountOption})";
+    }
+
 }

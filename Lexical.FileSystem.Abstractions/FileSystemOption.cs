@@ -88,10 +88,10 @@ namespace Lexical.FileSystem
 
 
         // FileSystem-level options //
-        /// <summary>Create option for mount path. Used with decorator.</summary>
-        public static IFileSystemOption MountPath(string mountPath) => new FileSystemOptionMountPath(mountPath);
+        /// <summary>Create option for sub-path. Used with decorator and virtual filesystem mount option.</summary>
+        public static IFileSystemOption SubPath(string subPath) => new FileSystemOptionSubPath(subPath);
         /// <summary>No mount path.</summary>
-        public static IFileSystemOption NoMountPath => noMountPath;
+        public static IFileSystemOption NoSubPath => noSubPath;
 
     }
 }

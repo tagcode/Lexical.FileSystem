@@ -254,7 +254,7 @@ namespace Lexical.FileSystem
          */
 
         /// <summary>
-        /// Virtual directory in virtual filesystem.
+        /// Vfs directory. Virtual tree directories are created with Mount() and deleted with Unmount(). 
         /// 
         /// Mounted filesystem can be attached to virtual directory.
         /// </summary>

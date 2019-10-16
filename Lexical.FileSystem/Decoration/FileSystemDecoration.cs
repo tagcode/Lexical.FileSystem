@@ -27,7 +27,7 @@ namespace Lexical.FileSystem.Decoration
     ///     <item><see cref="IFileSystemOptionMove"/> </item>
     ///     <item><see cref="IFileSystemOptionCreateDirectory"/> </item>
     ///     <item><see cref="IFileSystemOptionMount"/> </item>
-    ///     <item><see cref="IFileSystemOptionMountPath"/> </item>
+    ///     <item><see cref="IFileSystemOptionSubPath"/> </item>
     /// </list>
     /// 
     /// </summary>
@@ -99,7 +99,7 @@ namespace Lexical.FileSystem.Decoration
         /// Modifies the permissions of <paramref name="filesystem"/>. 
         /// The effective options will be an intersection of option in <paramref name="filesystem"/> and <paramref name="option"/>.
         /// 
-        /// <see cref="IFileSystemOptionMountPath"/> exposes a subpath of <paramref name="filesystem"/>.
+        /// <see cref="IFileSystemOptionSubPath"/> exposes a subpath of <paramref name="filesystem"/>.
         /// <see cref="FileSystemOption.ReadOnly"/> decorates filesystem in readonly mode.
         /// </summary>
         /// <param name="filesystem"></param>
@@ -131,7 +131,7 @@ namespace Lexical.FileSystem.Decoration
         /// An intersection of filesystem and option are used, so the option reduces 
         /// the options of the filesystem.
         /// 
-        /// <see cref="IFileSystemOptionMountPath"/> option can be used to use subpath of <see cref="IFileSystem"/>.
+        /// <see cref="IFileSystemOptionSubPath"/> option can be used to use subpath of <see cref="IFileSystem"/>.
         /// </summary>
         /// <param name="filesystemsAndOptions"></param>
         public FileSystemDecoration(params (IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
@@ -1341,7 +1341,7 @@ namespace Lexical.FileSystem.Decoration
             => GetType().Name + "(" + String.Join<IFileSystem>(", ", Decorees) + ")";
 
         /// <summary>Flattened options for (slight) performance gain.</summary>
-        public class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionMountPath
+        public class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionSubPath
         {
             // TODO Implement Hash-Equals //
             // TODO Implement Union & Intersection //
@@ -1379,7 +1379,7 @@ namespace Lexical.FileSystem.Decoration
             /// <inheritdoc/>
             public bool EmptyDirectoryName { get; set; }
             /// <inheritdoc/>
-            public string MountPath { get; set; }
+            public string SubPath { get; set; }
 
             /// <summary>
             /// Read options from <paramref name="option"/> and return flattened object.
@@ -1406,7 +1406,7 @@ namespace Lexical.FileSystem.Decoration
                 result.CanMount = option.CanMount();
                 result.CanUnmount = option.CanUnmount();
                 result.CanListMounts = option.CanListMounts();
-                result.MountPath = option.MountPath();
+                result.SubPath = option.MountPath();
                 return result;
             }
 
@@ -1436,7 +1436,7 @@ namespace Lexical.FileSystem.Decoration
                 result.CanMount = this.CanMount | option.CanMount();
                 result.CanUnmount = this.CanUnmount | option.CanUnmount();
                 result.CanListMounts = this.CanListMounts | option.CanListMounts();
-                result.MountPath = this.MountPath ?? option.MountPath();
+                result.SubPath = this.SubPath ?? option.MountPath();
                 return result;
             }
         }

@@ -20,7 +20,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>Parent filesystem to use in decorated events.</summary>
         public IFileSystem FileSystem { get; protected set; }
 
-        /// <summary><see cref="IFileSystemOptionMountPath"/> adapted path filter string.</summary>
+        /// <summary><see cref="IFileSystemOptionSubPath"/> adapted path filter string.</summary>
         public string Filter { get; protected set; }
 
         /// <summary>The observer were decorated events are forwarded to.</summary>

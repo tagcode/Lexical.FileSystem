@@ -39,7 +39,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>mount path or null</returns>
         public static String MountPath(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionMountPath>() is IFileSystemOptionMountPath mp ? mp.MountPath : null;
+            => filesystemOption.As<IFileSystemOptionSubPath>() is IFileSystemOptionSubPath mp ? mp.SubPath : null;
 
         /// <summary>
         /// Mount <paramref name="filesystem"/> at <paramref name="path"/> in the parent filesystem.
@@ -105,41 +105,41 @@ namespace Lexical.FileSystem
         public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanMount && c1.CanMount, c1.CanUnmount && c2.CanUnmount, c1.CanListMounts && c2.CanListMounts) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
     }
 
-    /// <summary><see cref="IFileSystemOptionMountPath"/> operations.</summary>
-    public class FileSystemOptionOperationMountPath : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IFileSystemOptionSubPath"/> operations.</summary>
+    public class FileSystemOptionOperationSubPath : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionMountPath);
+        public Type OptionType => typeof(IFileSystemOptionSubPath);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionMountPath b ? o is FileSystemOptionMountPath ? /*already flattened*/o : /*new instance*/new FileSystemOptionMountPath(b.MountPath) : throw new InvalidCastException($"{typeof(IFileSystemOptionMountPath)} expected.");
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionSubPath b ? o is FileSystemOptionSubPath ? /*already flattened*/o : /*new instance*/new FileSystemOptionSubPath(b.SubPath) : throw new InvalidCastException($"{typeof(IFileSystemOptionSubPath)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMountPath c1 && o2 is IFileSystemOptionMountPath c2 ?
-            (c1 != null && c2 == null ? new FileSystemOptionMountPath(c1.MountPath) :
-             c1 == null && c2 != null ? new FileSystemOptionMountPath(c2.MountPath) :
-             c1 != null && c2 != null && c1.MountPath == c1.MountPath ? new FileSystemOptionMountPath(c1.MountPath) :
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionSubPath c1 && o2 is IFileSystemOptionSubPath c2 ?
+            (c1 != null && c2 == null ? new FileSystemOptionSubPath(c1.SubPath) :
+             c1 == null && c2 != null ? new FileSystemOptionSubPath(c2.SubPath) :
+             c1 != null && c2 != null && c1.SubPath == c1.SubPath ? new FileSystemOptionSubPath(c1.SubPath) :
              c1 == null && c2 == null ? (IFileSystemOption) null: 
-             throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(IFileSystemOptionMountPath), typeof(IFileSystemOptionOperationIntersection))) : 
+             throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(IFileSystemOptionSubPath), typeof(IFileSystemOptionOperationIntersection))) : 
             throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMountPath c1 && o2 is IFileSystemOptionMountPath c2 ?
-            (c1 != null && c2 == null ? new FileSystemOptionMountPath(c1.MountPath) :
-             c1 == null && c2 != null ? new FileSystemOptionMountPath(c2.MountPath) :
-             c1 != null && c2 != null && c1.MountPath == c1.MountPath ? new FileSystemOptionMountPath(c1.MountPath) :
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionSubPath c1 && o2 is IFileSystemOptionSubPath c2 ?
+            (c1 != null && c2 == null ? new FileSystemOptionSubPath(c1.SubPath) :
+             c1 == null && c2 != null ? new FileSystemOptionSubPath(c2.SubPath) :
+             c1 != null && c2 != null && c1.SubPath == c1.SubPath ? new FileSystemOptionSubPath(c1.SubPath) :
              c1 == null && c2 == null ? (IFileSystemOption)null :
-             throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(IFileSystemOptionMountPath), typeof(IFileSystemOptionOperationIntersection))) :
+             throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(IFileSystemOptionSubPath), typeof(IFileSystemOptionOperationIntersection))) :
             throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
     }
 
     /// <summary>Option for mount path. Use with decorator.</summary>
-    public class FileSystemOptionMountPath : IFileSystemOptionMountPath
+    public class FileSystemOptionSubPath : IFileSystemOptionSubPath
     {
         /// <summary>Mount path.</summary>
-        public String MountPath { get; protected set; }
+        public String SubPath { get; protected set; }
 
         /// <summary>Create option for mount path.</summary>
-        public FileSystemOptionMountPath(string mountPath)
+        public FileSystemOptionSubPath(string mountPath)
         {
-            MountPath = mountPath;
+            SubPath = mountPath;
         }
     }
 
