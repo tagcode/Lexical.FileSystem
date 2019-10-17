@@ -909,12 +909,12 @@ namespace Lexical.FileSystem
             }
 
             /// <summary>
-            /// Dispose observer
+            /// Dispose unmanaged resources
             /// </summary>
             /// <exception cref="AggregateException"></exception>
-            protected override void InnerDispose(ref StructList4<Exception> errors)
+            protected override void InnerDispose/*Unmanaged*/(ref StructList4<Exception> errors)
             {
-                base.InnerDispose(ref errors);
+                base.InnerDispose/*Unmanaged*/(ref errors);
 
                 var _fileWatcher = fileWatcher;
                 if (_fileWatcher != null)

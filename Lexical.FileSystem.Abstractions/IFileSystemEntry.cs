@@ -110,17 +110,17 @@ namespace Lexical.FileSystem
 
     // <IFileSystemEntryMount>
     /// <summary>
-    /// Entry represents a mountpoint (mount root). 
+    /// Entry represents a mount point (decoration or virtual filesystem directory). 
     /// </summary>
     public interface IFileSystemEntryMount : IFileSystemEntry
     {
         /// <summary>
-        /// Tests if entry represents a mount root.
+        /// Tests if directory represents a mount point.
         /// </summary>
         bool IsMountPoint { get; }
 
         /// <summary>
-        /// (optional) Mounted filesystem(s).
+        /// (optional) Manually mounted filesystem(s).
         /// </summary>
         FileSystemAssignment[] Mounts { get; }
     }

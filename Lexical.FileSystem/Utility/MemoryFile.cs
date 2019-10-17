@@ -83,21 +83,53 @@ namespace Lexical.FileSystem.Utility
         public readonly long BlockSize;
 
         /// <summary>
+        /// Block pool that allocates memory blocks.
+        /// </summary>
+        protected IBlockPool blockPool; // <- TODO Currently not used. // 
+
+        /// <summary>Path hint (for exceptions)</summary>
+        protected string Path;
+
+        /// <summary>
         /// Create memory based file.
         /// </summary>
         public MemoryFile()
         {
             this.BlockSize = 1024;
+            this.blockPool = new BlockPool((int)BlockSize, int.MaxValue, 0, true);
         }
 
         /// <summary>
         /// Create memory based file.
         /// </summary>
         /// <param name="blockSize"></param>
-        public MemoryFile(long blockSize)
+        public MemoryFile(int blockSize)
         {
             if (blockSize < 16) throw new ArgumentOutOfRangeException(nameof(blockSize));
             this.BlockSize = blockSize;
+            this.blockPool = new BlockPool(blockSize, int.MaxValue, 0, true);
+        }
+
+        /// <summary>
+        /// Create memory based file.
+        /// </summary>
+        /// <param name="blockPool"></param>
+        public MemoryFile(IBlockPool blockPool)
+        {
+            this.blockPool = blockPool ?? throw new ArgumentNullException(nameof(blockPool));
+            this.BlockSize = blockPool.BlockSize;
+        }
+
+        /// <summary>
+        /// Create memory based file.
+        /// </summary>
+        /// <param name="blockPool"></param>
+        /// <param name="pathHint"></param>
+        public MemoryFile(IBlockPool blockPool, string pathHint = null)
+        {
+            this.blockPool = blockPool ?? throw new ArgumentNullException(nameof(blockPool));
+            this.BlockSize = blockPool.BlockSize;
+            this.Path = pathHint;
         }
 
         /// <summary>
@@ -165,17 +197,31 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         public void Dispose()
         {
-            // Mark disposed
-            isDisposed = true;
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-            // Remove observers
-            while (observers.Count > 0)
+        /// <summary>
+        /// Dispose memory file.
+        /// </summary>
+        /// <param name="disposing">if false, called from finalized and needs to dispose only unmanaged resources</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            // Dispose managed resources
+            if (disposing)
             {
-                var array = observers.Array;
-                foreach (var observer in array)
+                // Mark disposed
+                isDisposed = true;
+
+                // Remove observers
+                while (observers.Count > 0)
                 {
-                    observer.OnCompleted();
-                    observers.Remove(observer);
+                    var array = observers.Array;
+                    foreach (var observer in array)
+                    {
+                        observer.OnCompleted();
+                        observers.Remove(observer);
+                    }
                 }
             }
         }
@@ -570,6 +616,7 @@ namespace Lexical.FileSystem.Utility
                             offset += bytesToWriteToThisBlock;
                             _position += bytesToWriteToThisBlock;
                             count -= bytesToWriteToThisBlock;
+                            position = _position;
                             if (parent.length < _position) parent.length = _position;
                         }
                     }
@@ -625,6 +672,8 @@ namespace Lexical.FileSystem.Utility
                         byte[] block = null;
                         while (_position >= blocks.Count * blockSize)
                         {
+                            // TODO Allocate and Return blocks -- also when deleting files in MemoryFileSystem.
+                            //if (!parent.blockPool.TryAllocate(out block)) throw new FileSystemExceptionOutOfDiskSpace(null, parent.Path);
                             block = new byte[blockSize];
                             blocks.Add(block);
                         }
@@ -653,5 +702,9 @@ namespace Lexical.FileSystem.Utility
                 lock (parent.m_stream_lock) parent.streams.Remove(this);
             }
         }
+
+        /// <summary>Print info</summary>
+        public override string ToString()
+            => Path != null ? Path : GetType().Name;
     }
 }

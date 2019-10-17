@@ -72,10 +72,11 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanCreateFile => true;
 
-        /// <summary>
-        /// Block size
-        /// </summary>
+        /// <summary>Block size</summary>
         public readonly long BlockSize;
+
+        /// <summary>Block pool that dispenses blocks</summary>
+        protected IBlockPool blockPool;
 
         /// <summary>
         /// Create new in-memory filesystem.
@@ -84,17 +85,54 @@ namespace Lexical.FileSystem
         {
             this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
             this.BlockSize = 1024L;
+            this.blockPool = new BlockPool((int)BlockSize, int.MaxValue, 0, true);
         }
 
         /// <summary>
         /// Create new in-memory filesystem with <paramref name="blockSize"/> block size.
         /// </summary>
         /// <param name="blockSize"></param>
-        public MemoryFileSystem(long blockSize) : base()
+        public MemoryFileSystem(int blockSize) : base()
         {
             this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
             if (blockSize < 16L) throw new ArgumentOutOfRangeException(nameof(blockSize));
             this.BlockSize = blockSize;
+            long maxBlockCount = int.MaxValue;
+            this.blockPool = new BlockPool(blockSize, maxBlockCount, 0, true);
+        }
+
+        /// <summary>
+        /// Create new in-memory filesystem with <paramref name="blockSize"/> block size and limited space with <paramref name="maxSpace"/> parameter.
+        /// </summary>
+        /// <param name="blockSize"></param>
+        /// <param name="maxSpace">maximum space in bytes, truncated to block size upwards</param>
+        public MemoryFileSystem(int blockSize, long maxSpace) : base()
+        {
+            this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
+            if (blockSize < 16L) throw new ArgumentOutOfRangeException(nameof(blockSize));
+            this.BlockSize = blockSize;
+            long maxBlockCount = (maxSpace+blockSize-1) / blockSize;
+            if (maxBlockCount > int.MaxValue) throw new ArgumentOutOfRangeException($"Max block count cannot be over {int.MaxValue}. Please increase block size.");
+            this.blockPool = new BlockPool(blockSize, maxBlockCount, 0, true);
+        }
+
+        /// <summary>
+        /// Create new in-memory filesystem that that allocates blocks with <paramref name="blockPool"/>.
+        /// 
+        /// <paramref name="blockPool"/> can be shared with other <see cref="MemoryFileSystem"/> implementations for shared free space quota.
+        /// </summary>
+        /// <param name="blockPool"></param>
+        internal MemoryFileSystem(IBlockPool blockPool) : base()
+        {
+            // Is not implemented yet completely //
+            // TODO
+            //   When disposed release blocks
+            //   When delete files or directories, release blocks
+            //   When file is truncated release blocks
+            //   When file allocates blocks use blockPool
+            this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
+            this.blockPool = blockPool ?? throw new ArgumentNullException(nameof(blockPool));
+            this.BlockSize = blockPool.BlockSize;
         }
 
         /// <summary>
@@ -105,7 +143,9 @@ namespace Lexical.FileSystem
             /// <summary>Create non-disposable memory filesystem.</summary>
             public NonDisposable() : base() { SetToNonDisposable(); }
             /// <summary>Create non-disposable memory filesystem.</summary>
-            public NonDisposable(long blockSize) : base(blockSize) { SetToNonDisposable(); }
+            public NonDisposable(int blockSize) : base(blockSize) { SetToNonDisposable(); }
+            /// <summary>Create non-disposable memory filesystem.</summary>
+            public NonDisposable(IBlockPool blockPool) : base(blockPool) { SetToNonDisposable(); }
             /// <summary>Clean files</summary>
             /// <param name="disposeErrors"></param>
             protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
@@ -1252,7 +1292,7 @@ namespace Lexical.FileSystem
             /// <param name="lastModified"></param>
             public File(MemoryFileSystem filesystem, Directory parent, string name, DateTimeOffset lastModified) : base(filesystem, parent, name, lastModified)
             {
-                memoryFile = new MemoryFile(filesystem.BlockSize);
+                memoryFile = new MemoryFile(filesystem.blockPool, Path);
                 memoryFile.Subscribe(this);
             }
 

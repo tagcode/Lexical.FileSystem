@@ -101,7 +101,7 @@ namespace Lexical.FileSystem
                 Directory directory;
                 // Search for vfs node
                 bool directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints);
-                // Browse the vfs directory at path
+                // Browse the vfs directory (mountpoint) at the path
                 if (directoryAtPath && directory.children.Count>0) foreach(var c in directory.children) vfsEntries.Add(c.Value.Entry);
             }
             finally
@@ -118,9 +118,9 @@ namespace Lexical.FileSystem
             // Create union of mountpoints and final directory. Remove overlapping content if same name. Priority: vfs, mountpoints
             // Estimation of entry count
             int entryCount = vfsEntries.Count;
-            // Browse each decoration
+            // Browse each mountpoint
             StructList4<IFileSystemEntry[]> entryArrays = new StructList4<IFileSystemEntry[]>();
-            for (int i = 0; i < mountpoints.Count; i++)
+            for (int i = mountpoints.Count-1; i >= 0; i--)
             {
                 var fs = mountpoints[i];
                 if (!fs.CanBrowse()) continue;
@@ -170,35 +170,37 @@ namespace Lexical.FileSystem
 
             // Stack of nodes that start with path and have a mounted filesystem
             StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
+            // Vfs Node
+            Directory directory;
+            // Found vfs at path
+            bool directoryAtPath;
             // Lock for the duration of tree traversal
             vfsLock.AcquireReaderLock(int.MaxValue);
             try
             {
-                // Vfs Node
-                Directory directory;
                 // Search for vfs node
-                bool directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints);
+                directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints);
                 // Browse the vfs directory at path
                 if (directoryAtPath) return directory.Entry;
-                // Try to get entry from mounted filesystems
-                for (int i = 0; i < mountpoints.Count; i++)
-                {
-                    var fs = mountpoints[i];
-                    if (!fs.CanGetEntry()) continue;
-                    try
-                    {
-                        IFileSystemEntry e = fs.GetEntry(path);
-                        if (e != null) return e;
-                    }
-                    catch (NotSupportedException) { }
-                }
-                // Nothing
-                return null;
             }
             finally
             {
                 vfsLock.ReleaseReaderLock();
             }
+            // Try to get entry from mounted filesystems
+            for (int i = mountpoints.Count-1; i >= 0; i--)
+            {
+                var fs = mountpoints[i];
+                if (!fs.CanGetEntry()) continue;
+                try
+                {
+                    IFileSystemEntry e = fs.GetEntry(path);
+                    if (e != null) return e;
+                }
+                catch (NotSupportedException) { }
+            }
+            // Nothing
+            return null;
         }
 
         /// <summary>
@@ -211,7 +213,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <param name="directory"></param>
-        /// <param name="mountpoints"></param>
+        /// <param name="mountpoints">place all assigned filesystems that were found in the traversal of <paramref name="path"/>. Added in order from root towards <paramref name="path"/>.</param>
         /// <returns>true if directory was found at <paramref name="path"/>, else false and the last directory that was found</returns>
         bool GetVfsDirectory(string path, out Directory directory, ref StructList4<FileSystemDecoration> mountpoints)
         {
@@ -348,6 +350,7 @@ namespace Lexical.FileSystem
                 var _mount = mount;
                 if (_mount != null) mounts = _mount.components.Array.Select(c => c.Assignment).ToArray();                    
                 return new FileSystemEntryMount(filesystem, Path, name, lastModified, lastAccess, filesystem, mounts);
+
             }
 
             /// <summary>
@@ -1272,43 +1275,45 @@ namespace Lexical.FileSystem
 
             // Stack of nodes that start with path and have a mounted filesystem
             StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
+            // Vfs Node
+            Directory directory;
             // Lock for the duration of tree traversal
             vfsLock.AcquireReaderLock(int.MaxValue);
             try
             {
-                // Vfs Node
-                Directory directory;
                 // Search for vfs node
                 GetVfsDirectory(path, out directory, ref mountpoints);
-                // Try to get entry from mounted filesystems
-                for (int i = 0; i < mountpoints.Count; i++)
-                {
-                    var fs = mountpoints[i];
-                    // Get fs option
-                    var option = fs.As<IFileSystemOptionOpen>();
-                    // No feature
-                    if (option == null) continue;
-                    // fs cannot open
-                    if (!option.CanOpen) continue;
-                    // fs cannot read
-                    if (!option.CanRead && (fileAccess & FileAccess.Read) != 0) continue;
-                    // fs cannot write
-                    if (!option.CanWrite && (fileAccess & FileAccess.Write) != 0) continue;
-                    // fs cannot create
-                    if (!option.CanCreateFile && (fileMode & (FileMode.Append|FileMode.Create|FileMode.CreateNew|FileMode.OpenOrCreate)) != 0) continue;
-
-                    try
-                    {
-                        return fs.Open(path, fileMode, fileAccess, fileShare);
-                    }
-                    catch (NotSupportedException) { }
-                }
-                throw new NotSupportedException(nameof(Open));
             }
             finally
             {
                 vfsLock.ReleaseReaderLock();
             }
+
+            // Try to get entry from mounted filesystems
+            for (int i = mountpoints.Count-1; i >= 0; i--)
+            {
+                var fs = mountpoints[i];
+                // Get fs option
+                var option = fs.As<IFileSystemOptionOpen>();
+                // No feature
+                if (option == null) continue;
+                // fs cannot open
+                if (!option.CanOpen) continue;
+                // fs cannot read
+                if (!option.CanRead && (fileAccess & FileAccess.Read) != 0) continue;
+                // fs cannot write
+                if (!option.CanWrite && (fileAccess & FileAccess.Write) != 0) continue;
+                // fs cannot create
+                if (!option.CanCreateFile && (fileMode & (FileMode.Append | FileMode.Create | FileMode.CreateNew | FileMode.OpenOrCreate)) != 0) continue;
+
+                try
+                {
+                    return fs.Open(path, fileMode, fileAccess, fileShare);
+                }
+                catch (NotSupportedException) { }
+            }
+            throw new NotSupportedException(nameof(Open));
+
         }
 
         /// <summary>
@@ -1338,33 +1343,33 @@ namespace Lexical.FileSystem
 
             // Stack of nodes that start with path and have a mounted filesystem
             StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
+            // Vfs Node
+            Directory directory;
             // Lock for the duration of tree traversal
             vfsLock.AcquireReaderLock(int.MaxValue);
             try
             {
-                // Vfs Node
-                Directory directory;
                 // Search for vfs node
                 GetVfsDirectory(path, out directory, ref mountpoints);
-                // Try to get entry from mounted filesystems
-                for (int i = 0; i < mountpoints.Count; i++)
-                {
-                    var fs = mountpoints[i];
-                    // fs cannot open
-                    if (!fs.CanCreateDirectory()) continue;
-                    try
-                    {
-                        fs.CreateDirectory(path);
-                        return;
-                    }
-                    catch (NotSupportedException) { }
-                }
-                throw new NotSupportedException(nameof(CreateDirectory));
             }
             finally
             {
                 vfsLock.ReleaseReaderLock();
             }
+            // Try to get entry from mounted filesystems
+            for (int i = mountpoints.Count-1; i >= 0; i--)
+            {
+                var fs = mountpoints[i];
+                // fs cannot open
+                if (!fs.CanCreateDirectory()) continue;
+                try
+                {
+                    fs.CreateDirectory(path);
+                    return;
+                }
+                catch (NotSupportedException) { }
+            }
+            throw new NotSupportedException(nameof(CreateDirectory));
         }
 
         /// <summary>

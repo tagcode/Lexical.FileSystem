@@ -83,6 +83,7 @@ namespace Lexical.FileSystem
         {
             FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
             Option = option;
+            AutoMount = false;
         }
     }
     // </doc>

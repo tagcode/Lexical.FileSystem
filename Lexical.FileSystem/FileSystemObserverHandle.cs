@@ -116,9 +116,10 @@ namespace Lexical.FileSystem
             this.original = original ?? throw new ArgumentNullException(nameof(original));
         }
 
-        /// <inheritdoc/>
-        public virtual void Dispose()
-            => original.Dispose();
+        /// <summary></summary>
+        public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
+        /// <summary></summary>
+        protected virtual void Dispose(bool disposing) => original.Dispose();
 
         /// <summary>Class with overridden filesystem.</summary>
         protected class NewFileSystem : FileSystemObserverHandleDecoration

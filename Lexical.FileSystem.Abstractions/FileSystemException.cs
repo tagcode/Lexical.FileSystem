@@ -67,6 +67,19 @@ namespace Lexical.FileSystem
             this.path = path;
         }
 
+        /// <summary>
+        /// Create filesystem exception.
+        /// </summary>
+        /// <param name="filesystem">(optional) error related filesystem</param>
+        /// <param name="path">(optional) error related file path</param>
+        /// <param name="message">Message</param>
+        /// <param name="hresult"></param>
+        public FileSystemException(IFileSystem filesystem, string path, string message, int hresult) : base(message, hresult)
+        {
+            this.filesystem = filesystem;
+            this.path = path;
+        }
+
         /// <summary>Deserialize exception.</summary>
         /// <param name="info"></param>
         /// <param name="context"></param>
@@ -244,6 +257,22 @@ namespace Lexical.FileSystem
 
         /// <inheritdoc/>
         protected FileSystemExceptionOptionOperationNotSupported(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+    /// <summary>
+    /// Out of disk space exception
+    /// </summary>
+    public class FileSystemExceptionOutOfDiskSpace : FileSystemException
+    {
+        /// <summary>
+        /// Create exception
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path"></param>
+        public FileSystemExceptionOutOfDiskSpace(IFileSystem filesystem = null, string path = null) : base(filesystem, path, "Out of disk space", 0x00000070 /*ERROR_DISK_FULL*/) { }
+
+        /// <inheritdoc/>
+        protected FileSystemExceptionOutOfDiskSpace(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 }

@@ -23,6 +23,7 @@ namespace Lexical.FileSystem.Utility
         /// <returns>belating handle that must be diposed</returns>
         /// <exception cref="ObjectDisposedException">thrown if object has already been disposed</exception>
         IDisposable BelateDispose();
+        void Dispose();
     }
     // </doc>
 }

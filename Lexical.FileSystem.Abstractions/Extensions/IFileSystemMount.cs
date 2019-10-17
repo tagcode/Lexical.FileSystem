@@ -9,13 +9,29 @@ namespace Lexical.FileSystem
 {
     public partial struct FileSystemAssignment : IEquatable<FileSystemAssignment>
     {
+        /// <summary>Is flagged as automatically mounted.</summary>
+        public readonly bool AutoMount;
+
         /// <summary>Create filesystem and option assignment.</summary>
         /// <param name="fileSystem">file system</param>
         public FileSystemAssignment(IFileSystem fileSystem)
         {
             FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
             Option = null;
+            AutoMount = false;
         }
+
+        /// <summary>Create filesystem and option assignment.</summary>
+        /// <param name="fileSystem">file system</param>
+        /// <param name="option">(optional) overriding option assignment</param>
+        /// <param name="isAutoMount">is flagged as automount</param>
+        public FileSystemAssignment(IFileSystem fileSystem, IFileSystemOption option, bool isAutoMount)
+        {
+            FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+            Option = option;
+            AutoMount = isAutoMount;
+        }
+
         /// <summary>Implicit conversion</summary>
         public static implicit operator (IFileSystem, IFileSystemOption)(FileSystemAssignment info) => (info.FileSystem, info.Option);
         /// <summary>Implicit conversion</summary>

@@ -13,10 +13,11 @@ namespace Lexical.FileSystem.Utility
     /// <summary>
     /// A disposable that manages a list of disposable objects.
     /// 
-    /// All attached disposables are disposed at <see cref="Dispose"/>.
+    /// All attached disposables are disposed at Dispose().
     /// 
     /// Subclasses that inherit <see cref="DisposeList"/> can put their own dispose
-    /// behaviour into <see cref="InnerDispose(ref StructList4{Exception})"/>.
+    /// behaviour into <see cref="InnerDispose(ref StructList4{Exception})"/> and <see cref="InnerDisposeUnmanaged(ref StructList4{Exception})"/>.
+    /// 
     /// InnerDispose will be called only once. 
     /// </summary>
     public class DisposeList : IDisposeList, IBelatableDispose
@@ -75,7 +76,7 @@ namespace Lexical.FileSystem.Utility
         /// Non-disposable is a flag for objects that cannot be disposed, such as singleton instances.
         /// <see cref="nonDisposable"/> is set at construction.
         /// 
-        /// When <see cref="Dispose"/> is called for non-disposable object, the attached disposables
+        /// When Dispose() is called for non-disposable object, the attached disposables
         /// are removed and disposed, but the object itself does not go into disposed state.
         /// </summary>
         protected void SetToNonDisposable()
@@ -106,7 +107,7 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// A handle that postpones dispose of the <see cref="DisposeList"/> object.
         /// </summary>
-        class BelateHandle : IDisposable
+        sealed class BelateHandle : IDisposable
         {
             DisposeList parent;
 
@@ -138,32 +139,62 @@ namespace Lexical.FileSystem.Utility
         }
 
         /// <summary>
-        /// Dispose all attached diposables and call <see cref="InnerDispose(ref StructList4{Exception})"/>.
+        /// Dispose object. This method is intended to be called by the consumer of the object.
         /// </summary>
-        /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
-        public virtual void Dispose()
+        public void Dispose()
         {
-            // Dispose() called
-            Interlocked.CompareExchange(ref disposing, 1L, 0L);
-
-            // Should dispose be started
-            bool processDispose = false;
-
-            lock (m_disposelist_lock)
-            {
-                // Post-pone if there are belate handles
-                if (belateHandleCount > 0) return;
-                // Set state to dispose called
-                processDispose = Interlocked.Read(ref disposing) <= 1L;
-            }
-
-            // Start dispose
-            if (processDispose) { if (nonDisposable) ProcessNonDispose(); else ProcessDispose(); }
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
-        /// Process the actual dispose. This may be called from <see cref="Dispose"/> or from the dispose of the last
-        /// belate handle (After <see cref="Dispose"/> has been called aswell).
+        /// Marks dispose-has-been-called. If there are no belate handles, then proceeds with dispose.
+        /// </summary>
+        /// <param name="disposing">
+        ///     If true, called by Dispose(), and should dispose managed and unmanaged resources.
+        ///     If false, called by GC, and should dispose only unmanaged resources.
+        /// </param>
+        /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
+        protected virtual void Dispose(bool disposing)
+        {
+            // Called by finalized, someone forgot to dispose the object
+            if (!disposing)
+            {
+                // Collection of errors
+                StructList4<Exception> disposeErrors = new StructList4<Exception>();
+                // Dispose unmanaged resources
+                InnerDisposeUnmanaged(ref disposeErrors);
+                // Throw captured errors
+                if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
+            }
+
+            // Dispose unamnaged and managed resources
+            if (disposing)
+            {
+                // Dispose() called
+                Interlocked.CompareExchange(ref this.disposing, 1L, 0L);
+
+                // Should dispose be started
+                bool processDispose = false;
+
+                lock (m_disposelist_lock)
+                {
+                    // Post-pone if there are belate handles
+                    if (belateHandleCount > 0) return;
+                    // Set state to dispose called
+                    processDispose = Interlocked.Read(ref this.disposing) <= 1L;
+                }
+
+                // Start dispose
+                if (processDispose) { if (nonDisposable) ProcessNonDispose(); else ProcessDispose(); }
+            }
+        }
+
+        /// <summary>
+        /// Process the actual dispose. This may be called from Dispose() or from the dispose of the last
+        /// belate handle (After Dispose() has been called aswell).
+        /// 
+        /// Disposes all attached diposables and call <see cref="InnerDispose(ref StructList4{Exception})"/>.
         /// 
         /// Only one thread may process the dispose.
         /// Sets state to 2, and then 3.
@@ -199,6 +230,17 @@ namespace Lexical.FileSystem.Utility
                 disposeErrors.Add(e);
             }
 
+            // Call InnerDisposeUnmanaged(). Capture errors to compose it with others.
+            try
+            {
+                InnerDisposeUnmanaged(ref disposeErrors);
+            }
+            catch (Exception e)
+            {
+                // Capture error
+                disposeErrors.Add(e);
+            }
+
             // Is disposed
             Interlocked.CompareExchange(ref disposing, 3L, 2L);
 
@@ -209,8 +251,8 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Process the non-dispose. Used when <see cref="nonDisposable"/> is true (singleton instances).
         /// 
-        /// This may be called from <see cref="Dispose"/> or from the dispose of the last
-        /// belate handle (After <see cref="Dispose"/> has been called aswell).
+        /// This may be called from Dispose() or from the dispose of the last
+        /// belate handle (After Dispose() has been called aswell).
         /// 
         /// Only one thread may process the dispose. Returns state back to 0.
         /// 
@@ -244,18 +286,39 @@ namespace Lexical.FileSystem.Utility
                 disposeErrors.Add(e);
             }
 
+            // Call InnerDisposeUnmanaged(). Capture errors to compose it with others.
+            try
+            {
+                InnerDisposeUnmanaged(ref disposeErrors);
+            }
+            catch (Exception e)
+            {
+                // Capture error
+                disposeErrors.Add(e);
+            }
+
             // Throw captured errors
             if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
         }
 
         /// <summary>
-        /// Override this for dispose mechanism of the implementing class.
+        /// Override this to dispose managed resources
         /// </summary>
         /// <param name="disposeErrors">list that can be instantiated and where errors can be added</param>
         /// <exception cref="Exception">any exception is captured and aggregated with other errors</exception>
         protected virtual void InnerDispose(ref StructList4<Exception> disposeErrors)
         {
         }
+
+        /// <summary>
+        /// Override this to dispose unmanaged resources.
+        /// </summary>
+        /// <param name="disposeErrors">list that can be instantiated and where errors can be added</param>
+        /// <exception cref="Exception">any exception is captured and aggregated with other errors</exception>
+        protected virtual void InnerDisposeUnmanaged(ref StructList4<Exception> disposeErrors)
+        {
+        }
+
 
         /// <summary>
         /// Add <paramref name="disposableObject"/> to be disposed with the object.
@@ -309,7 +372,7 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Adapts <see cref="Action"/> into <see cref="IDisposable"/>.
         /// </summary>
-        public class DisposeAction : IDisposable
+        public sealed class DisposeAction : IDisposable
         {
             Action<object> action;
             object state;
@@ -335,7 +398,7 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Adapts <see cref="Action"/> into <see cref="IDisposable"/>.
         /// </summary>
-        public class DisposeAction<T> : IDisposable
+        public sealed class DisposeAction<T> : IDisposable
         {
             Action<T> action;
             T disposeObject;
