@@ -40,7 +40,7 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Observers
         /// </summary>
-        CopyOnWriteList<IObserver<ModifiedEvent>> observers = new CopyOnWriteList<IObserver<ModifiedEvent>>();
+        ArrayList<IObserver<ModifiedEvent>> observers = new ArrayList<IObserver<ModifiedEvent>>();
 
         /// <summary>
         /// Open streams
@@ -177,9 +177,9 @@ namespace Lexical.FileSystem.Utility
         class ObserverHandle : IDisposable
         {
             IObserver<ModifiedEvent> observer;
-            CopyOnWriteList<IObserver<ModifiedEvent>> observers;
+            ArrayList<IObserver<ModifiedEvent>> observers;
 
-            public ObserverHandle(IObserver<ModifiedEvent> observer, CopyOnWriteList<IObserver<ModifiedEvent>> observers)
+            public ObserverHandle(IObserver<ModifiedEvent> observer, ArrayList<IObserver<ModifiedEvent>> observers)
             {
                 this.observer = observer ?? throw new ArgumentNullException(nameof(observer));
                 this.observers = observers ?? throw new ArgumentNullException(nameof(observers));

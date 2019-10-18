@@ -38,7 +38,7 @@ namespace Lexical.FileSystem.Decoration
         static IFileSystemEntry[] noEntries = new IFileSystemEntry[0];
 
         /// <summary>FileSystem specific components.</summary>
-        protected internal CopyOnWriteList<Component> components = new CopyOnWriteList<Component>();
+        protected internal ArrayList<Component> components = new ArrayList<Component>();
         /// <summary>Union of options.</summary>
         protected internal Options Option;
         /// <summary>Count</summary>

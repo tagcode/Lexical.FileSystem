@@ -40,7 +40,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// List of observers.
         /// </summary>
-        CopyOnWriteList<ObserverHandle> observers = new CopyOnWriteList<ObserverHandle>();
+        ArrayList<ObserverHandle> observers = new ArrayList<ObserverHandle>();
 
         /// <summary>
         /// A snapshot of observers.

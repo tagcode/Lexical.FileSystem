@@ -831,7 +831,7 @@ namespace Lexical.FileSystem
             /// <summary>Files and directories. Lazy construction. Reads and modifications under parent's m_lock.</summary>
             protected internal Dictionary<StringSegment, ObserverNode> children = new Dictionary<StringSegment, ObserverNode>();
             /// <summary>Observers that are on this node.</summary>
-            protected internal CopyOnWriteList<ObserverHandle> observers = new CopyOnWriteList<ObserverHandle>();
+            protected internal ArrayList<ObserverHandle> observers = new ArrayList<ObserverHandle>();
             /// <summary>Path</summary>
             public string Path
             {

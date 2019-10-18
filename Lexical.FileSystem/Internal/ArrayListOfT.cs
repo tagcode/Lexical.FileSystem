@@ -14,10 +14,10 @@ namespace Lexical.FileSystem.Internal
     /// 
     /// List is modified under mutually exclusive lock <see cref="SyncRoot"/>.
     /// 
-    /// Enumeration creats an array snapshot which will not throw <see cref="InvalidOperationException"/> if 
-    /// list is modified while being enumerated.
+    /// <see cref="Array"/> and <see cref="GetEnumerator"/> creates a snapshot array, which won't throw <see cref="InvalidOperationException"/> 
+    /// if list is modified while being enumerated.
     /// </summary>
-    public class CopyOnWriteList<T> : IList<T>, ICollection
+    public class ArrayList<T> : IList<T>, IReadOnlyList<T>, ICollection
     {
         /// <summary>Empty array of T</summary>
         static T[] EmptyArray = new T[0];
@@ -72,7 +72,7 @@ namespace Lexical.FileSystem.Internal
         /// <summary>
         /// Create copy-on-write list
         /// </summary>
-        public CopyOnWriteList()
+        public ArrayList()
         {
         }
 
@@ -80,7 +80,7 @@ namespace Lexical.FileSystem.Internal
         /// Create copy-on-write list.
         /// </summary>
         /// <param name="strsEnumr"></param>
-        public CopyOnWriteList(IEnumerable<T> strsEnumr)
+        public ArrayList(IEnumerable<T> strsEnumr)
         {
             this._list = new List<T>(strsEnumr);
         }
@@ -263,6 +263,6 @@ namespace Lexical.FileSystem.Internal
             => ((IEnumerable<T>)Array).GetEnumerator();
 
         /// <summary>Print info</summary>
-        public override string ToString() => $"CopyOnWriteList(Count={Count})";
+        public override string ToString() => $"ArrayList(Count={Count})";
     }
 }

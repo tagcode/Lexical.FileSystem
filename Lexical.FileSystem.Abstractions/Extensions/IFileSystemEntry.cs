@@ -66,6 +66,23 @@ namespace Lexical.FileSystem
         /// <returns>mounted filesystem or null</returns>
         public static FileSystemAssignment[] Mounts(this IFileSystemEntry entry)
             => entry is IFileSystemEntryMount mount ? mount.Mounts : null;
+
+        /// <summary>
+        /// Tests if <paramref name="entry"/> is a directory that is automatically mounted.
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns>true if automatically mounted</returns>
+        public static bool IsAutoMounted(this IFileSystemEntry entry)
+        {
+            if (entry is IFileSystemEntryMount mountEntry && mountEntry.IsMountPoint())
+            {
+                foreach(var mount in mountEntry.Mounts)
+                {
+                    if (mount.AutoMount) return true;
+                }
+            }
+            return false;
+        }
     }
 
 }

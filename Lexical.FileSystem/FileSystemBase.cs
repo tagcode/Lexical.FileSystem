@@ -97,25 +97,16 @@ namespace Lexical.FileSystem
             {
                 // Errors
                 StructList4<Exception> errors = new StructList4<Exception>();
-                foreach (IFileSystemEvent e in events)
+                for (int i=0; i<events.Count; i++)
                 {
+                    IFileSystemEvent e = events[i];
                     try
                     {
                         e.Observer?.Observer?.OnNext(e);
                     }
                     catch (Exception error)
                     {
-                        // Bumerang error
-                        try
-                        {
-                            e.Observer?.Observer?.OnError(error);
-                        }
-                        catch (Exception error2)
-                        {
-                            // 
-                            errors.Add(error);
-                            errors.Add(error2);
-                        }
+                        errors.Add(error);
                     }
                 }
                 if (errors.Count > 0) throw new AggregateException(errors.ToArray());
@@ -143,26 +134,7 @@ namespace Lexical.FileSystem
             // Send events in this thread
             if (_taskFactory == null)
             {
-                // Error
-                Exception error = null;
-                try
-                {
-                    @event.Observer?.Observer?.OnNext(@event);
-                }
-                catch (Exception error1)
-                {
-                    // Bumerang error
-                    try
-                    {
-                        @event.Observer?.Observer?.OnError(error1);
-                    }
-                    catch (Exception error2)
-                    {
-                        // Capture
-                        error = new AggregateException(error1, error2);
-                    }
-                }
-                if (error != null) throw error;
+                @event.Observer?.Observer?.OnNext(@event);
             }
             else
             // Create task that processes events.
@@ -189,41 +161,13 @@ namespace Lexical.FileSystem
                     }
                     catch (Exception error)
                     {
-                        // Bumerang error
-                        try
-                        {
-                            e.Observer?.Observer?.OnError(error);
-                        }
-                        catch (Exception error2)
-                        {
-                            // 
-                            errors.Add(error2);
-                        }
+                        errors.Add(error);
                     }
                 }
                 if (errors.Count > 0) throw new AggregateException(errors.ToArray());
             } else if (events is IFileSystemEvent @event)
             {
-                // Error
-                Exception error = null;
-                try
-                {
-                    @event.Observer?.Observer?.OnNext(@event);
-                }
-                catch (Exception error1)
-                {
-                    // Bumerang error
-                    try
-                    {
-                        @event.Observer?.Observer?.OnError(error1);
-                    }
-                    catch (Exception error2)
-                    {
-                        // Capture
-                        error = new AggregateException(error1, error2);
-                    }
-                }
-                if (error != null) throw error;
+                @event.Observer?.Observer?.OnNext(@event);
             }
         }
 
