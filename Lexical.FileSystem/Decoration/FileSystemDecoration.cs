@@ -674,7 +674,7 @@ namespace Lexical.FileSystem.Decoration
                         String oldChildPath, newChildPath;
                         if (!component.Path.ParentToChild(oldPath, out oldChildPath)) continue;
                         if (!component.Path.ParentToChild(newPath, out newChildPath)) continue;
-                        return true;
+                        if (component.FileSystem.CanMoveLocal(oldChildPath, newChildPath)) return true;
                     }
                     return false;
                 }

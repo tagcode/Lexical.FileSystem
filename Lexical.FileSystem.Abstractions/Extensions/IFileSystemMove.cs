@@ -17,9 +17,19 @@ namespace Lexical.FileSystem
     public static partial class IFileSystemExtensions
     {
         /// <summary>
-        /// Test if <paramref name="filesystem"/> has Move capability.
-        /// <param name="filesystem"></param>
+        /// Test if <paramref name="filesystem"/> can move/rename <paramref name="oldPath"/> to <paramref name="newPath"/>.
         /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="oldPath"></param>
+        /// <param name="newPath"></param>
+        /// <returns>true, if has Move capability</returns>
+        public static bool CanMoveLocal(this IFileSystem filesystem, string oldPath, string newPath)
+            => filesystem is IFileSystemMove mover ? mover.CanMoveLocal(oldPath, newPath) : false;
+
+        /// <summary>
+        /// Test if <paramref name="filesystem"/> can move/rename or transfer file within or across volumes.
+        /// </summary>
+        /// <param name="filesystem"></param>
         /// <param name="oldPath"></param>
         /// <param name="newPath"></param>
         /// <returns>true, if has Move capability</returns>
