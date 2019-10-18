@@ -249,14 +249,14 @@ namespace Lexical.FileSystem.Internal
         }
 
         /// <summary>
-        /// Get enumerator to a snapsot list. Does not throw <see cref="InvalidOperationException"/>.
+        /// Get enumerator to a snapsot list. Enumerator will not throw <see cref="InvalidOperationException"/>.
         /// </summary>
         /// <returns>enumerator</returns>
         IEnumerator IEnumerable.GetEnumerator()
             => Array.GetEnumerator();
 
         /// <summary>
-        /// Get enumerator to a snapsot list. Does not throw <see cref="InvalidOperationException"/>.
+        /// Get enumerator to a snapsot list. Enumerator not throw <see cref="InvalidOperationException"/>.
         /// </summary>
         /// <returns>enumerator</returns>
         public IEnumerator<T> GetEnumerator()

@@ -62,7 +62,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public override bool CanObserve => true;
         /// <inheritdoc/>
-        public virtual bool CanMove => true;
+        public virtual bool CanMoveLocal => true;
         /// <inheritdoc/>
         public virtual bool CanOpen => true;
         /// <inheritdoc/>
@@ -71,6 +71,8 @@ namespace Lexical.FileSystem
         public virtual bool CanWrite => true;
         /// <inheritdoc/>
         public virtual bool CanCreateFile => true;
+        /// <summary>Test if can make local move/rename.</summary>
+        bool IFileSystemMove.CanMoveLocal(string oldPath, string newPath) => true;
 
         /// <summary>Block size</summary>
         public readonly long BlockSize;
@@ -450,7 +452,7 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Try to move/rename a file or directory.
+        /// Move/rename a file or directory.
         /// </summary>
         /// <param name="oldPath">old path of a file or directory</param>
         /// <param name="newPath">new path of a file or directory</param>
@@ -462,7 +464,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string oldPath, string newPath)
+        public void MoveLocal(string oldPath, string newPath)
         {
             // Assert arguments
             if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));

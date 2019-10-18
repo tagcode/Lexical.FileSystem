@@ -69,7 +69,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool CanDelete => Option.CanDelete;
         /// <inheritdoc/>
-        public virtual bool CanMove => Option.CanMove;
+        public virtual bool CanMoveLocal => Option.CanMoveLocal;
         /// <inheritdoc/>
         public virtual bool CanCreateDirectory => Option.CanCreateDirectory;
         /// <inheritdoc/>
@@ -639,6 +639,55 @@ namespace Lexical.FileSystem.Decoration
             }
         }
 
+        /// <summary>Test if can make local move/rename.</summary>
+        bool IFileSystemMove.CanMoveLocal(string oldPath, string newPath)
+        {
+            // Assert argument
+            if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
+            // Assert argument
+            if (newPath == null) throw new ArgumentNullException(nameof(newPath));
+
+            try
+            {
+                // Get reference
+                Component[] components = this.components.Array;
+                // Zero components
+                if (components.Length == 0) return this.Option.CanMoveLocal;
+
+                // One component
+                else if (components.Length == 1)
+                {
+                    // Get reference
+                    var component = components[0];
+                    // can move locally
+                    return component.Option.CanMoveLocal;
+                }
+
+                // Many components
+                else
+                {
+                    foreach (Component component in components)
+                    {
+                        // Assert can move
+                        if (!component.Option.CanMoveLocal) continue;
+                        // Convert paths
+                        String oldChildPath, newChildPath;
+                        if (!component.Path.ParentToChild(oldPath, out oldChildPath)) continue;
+                        if (!component.Path.ParentToChild(newPath, out newChildPath)) continue;
+                        return true;
+                    }
+                    return false;
+                }
+
+            }
+            // Update references in the expception and let it fly
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, oldPath))
+            {
+                // Never goes here
+                throw new NotSupportedException(nameof(Open));
+            }
+        }
+
         /// <summary>
         /// Try to move/rename a file or directory.
         /// </summary>
@@ -655,7 +704,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string oldPath, string newPath)
+        public void MoveLocal(string oldPath, string newPath)
         {
             // Assert argument
             if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
@@ -672,7 +721,7 @@ namespace Lexical.FileSystem.Decoration
                 if (components.Length == 0)
                 {
                     // Assert can move
-                    if (!this.Option.CanMove) throw new NotSupportedException(nameof(Move));
+                    if (!this.Option.CanMoveLocal) throw new NotSupportedException(nameof(MoveLocal));
                     // Nothing to move
                     throw new FileNotFoundException(oldPath);
                 }
@@ -683,7 +732,7 @@ namespace Lexical.FileSystem.Decoration
                     // Get reference
                     var component = components[0];
                     // Assert can move
-                    if (!component.Option.CanMove) throw new NotSupportedException(nameof(Move));
+                    if (!component.Option.CanMoveLocal) throw new NotSupportedException(nameof(MoveLocal));
                     // Convert paths
                     String oldChildPath, newChildPath;
                     if (!component.Path.ParentToChild(oldPath, out oldChildPath)) throw new FileNotFoundException(oldPath);
@@ -702,7 +751,7 @@ namespace Lexical.FileSystem.Decoration
                     foreach (Component component in components)
                     {
                         // Assert can move
-                        if (!component.Option.CanMove) continue;
+                        if (!component.Option.CanMoveLocal) continue;
                         // Convert paths
                         String oldChildPath, newChildPath;
                         if (!component.Path.ParentToChild(oldPath, out oldChildPath)) continue;
@@ -716,7 +765,7 @@ namespace Lexical.FileSystem.Decoration
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
-                    if (!supported) throw new NotSupportedException(nameof(Move));
+                    if (!supported) throw new NotSupportedException(nameof(MoveLocal));
                     if (!ok) throw new FileNotFoundException(oldPath);
                 }
             }
@@ -1284,7 +1333,7 @@ namespace Lexical.FileSystem.Decoration
             /// <inheritdoc/>
             public bool CanDelete { get; set; }
             /// <inheritdoc/>
-            public bool CanMove { get; set; }
+            public bool CanMoveLocal { get; set; }
             /// <inheritdoc/>
             public bool CanCreateDirectory { get; set; }
             /// <inheritdoc/>
@@ -1320,7 +1369,7 @@ namespace Lexical.FileSystem.Decoration
                 result.CanMount = option.CanMount();
                 result.CanCreateFile = option.CanCreateFile();
                 result.CanDelete = option.CanDelete();
-                result.CanMove = option.CanMove();
+                result.CanMoveLocal = option.CanMove();
                 result.CanCreateDirectory = option.CanCreateDirectory();
                 result.CanMount = option.CanMount();
                 result.CanUnmount = option.CanUnmount();
@@ -1350,7 +1399,7 @@ namespace Lexical.FileSystem.Decoration
                 result.CanMount = this.CanMount | option.CanMount();
                 result.CanCreateFile = this.CanCreateFile | option.CanCreateFile();
                 result.CanDelete = this.CanDelete | option.CanDelete();
-                result.CanMove = this.CanMove | option.CanMove();
+                result.CanMoveLocal = this.CanMoveLocal | option.CanMove();
                 result.CanCreateDirectory = this.CanCreateDirectory | option.CanCreateDirectory();
                 result.CanMount = this.CanMount | option.CanMount();
                 result.CanUnmount = this.CanUnmount | option.CanUnmount();

@@ -1209,6 +1209,13 @@ namespace Lexical.FileSystem.Utility
                 this.ProgressInterval = progressInterval;
             }
 
+            /// <summary>Set new policy</summary>
+            public Session SetPolicy(Policy newPolicy)
+            {
+                this.Policy = newPolicy;
+                return this;
+            }
+
             /// <summary>Dispose</summary>
             public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
             /// <summary>Dispose called by finalizer or consumer (on Dispose())</summary>

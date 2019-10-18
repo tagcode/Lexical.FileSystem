@@ -115,9 +115,11 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanDelete => true;
         /// <inheritdoc/>
-        public virtual bool CanMove => true;
+        public virtual bool CanMoveLocal => true;
         /// <inheritdoc/>
         public virtual bool CanCreateDirectory => true;
+        /// <summary>Test if can make local move/rename.</summary>
+        bool IFileSystemMove.CanMoveLocal(string oldPath, string newPath) => true;
 
         /// <summary>Root "" entry</summary>
         protected IFileSystemEntry rootEntry;
@@ -486,7 +488,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
-        public void Move(string oldPath, string newPath)
+        public void MoveLocal(string oldPath, string newPath)
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string oldConcatenatedPath, oldAbsolutePath, newConcatenatedPath, newAbsolutePath;
