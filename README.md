@@ -368,7 +368,7 @@ Start(VirtualFileSystem, 19.10.2019 11.34.23 +00:00)
 Create(VirtualFileSystem, 19.10.2019 11.34.23 +00:00, /dir/file.txt)
 ```
 
-**.Unmount()** dispatches events of as if files were deleted.
+**.Unmount()** dispatches events of unmounted files as if they were deleted.
 
 ```csharp
 vfs.Unmount("");
@@ -378,18 +378,11 @@ vfs.Unmount("");
 Delete(VirtualFileSystem, 19.10.2019 11.34.39 +00:00, /dir/file.txt)
 ```
 
-If filesystem is mounted with **FileSystemOption.NoObserve** the assigned filesystem cannot be observed, and it won't dispatch events of added files on mount.
+If filesystem is mounted with **FileSystemOption.NoObserve**, then the assigned filesystem cannot be observed, and it won't dispatch events of added files on mount.
 
 ```csharp
 vfs.Mount("", ram, FileSystemOption.NoObserve);
 ```
-
-**PrintObserver.cs**
-
-```csharp
-
-```
-
 
 Observer isn't closed by unmounting. It can be closed by disposing its handle.
 
