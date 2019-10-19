@@ -262,6 +262,8 @@ File system can be assigned as a child of an earlier assignment. Child assignmen
 IFileSystem vfs = new VirtualFileSystem()
     .Mount("", FileSystem.OS)
     .Mount("/tmp/", new MemoryFileSystem());
+
+vfs.Browse("/tmp/");
 ```
 
 **.Unmount(<i>path</i>)** removes filesystem assignments.
@@ -342,6 +344,16 @@ ram.CreateDirectory("/dir/");
 ram.CreateFile("/dir/file.txt", new byte[] { 32, 65, 66 });
 
 vfs.Mount("", ram);
+```
+
+
+```csharp
+class PrintObserver : IObserver<IFileSystemEvent>
+{
+    public void OnCompleted() => Console.WriteLine("OnCompleted");
+    public void OnError(Exception error) => Console.WriteLine(error);
+    public void OnNext(IFileSystemEvent @event) => Console.WriteLine(@event);
+}
 ```
 
 ```none
