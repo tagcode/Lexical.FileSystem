@@ -100,7 +100,7 @@ namespace Lexical.FileSystem
                 // Vfs Node
                 Directory directory;
                 // Search for vfs node
-                bool directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints);
+                bool directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints, true);
                 // Browse the vfs directory (mountpoint) at the path
                 if (directoryAtPath && directory.children.Count>0) foreach(var c in directory.children) vfsEntries.Add(c.Value.Entry);
             }
@@ -179,7 +179,7 @@ namespace Lexical.FileSystem
             try
             {
                 // Search for vfs node
-                directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints);
+                directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints, false);
                 // Browse the vfs directory at path
                 if (directoryAtPath) return directory.Entry;
             }
@@ -214,8 +214,10 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="directory"></param>
         /// <param name="mountpoints">place all assigned filesystems that were found in the traversal of <paramref name="path"/>. Added in order from root towards <paramref name="path"/>.</param>
+        /// <param name="throwOnError">if true and <paramref name="path"/> refers beyond root, then throw <see cref="DirectoryNotFoundException"/></param>
         /// <returns>true if directory was found at <paramref name="path"/>, else false and the last directory that was found</returns>
-        bool GetVfsDirectory(string path, out Directory directory, ref StructList4<FileSystemDecoration> mountpoints)
+        /// <exception cref="DirectoryNotFoundException">If <paramref name="path"/> refers beyond root and <paramref name="throwOnError"/> is true</exception>
+        bool GetVfsDirectory(string path, out Directory directory, ref StructList4<FileSystemDecoration> mountpoints, bool throwOnError)
         {
             // Special case root
             if (path == "") { if (vfsRoot.mount != null) mountpoints.Add(vfsRoot.mount); directory = vfsRoot; return true; }
@@ -235,7 +237,11 @@ namespace Lexical.FileSystem
                 // ".."
                 if (name.Equals(StringSegment.DotDot))
                 {
-                    if (cursor.parent == null) throw new DirectoryNotFoundException(path);
+                    if (cursor.parent == null)
+                    {
+                        if (throwOnError) throw new DirectoryNotFoundException(path);
+                        return false;
+                    }
                     cursor = cursor.parent;
                     continue;
                 }
@@ -261,9 +267,12 @@ namespace Lexical.FileSystem
          */
 
         /// <summary>
-        /// Vfs directory. Virtual tree directories are created with Mount() and deleted with Unmount(). 
+        /// Vfs directory. 
+        /// They are points where other filesystems are mounted to.
         /// 
-        /// Mounted filesystem can be attached to virtual directory.
+        /// Virtual tree directories are created with Mount() and deleted with Unmount(). 
+        /// Vfs doesn't allow creating mountpoints with CreateDirectory() and Delete().
+        /// 
         /// </summary>
         class Directory : IDisposable
         {
@@ -1282,14 +1291,14 @@ namespace Lexical.FileSystem
             try
             {
                 // Search for vfs node
-                GetVfsDirectory(path, out directory, ref mountpoints);
+                GetVfsDirectory(path, out directory, ref mountpoints, true);
             }
             finally
             {
                 vfsLock.ReleaseReaderLock();
             }
 
-            // Try to get entry from mounted filesystems
+            // Try to open with mounted filesystems
             for (int i = mountpoints.Count-1; i >= 0; i--)
             {
                 var fs = mountpoints[i];
@@ -1350,13 +1359,14 @@ namespace Lexical.FileSystem
             try
             {
                 // Search for vfs node
-                GetVfsDirectory(path, out directory, ref mountpoints);
+                GetVfsDirectory(path, out directory, ref mountpoints, true);
             }
             finally
             {
                 vfsLock.ReleaseReaderLock();
             }
-            // Try to get entry from mounted filesystems
+
+            // Try to create direcotry with mounted filesystems
             for (int i = mountpoints.Count-1; i >= 0; i--)
             {
                 var fs = mountpoints[i];
@@ -1369,6 +1379,8 @@ namespace Lexical.FileSystem
                 }
                 catch (NotSupportedException) { }
             }
+
+            // Failed
             throw new NotSupportedException(nameof(CreateDirectory));
         }
 
@@ -1408,26 +1420,48 @@ namespace Lexical.FileSystem
                 // Vfs Node
                 Directory directory;
                 // Search for vfs node
-                GetVfsDirectory(path, out directory, ref mountpoints);
-
+                GetVfsDirectory(path, out directory, ref mountpoints, true);
             }
             finally
             {
                 vfsLock.ReleaseReaderLock();
             }
 
-            throw new NotImplementedException();
+            // Run delete through all components
+            // Try to open with mounted filesystems
+            bool supported = false;
+            bool ok = false;
+            for (int i = mountpoints.Count - 1; i >= 0; i--)
+            {
+                var fs = mountpoints[i];
+                // Cannot Delete
+                if (!fs.CanDelete()) continue;
+
+                try
+                {
+                    fs.Delete(path, recurse);
+                    // We got something
+                    return; 
+                }
+                catch (FileNotFoundException) { supported = true; }
+                catch (DirectoryNotFoundException) { supported = true; }
+                catch (NotSupportedException) { }
+            }
+            if (!supported) throw new NotSupportedException(nameof(Delete));
+            if (!ok) throw new FileNotFoundException(path);
+
+            throw new NotSupportedException(nameof(Delete));
         }
 
         /// <summary>
         /// Move/rename a file or directory. 
         /// 
-        /// If <paramref name="oldPath"/> and <paramref name="newPath"/> refers to a directory, then the path names 
+        /// If <paramref name="srcPath"/> and <paramref name="dstPath"/> refers to a directory, then the path names 
         /// should end with directory separator character '/'.
         /// </summary>
-        /// <param name="oldPath">old path of a file or directory</param>
-        /// <param name="newPath">new path of a file or directory</param>
-        /// <exception cref="FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
+        /// <param name="srcPath">old path of a file or directory</param>
+        /// <param name="dstPath">new path of a file or directory</param>
+        /// <exception cref="FileNotFoundException">The specified <paramref name="srcPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException">path is null</exception>
@@ -1435,13 +1469,13 @@ namespace Lexical.FileSystem
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support renaming/moving files</exception>
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
-        /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
+        /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string oldPath, string newPath)
+        public void Move(string srcPath, string dstPath)
         {
             // Assert arguments
-            if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
-            if (newPath == null) throw new ArgumentNullException(nameof(newPath));
+            if (srcPath == null) throw new ArgumentNullException(nameof(srcPath));
+            if (dstPath == null) throw new ArgumentNullException(nameof(dstPath));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
 
@@ -1454,14 +1488,117 @@ namespace Lexical.FileSystem
                 // Vfs Node
                 Directory directory;
                 // Search for vfs node
-                GetVfsDirectory(oldPath, out directory, ref mountpoints);
+                GetVfsDirectory(srcPath, out directory, ref mountpoints, true);
             }
             finally
             {
                 vfsLock.ReleaseReaderLock();
             }
 
-            throw new NotImplementedException();
+            // Extract components from mounts, shuffle so that highest priority component is on first index 0
+            StructList4<FileSystemDecoration.Component> components = new StructList4<FileSystemDecoration.Component>();
+            for (int i = mountpoints.Count - 1; i >= 0; i--)
+                foreach (var c in mountpoints[i].components.Array) components.Add(c);
+
+            // Zero components
+            if (components.Count == 0)
+            {
+                // Assert can move
+                if (!this.CanMove) throw new NotSupportedException(nameof(Move));
+                // Nothing to move
+                throw new FileNotFoundException(srcPath);
+            }
+
+            // One component
+            if (components.Count == 1)
+            {
+                // Get reference
+                var component = components[0];
+                // Assert can move
+                if (!component.Option.CanMove) throw new NotSupportedException(nameof(Move));
+                // Convert paths
+                String componentSrcPath, componentDstPath;
+                if (!component.Path.ParentToChild(srcPath, out componentSrcPath)) throw new FileNotFoundException(srcPath);
+                if (!component.Path.ParentToChild(dstPath, out componentDstPath)) throw new FileNotFoundException(dstPath);
+                // Move
+                component.FileSystem.Move(componentSrcPath, componentDstPath);
+                // Done
+                return;
+            }
+
+            // Get parent path
+            string newPathParent = PathEnumerable.GetParent(dstPath);
+            FileSystemDecoration.Component srcComponent = null, dstComponent = null;
+            string srcComponentPath = null, dstComponentPath = null;
+            for (int i=0; i<components.Count; i++)
+            {
+                FileSystemDecoration.Component component = components[i];
+                // Estimate if component suits as source of move op
+                if (srcComponent == null && component.Path.ParentToChild(srcPath, out srcComponentPath))
+                {
+                    try
+                    {
+                        if (component.FileSystem.Exists(srcComponentPath)) srcComponent = component;
+                    }
+                    catch (NotSupportedException)
+                    {
+                        // We don't know if this is good source component
+                    }
+                }
+
+                // Try converting path
+                string dstParent;
+                // Estimate if component suits as dst of move
+                if (dstComponent == null && component.Path.ParentToChild(newPathParent, out dstParent) && component.Path.ParentToChild(dstPath, out dstComponentPath))
+                {
+                    try
+                    {
+                        IFileSystemEntry e = component.FileSystem.GetEntry(dstParent);
+                        if (e != null && e.IsDirectory()) dstComponent = component;
+                    }
+                    catch (NotSupportedException)
+                    {
+                        // We don't know if this is good dst component
+                    }
+                }
+            }
+
+            // Found suitable components
+            if (srcComponent != null && dstComponent != null)
+            {
+                // Move locally
+                if (srcComponent.FileSystem.Equals(dstComponent.FileSystem) || dstComponent.FileSystem.Equals(srcComponent.FileSystem)) srcComponent.FileSystem.Move(srcComponentPath, dstComponentPath);
+                // Copy+Delete
+                else srcComponent.FileSystem.Transfer(srcComponentPath, dstComponent.FileSystem, dstComponentPath);
+                return;
+            }
+
+            // Could not figure out from where to which, try each afawk (but not all permutations)
+            bool supported = false;
+            bool ok = false;
+            for (int i = 0; i < components.Count; i++)
+            {
+                FileSystemDecoration.Component component = components[i];
+                // Estimate if component suits as source of move op
+                if (srcComponent == null && !component.Path.ParentToChild(srcPath, out srcComponentPath)) continue;
+                if (dstComponent == null && !component.Path.ParentToChild(dstPath, out dstComponentPath)) continue;
+
+                FileSystemDecoration.Component sc = srcComponent ?? component, dc = dstComponent ?? component;
+                try
+                {
+                    // Move locally
+                    if (sc.FileSystem.Equals(dc.FileSystem) || dc.FileSystem.Equals(sc.FileSystem)) sc.FileSystem.Move(srcComponentPath, dstComponentPath);
+                    // Copy+Delete
+                    else sc.FileSystem.Transfer(srcComponentPath, dc.FileSystem, dstComponentPath);
+                    ok = true; supported = true;
+                }
+                catch (FileNotFoundException) { supported = true; }
+                catch (NotSupportedException) { }
+            }
+            // Failed
+            if (!supported) throw new NotSupportedException(nameof(Move));
+            if (!ok) throw new FileNotFoundException(srcPath);
+            throw new NotSupportedException(nameof(Move));
         }
 
         /// <summary>

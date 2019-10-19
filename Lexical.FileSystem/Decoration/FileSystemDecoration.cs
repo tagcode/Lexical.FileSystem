@@ -559,13 +559,13 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Delete a file or directory.
         /// 
-        /// If <paramref name="recursive"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="IOException"/> is thrown.
-        /// If <paramref name="recursive"/> is true, then any file or directory within <paramref name="path"/> is deleted as well.
+        /// If <paramref name="recurse"/> is false and <paramref name="path"/> is a directory that is not empty, then <see cref="IOException"/> is thrown.
+        /// If <paramref name="recurse"/> is true, then any file or directory within <paramref name="path"/> is deleted as well.
         /// </summary>
         /// <param name="path">path to a file or directory</param>
-        /// <param name="recursive">if path refers to directory, recurse into sub directories</param>
+        /// <param name="recurse">if path refers to directory, recurse into sub directories</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
-        /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false</exception>
+        /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recurse"/> is false</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
@@ -574,7 +574,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Delete(string path, bool recursive = false)
+        public void Delete(string path, bool recurse = false)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -604,7 +604,7 @@ namespace Lexical.FileSystem.Decoration
                     String childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
                     // Delete
-                    component.FileSystem.Delete(childPath, recursive);
+                    component.FileSystem.Delete(childPath, recurse);
                 }
 
                 // Many components
@@ -621,7 +621,7 @@ namespace Lexical.FileSystem.Decoration
                         if (!component.Path.ParentToChild(path, out childPath)) continue;
                         try
                         {
-                            component.FileSystem.Delete(childPath, recursive);
+                            component.FileSystem.Delete(childPath, recurse);
                             ok = true; supported = true;
                         }
                         catch (FileNotFoundException) { supported = true; }
@@ -642,9 +642,9 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Try to move/rename a file or directory.
         /// </summary>
-        /// <param name="oldPath">old path of a file or directory</param>
-        /// <param name="newPath">new path of a file or directory</param>
-        /// <exception cref="FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
+        /// <param name="srcPath">old path of a file or directory</param>
+        /// <param name="dstPath">new path of a file or directory</param>
+        /// <exception cref="FileNotFoundException">The specified <paramref name="srcPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
@@ -653,14 +653,14 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support renaming/moving files</exception>
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
-        /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
+        /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string oldPath, string newPath)
+        public void Move(string srcPath, string dstPath)
         {
             // Assert argument
-            if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
+            if (srcPath == null) throw new ArgumentNullException(nameof(srcPath));
             // Assert argument
-            if (newPath == null) throw new ArgumentNullException(nameof(newPath));
+            if (dstPath == null) throw new ArgumentNullException(nameof(dstPath));
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
 
@@ -674,7 +674,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can move
                     if (!this.Option.CanMove) throw new NotSupportedException(nameof(Move));
                     // Nothing to move
-                    throw new FileNotFoundException(oldPath);
+                    throw new FileNotFoundException(srcPath);
                 }
 
                 // One component
@@ -685,11 +685,11 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can move
                     if (!component.Option.CanMove) throw new NotSupportedException(nameof(Move));
                     // Convert paths
-                    String oldChildPath, newChildPath;
-                    if (!component.Path.ParentToChild(oldPath, out oldChildPath)) throw new FileNotFoundException(oldPath);
-                    if (!component.Path.ParentToChild(newPath, out newChildPath)) throw new FileNotFoundException(newPath);
+                    String componentSrcPath, componentDstPath;
+                    if (!component.Path.ParentToChild(srcPath, out componentSrcPath)) throw new FileNotFoundException(srcPath);
+                    if (!component.Path.ParentToChild(dstPath, out componentDstPath)) throw new FileNotFoundException(dstPath);
                     // Move
-                    component.FileSystem.Move(oldChildPath, newChildPath);
+                    component.FileSystem.Move(componentSrcPath, componentDstPath);
                     // Done
                     return;
                 }
@@ -698,17 +698,17 @@ namespace Lexical.FileSystem.Decoration
                 else
                 {
                     // Get parent path
-                    string newPathParent = PathEnumerable.GetParent(newPath);
+                    string newPathParent = PathEnumerable.GetParent(dstPath);
                     Component srcComponent = null, dstComponent = null;
-                    string srcPath = null, dstPath = null;
+                    string srcComponentPath = null, dstComponentPath = null;
                     foreach (Component component in components)
                     {
                         // Estimate if component suits as source of move op
-                        if (srcComponent == null && component.Path.ParentToChild(oldPath, out srcPath))
+                        if (srcComponent == null && component.Path.ParentToChild(srcPath, out srcComponentPath))
                         {
                             try
                             {
-                                if (component.FileSystem.Exists(srcPath)) srcComponent = component;
+                                if (component.FileSystem.Exists(srcComponentPath)) srcComponent = component;
                             }
                             catch (NotSupportedException)
                             {
@@ -719,7 +719,7 @@ namespace Lexical.FileSystem.Decoration
                         // Try converting path
                         string dstParent;
                         // Estimate if component suits as dst of move
-                        if (dstComponent == null && component.Path.ParentToChild(newPathParent, out dstParent) && component.Path.ParentToChild(newPath, out dstPath))
+                        if (dstComponent == null && component.Path.ParentToChild(newPathParent, out dstParent) && component.Path.ParentToChild(dstPath, out dstComponentPath))
                         {
                             try
                             {
@@ -737,9 +737,9 @@ namespace Lexical.FileSystem.Decoration
                     if (srcComponent != null && dstComponent != null)
                     {
                         // Move locally
-                        if (srcComponent == dstComponent) srcComponent.FileSystem.Move(srcPath, dstPath);
+                        if (srcComponent.FileSystem.Equals(dstComponent.FileSystem)||dstComponent.FileSystem.Equals(srcComponent.FileSystem)) srcComponent.FileSystem.Move(srcComponentPath, dstComponentPath);
                         // Copy+Delete
-                        else srcComponent.FileSystem.Transfer(srcPath, dstComponent.FileSystem, dstPath);
+                        else srcComponent.FileSystem.Transfer(srcComponentPath, dstComponent.FileSystem, dstComponentPath);
                         return;
                     }
 
@@ -748,27 +748,27 @@ namespace Lexical.FileSystem.Decoration
                     bool ok = false;
                     foreach (Component component in components)
                     {
-                        if (srcComponent == null && !component.Path.ParentToChild(oldPath, out srcPath)) continue;
-                        if (dstComponent == null && !component.Path.ParentToChild(newPath, out dstPath)) continue;
+                        if (srcComponent == null && !component.Path.ParentToChild(srcPath, out srcComponentPath)) continue;
+                        if (dstComponent == null && !component.Path.ParentToChild(dstPath, out dstComponentPath)) continue;
 
                         Component sc = srcComponent ?? component, dc = dstComponent ?? component;
                         try
                         {
                             // Move locally
-                            if (sc == dc) sc.FileSystem.Move(srcPath, dstPath);
+                            if (sc.FileSystem.Equals(dc.FileSystem) || dc.FileSystem.Equals(sc.FileSystem)) sc.FileSystem.Move(srcComponentPath, dstComponentPath);
                             // Copy+Delete
-                            else sc.FileSystem.Transfer(srcPath, dc.FileSystem, dstPath);
+                            else sc.FileSystem.Transfer(srcComponentPath, dc.FileSystem, dstComponentPath);
                             ok = true; supported = true;
                         }
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
                     if (!supported) throw new NotSupportedException(nameof(Move));
-                    if (!ok) throw new FileNotFoundException(oldPath);
+                    if (!ok) throw new FileNotFoundException(srcPath);
                 }
             }
             // Update references in the expception and let it fly
-            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, oldPath))
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, srcPath))
             {
                 // Never goes here
                 throw new NotSupportedException(nameof(Open));
