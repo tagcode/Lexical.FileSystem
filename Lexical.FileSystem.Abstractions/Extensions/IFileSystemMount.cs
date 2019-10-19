@@ -9,9 +9,6 @@ namespace Lexical.FileSystem
 {
     public partial struct FileSystemAssignment : IEquatable<FileSystemAssignment>
     {
-        /// <summary>Is flagged as automatically mounted.</summary>
-        public readonly bool AutoMount;
-
         /// <summary>Create filesystem and option assignment.</summary>
         /// <param name="fileSystem">file system</param>
         public FileSystemAssignment(IFileSystem fileSystem)

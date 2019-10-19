@@ -226,7 +226,7 @@ namespace Lexical.FileSystem.Utility
     /// <summary>
     /// Resettable scan enumerator.
     /// </summary>
-    public class PatternScanner : IEnumerator<IFileSystemEntry>
+    public sealed class PatternScanner : IEnumerator<IFileSystemEntry>
     {
         /// <summary>
         /// Collection or errors are placed here.

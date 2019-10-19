@@ -75,6 +75,8 @@ namespace Lexical.FileSystem
         public readonly IFileSystem FileSystem;
         /// <summary>Overriding option assignment.</summary>
         public readonly IFileSystemOption Option;
+        /// <summary>Is flagged as automatically mounted.</summary>
+        public readonly bool AutoMount;
 
         /// <summary>Create filesystem and option assignment.</summary>
         /// <param name="fileSystem">file system</param>

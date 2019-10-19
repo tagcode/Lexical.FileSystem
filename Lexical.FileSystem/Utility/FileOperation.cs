@@ -183,6 +183,8 @@ namespace Lexical.FileSystem.Utility
             public ArrayList<FileOperation> Ops = new ArrayList<FileOperation>();
             /// <summary>Child operations</summary>
             public override FileOperation[] Children => Ops.Array;
+            /// <summary></summary>
+            public bool ThrowIfError = false;
 
             /// <summary>Create batch op.</summary>
             public Batch(Session session, IEnumerable<FileOperation> ops) : base(session)
@@ -254,6 +256,8 @@ namespace Lexical.FileSystem.Utility
                             if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
                             // Run op
                             op.Run();
+                            // 
+                            if (ThrowIfError && op.CurrentState == State.Error) throw new AggregateException(op.Errors);
                             // Move progress
                             if (op.Progress > 0L)
                             {
@@ -1007,6 +1011,7 @@ namespace Lexical.FileSystem.Utility
                     PathConverter pathConverter = new PathConverter(SrcPath, DstPath);
                     List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
                     IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath);
+                    if (e == null) throw new FileNotFoundException(SrcPath);
                     queue.Add(e);
                     while (queue.Count > 0)
                     {
@@ -1090,6 +1095,7 @@ namespace Lexical.FileSystem.Utility
                     {
                         List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
                         IFileSystemEntry e = FileSystem.GetEntry(Path);
+                        if (e == null) throw new FileNotFoundException(Path);
                         queue.Add(e);
                         while (queue.Count > 0)
                         {
@@ -1163,16 +1169,13 @@ namespace Lexical.FileSystem.Utility
                 this.DstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
                 this.SrcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
                 this.DstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
-            }
 
-            /// <summary>Estimate viability of operation.</summary>
-            /// <exception cref="FileNotFoundException">If <see cref="SrcPath"/> is not found.</exception>
-            /// <exception cref="FileSystemExceptionFileExists">If <see cref="DstPath"/> already exists.</exception>
-            public override void Estimate()
-            {
-                Ops.Add(new CopyTree(session, SrcFileSystem, SrcPath, DstFileSystem, DstPath));
-                Ops.Add(new DeleteTree(session, DstFileSystem, DstPath));
-                base.Estimate();
+                Batch copy = new CopyTree(session, SrcFileSystem, SrcPath, DstFileSystem, DstPath);
+                Batch delete = new DeleteTree(session, SrcFileSystem, SrcPath);
+                copy.ThrowIfError = true;
+                delete.ThrowIfError = true;
+                Ops.Add(copy);
+                Ops.Add(delete);
             }
 
             // /// <summary>Print info</summary>

@@ -3,7 +3,6 @@
 // Date:           14.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -28,6 +27,45 @@ namespace Lexical.FileSystem.Internal
     public struct PathEnumerable : IEnumerable<StringSegment>
     {
         /// <summary>
+        /// Get parent path of <paramref name="path"/>.
+        /// 
+        /// Examples:
+        /// <list type="bullet">
+        ///     <item>"" -> ""</item>
+        ///     <item>"/" -> ""</item>
+        ///     <item>"dir" -> ""</item>
+        ///     <item>"dir/" -> ""</item>
+        ///     <item>"dir/file" -> "dir/"</item>
+        ///     <item>"dir/dir" -> "dir/"</item>
+        ///     <item>"dir/dir/" -> "dir/"</item>
+        ///     <item>"dir/dir/dir/" -> "dir/dir/"</item>
+        /// </list>
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>parent path</returns>
+        public static StringSegment GetParent(StringSegment path)
+        {
+            // ""
+            if (path.Equals(StringSegment.Empty)) return StringSegment.Empty;
+            // Enumerate paths
+            PathEnumerator enumr = new PathEnumerator(path, true);
+            // Last and second last
+            StringSegment ss1 = StringSegment.Empty, ss2 = StringSegment.Empty;
+            // Iterate paths
+            while (enumr.MoveNext())
+            {
+                ss2 = ss1;
+                ss1 = enumr.Current;
+            }
+            // End index
+            int endix = ss2.Start + ss2.Length;
+            // Extend to trailing "/"
+            if (endix < path.Length - 1 && path.String[endix] == '/') endix++;
+            // Result substring
+            return new StringSegment(path.String, path.Start, endix - path.Start);
+        }
+
+        /// <summary>
         /// Path string.
         /// </summary>
         public readonly StringSegment Path;
@@ -40,9 +78,9 @@ namespace Lexical.FileSystem.Internal
         public PathEnumerable(string path, bool ignoreTrailingSlash = false)
         {
             if (path == null) Path = new StringSegment("", 0, 0);
-            else if (ignoreTrailingSlash && path.Length>0 && path[path.Length-1] == '/')
-            {                
-                Path = new StringSegment(path, 0, path.Length-1);
+            else if (ignoreTrailingSlash && path.Length > 0 && path[path.Length - 1] == '/')
+            {
+                Path = new StringSegment(path, 0, path.Length - 1);
             }
             else
             {
@@ -114,7 +152,7 @@ namespace Lexical.FileSystem.Internal
 
         /// <inheritdoc/>
         public StringSegment Current
-            => startIx < Path.Start || endIx < Path.Start || startIx > Path.Start+Path.Length || endIx > Path.Start + Path.Length  ?
+            => startIx < Path.Start || endIx < Path.Start || startIx > Path.Start + Path.Length || endIx > Path.Start + Path.Length ?
                new StringSegment(Path.String, Path.Start, 0) :
                new StringSegment(Path.String, Path.Start + startIx, endIx - startIx);
 
@@ -147,7 +185,8 @@ namespace Lexical.FileSystem.Internal
             startIx++;
 
             // Move end index
-            while (true) {
+            while (true)
+            {
                 endIx++;
                 // End
                 if (endIx > eol) return false;

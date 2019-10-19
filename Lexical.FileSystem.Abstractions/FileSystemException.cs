@@ -275,20 +275,4 @@ namespace Lexical.FileSystem
         protected FileSystemExceptionOutOfDiskSpace(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
-    /// <summary>
-    /// Different volumes exception. Thrown when moving file from one volume to another with MoveLocal method.
-    /// </summary>
-    public class FileSystemExceptionDifferentVolumes : FileSystemException
-    {
-        /// <summary>
-        /// Create exception
-        /// </summary>
-        /// <param name="filesystem"></param>
-        /// <param name="path"></param>
-        public FileSystemExceptionDifferentVolumes(IFileSystem filesystem = null, string path = null) : base(filesystem, path, "Different volumes") { }
-
-        /// <inheritdoc/>
-        protected FileSystemExceptionDifferentVolumes(SerializationInfo info, StreamingContext context) : base(info, context) { }
-    }
-
 }

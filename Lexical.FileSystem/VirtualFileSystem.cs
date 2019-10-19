@@ -47,7 +47,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public override bool CanObserve => true;
         /// <inheritdoc/>
-        public virtual bool CanMoveLocal => true;
+        public virtual bool CanMove => true;
         /// <inheritdoc/>
         public virtual bool CanOpen => true;
         /// <inheritdoc/>
@@ -1419,21 +1419,11 @@ namespace Lexical.FileSystem
             throw new NotImplementedException();
         }
 
-        /// <summary>Test if can make local move/rename.</summary>
-        bool IFileSystemMove.CanMoveLocal(string oldPath, string newPath)
-        {
-            // TODO Implement
-            return true;
-        }
-
         /// <summary>
-        /// Move/rename a file or directory within same filesystem volume. 
+        /// Move/rename a file or directory. 
         /// 
         /// If <paramref name="oldPath"/> and <paramref name="newPath"/> refers to a directory, then the path names 
         /// should end with directory separator character '/'.
-        /// 
-        /// If <paramref name="oldPath"/> is on different volume than <paramref name="newPath"/>, then <see cref="FileSystemExceptionDifferentVolumes"/> 
-        /// is thrown. The consumer of the interface can use the Move() extension method. 
         /// </summary>
         /// <param name="oldPath">old path of a file or directory</param>
         /// <param name="newPath">new path of a file or directory</param>
@@ -1447,7 +1437,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void MoveLocal(string oldPath, string newPath)
+        public void Move(string oldPath, string newPath)
         {
             // Assert arguments
             if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));

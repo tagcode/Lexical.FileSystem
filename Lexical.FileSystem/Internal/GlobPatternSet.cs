@@ -550,9 +550,23 @@ namespace Lexical.FileSystem.Internal
         static String Print(List<Token> tokens)
         {
             if (tokens == null) return "";
-            StringBuilder sb = new StringBuilder(tokens.Count + 4);
-            foreach (var l in tokens) l.AppendTo(sb);
-            return sb.ToString();
+            int count = 0;
+            foreach (var t in tokens) count += t.Length;
+            char[] arr = new char[count];
+            int ix = 0;
+            foreach (var t in tokens)
+            {
+                switch (t.Kind)
+                {
+                    case Token.Type.QuestionMark: arr[ix++] = '?'; break;
+                    case Token.Type.Slash: arr[ix++] = '/'; break;
+                    case Token.Type.Star: arr[ix++] = '*'; break;
+                    case Token.Type.StarStar: arr[ix++] = '*'; arr[ix++] = '*'; break;
+                    case Token.Type.Char: arr[ix++] = t.Char; break;
+                    default: break;
+                }
+            }
+            return new String(arr);
         }
 
         struct Line : IEquatable<Line>
@@ -643,6 +657,8 @@ namespace Lexical.FileSystem.Internal
             public override bool Equals(Object other_) => other_ is Token other ? Kind == other.Kind && (Kind != Type.Char || Char == other.Char) : false;
             /// <summary>Get hashcode.</summary>
             public override int GetHashCode() => Kind == Type.Char ? Char.GetHashCode() : Kind.GetHashCode();
+            /// <summary>Number of characters</summary>
+            public int Length => Kind == Type.None ? 0 : Kind == Type.StarStar ? 2 : 1;
             /// <summary>Append to string builder</summary>
             public void AppendTo(StringBuilder sb)
             {

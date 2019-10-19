@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public bool CanCreateFile => false;
         /// <inheritdoc/>
-        public bool CanMoveLocal => false;
+        public bool CanMove => false;
         /// <inheritdoc/>
         public bool CanDelete => false;
         /// <inheritdoc/>
