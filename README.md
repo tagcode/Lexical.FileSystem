@@ -6,193 +6,198 @@ NuGet Packages:
 * Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
 
 
-# FileSystem
+# VirtualFileSystem
 
-**new FileSystem(<i>path</i>)** creates an instance of filesystem at directory. Path "" refers to operating system root.
+**new VirtualFileSystem()** creates virtual filesystem. Other filesystems can be mounted as part of it.
 
 ```csharp
-IFileSystem filesystem = new FileSystem(path: "");
+IFileSystem vfs = new VirtualFileSystem();
 ```
 
-*FileSystem* can be browsed.
+**.Mount(<i>path</i>, <i>filesystem</i>)** assigns a filesystem to a mountpoint.
 
 ```csharp
-foreach (var entry in filesystem.Browse(""))
-    Console.WriteLine(entry.Path);
+IFileSystem vfs = new VirtualFileSystem()
+    .Mount("", FileSystem.OS);
 ```
 
-Files can be opened for reading.
+File systems can be assigned to multiple points.
 
 ```csharp
-using (Stream s = filesystem.Open("file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
-{
-    Console.WriteLine(s.Length);
-}
+IFileSystem vfs = new VirtualFileSystem()
+    .Mount("file://", FileSystem.OS)
+    .Mount("tmp://", new MemoryFileSystem())
+    .Mount("home://", FileSystem.Personal)
+    .Mount("docs://", FileSystem.MyDocuments)
+    .Mount("application://", FileSystem.Application);
 ```
 
-And for for writing.
+Mount assignments can cascading paths. Child assignment has higher evaluation priority than parent. In the following example, "/tmp/" is evaluated from **MemoryFileSystem** first, and then concatenated with potential directory "/tmp/" from the **FileSystem.OS**.
 
 ```csharp
-using (Stream s = filesystem.Open("somefile.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
-{
-    s.WriteByte(32);
-}
+IFileSystem vfs = new VirtualFileSystem()
+    .Mount("", FileSystem.OS)
+    .Mount("/tmp/", new MemoryFileSystem());
 ```
 
-Files and directories can be observed for changes.
+**.Unmount(<i>path</i>)** removes filesystem assignments.
 
 ```csharp
-IObserver<IFileSystemEvent> observer = new Observer();
-using (IDisposable handle = filesystem.Observe("C:/**", observer))
-{
-}
+IFileSystem vfs = new VirtualFileSystem();
+vfs.Mount("/tmp/", FileSystem.Temp);
+vfs.Unmount("/tmp/");
 ```
 
-Directories can be created.
+Previously assigned filesystem can be replaced.
 
 ```csharp
-filesystem.CreateDirectory("dir/");
+IFileSystem vfs = new VirtualFileSystem();
+vfs.Mount("/tmp/", FileSystem.Temp);
+vfs.Mount("/tmp/", new MemoryFileSystem());
 ```
 
-Directories can be deleted.
+**.Mount(<i>path</i>, params <i>IFilesystem</i>, <i>IFileSystemOption</i>)** assigns filesystem with mount option.
 
 ```csharp
-filesystem.Delete("dir/", recurse: true);
+IFileSystem vfs = new VirtualFileSystem();
+vfs.Mount("/app/", FileSystem.Application, FileSystemOption.ReadOnly);
 ```
 
-Files and directories can be renamed and moved.
+Option such as *FileSystemOption.SubPath()*.
 
 ```csharp
-filesystem.CreateDirectory("dir/");
-filesystem.Move("dir/", "new-name/");
+IFileSystem vfs = new VirtualFileSystem();
+string appDir = AppDomain.CurrentDomain.BaseDirectory.Replace('\\', '/');
+vfs.Mount("/app/", FileSystem.OS, FileSystemOption.SubPath(appDir));
 ```
 
-# File structure
-The singleton instance **FileSystem.OS** refers to a filesystem at the OS root.
+**.Mount(<i>path</i>, params <i>IFilesystem[]</i>)** assigns multiple filesystems into one mountpoint.
 
 ```csharp
-IFileSystem filesystem = FileSystem.OS;
+IFileSystem vfs = new VirtualFileSystem();
+IFileSystem overrides = new MemoryFileSystem();
+overrides.CreateFile("important.dat", new byte[] { 12, 23, 45, 67, 89 });
+vfs.Mount("/app/", overrides, FileSystem.Application);
 ```
 
-Extension method **.VisitTree()** visits filesystem. On root path "" *FileSystem.OS* returns drive letters.
+**.Mount(<i>path</i>, params (<i>IFilesystem</i>, <i>IFileSystemOption</i>)[])** assigns multiple filesystems with mount options.
 
 ```csharp
-foreach (var line in FileSystem.OS.VisitTree(depth: 2))
-    Console.WriteLine(line);
+IFileSystem overrides = new MemoryFileSystem();
+IFileSystem vfs = new VirtualFileSystem();
+
+vfs.Mount("/app/", 
+    (overrides, FileSystemOption.ReadOnly), 
+    (FileSystem.Application, FileSystemOption.ReadOnly)
+);
 ```
 
-
-<pre style="line-height:1.2;">
-""
-├──"C:"
-│  ├── "hiberfil.sys"
-│  ├── "pagefile.sys"
-│  ├── "swapfile.sys"
-│  ├── "Documents and Settings"
-│  ├── "Program Files"
-│  ├── "Program Files (x86)"
-│  ├── "System Volume Information"
-│  ├── "Users"
-│  └── "Windows10"
-└──"D:"
-</pre>
-
-> [!NOTE]
-> The separator character is always forward slash '/'. For example "C:/Windows/win.ini".
-
-Extension method **.PrintTo()** appends the visited filesystem to text output. 
-
+If virtual filesystem is assigned with *null* filesystem, then empty mountpoint is created. Mountpoint cannot be deleted with **.Delete()** method, only remounted or unmounted.
+*null* assignment doesn't have any interface capabilities, such as *.Browse()*.
 
 ```csharp
-FileSystem.OS.PrintTo(Console.Out, depth: 2, format: PrintTree.Format.DefaultPath);
+IFileSystem vfs = new VirtualFileSystem();
+vfs.Mount("/tmp/", filesystem: null);
 ```
 
 <pre style="line-height:1.2;">
-├── C:/
-│  ├── C:/hiberfil.sys
-│  ├── C:/pagefile.sys
-│  ├── C:/swapfile.sys
-│  ├── C:/Documents and Settings/
-│  ├── C:/Program Files/
-│  ├── C:/Program Files (x86)/
-│  ├── C:/System Volume Information/
-│  ├── C:/Users/
-│  └── C:/Windows/
-└── D:/
-</pre>
-
-On linux *FileSystem.OS* returns slash '/' root.
-
-```csharp
-FileSystem.OS.PrintTo(Console.Out, depth: 3, format: PrintTree.Format.DefaultPath);
-```
-
-<pre style="line-height:1.2;">
-
 └──/
-   ├──/bin/
-   ├──/boot/
-   ├──/dev/
-   ├──/etc/
-   ├──/lib/
-   ├──/media/
-   ├──/mnt/
-   ├──/root/
-   ├──/sys/
-   ├──/usr/
-   └──/var/
+   └── /tmp/ NotSupportedException: Browse
 </pre>
 
-**FileSystem.Application** refers to the application's root directory.
+# Observing
+
+Observer can be placed before and after mounting. If observer is placed before, then mounting will notify the observer with Create event for all the added files.
 
 ```csharp
-FileSystem.Application.PrintTo(Console.Out);
+IFileSystem vfs = new VirtualFileSystem();
+vfs.Observe("**", new PrintObserver());
+
+IFileSystem ram = new MemoryFileSystem();
+ram.CreateDirectory("/dir/");
+ram.CreateFile("/dir/file.txt", new byte[] { 32, 65, 66 });
+
+vfs.Mount("", ram);
 ```
 
-<pre style="line-height:1.2;">
-""
-├── "Application.dll"
-├── "Application.runtimeconfig.json"
-├── "Lexical.FileSystem.Abstractions.dll"
-└── "Lexical.FileSystem.dll"
-</pre>
+```none
+Start(VirtualFileSystem, 19.10.2019 11.34.08 +00:00)
+Create(VirtualFileSystem, 19.10.2019 11.34.08 +00:00, /dir/file.txt)
+```
 
-**FileSystem.Temp** refers to the running user's temp directory.
+Observer filter can be an intersection of the mounted filesystem's contents.
 
 ```csharp
-FileSystem.Temp.PrintTo(Console.Out, depth: 1);
+IFileSystem vfs = new VirtualFileSystem();
+vfs.Observe("/dir/*.txt", new PrintObserver());
+
+IFileSystem ram = new MemoryFileSystem();
+ram.CreateDirectory("/dir/");
+ram.CreateFile("/dir/file.txt", new byte[] { 32, 65, 66 });
+ram.CreateFile("/dir/file.dat", new byte[] { 255, 255, 255 });
+
+vfs.Mount("", ram);
 ```
 
-<pre style="line-height:1.2;">
-""
-├── "dmk55ohj.jjp"
-├── "wrz4cms5.r2f"
-├── "18e1904137f065db88dfbd23609eb877"
-└── "82e759b7-b237-45f7-91b9-8450b0732a6e.tmp"
-</pre>
+```none
+Start(VirtualFileSystem, 19.10.2019 11.34.23 +00:00)
+Create(VirtualFileSystem, 19.10.2019 11.34.23 +00:00, /dir/file.txt)
+```
 
-**Singleton** instances:
+**.Unmount()** dispatches events of as if files were deleted.
 
-| Name                             | Description                                                                                      | On Windows                                            | On Linux                                 |
-|:---------------------------------|:-------------------------------------------------------------------------------------------------|:------------------------------------------------------|:-----------------------------------------|
-| FileSystem.OS                    | Operating system root.                                                                           | ""                                                    | ""                                       |
-| FileSystem.Application           | Running application's base directory.                                                            |                                                       |                                          |
-| FileSystem.UserProfile           | The user's profile folder.                                                                       | "C:\\Users\\<i>&lt;user&gt;</i>"                      | "/home/<i>&lt;user&gt;</i>"              |
-| FileSystem.MyDocuments           | The My Documents folder.                                                                         | "C:\\Users\\<i>&lt;user&gt;</i>\\Documents"           | "/home/<i>&lt;user&gt;</i>"              |
-| FileSystem.Personal              | A common repository for documents.                                                               | "C:\\Users\\<i>&lt;user&gt;</i>\\Documents"           | "/home/<i>&lt;user&gt;</i>"              |
-| FileSystem.Temp                  | Running user's temp directory.                                                                   | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local\\Temp"| "/tmp                                    |
-| FileSystem.ApplicationData       | A common repository for application-specific data for the current roaming user.                  | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
-| FileSysten.LocalApplicationData  | A common repository for application-specific data that is used by the current, non-roaming user. | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
-| FileSysten.CommonApplicationData | A common repository for application-specific data that is used by all users.                     | "C:\\ProgramData"                                     | "/usr/share"                             |
+```csharp
+vfs.Unmount("");
+```
+
+```none
+Delete(VirtualFileSystem, 19.10.2019 11.34.39 +00:00, /dir/file.txt)
+```
+
+If filesystem is mounted with **FileSystemOption.NoObserve** the assigned filesystem cannot be observed, and it won't dispatch events of added files on mount.
+
+```csharp
+vfs.Mount("", ram, FileSystemOption.NoObserve);
+```
+
+**PrintObserver.cs**
+
+```csharp
+
+```
+
+
+Observer isn't closed by unmounting. It can be closed by disposing its handle.
+
+```csharp
+IDisposable observerHandle = vfs.Observe("**", new PrintObserver());
+observerHandle.Dispose();
+```
+
+```none
+OnCompleted
+```
+
+... or by disposing the virtual filesystem.
+
+```csharp
+VirtualFileSystem vfs = new VirtualFileSystem();
+IDisposable observerHandle = vfs.Observe("**", new PrintObserver());
+vfs.Dispose();
+```
+
+```none
+OnCompleted
+```
 
 # Disposing
 
-Disposable objects can be attached to be disposed along with *FileSystem*.
+Disposable objects can be attached to be disposed along with *VirtualFileSystem*.
 
 ```csharp
 // Init
 object obj = new ReaderWriterLockSlim();
-IFileSystemDisposable filesystem = new FileSystem("").AddDisposable(obj);
+IFileSystemDisposable filesystem = new VirtualFileSystem().AddDisposable(obj);
 
 // ... do work ...
 
@@ -200,10 +205,10 @@ IFileSystemDisposable filesystem = new FileSystem("").AddDisposable(obj);
 filesystem.Dispose();
 ```
 
-Delegates can be attached to be executed at dispose of *FileSystem*.
+Delegates can be attached to be executed at dispose of *VirtualFileSystem*.
 
 ```csharp
-IFileSystemDisposable filesystem = new FileSystem("")
+IFileSystemDisposable filesystem = new VirtualFileSystem()
     .AddDisposeAction(f => Console.WriteLine("Disposed"));
 ```
 
@@ -211,7 +216,7 @@ IFileSystemDisposable filesystem = new FileSystem("")
 all belate handles are disposed. This can be used for passing the *IFileSystem* to a worker thread. 
 
 ```csharp
-FileSystem filesystem = new FileSystem("");
+VirtualFileSystem filesystem = new VirtualFileSystem().Mount("", FileSystem.OS);
 filesystem.Browse("");
 
 // Postpone dispose
@@ -252,14 +257,16 @@ IFileSystem rom = ram.AsReadOnly();
 IFileSystem invisible = ram.Decorate(FileSystemOption.NoBrowse);
 ```
 
-**FileSystemOption.MountPath(<i>subpath</i>)** option exposes a subpath.
+**FileSystemOption.SubPath(<i>subpath</i>)** option exposes only a subtree of the decorated filesystem. 
+The *subpath* argument must end with slash "/", or else it mounts to prefix of files.
+
 
 ```csharp
 IFileSystem ram = new MemoryFileSystem();
 ram.CreateDirectory("tmp/dir/");
 ram.CreateFile("tmp/dir/file.txt", new byte[] { 32,32,32,32,32,32,32,32,32 });
 
-IFileSystem tmp = ram.Decorate(FileSystemOption.MountPath("tmp/"));
+IFileSystem tmp = ram.Decorate(FileSystemOption.SubPath("tmp/"));
 tmp.PrintTo(Console.Out, format: PrintTree.Format.DefaultPath);
 ```
 <pre style="line-height:1.2;">
@@ -268,7 +275,16 @@ tmp.PrintTo(Console.Out, format: PrintTree.Format.DefaultPath);
    └── dir/file.txt
 </pre>
 
-The decoration implements **IDisposeList** and **IBelatableDispose** which allows to add disposables.
+**.AddSourceToBeDisposed()** adds source objects to be disposed along with the decoration.
+
+```csharp
+MemoryFileSystem ram = new MemoryFileSystem();
+IFileSystemDisposable rom = ram.Decorate(FileSystemOption.ReadOnly).AddSourceToBeDisposed();
+// Do work ...
+rom.Dispose();
+```
+
+Decorations implement **IDisposeList** and **IBelatableDispose** which allows to attach disposable objects.
 
 ```csharp
 MemoryFileSystem ram = new MemoryFileSystem();
@@ -289,8 +305,8 @@ ram.CreateFile("tmp/dir/file.txt", new byte[] { 32, 32, 32, 32, 32, 32, 32, 32, 
 
 // Create decorations
 IFileSystemDisposable rom = ram.Decorate(FileSystemOption.ReadOnly).AddDisposable(ram.BelateDispose());
-IFileSystemDisposable tmp = ram.Decorate(FileSystemOption.MountPath("tmp/")).AddDisposable(ram.BelateDispose());
-ram.Dispose();
+IFileSystemDisposable tmp = ram.Decorate(FileSystemOption.SubPath("tmp/")).AddDisposable(ram.BelateDispose());
+ram.Dispose(); // <- is actually postponed
 
 // Do work ...
 
@@ -463,7 +479,7 @@ foreach (var line in fs.VisitTree(depth: 2))
    └──"Videos"
 </pre>
 
-**.Observe()** attaches an watcher to the source *IFileProvider* and adapts events.
+**.Observe()** attaches a watcher to the source *IFileProvider* and adapts incoming events.
 
 ```csharp
 IFileSystem fs = new PhysicalFileProvider(@"C:\Users").ToFileSystem();
@@ -475,8 +491,9 @@ using (IDisposable handle = fs.Observe("**", observer))
 
 > [!WARNING]
 > Note that, observing a IFileProvider through IFileSystem adapter browses
-> the whole subtree in the source IFileProvider and compares snapshots
-> in order to produce delta events for the observer of the IFileSystem.
+> the subtree of the source IFileProvider and compares snapshots
+> in order to produce change events. If observer uses "**" pattern, it will
+> browse through the whole IFileProvider.
 
 ## To IFileProvider
 <i>*IFileSystem*</i><b>.ToFileProvider()</b> adapts *IFileProvider* into *IFileSystem*.
@@ -563,7 +580,7 @@ IFileSystem filesystem = new MemoryFileSystem();
 Files are based on blocks. Maximum number of blocks is 2^31-1. The <i>blockSize</i> can be set in constructor. The default blocksize is 1024. 
 
 ```csharp
-IFileSystem filesystem = new MemoryFileSystem(blockSize: 4096L);
+IFileSystem filesystem = new MemoryFileSystem(blockSize: 4096);
 ```
 
 Files can be browsed.
