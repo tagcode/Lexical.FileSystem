@@ -256,7 +256,7 @@ IFileSystem vfs = new VirtualFileSystem()
     .Mount("application://", FileSystem.Application);
 ```
 
-File system can be assigned to a mountpoint that is child of an earlier mount assignment. Child assignment has higher evaluation priority than parent. In the following example, "/tmp/" is evaluated from **MemoryFileSystem** first, and then concatenated with potential directory "/tmp/" from the **FileSystem.OS**.
+File system can be assigned as a child of an earlier assignment. Child assignment has higher evaluation priority than parent. In the following example, "/tmp/" is evaluated from **MemoryFileSystem** first, and then concatenated with potential directory "/tmp/" from the **FileSystem.OS**.
 
 ```csharp
 IFileSystem vfs = new VirtualFileSystem()
