@@ -71,9 +71,9 @@ namespace Lexical.FileSystem
     /// <summary>The filesystem and option assignment.</summary>
     public partial struct FileSystemAssignment
     {
-        /// <summary>Filesystem.</summary>
+        /// <summary>(optional) Filesystem.</summary>
         public readonly IFileSystem FileSystem;
-        /// <summary>Overriding option assignment.</summary>
+        /// <summary>(optional) Overriding option assignment.</summary>
         public readonly IFileSystemOption Option;
         /// <summary>Is flagged as automatically mounted.</summary>
         public readonly bool AutoMount;
@@ -83,7 +83,7 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) overriding option assignment</param>
         public FileSystemAssignment(IFileSystem fileSystem, IFileSystemOption option)
         {
-            FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+            FileSystem = fileSystem;;
             Option = option;
             AutoMount = false;
         }

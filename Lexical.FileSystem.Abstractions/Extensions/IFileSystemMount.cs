@@ -104,7 +104,7 @@ namespace Lexical.FileSystem
         /// If there is an open stream to a mounted filesystem, then the file is unlinked from the parent filesystem, but stream maintains open.
         /// </summary>
         /// <param name="parentFileSystem"></param>
-        /// <param name="path"></param>
+        /// <param name="path">path to mount point</param>
         /// <param name="filesystem">filesystem</param>
         /// <param name="mountOption">(optional) options</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
@@ -140,6 +140,23 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Mount <paramref name="filesystems"/> at <paramref name="path"/> in the parent filesystem.
+        /// 
+        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="parentFileSystem"></param>
+        /// <param name="path">path to mount point</param>
+        /// <param name="filesystems"></param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params (IFileSystem filesystem, IFileSystemOption mountOption)[] filesystems)
+        {
+            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystems.Select(fs => new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray());
+            throw new NotSupportedException(nameof(Mount));
+        }
+
+        /// <summary>
         /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IFileSystemOption"/> in the parent filesystem.
         /// 
         /// If no mounts are provided, then creates empty virtual directory.
@@ -155,7 +172,7 @@ namespace Lexical.FileSystem
         /// If there is an open stream to a mounted filesystem, then the file is unlinked from the parent filesystem, but stream maintains open.
         /// </summary>
         /// <param name="parentFileSystem"></param>
-        /// <param name="path"></param>
+        /// <param name="path">path to mount point</param>
         /// <param name="mounts">(optional) filesystem and option infos</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params FileSystemAssignment[] mounts)
@@ -170,7 +187,7 @@ namespace Lexical.FileSystem
         /// If there is no mount at <paramref name="path"/>, then does nothing.
         /// </summary>
         /// <param name="parentFileSystem"></param>
-        /// <param name="path"></param>
+        /// <param name="path">path to mount point</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         public static IFileSystem Unmount(this IFileSystem parentFileSystem, string path)

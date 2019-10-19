@@ -95,12 +95,14 @@ namespace Lexical.FileSystem
             StructList4<IFileSystemEntry> vfsEntries = new StructList4<IFileSystemEntry>();
             // Lock for the duration of tree traversal
             vfsLock.AcquireReaderLock(int.MaxValue);
+            // Was vfs directory found at path argument
+            bool directoryAtPath;
             try
             {
                 // Vfs Node
                 Directory directory;
                 // Search for vfs node
-                bool directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints, true);
+                directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints, true);
                 // Browse the vfs directory (mountpoint) at the path
                 if (directoryAtPath && directory.children.Count>0) foreach(var c in directory.children) vfsEntries.Add(c.Value.Entry);
             }
@@ -109,7 +111,11 @@ namespace Lexical.FileSystem
                 vfsLock.ReleaseReaderLock();
             }
             // Found nothing.
-            if (mountpoints.Count == 0 && vfsEntries.Count == 0) throw new DirectoryNotFoundException(path);
+            if (mountpoints.Count == 0 && vfsEntries.Count == 0)
+            {
+                if (directoryAtPath) return new IFileSystemEntry[0];
+                throw new DirectoryNotFoundException(path);
+            }
             // Return vfs contents
             if (mountpoints.Count == 0 && vfsEntries.Count > 0) return vfsEntries.ToArray();
             // Return already decorated contents
@@ -327,7 +333,7 @@ namespace Lexical.FileSystem
                     Directory _parent = parent;
                     // Case for root
                     if (_parent == null) return path = "";
-                    // k2nd+ level paths
+                    // 2nd+ level paths
                     return _parent.Path + name + "/";
                 }
             }
@@ -923,6 +929,19 @@ namespace Lexical.FileSystem
             => Mount(path, new FileSystemAssignment(filesystem, mountOption));
 
         /// <summary>
+        /// Mount <paramref name="filesystems"/> at <paramref name="path"/> in the parent filesystem.
+        /// 
+        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="filesystems"></param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public VirtualFileSystem Mount(string path, params (IFileSystem filesystem, IFileSystemOption mountOption)[] filesystems)
+            => Mount(path, filesystems.Select(fs=>new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray());
+
+        /// <summary>
         /// Mount <paramref name="mounts"/> at <paramref name="path"/> in the parent filesystem.
         /// 
         /// If <paramref name="path"/> is already mounted, then replaces previous mount.
@@ -1299,6 +1318,7 @@ namespace Lexical.FileSystem
             }
 
             // Try to open with mounted filesystems
+            bool supported = false;
             for (int i = mountpoints.Count-1; i >= 0; i--)
             {
                 var fs = mountpoints[i];
@@ -1320,9 +1340,10 @@ namespace Lexical.FileSystem
                     return fs.Open(path, fileMode, fileAccess, fileShare);
                 }
                 catch (NotSupportedException) { }
+                catch (FileNotFoundException) { supported = true; }
             }
-            throw new NotSupportedException(nameof(Open));
-
+            if (!supported) throw new NotSupportedException(nameof(Open));
+            throw new FileNotFoundException(path);
         }
 
         /// <summary>
@@ -1607,6 +1628,37 @@ namespace Lexical.FileSystem
         /// <param name="disposeErrors"></param>
         protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
         {
+
+            // Gather observer node
+            StructList12<ObserverHandle> handles = new StructList12<ObserverHandle>();
+            observerLock.AcquireWriterLock(int.MaxValue);
+            try
+            {
+                foreach (var n in observerRoot.Visit(false, true, true))
+                {
+                    var array = n.observers.Array;
+                    foreach (var oh in array)
+                    {
+                        handles.Add(oh);
+                        n.observers.Remove(oh);
+                    }
+                }
+            } finally
+            {
+                observerLock.ReleaseWriterLock();
+            }
+            // Dispose gathered handles
+            for (int i = 0; i < handles.Count; i++)
+                try
+                {
+                    handles[i].Dispose();
+                }
+                catch (Exception e)
+                {
+                    disposeErrors.Add(e);
+                }
+
+            // Gather assigned filesystems
             StructList12<FileSystemDecoration> decorations = new StructList12<FileSystemDecoration>();
             vfsLock.AcquireWriterLock(int.MaxValue);
             try
