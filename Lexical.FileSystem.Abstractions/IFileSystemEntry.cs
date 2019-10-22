@@ -21,6 +21,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemEntryDrive"/></item>
     ///     <item><see cref="IFileSystemEntryMount"/></item>
     ///     <item><see cref="IFileSystemEntryOptions"/></item>
+    ///     <item><see cref="IFileSystemEntryAttributes"/></item>
     /// </list>    
     /// </summary>
     public interface IFileSystemEntry
@@ -167,16 +168,34 @@ namespace Lexical.FileSystem
 
     // <IFileSystemEntryOptions>
     /// <summary>
-    /// Directory entry that can be browsed for contents with <see cref="IFileSystemBrowse"/>.
+    /// Entry specific filesystem capability options.
     /// </summary>
     public interface IFileSystemEntryOptions : IFileSystemEntry
     {
         /// <summary>
-        /// (optional) Options that apply to this entry. The option here is equal or subset of the options in the owning <see cref="IFileSystem"/>.
+        /// (optional) Options that apply to this entry. The options here are equal or subset of the options in the parenting <see cref="IFileSystem"/>.
         /// </summary>
         IFileSystemOption Options { get; }
     }
     // </IFileSystemEntryOptions>
+
+    // <IFileSystemEntryAttributes>
+    /// <summary>
+    /// Entry file Attributes.
+    /// </summary>
+    public interface IFileSystemEntryAttributes : IFileSystemEntry
+    {
+        /// <summary>
+        /// True, if has attached <see cref="FileAttributes"/>.
+        /// </summary>
+        bool HasFileAttributes { get; }
+
+        /// <summary>
+        /// (optional) File attributes
+        /// </summary>
+        FileAttributes FileAttributes { get; }
+    }
+    // </IFileSystemEntryAttributes>
 
 
 }

@@ -73,7 +73,7 @@ namespace Lexical.FileSystem
             /// ├──/
             /// │  ├──/mnt/
             /// │  ├──/tmp/
-            /// │  │  └──/tmp/helloworld.txt 128
+            /// │  │  └──/tmp/helloworld.txt [128]
             /// │  └──/usr/
             /// │     └──/usr/myuser/
             /// </summary>
@@ -117,10 +117,15 @@ namespace Lexical.FileSystem
             DriveFormat = 1 << 18,
 
             /// <summary>
+            /// Print file attributes
+            /// </summary>
+            Attributes = 1 << 19,
+
+            /// <summary>
             /// Print error on files
             /// 
             /// ├──/
-            /// │  └──/tmp/ IOException: File not found.
+            /// │  └──/tmp/ [IOException: File not found.]
             /// </summary>
             Error = 1 << 29,
 

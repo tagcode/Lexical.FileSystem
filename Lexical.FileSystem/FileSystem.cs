@@ -347,12 +347,12 @@ namespace Lexical.FileSystem
                 {
                     if (fsi is DirectoryInfo di)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked());
+                        IFileSystemEntry e = new FileSystemEntryDirectory.WithAttributes(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), di.Attributes);
                         list.Add(e);
                     }
                     else if (fsi is FileInfo _fi)
                     {
-                        IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length);
+                        IFileSystemEntry e = new FileSystemEntryFile.WithAttributes(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length, _fi.Attributes);
                         list.Add(e);
                     }
                 }
@@ -362,7 +362,7 @@ namespace Lexical.FileSystem
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists)
             {
-                IFileSystemEntry e = new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length);
+                IFileSystemEntry e = new FileSystemEntryFile.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes);
                 return new IFileSystemEntry[] { e };
             }
 
@@ -394,10 +394,10 @@ namespace Lexical.FileSystem
             if (path == null) return null;
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists) return new FileSystemEntryDirectory(this, path + "/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked());
+            if (dir.Exists) return new FileSystemEntryDirectory.WithAttributes(this, path + "/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), dir.Attributes);
 
             FileInfo fi = new FileInfo(absolutePath);
-            if (fi.Exists) return new FileSystemEntryFile(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length);
+            if (fi.Exists) return new FileSystemEntryFile.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes);
 
             return null;
         }

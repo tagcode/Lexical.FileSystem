@@ -128,6 +128,23 @@ namespace Lexical.FileSystem
             }
             return false;
         }
+
+        /// <summary>
+        /// Tests if <paramref name="entry"/> has <see cref="FileAttributes"/>.
+        /// </summary>
+        /// <returns>true if it has file attributes</returns>
+        public static bool HasFileAttributes(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryAttributes attributes ? attributes.HasFileAttributes : false;
+
+        /// <summary>
+        /// Gets file attributes of <paramref name="entry"/>.
+        /// 
+        /// The caller should first test if attributes exist with <see cref="HasFileAttributes(IFileSystemEntry)"/>.
+        /// </summary>
+        /// <returns>file attributes</returns>
+        public static FileAttributes FileAttributes(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryAttributes attributes ? attributes.FileAttributes : 0;
+
     }
 
 }

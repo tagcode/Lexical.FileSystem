@@ -251,6 +251,13 @@ namespace Lexical.FileSystem
                     if (!String.IsNullOrEmpty(driveFormat)) infos.Add(driveFormat);
                 }
 
+                // Print file attributes
+                if (format.HasFlag(Format.Attributes) && Entry.HasFileAttributes())
+                {
+                    string attribs = Entry.FileAttributes().ToString();
+                    if (!string.IsNullOrEmpty(attribs)) infos.Add(attribs);
+                }
+
                 // Print length
                 if (format.HasFlag(Format.Length) && Entry.IsFile())
                 {
@@ -372,6 +379,12 @@ namespace Lexical.FileSystem
                     if (!String.IsNullOrEmpty(driveFormat)) infos.Add(driveFormat);
                 }
 
+                // Print file attributes
+                if (format.HasFlag(Format.Attributes) && Entry.HasFileAttributes())
+                {
+                    string attribs = Entry.FileAttributes().ToString();
+                    if (!string.IsNullOrEmpty(attribs)) infos.Add(attribs);
+                }
 
                 // Print length
                 if (format.HasFlag(Format.Length) && Entry.IsFile())
