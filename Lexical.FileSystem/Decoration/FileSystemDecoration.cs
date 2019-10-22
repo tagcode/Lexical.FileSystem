@@ -390,7 +390,7 @@ namespace Lexical.FileSystem.Decoration
                 if (components.Length == 0)
                 {
                     // Assert can get entry
-                    if (!this.Option.CanGetEntry) return null;
+                    if (!this.Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
                     // Return root
                     if (path == "") return rootEntry;
                     // No match
@@ -403,7 +403,7 @@ namespace Lexical.FileSystem.Decoration
                     // Get reference
                     var component = components[0];
                     // Assert can get entry
-                    if (!component.Option.CanGetEntry) return null;
+                    if (!component.Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
 
                     // Convert Path
                     String/*Segment*/ childPath;
@@ -435,7 +435,7 @@ namespace Lexical.FileSystem.Decoration
                 else
                 {
                     // Assert can get entry
-                    if (!Option.CanGetEntry) return null;
+                    if (!Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
                     // Return root
                     if (path == "") return rootEntry;
 

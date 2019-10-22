@@ -119,7 +119,7 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Print file attributes
             /// </summary>
-            Attributes = 1 << 19,
+            FileAttributes = 1 << 19,
 
             /// <summary>
             /// Print error on files

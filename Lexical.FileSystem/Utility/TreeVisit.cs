@@ -252,7 +252,7 @@ namespace Lexical.FileSystem
                 }
 
                 // Print file attributes
-                if (format.HasFlag(Format.Attributes) && Entry.HasFileAttributes())
+                if (format.HasFlag(Format.FileAttributes) && Entry.HasFileAttributes())
                 {
                     string attribs = Entry.FileAttributes().ToString();
                     if (!string.IsNullOrEmpty(attribs)) infos.Add(attribs);
@@ -380,7 +380,7 @@ namespace Lexical.FileSystem
                 }
 
                 // Print file attributes
-                if (format.HasFlag(Format.Attributes) && Entry.HasFileAttributes())
+                if (format.HasFlag(Format.FileAttributes) && Entry.HasFileAttributes())
                 {
                     string attribs = Entry.FileAttributes().ToString();
                     if (!string.IsNullOrEmpty(attribs)) infos.Add(attribs);
