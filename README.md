@@ -8,10 +8,10 @@ NuGet Packages:
 
 # FileSystem
 
-**new FileSystem(<i>path</i>)** creates an instance of filesystem at directory. Path "" refers to operating system root.
+**new FileSystem(<i>path</i>)** creates an instance of filesystem at *path*. Separator character is always '/'.
 
 ```csharp
-IFileSystem filesystem = new FileSystem(path: "");
+IFileSystem filesystem = new FileSystem("C:/");
 ```
 
 *FileSystem* can be browsed.
@@ -333,7 +333,7 @@ vfs.Mount("/tmp/", filesystem: null);
 
 # Observing
 
-Observer can be placed before and after mounting. If observer is placed before, then mounting will notify the observer with Create event for all the added files.
+Observer can be placed before and after mounting. If observer is placed before, then mounting will notify the observer with *IFileSystemEventCreate* event for all the added files.
 
 ```csharp
 IFileSystem vfs = new VirtualFileSystem();

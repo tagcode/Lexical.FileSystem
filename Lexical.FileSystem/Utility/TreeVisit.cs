@@ -194,29 +194,74 @@ namespace Lexical.FileSystem
                     output.Append(Entry.Path);
                 }
 
+                // [xx, yy, zz]
+                StructList4<string> infos = new StructList4<string>();
+
                 // Print mountpoint
                 if (format.HasFlag(Format.Mount) && Entry.IsMountPoint())
                 {
                     FileSystemAssignment[] mounts = Entry.Mounts();
                     if (mounts != null)
                     {
-                        if (column++ > 0) output.Append(" ");
-                        output.Append('[');
-                        for (int i=0; i<mounts.Length; i++)
+                        for (int i = 0; i < mounts.Length; i++)
                         {
                             FileSystemAssignment info = mounts[i];
-                            if (i > 0) output.Append(", ");
-                            output.Append(info.FileSystem);
-                            if (info.Option!=null)
+                            if (info.FileSystem != null)
                             {
-                                //output.Append(" [");
-                                output.Append(" ");
-                                output.Append(info.Option);
-                                //output.Append("]");
+                                string fs = info.FileSystem.ToString();
+                                if (!String.IsNullOrEmpty(fs)) infos.Add(fs);
+                            }
+                            if (info.Option != null)
+                            {
+                                string op = info.Option.ToString();
+                                if (!String.IsNullOrEmpty(op)) infos.Add(op);
                             }
                         }
-                        output.Append(']');
                     }
+                }
+
+                // Append drive label [Tank]
+                if (format.HasFlag(Format.DriveLabel))
+                {
+                    string label = Entry.DriveLabel();
+                    if (!String.IsNullOrEmpty(label)) infos.Add(label);
+                }
+
+                // Append drive label [Tank]
+                if (format.HasFlag(Format.DriveFreespace) || format.HasFlag(Format.DriveSize))
+                {
+                    long freespace = format.HasFlag(Format.DriveFreespace) ? Entry.DriveFreeSpace() : -1L;
+                    long size = format.HasFlag(Format.DriveSize) ? Entry.DriveSize() : -1L;
+                    if (freespace > 0 && size > 0) infos.Add((freespace >> 30) + "G/" + (size >> 30) + "G");
+                    else if (freespace > 0) infos.Add((freespace >> 30) + "G");
+                    else if (size > 0) infos.Add((size >> 30) + "G");
+                }
+
+                // Append drive type [Ram]
+                if (format.HasFlag(Format.DriveType))
+                {
+                    DriveType driveType = Entry.DriveType();
+                    if (driveType != DriveType.Unknown) infos.Add(driveType.ToString());
+                }
+
+                // Append drive format [NTFS]
+                if (format.HasFlag(Format.DriveFormat))
+                {
+                    string driveFormat = Entry.DriveFormat();
+                    if (!String.IsNullOrEmpty(driveFormat)) infos.Add(driveFormat);
+                }
+
+                // Print colon infos
+                if (infos.Count > 0)
+                {
+                    if (column++ > 0) output.Append(" ");
+                    output.Append('[');
+                    for (int i = 0; i < infos.Count; i++)
+                    {
+                        if (i > 0) output.Append(", ");
+                        output.Append(infos[i]);
+                    }
+                    output.Append(']');
                 }
 
                 // Print length
@@ -270,29 +315,74 @@ namespace Lexical.FileSystem
                     output.Write(Entry.Path);
                 }
 
+                // [xx, yy, zz]
+                StructList4<string> infos = new StructList4<string>();
+
                 // Print mountpoint
                 if (format.HasFlag(Format.Mount) && Entry.IsMountPoint())
                 {
                     FileSystemAssignment[] mounts = Entry.Mounts();
                     if (mounts != null)
                     {
-                        if (column++ > 0) output.Write(" ");
-                        output.Write('[');
                         for (int i = 0; i < mounts.Length; i++)
                         {
                             FileSystemAssignment info = mounts[i];
-                            if (i > 0) output.Write(", ");
-                            output.Write(info.FileSystem);
+                            if (info.FileSystem != null)
+                            {
+                                string fs = info.FileSystem.ToString();
+                                if (!String.IsNullOrEmpty(fs)) infos.Add(fs);
+                            }
                             if (info.Option != null)
                             {
-                                //output.Write(" [");
-                                output.Write(" ");
-                                output.Write(info.Option);
-                                //output.Write("]");
+                                string op = info.Option.ToString();
+                                if (!String.IsNullOrEmpty(op)) infos.Add(op);
                             }
                         }
-                        output.Write(']');
                     }
+                }
+
+                // Write drive label [Tank]
+                if (format.HasFlag(Format.DriveLabel))
+                {
+                    string label = Entry.DriveLabel();
+                    if (!String.IsNullOrEmpty(label)) infos.Add(label);
+                }
+
+                // Write drive label [Tank]
+                if (format.HasFlag(Format.DriveFreespace) || format.HasFlag(Format.DriveSize))
+                {
+                    long freespace = format.HasFlag(Format.DriveFreespace) ? Entry.DriveFreeSpace() : -1L;
+                    long size = format.HasFlag(Format.DriveSize) ? Entry.DriveSize() : -1L;
+                    if (freespace > 0 && size > 0) infos.Add((freespace >> 30) + "G/" + (size >> 30) + "G");
+                    else if (freespace > 0) infos.Add((freespace >> 30) + "G");
+                    else if (size > 0) infos.Add((size >> 30) + "G");
+                }
+
+                // Write drive type [Ram]
+                if (format.HasFlag(Format.DriveType))
+                {
+                    DriveType driveType = Entry.DriveType();
+                    if (driveType != DriveType.Unknown) infos.Add(driveType.ToString());
+                }
+
+                // Write drive format [NTFS]
+                if (format.HasFlag(Format.DriveFormat))
+                {
+                    string driveFormat = Entry.DriveFormat();
+                    if (!String.IsNullOrEmpty(driveFormat)) infos.Add(driveFormat);
+                }
+
+                // Print colon infos
+                if (infos.Count > 0)
+                {
+                    if (column++ > 0) output.Write(" ");
+                    output.Write('[');
+                    for (int i = 0; i < infos.Count; i++)
+                    {
+                        if (i > 0) output.Write(", ");
+                        output.Write(infos[i]);
+                    }
+                    output.Write(']');
                 }
 
                 // Print length

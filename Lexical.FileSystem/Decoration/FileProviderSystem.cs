@@ -83,7 +83,7 @@ namespace Lexical.FileSystem.Decoration
             this.canObserve = canObserve;
             this.CanOpen = this.CanRead = canOpen;
             this.isPhysicalFileProvider = sourceFileProvider.GetType().FullName == "Microsoft.Extensions.FileProviders.PhysicalFileProvider";
-            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, this);
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue);
         }
 
         /// <summary>
@@ -175,7 +175,7 @@ namespace Lexical.FileSystem.Decoration
                 {
                     if (info.IsDirectory)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue, this);
+                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue);
                         list.Add(e);
                     }
                     else
@@ -227,7 +227,7 @@ namespace Lexical.FileSystem.Decoration
                 if (fi.IsDirectory)
                 {
                     if (path != "" && !path.EndsWith("/") && !path.EndsWith("\\")) path = path + "/";
-                    return new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, this);
+                    return new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue);
                 }
                 else return new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length);
             }
@@ -251,7 +251,7 @@ namespace Lexical.FileSystem.Decoration
                 {
                     name = Path.GetDirectoryName(path);
                 }
-                return new FileSystemEntryDirectory(this, path, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, this);
+                return new FileSystemEntryDirectory(this, path, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue);
             }
 
             // Nothing was found

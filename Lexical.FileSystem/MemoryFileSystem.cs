@@ -1225,8 +1225,10 @@ namespace Lexical.FileSystem
             /// Create entry snapshot.
             /// </summary>
             /// <returns></returns>
-            public override IFileSystemEntry CreateEntry()
-                => new FileSystemEntryDirectory(filesystem, Path, name, lastModified, lastAccess, filesystem);
+            public override IFileSystemEntry CreateEntry() =>
+                parent == null ? 
+                /*Root*/     (IFileSystemEntry) new FileSystemEntryDrive(filesystem, Path, name, lastModified, lastAccess, DriveType.Ram, -1L, -1L, null, null, true) : 
+                /*non-root*/ (IFileSystemEntry) new FileSystemEntryDirectory(filesystem, Path, name, lastModified, lastAccess);
 
             /// <summary>
             /// Flush cached array of child entries.

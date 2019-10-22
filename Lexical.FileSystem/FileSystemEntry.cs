@@ -16,7 +16,6 @@ namespace Lexical.FileSystem
     ///     <item><see cref="FileSystemEntryFile"/></item>
     ///     <item><see cref="FileSystemEntryDirectory"/></item>
     ///     <item><see cref="FileSystemEntryDrive"/></item>
-    ///     <item><see cref="FileSystemEntryDriveDirectory"/></item>
     ///     <item><see cref="FileSystemEntryDecoration"/></item>
     /// </list>
     /// </summary>
@@ -101,6 +100,19 @@ namespace Lexical.FileSystem
         {
             Length = length;
         }
+
+        /// <summary>Entry with custom option.</summary>
+        public class AndOption : FileSystemEntryFile
+        {
+            /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
+            public IFileSystemOption Options { get; protected set; }
+            /// <summary>Create entry with custom option</summary>
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, length)
+            {
+                this.Options = options;
+            }
+        }
+
     }
 
     /// <summary>
@@ -114,11 +126,6 @@ namespace Lexical.FileSystem
         public bool IsDirectory => true;
 
         /// <summary>
-        /// Options that describe features and capabilities in that apply to entries in this directory.
-        /// </summary>
-        public IFileSystemOption Option { get; protected set; }
-
-        /// <summary>
         /// Create entry
         /// </summary>
         /// <param name="filesystem"></param>
@@ -126,24 +133,72 @@ namespace Lexical.FileSystem
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
         /// <param name="lastAccess"></param>
-        /// <param name="options"></param>
-        public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess)
+        public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess) : base(filesystem, path, name, lastModified, lastAccess)
         {
-            this.Option = options ?? throw new ArgumentNullException(nameof(options));
         }
+
+        /// <summary>Directory with custom option.</summary>
+        public class AndOption : FileSystemEntryDirectory
+        {
+            /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
+            public IFileSystemOption Options { get; protected set; }
+
+            /// <summary>Create entry with custom option</summary>
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess)
+            {
+                this.Options = options;
+            }
+        }
+
     }
 
     /// <summary>
     /// Drive entry.
     /// </summary>
-    public class FileSystemEntryDrive : FileSystemEntryBase, IFileSystemEntryDrive
+    public class FileSystemEntryDrive : FileSystemEntryBase, IFileSystemEntryDrive, IFileSystemEntryDirectory
     {
+        /// <summary>
+        /// Tests if entry represents a directory.
+        /// </summary>
+        public bool IsDirectory { get; protected set; }
+
         /// <summary>
         /// Tests if entry represents a drive.
         /// </summary>
         public bool IsDrive => true;
 
         /// <summary>
+        /// Drive type.
+        /// </summary>
+        public System.IO.DriveType DriveType { get; protected set; }
+
+        /// <summary>
+        /// Free space, -1L if unknown.
+        /// </summary>
+        public long DriveFreeSpace { get; protected set; }
+
+        /// <summary>
+        /// Total size of drive or volume. -1L if unkown.
+        /// </summary>
+        public long DriveSize { get; protected set; }
+
+        /// <summary>
+        /// Label, or null if unknown.
+        /// </summary>
+        public String DriveLabel { get; protected set; }
+
+        /// <summary>
+        /// File system format.
+        /// 
+        /// Examples:
+        /// <list type="bullet">
+        ///     <item>NTFS</item>
+        ///     <item>FAT32</item>
+        /// </list>
+        /// </summary>
+        public String DriveFormat { get; protected set; }
+
+        /// <summary>
         /// Create entry
         /// </summary>
         /// <param name="filesystem"></param>
@@ -151,38 +206,32 @@ namespace Lexical.FileSystem
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
         /// <param name="lastAccess"></param>
-        public FileSystemEntryDrive(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess) : base(filesystem, path, name, lastModified, lastAccess)
+        /// <param name="driveType"></param>
+        /// <param name="driveFreeSpace"></param>
+        /// <param name="driveSize"></param>
+        /// <param name="driveLabel"></param>
+        /// <param name="driveFormat"></param>
+        /// <param name="isDirectory">Does entry represent a directory (is entry ready, mounted and readable)</param>
+        public FileSystemEntryDrive(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, System.IO.DriveType driveType, long driveFreeSpace, long driveSize, string driveLabel, string driveFormat, bool isDirectory) : base(filesystem, path, name, lastModified, lastAccess)
         {
+            this.DriveType = driveType;
+            this.DriveFreeSpace = driveFreeSpace;
+            this.DriveSize = driveSize;
+            this.DriveLabel = driveLabel;
+            this.DriveFormat = driveFormat;
+            this.IsDirectory = isDirectory;
         }
-    }
 
-    /// <summary>
-    /// Drive entry that is also a directory (browsable).
-    /// </summary>
-    public class FileSystemEntryDriveDirectory : FileSystemEntryDrive, IFileSystemEntryDirectory
-    {
-        /// <summary>
-        /// Tests if entry represents a directory.
-        /// </summary>
-        public bool IsDirectory => true;
-
-        /// <summary>
-        /// Options that apply to this directory.
-        /// </summary>
-        public IFileSystemOption Option { get; protected set; }
-
-        /// <summary>
-        /// Create entry
-        /// </summary>
-        /// <param name="filesystem"></param>
-        /// <param name="path"></param>
-        /// <param name="name"></param>
-        /// <param name="lastModified"></param>
-        /// <param name="lastAccess"></param>
-        /// <param name="options"></param>
-        public FileSystemEntryDriveDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess)
+        /// <summary>Entry with custom option.</summary>
+        public class AndOption : FileSystemEntryDrive
         {
-            this.Option = options ?? throw new ArgumentNullException(nameof(options));
+            /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
+            public IFileSystemOption Options { get; protected set; }
+            /// <summary>Create entry with custom option</summary>
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, System.IO.DriveType driveType, long driveFreeSpace, long driveSize, string driveLabel, string driveFormat, bool isDirectory, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, driveType, driveFreeSpace, driveSize, driveLabel, driveFormat, isDirectory)
+            {
+                this.Options = options;
+            }
         }
     }
 
@@ -209,12 +258,24 @@ namespace Lexical.FileSystem
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
         /// <param name="lastAccess"></param>
-        /// <param name="options"></param>
         /// <param name="mounts"></param>
-        public FileSystemEntryMount(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options, FileSystemAssignment[] mounts) : base(filesystem, path, name, lastModified, lastAccess, options)
+        public FileSystemEntryMount(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileSystemAssignment[] mounts) : base(filesystem, path, name, lastModified, lastAccess)
         {
             this.Mounts = mounts;
+        }
+
+        /// <summary>Entry with custom option.</summary>
+        public new class AndOption : FileSystemEntryMount
+        {
+            /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
+            public IFileSystemOption Options { get; protected set; }
+            /// <summary>Create entry with custom option</summary>
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileSystemAssignment[] mounts, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, mounts)
+            {
+                this.Options = options;
+            }
         }
     }
 
 }
+

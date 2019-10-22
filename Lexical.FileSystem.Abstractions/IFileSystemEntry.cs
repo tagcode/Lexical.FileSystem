@@ -4,6 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.IO;
 
 namespace Lexical.FileSystem
 {
@@ -19,6 +20,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemEntryDirectory"/></item>
     ///     <item><see cref="IFileSystemEntryDrive"/></item>
     ///     <item><see cref="IFileSystemEntryMount"/></item>
+    ///     <item><see cref="IFileSystemEntryOptions"/></item>
     /// </list>    
     /// </summary>
     public interface IFileSystemEntry
@@ -83,28 +85,52 @@ namespace Lexical.FileSystem
         /// Tests if entry represents a directory.
         /// </summary>
         bool IsDirectory { get; }
-
-        /// <summary>
-        /// Options that apply to this directory. 
-        /// 
-        /// The options returned here is equal to or a subset of options in the parent <see cref="IFileSystem"/>.
-        /// </summary>
-        IFileSystemOption Option { get; }
     }
     // </IFileSystemEntryDirectory>
 
     // <IFileSystemEntryDrive>
     /// <summary>
-    /// Drive entry. 
+    /// Drive or volume entry. 
     /// 
     /// If drive class is browsable, then the implementation also implements <see cref="IFileSystemEntryDirectory"/>.
     /// </summary>
     public interface IFileSystemEntryDrive : IFileSystemEntry
     {
         /// <summary>
-        /// Tests if entry represents a drive.
+        /// Tests if entry represents a drive or volume.
         /// </summary>
         bool IsDrive { get; }
+
+        /// <summary>
+        /// Drive type.
+        /// </summary>
+        DriveType DriveType { get; }
+
+        /// <summary>
+        /// Free space, -1L if unknown.
+        /// </summary>
+        long DriveFreeSpace { get; }
+
+        /// <summary>
+        /// Total size of drive or volume. -1L if unkown.
+        /// </summary>
+        long DriveSize { get; }
+
+        /// <summary>
+        /// Label, or null if unknown.
+        /// </summary>
+        String DriveLabel { get; }
+
+        /// <summary>
+        /// File system format.
+        /// 
+        /// Examples:
+        /// <list type="bullet">
+        ///     <item>NTFS</item>
+        ///     <item>FAT32</item>
+        /// </list>
+        /// </summary>
+        String DriveFormat { get; }
     }
     // </IFileSystemEntryDrive>
 
@@ -128,9 +154,7 @@ namespace Lexical.FileSystem
 
     // <IFileSystemEntryDecoration>
     /// <summary>
-    /// Entry that is actually a decoration. 
-    /// 
-    /// Decorating classes can implement this interface if they want to expose the original entry.
+    /// Optional interface that exposes decoree.
     /// </summary>
     public interface IFileSystemEntryDecoration : IFileSystemEntry
     {
@@ -140,5 +164,19 @@ namespace Lexical.FileSystem
         IFileSystemEntry Original { get; }
     }
     // </IFileSystemEntryDecoration>
+
+    // <IFileSystemEntryOptions>
+    /// <summary>
+    /// Directory entry that can be browsed for contents with <see cref="IFileSystemBrowse"/>.
+    /// </summary>
+    public interface IFileSystemEntryOptions : IFileSystemEntry
+    {
+        /// <summary>
+        /// (optional) Options that apply to this entry. The option here is equal or subset of the options in the owning <see cref="IFileSystem"/>.
+        /// </summary>
+        IFileSystemOption Options { get; }
+    }
+    // </IFileSystemEntryOptions>
+
 
 }

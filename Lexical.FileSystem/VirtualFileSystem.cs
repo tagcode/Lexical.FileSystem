@@ -279,6 +279,7 @@ namespace Lexical.FileSystem
         /// Virtual tree directories are created with Mount() and deleted with Unmount(). 
         /// Vfs doesn't allow creating mountpoints with CreateDirectory() and Delete().
         /// 
+        /// Vfs tree structure is read and written to under <see cref="vfsLock"/>.
         /// </summary>
         class Directory : IDisposable
         {
@@ -293,7 +294,7 @@ namespace Lexical.FileSystem
             /// <summary>Last access time.</summary>
             protected internal DateTimeOffset lastAccess;
             /// <summary>Parent filesystem.</summary>
-            protected VirtualFileSystem filesystem;
+            protected VirtualFileSystem vfs;
             /// <summary>Parent node.</summary>
             protected internal Directory parent;
             /// <summary>Cached entry</summary>
@@ -347,7 +348,7 @@ namespace Lexical.FileSystem
             /// <param name="lastModified"></param>
             public Directory(VirtualFileSystem filesystem, Directory parent, string name, DateTimeOffset lastModified)
             {
-                this.filesystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
+                this.vfs = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.parent = parent;
                 this.name = name ?? throw new ArgumentNullException(nameof(name));
                 this.lastModified = lastModified;
@@ -361,11 +362,13 @@ namespace Lexical.FileSystem
             /// <returns></returns>
             public IFileSystemEntryMount CreateEntry()
             {
-                FileSystemAssignment[] mounts = null;
                 var _mount = mount;
-                if (_mount != null) mounts = _mount.components.Array.Select(c => c.Assignment).ToArray();                    
-                return new FileSystemEntryMount(filesystem, Path, name, lastModified, lastAccess, filesystem, mounts);
-
+                if (_mount != null)
+                {
+                    IFileSystemEntryMount e = _mount.GetEntry(Path) as IFileSystemEntryMount;
+                    if (e != null) return e;
+                }
+                return new FileSystemEntryMount(vfs, Path, name, lastModified, lastAccess, null);
             }
 
             /// <summary>
@@ -444,7 +447,7 @@ namespace Lexical.FileSystem
          * Any filesystem mounting and unmounting does not dispose observer.
          * 
          * Observer forwards events from mounted filesystems and from modifications of vfs tree structure. 
-         * Mounting and unmounting creates virtual folders, which create Create and Delete events.
+         * Mounting and unmounting creates virtual folders create pseudo-Create and Delete events.
          */
 
         /// <summary>
@@ -637,7 +640,7 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// 
+        /// Add observer.
         /// </summary>
         /// <param name="filter"></param>
         /// <param name="observer"></param>

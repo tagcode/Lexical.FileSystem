@@ -4,13 +4,14 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.IO;
 
 namespace Lexical.FileSystem.Decoration
 {
     /// <summary>
     /// Abstract base class for decorated entry.
     /// </summary>
-    public abstract class FileSystemEntryDecoration : IFileSystemEntryDecoration, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive, IFileSystemEntryMount
+    public abstract class FileSystemEntryDecoration : IFileSystemEntryDecoration, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive, IFileSystemEntryMount, IFileSystemOption
     {
         /// <summary>
         /// Decorate filesystem.
@@ -63,13 +64,23 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsDirectory => Original.IsDirectory();
         /// <inheritdoc/>
-        public virtual IFileSystemOption Option => Original.Options();
+        public virtual IFileSystemOption Options => Original.Options();
         /// <inheritdoc/>
         public virtual bool IsDrive => Original.IsDrive();
         /// <inheritdoc/>
         public virtual bool IsMountPoint => Original.IsMountPoint();
         /// <inheritdoc/>
         public virtual FileSystemAssignment[] Mounts => Original.Mounts();
+        /// <inheritdoc/>
+        public virtual DriveType DriveType => Original.DriveType();
+        /// <inheritdoc/>
+        public virtual long DriveFreeSpace => Original.DriveFreeSpace();
+        /// <inheritdoc/>
+        public virtual long DriveSize => Original.DriveSize();
+        /// <inheritdoc/>
+        public virtual string DriveLabel => Original.DriveLabel();
+        /// <inheritdoc/>
+        public virtual string DriveFormat => Original.DriveFormat();
 
         /// <summary>
         /// Create decorated entry.
@@ -148,7 +159,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and <see cref="Original"/>.Option()</summary>
             protected IFileSystemOption optionIntersection;
             /// <summary>Intersection of <see cref="Original"/>.Option() and <see cref="optionModifier"/></summary>
-            public override IFileSystemOption Option => optionIntersection ?? (optionIntersection = FileSystemOption.Intersection(optionModifier, Original.Options()));
+            public override IFileSystemOption Options => optionIntersection ?? (optionIntersection = FileSystemOption.Intersection(optionModifier, Original.Options()));
             /// <summary>
             /// Create decoration with <paramref name="newFileSystem"/>.
             /// </summary>

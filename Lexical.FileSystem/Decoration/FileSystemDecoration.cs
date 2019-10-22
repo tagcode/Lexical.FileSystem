@@ -95,6 +95,11 @@ namespace Lexical.FileSystem.Decoration
         protected IFileSystem sourceFileSystem;
 
         /// <summary>
+        /// Assignments
+        /// </summary>
+        protected FileSystemAssignment[] assignments;
+
+        /// <summary>
         /// Create composition of filesystems.
         /// 
         /// A constructor version that exposes its filesystem at a subpath parentPath. 
@@ -106,11 +111,12 @@ namespace Lexical.FileSystem.Decoration
         public FileSystemDecoration(IFileSystem parentFileSystem, string parentPath, params FileSystemAssignment[] assignments)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
+            this.assignments = assignments;
             this.components.AddRange( assignments.Select(a=> new Component(parentPath, a)) );
             this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
 
             this.sourceFileSystem = parentFileSystem ?? this;
-            this.rootEntry = new FileSystemEntryMount(this.sourceFileSystem, "", "", now, now, Option, this.components.Select(c=>c.Assignment).ToArray());
+            this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, assignments, Option);
         }
 
         /// <summary>FileSystem (as component of composition) specific information</summary>
@@ -193,10 +199,12 @@ namespace Lexical.FileSystem.Decoration
 
                 // Update root entry
                 DateTimeOffset now = DateTimeOffset.UtcNow;
-                this.rootEntry = new FileSystemEntryMount(this.sourceFileSystem, "", "", now, now, Option, this.components.Array.Select(c => c.Assignment).ToArray());
                 // Update options
+                this.assignments = assignments;
                 this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
+                this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, assignments, Option);
             }
+
         }
 
         /// <summary>
@@ -373,8 +381,6 @@ namespace Lexical.FileSystem.Decoration
             if (path == null) throw new ArgumentNullException(nameof(path));
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
-            // Return root
-            if (path == "") return rootEntry;
 
             try
             {
@@ -384,7 +390,9 @@ namespace Lexical.FileSystem.Decoration
                 if (components.Length == 0)
                 {
                     // Assert can get entry
-                    if (!this.Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
+                    if (!this.Option.CanGetEntry) return null;
+                    // Return root
+                    if (path == "") return rootEntry;
                     // No match
                     return null;
                 }
@@ -395,20 +403,28 @@ namespace Lexical.FileSystem.Decoration
                     // Get reference
                     var component = components[0];
                     // Assert can get entry
-                    if (!component.Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
-                    // Return root
-                    if (path == "") return rootEntry;
+                    if (!component.Option.CanGetEntry) return null;
 
                     // Convert Path
                     String/*Segment*/ childPath;
-                    if (!component.Path.ParentToChild(path, out childPath)) return null;
+                    if (!component.Path.ParentToChild(path, out childPath))
+                    {
+                        // Return root
+                        if (path == "") return rootEntry;
+                        return null;
+                    }
                     // GetEntry
                     IFileSystemEntry childEntry = component.FileSystem.GetEntry(childPath);
                     // Got no result
                     if (childEntry == null) return null;
                     // Convert again
                     String/*Segment*/ parentPath;
-                    if (!component.Path.ChildToParent(childEntry.Path, out parentPath)) return null;
+                    if (!component.Path.ChildToParent(childEntry.Path, out parentPath))
+                    {
+                        // Return root
+                        if (path == "") return rootEntry;
+                        return null;
+                    }
                     // Decorate
                     childEntry = CreateEntry(childEntry, sourceFileSystem, parentPath, component.Option);
                     // Return
@@ -419,7 +435,9 @@ namespace Lexical.FileSystem.Decoration
                 else
                 {
                     // Assert can get entry
-                    if (!Option.CanGetEntry) throw new NotSupportedException(nameof(GetEntry));
+                    if (!Option.CanGetEntry) return null;
+                    // Return root
+                    if (path == "") return rootEntry;
 
                     bool supported = false;
                     foreach (Component component in components)
@@ -451,9 +469,6 @@ namespace Lexical.FileSystem.Decoration
                         catch (NotSupportedException) { }
                     }
                     if (!supported) throw new NotSupportedException(nameof(GetEntry));
-
-                    // Return root
-                    if (path == "") return rootEntry;
                 }
             }
             // Update references in the expception and let it fly
@@ -1410,12 +1425,14 @@ namespace Lexical.FileSystem.Decoration
 
         /// <summary>Override this to change entry class. Must implement <see cref="IFileSystemEntryMount"/></summary>
         protected virtual IFileSystemEntry CreateEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, Options optionModifier)
-            => new Entry(original, newFileSystem, newPath, optionModifier);
+            => original.Path == "" ?
+                new RootEntry(original, newFileSystem, newPath, optionModifier, this.assignments) :
+                new Entry(original, newFileSystem, newPath, optionModifier);
 
         /// <summary>
         /// New overriding filesystem, Path and Option modifier
         /// </summary>
-        protected internal class Entry : Lexical.FileSystem.Decoration.FileSystemEntryDecoration
+        protected internal class Entry : FileSystemEntryDecoration
         {
             /// <summary>New overriding filesystem.</summary>
             protected IFileSystem newFileSystem;
@@ -1430,7 +1447,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and Original.Option()</summary>
             protected IFileSystemOption optionIntersection;
             /// <summary>Intersection of Original.Option() and <see cref="optionModifier"/></summary>
-            public override IFileSystemOption Option => optionIntersection ?? (optionIntersection = optionModifier == null ? Original.Options() : optionModifier.Intersection(Original.Options()));
+            public override IFileSystemOption Options => optionIntersection ?? (optionIntersection = optionModifier == null ? Original.Options() : optionModifier.Intersection(Original.Options()));
             /// <summary>
             /// Create decoration with <paramref name="newFileSystem"/>.
             /// </summary>
@@ -1445,6 +1462,33 @@ namespace Lexical.FileSystem.Decoration
                 this.optionModifier = optionModifier;
             }
         }
+
+        /// <summary>
+        /// New overriding root entry
+        /// </summary>
+        protected internal class RootEntry : Entry
+        {
+            /// <summary>Mount infos.</summary>
+            protected FileSystemAssignment[] mounts;
+            /// <summary></summary>
+            public override bool IsMountPoint => true;
+            /// <summary></summary>
+            public override FileSystemAssignment[] Mounts => mounts;
+
+            /// <summary>
+            /// Create decoration with <paramref name="newFileSystem"/>.
+            /// </summary>
+            /// <param name="original"></param>
+            /// <param name="newFileSystem"></param>
+            /// <param name="newPath"></param>
+            /// <param name="mounts"></param>
+            /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
+            public RootEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, Options optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
+            {
+                this.mounts = mounts;
+            }
+        }
+
     }
 
 }

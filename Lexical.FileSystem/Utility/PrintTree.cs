@@ -92,12 +92,37 @@ namespace Lexical.FileSystem
             Mount = 1 << 14,
 
             /// <summary>
+            /// Print drive label [Tank]
+            /// </summary>
+            DriveLabel = 1 << 15,
+
+            /// <summary>
+            /// Print drive free space [32G/]
+            /// </summary>
+            DriveFreespace = 1 << 16,
+
+            /// <summary>
+            /// Print drive total size [512GB]
+            /// </summary>
+            DriveSize = 1 << 16,
+
+            /// <summary>
+            /// Print drive format if other than <see cref="DriveType.Unknown"/> [Ram]
+            /// </summary>
+            DriveType = 1 << 17,
+
+            /// <summary>
+            /// Print drive type [RAM]
+            /// </summary>
+            DriveFormat = 1 << 18,
+
+            /// <summary>
             /// Print error on files
             /// 
             /// ├──/
             /// │  └──/tmp/ IOException: File not found.
             /// </summary>
-            Error = 1 << 16,
+            Error = 1 << 29,
 
             /// <summary>
             /// Print "\n"

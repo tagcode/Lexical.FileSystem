@@ -4,6 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.IO;
 
 namespace Lexical.FileSystem
 {
@@ -39,9 +40,17 @@ namespace Lexical.FileSystem
         /// Get options
         /// </summary>
         /// <param name="entry"></param>
-        /// <returns></returns>
+        /// <returns>options or null.</returns>
         public static IFileSystemOption Options(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryDirectory dir ? dir.Option : Lexical.FileSystem.FileSystemOptionNone.NoOptions;
+            => entry is IFileSystemEntryOptions options ? options.Options : null;
+
+        /// <summary>
+        /// Get effective options
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns>options.</returns>
+        public static IFileSystemOption EffectiveOptions(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryOptions options ? (options.Options??entry.FileSystem) : entry.FileSystem;
 
         /// <summary>
         /// Tests if <paramref name="entry"/> represents a drive.
@@ -50,6 +59,42 @@ namespace Lexical.FileSystem
         /// <returns></returns>
         public static bool IsDrive(this IFileSystemEntry entry)
             => entry is IFileSystemEntryDrive drive ? drive.IsDrive : false;
+
+        /// <summary>
+        /// Drive type.
+        /// </summary>
+        public static DriveType DriveType(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryDrive drive ? drive.DriveType : System.IO.DriveType.Unknown;
+
+        /// <summary>
+        /// Free space, -1L if unknown.
+        /// </summary>
+        public static long DriveFreeSpace(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryDrive drive ? drive.DriveFreeSpace: -1L;
+
+        /// <summary>
+        /// Total size of drive or volume. -1L if unkown.
+        /// </summary>
+        public static long DriveSize(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryDrive drive ? drive.DriveSize : -1L;
+
+        /// <summary>
+        /// Label, or null if unknown.
+        /// </summary>
+        public static String DriveLabel(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryDrive drive ? drive.DriveLabel : null;
+
+        /// <summary>
+        /// File system format.
+        /// 
+        /// Examples:
+        /// <list type="bullet">
+        ///     <item>NTFS</item>
+        ///     <item>FAT32</item>
+        /// </list>
+        /// </summary>
+        public static String DriveFormat(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryDrive drive ? drive.DriveFormat : null;
 
         /// <summary>
         /// Tests if <paramref name="entry"/> represents a mount root.
