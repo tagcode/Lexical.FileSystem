@@ -112,7 +112,7 @@ namespace Lexical.FileSystem
             DriveType = 1 << 17,
 
             /// <summary>
-            /// Print drive type [RAM]
+            /// Print drive type [NTFS]
             /// </summary>
             DriveFormat = 1 << 18,
 

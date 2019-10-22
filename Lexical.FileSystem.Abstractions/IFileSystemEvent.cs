@@ -145,14 +145,14 @@ namespace Lexical.FileSystem
         /// If it recommended that the implementation enumerates <paramref name="events"/>, as this allows the caller to pass on heavy enumeration operations.
         /// </summary>
         /// <param name="events">(optional) Events</param>
-        /// <exception cref="Exception">Any exception from event handler is passed to caller</exception>
+        /// <exception cref="Exception">Any exception from observer may be captured or passed to caller</exception>
         void DispatchEvents(IEnumerable<IFileSystemEvent> events);
 
         /// <summary>
         /// Dispatch single <paramref name="event"/> to observers.
         /// </summary>
         /// <param name="event">(optional) events</param>
-        /// <exception cref="Exception">Any exception from event handler is passed to caller</exception>
+        /// <exception cref="Exception">Any exception from observer may be captured or passed to caller</exception>
         void DispatchEvent(IFileSystemEvent @event);
     }
     // </IFileSystemEventDispatcher>

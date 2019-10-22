@@ -17,7 +17,7 @@ namespace Lexical.FileSystem
         /// Send <paramref name="events"/> to observers>.
         /// </summary>
         /// <param name="events">events</param>
-        /// <exception cref="Exception">Any exception from event handler is passed to caller</exception>
+        /// <exception cref="Exception">Any exception from observer may be captured or passed to caller</exception>
         void DispatchEvents(ref StructList12<IFileSystemEvent> events);
     }
 
