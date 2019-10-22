@@ -31,10 +31,32 @@ namespace Lexical.FileSystem
         /// <summary>Singleton instance </summary>
         public static FileSystemEventDispatcher Instance => instance;
 
+        /// <summary>
+        /// (optional) Error handler;
+        /// </summary>
+        protected Action<IFileSystemEventDispatcher, IFileSystemEvent, Exception> errorHandler;
+
+        /// <summary>
+        /// Create event dispatcher that dispatches events in the API caller's thread.
+        /// </summary>
+        /// <param name="errorHandler"></param>
+        public FileSystemEventDispatcher(Action<IFileSystemEventDispatcher, IFileSystemEvent, Exception> errorHandler = null)
+        {
+            this.errorHandler = errorHandler;
+        }
+
         /// <summary>Dispatch <paramref name="event"/></summary>
         /// <param name="event"></param>
         public void DispatchEvent(IFileSystemEvent @event)
-            => @event?.Observer?.Observer?.OnNext(@event);
+        {
+            try
+            {
+                @event?.Observer?.Observer?.OnNext(@event);
+            } catch (Exception error) when (errorHandler != null)
+            {
+                errorHandler(this, @event, error);
+            }
+        }
 
         /// <summary>Dispatch <paramref name="events"/></summary>
         /// <param name="events"></param>
@@ -51,7 +73,8 @@ namespace Lexical.FileSystem
                 }
                 catch (Exception error)
                 {
-                    errors.Add(error);
+                    if (errorHandler!=null) errorHandler(this, e, error);
+                    else errors.Add(error);
                 }
             }
             if (errors.Count > 0) throw new AggregateException(errors.ToArray());
@@ -72,7 +95,8 @@ namespace Lexical.FileSystem
                     }
                     catch (Exception error)
                     {
-                        errors.Add(error);
+                        if (errorHandler != null) errorHandler(this, e, error);
+                        else errors.Add(error);
                     }
                 }
             if (errors.Count > 0) throw new AggregateException(errors.ToArray());
@@ -112,6 +136,7 @@ namespace Lexical.FileSystem
         {
             this.taskFactory = taskFactory ?? Task.Factory;
             this.processEventsAction = processEvents;
+            this.errorHandler = errorHandler;
         }
 
         /// <summary>Dispatch <paramref name="event"/></summary>
