@@ -251,6 +251,20 @@ namespace Lexical.FileSystem
                     if (!String.IsNullOrEmpty(driveFormat)) infos.Add(driveFormat);
                 }
 
+                // Print length
+                if (format.HasFlag(Format.Length) && Entry.IsFile())
+                {
+                    long length = Entry.Length();
+                    if (length >= 0L) infos.Add(length.ToString());
+                }
+
+                // Print error
+                if (format.HasFlag(Format.Error) && Error != null)
+                {
+                    if (String.IsNullOrEmpty(Error.Message)) infos.Add(Error.GetType().Name);
+                    else  infos.Add(Error.GetType().Name + ": " + Error.Message);
+                }
+
                 // Print colon infos
                 if (infos.Count > 0)
                 {
@@ -264,20 +278,6 @@ namespace Lexical.FileSystem
                     output.Append(']');
                 }
 
-                // Print length
-                if (format.HasFlag(Format.Length) && Entry.IsFile())
-                {
-                    if (column++ > 0) output.Append(" ");
-                    output.Append(Entry.Length());
-                }
-                // Print error
-                if (format.HasFlag(Format.Error) && Error != null)
-                {
-                    if (column++ > 0) output.Append(" ");
-                    output.Append(Error.GetType().Name);
-                    output.Append(": ");
-                    output.Append(Error.Message);
-                }
                 // Next line
                 if (format.HasFlag(Format.LineFeed)) output.AppendLine();
             }
@@ -372,6 +372,21 @@ namespace Lexical.FileSystem
                     if (!String.IsNullOrEmpty(driveFormat)) infos.Add(driveFormat);
                 }
 
+
+                // Print length
+                if (format.HasFlag(Format.Length) && Entry.IsFile())
+                {
+                    long length = Entry.Length();
+                    if (length >= 0L) infos.Add(length.ToString());
+                }
+
+                // Print error
+                if (format.HasFlag(Format.Error) && Error != null)
+                {
+                    if (String.IsNullOrEmpty(Error.Message)) infos.Add(Error.GetType().Name);
+                    else infos.Add(Error.GetType().Name + ": " + Error.Message);
+                }
+
                 // Print colon infos
                 if (infos.Count > 0)
                 {
@@ -383,21 +398,6 @@ namespace Lexical.FileSystem
                         output.Write(infos[i]);
                     }
                     output.Write(']');
-                }
-
-                // Print length
-                if (format.HasFlag(Format.Length) && Entry.IsFile())
-                {
-                    if (column++ > 0) output.Write(" ");
-                    output.Write(Entry.Length());
-                }
-                // Print error
-                if (format.HasFlag(Format.Error) && Error != null)
-                {
-                    if (column++ > 0) output.Write(" ");
-                    output.Write(Error.GetType().Name);
-                    output.Write(": ");
-                    output.Write(Error.Message);
                 }
                 // Next line
                 if (format.HasFlag(Format.LineFeed)) output.WriteLine();

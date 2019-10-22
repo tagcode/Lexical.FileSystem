@@ -159,6 +159,22 @@ namespace Lexical.FileSystem
             ///       └──c:/dir/dir
             /// </summary>
             DefaultPath = Tree | Path | Error,
+
+            /// <summary>
+            /// All flags
+            /// </summary>
+            All = -1/*-Path*/,
+
+            /// <summary>
+            /// All flags with Name (excludes Path)
+            /// </summary>
+            AllWithName = -1 - Path,
+
+            /// <summary>
+            /// All flags with Path (excludes Name)
+            /// </summary>
+            AllWithPath = -1 - Name,
+
         }
 
         /// <summary>
