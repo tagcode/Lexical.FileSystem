@@ -1173,7 +1173,7 @@ string tree =  ram.Print(format: PrintTree.Format.Tree | PrintTree.Format.Path |
 ├── /
 │  ├── /mnt/
 │  ├── /tmp/
-│  │  └── /tmp/helloworld.txt 14
+│  │  └── /tmp/helloworld.txt [14]
 │  └── /usr/
 │     └── /usr/lex/
 ├── c:/

@@ -32,7 +32,7 @@ namespace Lexical.FileSystem.Decoration
     /// 
     /// See extension methods in <see cref="FileSystems"/> to create decorations, or use <see cref="VirtualFileSystem"/>.
     /// </summary>
-    public class FileSystemDecoration : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemMount, IFileSystemOptionPath
+    public class FileSystemDecoration : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemMount, IFileSystemOptionPath
     {
         /// <summary>Zero entries</summary>
         static IFileSystemEntry[] noEntries = new IFileSystemEntry[0];
@@ -78,6 +78,8 @@ namespace Lexical.FileSystem.Decoration
         public virtual bool CanUnmount => Option.CanUnmount;
         /// <inheritdoc/>
         public virtual bool CanListMountPoints => Option.CanListMountPoints;
+        /// <inheritdoc/>
+        public virtual bool CanSetFileAttribute => Option.CanSetFileAttribute;
 
         /// <summary>
         /// Root entry
@@ -626,7 +628,6 @@ namespace Lexical.FileSystem.Decoration
                 else
                 {
                     bool supported = false;
-                    bool ok = false;
                     foreach (Component component in components)
                     {
                         // Assert can delete
@@ -637,22 +638,103 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             component.FileSystem.Delete(childPath, recurse);
-                            ok = true; supported = true;
+                            return;
                         }
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
                     if (!supported) throw new NotSupportedException(nameof(Delete));
-                    if (!ok) throw new FileNotFoundException(path);
+                    throw new FileNotFoundException(path);
                 }
             }
             // Update references in the expception and let it fly
             catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
-                throw new NotSupportedException(nameof(Open));
+                throw new NotSupportedException(nameof(Delete));
             }
         }
+
+        /// <summary>
+        /// Set <paramref name="fileAttribute"/> on <paramref name="path"/>.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="fileAttribute"></param>
+        /// <exception cref="FileNotFoundException"><paramref name="path"/> is not found</exception>
+        /// <exception cref="DirectoryNotFoundException"><paramref name="path"/> is invalid. For example, it's on an unmapped drive. Only thrown when setting the property value.</exception>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support browse</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"></exception>
+        public void SetFileAttribute(string path, FileAttributes fileAttribute)
+        {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert not disposed
+            if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
+
+            try
+            {
+                // Get reference
+                Component[] components = this.components.Array;
+                // Zero components
+                if (components.Length == 0)
+                {
+                    // Assert can set fileattribute
+                    if (!this.Option.CanSetFileAttribute) throw new NotSupportedException(nameof(SetFileAttribute));
+                    throw new FileNotFoundException(path);
+                }
+
+                // One component
+                if (components.Length == 1)
+                {
+                    // Get reference
+                    var component = components[0];
+                    // Assert can set fileattribute
+                    if (!component.Option.CanSetFileAttribute) throw new NotSupportedException(nameof(SetFileAttribute));
+                    // Convert Path
+                    String childPath;
+                    if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
+                    // Delete
+                    component.FileSystem.SetFileAttribute(childPath, fileAttribute);
+                }
+
+                // Many components
+                else
+                {
+                    bool supported = false;
+                    foreach (Component component in components)
+                    {
+                        // Assert can set fileattribute
+                        if (!component.Option.CanSetFileAttribute) continue;
+                        // Convert Path
+                        String childPath;
+                        if (!component.Path.ParentToChild(path, out childPath)) continue;
+                        try
+                        {
+                            component.FileSystem.SetFileAttribute(childPath, fileAttribute);
+                            return;
+                        }
+                        catch (FileNotFoundException) { supported = true; }
+                        catch (NotSupportedException) { }
+                    }
+                    if (!supported) throw new NotSupportedException(nameof(SetFileAttribute));
+                    throw new FileNotFoundException(path);
+                }
+            }
+            // Update references in the expception and let it fly
+            catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
+            {
+                // Never goes here
+                throw new NotSupportedException(nameof(SetFileAttribute));
+            }
+        }
+
 
         /// <summary>
         /// Try to move/rename a file or directory.
@@ -760,7 +842,6 @@ namespace Lexical.FileSystem.Decoration
 
                     // Could not figure out from where to which, try each afawk (but not all permutations)
                     bool supported = false;
-                    bool ok = false;
                     foreach (Component component in components)
                     {
                         if (srcComponent == null && !component.Path.ParentToChild(srcPath, out srcComponentPath)) continue;
@@ -773,13 +854,13 @@ namespace Lexical.FileSystem.Decoration
                             if (sc.FileSystem.Equals(dc.FileSystem) || dc.FileSystem.Equals(sc.FileSystem)) sc.FileSystem.Move(srcComponentPath, dstComponentPath);
                             // Copy+Delete
                             else sc.FileSystem.Transfer(srcComponentPath, dc.FileSystem, dstComponentPath);
-                            ok = true; supported = true;
+                            return;
                         }
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
                     if (!supported) throw new NotSupportedException(nameof(Move));
-                    if (!ok) throw new FileNotFoundException(srcPath);
+                    throw new FileNotFoundException(srcPath);
                 }
             }
             // Update references in the expception and let it fly
@@ -824,7 +905,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can create
                     if (!this.Option.CanCreateDirectory) throw new NotSupportedException(nameof(CreateDirectory));
                     // No filesystem
-                    throw new NotSupportedException(nameof(Mount));
+                    throw new NotSupportedException(nameof(CreateDirectory));
                 }
 
                 // One component
@@ -845,7 +926,6 @@ namespace Lexical.FileSystem.Decoration
                 else
                 {
                     bool supported = false;
-                    bool ok = false;
                     foreach (Component component in components)
                     {
                         // Assert can create
@@ -856,13 +936,13 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             component.FileSystem.CreateDirectory(childPath);
-                            ok = true; supported = true;
+                            return;
                         }
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
                     if (!supported) throw new NotSupportedException(nameof(CreateDirectory));
-                    if (!ok) throw new FileNotFoundException(path);
+                    throw new FileNotFoundException(path);
                 }
             }
             // Update references in the expception and let it fly
@@ -912,7 +992,6 @@ namespace Lexical.FileSystem.Decoration
                 else
                 {
                     bool supported = false;
-                    bool ok = false;
                     foreach (Component component in components)
                     {
                         // Assert can mount
@@ -923,24 +1002,22 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             component.FileSystem.Mount(childPath, mounts);
-                            ok = true; supported = true;
-                            break; // one ok is enough
+                            // Return self
+                            return this;
                         }
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
                     if (!supported) throw new NotSupportedException(nameof(Mount));
-                    if (!ok) throw new NotSupportedException(nameof(Mount));
+                    throw new NotSupportedException(nameof(Mount));
+                    //throw new FileNotFoundException(path);
                 }
-                // Return self
-                return this;
             }
             // Update references in the expception and let it fly
             catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
-                // Never goes here
-                throw new NotSupportedException(nameof(Mount));
             }
+            throw new NotSupportedException(nameof(Mount));
         }
 
         /// <summary>
@@ -990,7 +1067,6 @@ namespace Lexical.FileSystem.Decoration
                 else
                 {
                     bool supported = false;
-                    bool ok = false;
                     foreach (Component component in components)
                     {
                         // Assert can unmount
@@ -1001,13 +1077,15 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             component.FileSystem.Unmount(childPath);
-                            ok = true; supported = true;
+                            // Return self
+                            return this;
                         }
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
                     if (!supported) throw new NotSupportedException(nameof(Unmount));
-                    if (!ok) throw new NotSupportedException(nameof(Unmount));
+                    throw new NotSupportedException(nameof(Unmount));
+                    //throw new FileNotFoundException(path);
                 }
                 // Return self
                 return this;
@@ -1322,7 +1400,7 @@ namespace Lexical.FileSystem.Decoration
             => GetType().Name + "(" + String.Join<IFileSystem>(", ", Decorees) + ")";
 
         /// <summary>Flattened options for (slight) performance gain.</summary>
-        public class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionSubPath
+        public class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionFileAttribute, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionSubPath
         {
             // TODO Implement Hash-Equals //
             // TODO Implement Union & Intersection //
@@ -1361,6 +1439,8 @@ namespace Lexical.FileSystem.Decoration
             public bool EmptyDirectoryName { get; set; }
             /// <inheritdoc/>
             public string SubPath { get; set; }
+            /// <inheritdoc/>
+            public bool CanSetFileAttribute { get; set; }
 
             /// <summary>
             /// Read options from <paramref name="option"/> and return flattened object.
@@ -1379,6 +1459,7 @@ namespace Lexical.FileSystem.Decoration
                 result.CanWrite = option.CanWrite();
                 result.CanCreateFile = option.CanCreateFile();
                 result.CanDelete = option.CanDelete();
+                result.CanSetFileAttribute = option.CanSetFileAttribute();
                 result.CanMount = option.CanMount();
                 result.CanCreateFile = option.CanCreateFile();
                 result.CanDelete = option.CanDelete();
@@ -1409,6 +1490,7 @@ namespace Lexical.FileSystem.Decoration
                 result.CanWrite = this.CanWrite | option.CanWrite();
                 result.CanCreateFile = this.CanCreateFile | option.CanCreateFile();
                 result.CanDelete = this.CanDelete | option.CanDelete();
+                result.CanSetFileAttribute = this.CanSetFileAttribute | option.CanSetFileAttribute();
                 result.CanMount = this.CanMount | option.CanMount();
                 result.CanCreateFile = this.CanCreateFile | option.CanCreateFile();
                 result.CanDelete = this.CanDelete | option.CanDelete();

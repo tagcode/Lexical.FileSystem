@@ -23,7 +23,7 @@ namespace Lexical.FileSystem
     /// If file watchers have been created, and file system is disposed, then watchers will be disposed also. 
     /// <see cref="IObserver{T}.OnCompleted"/> event is forwarded to watchers.
     /// </summary>
-    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemOptionPath
+    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemOptionPath
     {
         /// <summary>
         /// Regex pattern that extracts features and classifies paths.
@@ -118,6 +118,8 @@ namespace Lexical.FileSystem
         public virtual bool CanMove => true;
         /// <inheritdoc/>
         public virtual bool CanCreateDirectory => true;
+        /// <inheritdoc/>
+        public bool CanSetFileAttribute => true;
 
         /// <summary>Root "" entry</summary>
         protected IFileSystemEntry rootEntry;
@@ -472,6 +474,37 @@ namespace Lexical.FileSystem
 
             DirectoryInfo di = new DirectoryInfo(absolutePath);
             if (di.Exists) { di.Delete(recursive); return; }
+
+            throw new FileNotFoundException(path);
+        }
+
+        /// <summary>
+        /// Set <paramref name="fileAttribute"/> on <paramref name="path"/>.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="fileAttribute"></param>
+        /// <exception cref="FileNotFoundException"><paramref name="path"/> is not found</exception>
+        /// <exception cref="DirectoryNotFoundException"><paramref name="path"/> is invalid. For example, it's on an unmapped drive. Only thrown when setting the property value.</exception>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support browse</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"></exception>
+        public void SetFileAttribute(string path, FileAttributes fileAttribute)
+        {
+            // Concatenate paths and assert that path doesn't refer to parent of the constructed path
+            string concatenatedPath, absolutePath;
+            ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath, true);
+
+            FileInfo fi = new FileInfo(absolutePath);
+            if (fi.Exists) { fi.Attributes = fileAttribute; return; }
+
+            DirectoryInfo di = new DirectoryInfo(absolutePath);
+            if (di.Exists) { di.Attributes = fileAttribute; return; }
 
             throw new FileNotFoundException(path);
         }

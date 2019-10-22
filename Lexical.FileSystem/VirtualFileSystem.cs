@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Virtual filesystem.
     /// </summary>
-    public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath, IFileSystemMount, IFileSystemBrowse, IFileSystemOpen, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemDelete, IFileSystemMove
+    public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath, IFileSystemMount, IFileSystemBrowse, IFileSystemOpen, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove
     {
         /// <summary>
         /// Reader writer lock for modifying vfs directory structure. 
@@ -62,6 +62,8 @@ namespace Lexical.FileSystem
         public virtual bool CanUnmount => true;
         /// <inheritdoc/>
         public virtual bool CanListMountPoints => true;
+        /// <inheritdoc/>
+        public virtual bool CanSetFileAttribute => true;
 
         /// <summary>
         /// Create virtual filesystem.
@@ -1454,7 +1456,6 @@ namespace Lexical.FileSystem
             // Run delete through all components
             // Try to open with mounted filesystems
             bool supported = false;
-            bool ok = false;
             for (int i = mountpoints.Count - 1; i >= 0; i--)
             {
                 var fs = mountpoints[i];
@@ -1472,10 +1473,70 @@ namespace Lexical.FileSystem
                 catch (NotSupportedException) { }
             }
             if (!supported) throw new NotSupportedException(nameof(Delete));
-            if (!ok) throw new FileNotFoundException(path);
-
-            throw new NotSupportedException(nameof(Delete));
+            throw new FileNotFoundException(path);
         }
+
+        /// <summary>
+        /// Set <paramref name="fileAttribute"/> on <paramref name="path"/>.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="fileAttribute"></param>
+        /// <exception cref="FileNotFoundException"><paramref name="path"/> is not found</exception>
+        /// <exception cref="DirectoryNotFoundException"><paramref name="path"/> is invalid. For example, it's on an unmapped drive. Only thrown when setting the property value.</exception>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support browse</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"></exception>
+        public void SetFileAttribute(string path, FileAttributes fileAttribute)
+        {
+            // Assert argument
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert not disposed
+            if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
+
+            // Stack of nodes that start with path and have a mounted filesystem
+            StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
+            // Lock for the duration of tree traversal
+            vfsLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                // Vfs Node
+                Directory directory;
+                // Search for vfs node
+                GetVfsDirectory(path, out directory, ref mountpoints, true);
+            }
+            finally
+            {
+                vfsLock.ReleaseReaderLock();
+            }
+
+            // Run SetFileSystem through all components
+            bool supported = false;
+            for (int i = mountpoints.Count - 1; i >= 0; i--)
+            {
+                var fs = mountpoints[i];
+                // Cannot Delete
+                if (!fs.CanSetFileAttribute()) continue;
+
+                try
+                {
+                    fs.SetFileAttribute(path, fileAttribute);
+                    // We got something
+                    return;
+                }
+                catch (FileNotFoundException) { supported = true; }
+                catch (DirectoryNotFoundException) { supported = true; }
+                catch (NotSupportedException) { }
+            }
+            if (!supported) throw new NotSupportedException(nameof(SetFileAttribute));
+            throw new FileNotFoundException(path);
+        }
+
 
         /// <summary>
         /// Move/rename a file or directory. 
