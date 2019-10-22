@@ -8,10 +8,10 @@ NuGet Packages:
 
 # FileSystem
 
-**new FileSystem(<i>path</i>)** creates an instance of filesystem at *path*. Separator character is always '/'.
+**new FileSystem(<i>path</i>)** creates an instance of filesystem at *path*. 
 
 ```csharp
-IFileSystem filesystem = new FileSystem("C:/");
+IFileSystem filesystem = new FileSystem(@"C:\Temp\");
 ```
 
 *FileSystem* can be browsed.
