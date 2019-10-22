@@ -102,7 +102,7 @@ namespace Lexical.FileSystem.Decoration
             // Try to decorate event
             @event = FileSystemEventDecoration.DecorateObserverAndPath(@event, this, newOldPath, newNewPath, false);
             // Send event forward
-            if (FileSystem is IFileSystemEventDispatchable dispatchable) dispatchable.DispatchEvent(@event);
+            if (FileSystem is IFileSystemEventDispatcher dispatchable) dispatchable.DispatchEvent(@event);
             else
             {
                 try

@@ -1023,7 +1023,7 @@ namespace Lexical.FileSystem
                     }
 
                 // Create container for components.
-                if (cursor.mount == null) cursor.mount = new FileSystemDecoration(this, cursor.Path);
+                if (cursor.mount == null) cursor.mount = new FileSystemDecoration(this, cursor.Path).SetEventDispatcher(eventDispatcher);
                 // Set components
                 cursor.mount.SetComponents(ref componentsAdded, ref componentsRemoved, ref componentsReused, cursor.Path, mounts);
                 // Root entry changed
@@ -1768,6 +1768,40 @@ namespace Lexical.FileSystem
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;
+        }
+
+        /// <summary>
+        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
+        /// 
+        /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
+        /// </summary>
+        /// <param name="eventHandler">(optional) factory that handles observer events</param>
+        /// <returns>memory filesystem</returns>
+        public VirtualFileSystem SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
+        {
+            setEventDispatcher(eventHandler);
+            return this;
+        }
+
+        /// <summary>Override this to change behaviour.</summary>
+        /// <param name="eventDispatcher"></param>
+        protected override void setEventDispatcher(IFileSystemEventDispatcher eventDispatcher)
+        {
+            this.eventDispatcher = eventDispatcher;
+
+            // Set event dispatcher to all existing mounts
+            vfsLock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                foreach(var node in vfsRoot.Visit(false, true, true))
+                {
+                    var _mount = node.mount;
+                    if (_mount != null) _mount.SetEventDispatcher(eventDispatcher);
+                }
+            } finally
+            {
+                vfsLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>

@@ -4,6 +4,7 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.Collections.Generic;
 
 namespace Lexical.FileSystem
 {
@@ -128,4 +129,32 @@ namespace Lexical.FileSystem
         IFileSystemEvent Original { get; }
     }
     // </IFileSystemEventDecoration>
+
+    // <IFileSystemEventDispatcher>
+    /// <summary>
+    /// Dispatches <see cref="IFileSystemEvent"/>s.
+    /// 
+    /// Dispatcher implementation may capture unexpected exceptions from event handlers, or
+    /// it may let them fly to the caller. 
+    /// </summary>
+    public interface IFileSystemEventDispatcher
+    {
+        /// <summary>
+        /// Dispatch <paramref name="events"/> to observers.
+        /// 
+        /// If it recommended that the implementation enumerates <paramref name="events"/>, as this allows the caller to pass on heavy enumeration operations.
+        /// </summary>
+        /// <param name="events">(optional) Events</param>
+        /// <exception cref="Exception">Any exception from event handler is passed to caller</exception>
+        void DispatchEvents(IEnumerable<IFileSystemEvent> events);
+
+        /// <summary>
+        /// Dispatch single <paramref name="event"/> to observers.
+        /// </summary>
+        /// <param name="event">(optional) events</param>
+        /// <exception cref="Exception">Any exception from event handler is passed to caller</exception>
+        void DispatchEvent(IFileSystemEvent @event);
+    }
+    // </IFileSystemEventDispatcher>
+
 }

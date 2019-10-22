@@ -67,12 +67,12 @@ namespace Lexical.FileSystem
         IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
 
         /// <summary>
-        /// Set a <see cref="TaskFactory"/> that dispatches the events. If set to null, runs in running thread.
+        /// Set a <see cref="IFileSystemEventDispatcher"/> that dispatches the events. If set to null, then filesystem doesn't dispatch events.
         /// </summary>
-        /// <param name="eventDispatcher">(optional) Set a <see cref="TaskFactory"/> that processes events. If set to null, runs in running thread.</param>
+        /// <param name="eventDispatcher">(optional) that dispatches events to observers. If null, doesn't dispatch events..</param>
         /// <returns>this</returns>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
-        IFileSystem SetEventDispatcher(TaskFactory eventDispatcher);
+        IFileSystem SetEventDispatcher(IFileSystemEventDispatcher eventDispatcher);
     }
 
     /// <summary>

@@ -215,7 +215,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="eventHandler">(optional) factory that handles observer events</param>
         /// <returns>memory filesystem</returns>
-        public FileSystemDecoration SetEventDispatcher(TaskFactory eventHandler)
+        public FileSystemDecoration SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
         {
             ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
             return this;

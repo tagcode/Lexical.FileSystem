@@ -93,7 +93,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="eventHandler">(optional) factory that handles observer events</param>
         /// <returns>memory filesystem</returns>
-        public FileProviderSystem SetEventDispatcher(TaskFactory eventHandler)
+        public FileProviderSystem SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
         {
             ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
             return this;
@@ -371,8 +371,14 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="sender"></param>
             void OnEvent(object sender)
             {
+                // Get observer
                 var _observer = Observer;
+                // No observer
                 if (_observer == null) return;
+                // Get dispatcher
+                var _dispatcher = ((FileSystemBase)this.FileSystem).eventDispatcher;
+                // No dispatcher
+                if (_dispatcher == null) return;
 
                 // Disposed
                 IFileProvider _fileProvider = FileProvider;
@@ -398,7 +404,7 @@ namespace Lexical.FileSystem.Decoration
                 previousEntry = currentEntry;
 
                 // Send event
-                if (_event != null) ((FileSystemBase)this.FileSystem).DispatchEvent(_event);
+                if (_event != null) _dispatcher.DispatchEvent(_event);
 
                 // Start watching again
                 if (!IsDisposing) this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);

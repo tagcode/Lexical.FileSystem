@@ -6,28 +6,11 @@
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
-    /// <summary>
-    /// Interface for objects that can dispatch <see cref="IFileSystemEvent"/>s.
-    /// </summary>
-    public interface IFileSystemEventDispatchable
-    {
-        /// <summary>
-        /// Send <paramref name="events"/> to observers>.
-        /// </summary>
-        /// <param name="events"></param>
-        void DispatchEvents(ref StructList12<IFileSystemEvent> events);
-
-        /// <summary>
-        /// Send one <paramref name="event"/> to observers.
-        /// </summary>
-        /// <param name="event"></param>
-        void DispatchEvent(IFileSystemEvent @event);
-    }
-
     /// <summary>
     /// Base implementation for <see cref="IFileSystem"/>. 
     /// 
@@ -36,7 +19,7 @@ namespace Lexical.FileSystem
     /// 
     /// Can send events to observers.
     /// </summary>
-    public abstract class FileSystemBase : DisposeList, IFileSystemDisposable, IFileSystemObserve, IFileSystemEventDispatchable
+    public abstract class FileSystemBase : DisposeList, IFileSystemDisposable, IFileSystemObserve
     {
         /// <summary>
         /// Has SetEventDispatcher() capability.
@@ -49,39 +32,35 @@ namespace Lexical.FileSystem
         public abstract bool CanObserve { get; }
 
         /// <summary>
-        /// Task-factory that is used for sending events.
-        /// If factory is set to null, then events are processed in the current thread.
+        /// Evetnt dispatcher.
         /// </summary>
-        protected TaskFactory eventHandler;
-
-        /// <summary>Delegate that processes events</summary>
-        Action<object> processEventsAction;
+        protected internal IFileSystemEventDispatcher eventDispatcher = FileSystemEventDispatcher.Instance;
 
         /// <summary>
         /// Create new filesystem.
         /// </summary>
         public FileSystemBase() : base()
         {
-            this.processEventsAction = processEvents;
         }
 
         /// <summary>
-        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
-        /// 
-        /// If <paramref name="eventHandler"/> is null, then events are processed in the threads
-        /// that make modifications to memory filesytem.
+        /// Set a <see cref="IFileSystemEventDispatcher"/> that dispatches the events. If set to null, then filesystem doesn't dispatch events.
         /// </summary>
-        /// <param name="eventHandler">(optional) factory that handles observer events</param>
-        /// <returns>memory filesystem</returns>
-        IFileSystem IFileSystemObserve.SetEventDispatcher(TaskFactory eventHandler)
+        /// <param name="eventDispatcher">(optional) that dispatches events to observers. If null, doesn't dispatch events..</param>
+        /// <returns>this</returns>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
+        IFileSystem IFileSystemObserve.SetEventDispatcher(IFileSystemEventDispatcher eventDispatcher)
         {
-            this.eventHandler = eventHandler;
+            setEventDispatcher(eventDispatcher);
             return this;
         }
 
+        /// <summary>Override this to change behaviour.</summary>
+        /// <param name="eventDispatcher"></param>
+        protected virtual void setEventDispatcher(IFileSystemEventDispatcher eventDispatcher) => this.eventDispatcher = eventDispatcher;
+
         /// <summary>
-        /// Send <paramref name="events"/> to observers with <see cref="eventHandler"/>.
-        /// If <see cref="eventHandler"/> is null, then sends events in the running thread.
+        /// Send <paramref name="events"/> to observers.
         /// </summary>
         /// <param name="events"></param>
         public void DispatchEvents(ref StructList12<IFileSystemEvent> events)
@@ -90,85 +69,16 @@ namespace Lexical.FileSystem
             if (IsDisposing) return;
             // Nothing to do
             if (events.Count == 0) return;
-            // Get taskfactory
-            TaskFactory _taskFactory = eventHandler;
-            // Send events in this thread
-            if (_taskFactory == null)
-            {
-                // Errors
-                StructList4<Exception> errors = new StructList4<Exception>();
-                for (int i=0; i<events.Count; i++)
-                {
-                    IFileSystemEvent e = events[i];
-                    try
-                    {
-                        e.Observer?.Observer?.OnNext(e);
-                    }
-                    catch (Exception error)
-                    {
-                        errors.Add(error);
-                    }
-                }
-                if (errors.Count > 0) throw new AggregateException(errors.ToArray());
-            }
-            else
-            // Create task that processes events.
-            {
-                _taskFactory.StartNew(processEventsAction, events.ToArray());
-            }
-        }
-
-        /// <summary>
-        /// Send one <paramref name="event"/> to observers with <see cref="eventHandler"/>.
-        /// If <see cref="eventHandler"/> is null, then sends events in the running thread.
-        /// </summary>
-        /// <param name="event"></param>
-        public void DispatchEvent(IFileSystemEvent @event)
-        {
-            // Don't send events anymore
-            if (IsDisposing) return;
-            // Nothing to do
-            if (@event == null) return;
-            // Get taskfactory
-            TaskFactory _taskFactory = eventHandler;
-            // Send events in this thread
-            if (_taskFactory == null)
-            {
-                @event.Observer?.Observer?.OnNext(@event);
-            }
-            else
-            // Create task that processes events.
-            {
-                _taskFactory.StartNew(processEventsAction, @event);
-            }
-        }
-
-        /// <summary>
-        /// Forward events to observers in the running thread.
-        /// </summary>
-        /// <param name="events">IFileSystemEvent[] or <see cref="IFileSystemEvent"/></param>
-        protected void processEvents(object events)
-        {
-            // Errors
-            StructList4<Exception> errors = new StructList4<Exception>();
-            if (events is IFileSystemEvent[] eventsArray)
-            {
-                foreach (IFileSystemEvent e in eventsArray)
-                {
-                    try
-                    {
-                        e.Observer?.Observer?.OnNext(e);
-                    }
-                    catch (Exception error)
-                    {
-                        errors.Add(error);
-                    }
-                }
-                if (errors.Count > 0) throw new AggregateException(errors.ToArray());
-            } else if (events is IFileSystemEvent @event)
-            {
-                @event.Observer?.Observer?.OnNext(@event);
-            }
+            // Get reference
+            var _dispatcher = eventDispatcher;
+            // No dispatcher
+            if (_dispatcher == null) return;
+            // Dispatch one event
+            if (events.Count == 1) { _dispatcher.DispatchEvent(events[0]); return; }
+            // Send with struct list
+            if (_dispatcher is IFileSystemEventDispatcherExtended ext) { ext.DispatchEvents(ref events); return; }
+            // Convert to array
+            _dispatcher.DispatchEvents(events.ToArray());
         }
 
         /// <inheritdoc/>

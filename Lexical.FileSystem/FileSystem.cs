@@ -164,7 +164,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="eventHandler">(optional) factory that handles observer events</param>
         /// <returns>memory filesystem</returns>
-        public FileSystem SetEventDispatcher(TaskFactory eventHandler)
+        public FileSystem SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
         {
             ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
             return this;
@@ -627,8 +627,14 @@ namespace Lexical.FileSystem
             /// <param name="e"></param>
             void OnError(object sender, ErrorEventArgs e)
             {
+                // Get observer
                 var _observer = Observer;
+                // No observer
                 if (_observer == null) return;
+                // Get dispatcher
+                var _dispatcher = ((FileSystemBase)this.FileSystem).eventDispatcher;
+                // No dispatcher
+                if (_dispatcher == null) return;
 
                 // Disposed
                 IFileSystem _filesystem = FileSystem;
@@ -637,7 +643,7 @@ namespace Lexical.FileSystem
                 // Create event
                 IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath);
                 // Forward error as event object.
-                ((FileSystemBase)this.FileSystem).DispatchEvent(@event);
+                _dispatcher.DispatchEvent(@event);
             }
 
             /// <summary>
@@ -832,8 +838,14 @@ namespace Lexical.FileSystem
             /// <param name="e"></param>
             void OnError(object sender, ErrorEventArgs e)
             {
+                // Get observer
                 var _observer = Observer;
+                // No observer
                 if (_observer == null) return;
+                // Get dispatcher
+                var _dispatcher = ((FileSystemBase)this.FileSystem).eventDispatcher;
+                // No dispatcher
+                if (_dispatcher == null) return;
 
                 // Disposed
                 IFileSystem _filesystem = FileSystem;
@@ -842,7 +854,7 @@ namespace Lexical.FileSystem
                 // Forward error as event object.
                 IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), null);
                 // Forward error as event object.
-                ((FileSystemBase)this.FileSystem).DispatchEvent(@event);
+                _dispatcher.DispatchEvent(@event);
             }
 
             /// <summary>

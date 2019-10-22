@@ -67,6 +67,12 @@ filesystem.CreateDirectory("dir/");
 filesystem.Move( "dir/", "new-name/");
 ```
 
+And file attributes changed.
+
+```csharp
+filesystem.SetFileAttribute("myfile", FileAttributes.ReadOnly);
+```
+
 # File structure
 The singleton instance **FileSystem.OS** refers to a filesystem at the OS root.
 
