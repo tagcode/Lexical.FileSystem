@@ -115,7 +115,7 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>Entry with file attributes.</summary>
-        public class WithAttributes : FileSystemEntryFile, IFileSystemEntryAttributes
+        public class WithAttributes : FileSystemEntryFile, IFileSystemEntryFileAttributes
         {
             /// <summary>
             /// Has file attributes
@@ -184,7 +184,7 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>Entry with file attributes.</summary>
-        public class WithAttributes : FileSystemEntryDirectory, IFileSystemEntryAttributes
+        public class WithAttributes : FileSystemEntryDirectory, IFileSystemEntryFileAttributes
         {
             /// <summary>
             /// Has file attributes
@@ -344,7 +344,7 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>Entry with file attributes.</summary>
-        public new class WithAttributes : FileSystemEntryMount, IFileSystemEntryAttributes
+        public new class WithAttributes : FileSystemEntryMount, IFileSystemEntryFileAttributes
         {
             /// <summary>
             /// Has file attributes

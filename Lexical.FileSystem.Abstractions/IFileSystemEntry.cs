@@ -21,7 +21,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemEntryDrive"/></item>
     ///     <item><see cref="IFileSystemEntryMount"/></item>
     ///     <item><see cref="IFileSystemEntryOptions"/></item>
-    ///     <item><see cref="IFileSystemEntryAttributes"/></item>
+    ///     <item><see cref="IFileSystemEntryFileAttributes"/></item>
     /// </list>    
     /// </summary>
     public interface IFileSystemEntry
@@ -179,11 +179,11 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemEntryOptions>
 
-    // <IFileSystemEntryAttributes>
+    // <IFileSystemEntryFileAttributes>
     /// <summary>
     /// Entry file Attributes.
     /// </summary>
-    public interface IFileSystemEntryAttributes : IFileSystemEntry
+    public interface IFileSystemEntryFileAttributes : IFileSystemEntry
     {
         /// <summary>
         /// True, if has attached <see cref="FileAttributes"/>.
@@ -195,7 +195,7 @@ namespace Lexical.FileSystem
         /// </summary>
         FileAttributes FileAttributes { get; }
     }
-    // </IFileSystemEntryAttributes>
+    // </IFileSystemEntryFileAttributes>
 
 
 }

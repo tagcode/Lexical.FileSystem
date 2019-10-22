@@ -134,7 +134,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true if it has file attributes</returns>
         public static bool HasFileAttributes(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryAttributes attributes ? attributes.HasFileAttributes : false;
+            => entry is IFileSystemEntryFileAttributes attributes ? attributes.HasFileAttributes : false;
 
         /// <summary>
         /// Gets file attributes of <paramref name="entry"/>.
@@ -143,7 +143,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>file attributes</returns>
         public static FileAttributes FileAttributes(this IFileSystemEntry entry)
-            => entry is IFileSystemEntryAttributes attributes ? attributes.FileAttributes : 0;
+            => entry is IFileSystemEntryFileAttributes attributes ? attributes.FileAttributes : 0;
 
     }
 

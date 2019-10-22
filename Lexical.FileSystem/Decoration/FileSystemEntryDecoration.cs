@@ -11,7 +11,7 @@ namespace Lexical.FileSystem.Decoration
     /// <summary>
     /// Abstract base class for decorated entry.
     /// </summary>
-    public abstract class FileSystemEntryDecoration : IFileSystemEntryDecoration, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive, IFileSystemEntryMount, IFileSystemOption, IFileSystemEntryAttributes
+    public abstract class FileSystemEntryDecoration : IFileSystemEntryDecoration, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive, IFileSystemEntryMount, IFileSystemOption, IFileSystemEntryFileAttributes
     {
         /// <summary>
         /// Decorate filesystem.
