@@ -1660,7 +1660,6 @@ namespace Lexical.FileSystem
 
             // Could not figure out from where to which, try each afawk (but not all permutations)
             bool supported = false;
-            bool ok = false;
             for (int i = 0; i < components.Count; i++)
             {
                 FileSystemDecoration.Component component = components[i];
@@ -1675,15 +1674,14 @@ namespace Lexical.FileSystem
                     if (sc.FileSystem.Equals(dc.FileSystem) || dc.FileSystem.Equals(sc.FileSystem)) sc.FileSystem.Move(srcComponentPath, dstComponentPath);
                     // Copy+Delete
                     else sc.FileSystem.Transfer(srcComponentPath, dc.FileSystem, dstComponentPath);
-                    ok = true; supported = true;
+                    return;
                 }
                 catch (FileNotFoundException) { supported = true; }
                 catch (NotSupportedException) { }
             }
             // Failed
             if (!supported) throw new NotSupportedException(nameof(Move));
-            if (!ok) throw new FileNotFoundException(srcPath);
-            throw new NotSupportedException(nameof(Move));
+            throw new FileNotFoundException(srcPath);
         }
 
         /// <summary>

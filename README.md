@@ -11,20 +11,20 @@ NuGet Packages:
 **new FileSystem(<i>path</i>)** creates an instance of filesystem at *path*. 
 
 ```csharp
-IFileSystem filesystem = new FileSystem(@"C:\Temp\");
+IFileSystem fs = new FileSystem(@"C:\Temp\");
 ```
 
 *FileSystem* can be browsed.
 
 ```csharp
-foreach (var entry in filesystem.Browse(""))
+foreach (var entry in fs.Browse(""))
     Console.WriteLine(entry.Path);
 ```
 
 Files can be opened for reading.
 
 ```csharp
-using (Stream s = filesystem.Open("file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
+using (Stream s = fs.Open("file.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
 {
     Console.WriteLine(s.Length);
 }
@@ -33,51 +33,42 @@ using (Stream s = filesystem.Open("file.txt", FileMode.Open, FileAccess.Read, Fi
 And for for writing.
 
 ```csharp
-using (Stream s = filesystem.Open("somefile.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+using (Stream s = fs.Open("somefile.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
 {
     s.WriteByte(32);
-}
-```
-
-Files and directories can be observed for changes.
-
-```csharp
-IObserver<IFileSystemEvent> observer = new Observer();
-using (IDisposable handle = filesystem.Observe("C:/**", observer))
-{
 }
 ```
 
 Directories can be created.
 
 ```csharp
-filesystem.CreateDirectory("dir/");
+fs.CreateDirectory("dir/");
 ```
 
 Directories can be deleted.
 
 ```csharp
-filesystem.Delete("dir/", recurse: true);
+fs.Delete("dir/", recurse: true);
 ```
 
 Files and directories can be renamed and moved.
 
 ```csharp
-filesystem.CreateDirectory("dir/");
-filesystem.Move( "dir/", "new-name/");
+fs.CreateDirectory("dir/");
+fs.Move("dir/", "new-name/");
 ```
 
 And file attributes changed.
 
 ```csharp
-filesystem.SetFileAttribute("myfile", FileAttributes.ReadOnly);
+fs.SetFileAttribute("myfile", FileAttributes.ReadOnly);
 ```
 
 # File structure
 The singleton instance **FileSystem.OS** refers to a filesystem at the OS root.
 
 ```csharp
-IFileSystem filesystem = FileSystem.OS;
+IFileSystem fs = FileSystem.OS;
 ```
 
 Extension method **.VisitTree()** visits filesystem. On root path "" *FileSystem.OS* returns drive letters.
@@ -191,6 +182,65 @@ FileSystem.Temp.PrintTo(Console.Out, depth: 1);
 | FileSysten.LocalApplicationData  | A common repository for application-specific data that is used by the current, non-roaming user. | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
 | FileSysten.CommonApplicationData | A common repository for application-specific data that is used by all users.                     | "C:\\ProgramData"                                     | "/usr/share"                             |
 
+# Observing
+
+Files and directories can be observed for changes.
+
+```csharp
+IObserver<IFileSystemEvent> observer = new Observer();
+IFileSystemObserver handle = FileSystem.OS.Observe("C:/**", observer);
+```
+
+Observer can be used in a *using* scope.
+
+```csharp
+using (var handle = FileSystem.Temp.Observe("*.dat", new PrintObserver()))
+{
+    FileSystem.Temp.CreateFile("file.dat", new byte[] { 32, 32, 32, 32 });
+    FileSystem.Temp.Delete("file.dat");
+
+    Thread.Sleep(1000);
+}
+```
+
+
+```csharp
+class PrintObserver : IObserver<IFileSystemEvent>
+{
+    public void OnCompleted() => Console.WriteLine("OnCompleted");
+    public void OnError(Exception error) => Console.WriteLine(error);
+    public void OnNext(IFileSystemEvent @event) => Console.WriteLine(@event);
+}
+```
+
+```none
+Start(C:\Users\tonik\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00)
+Create(C:\Users\tonik\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+Change(C:\Users\tonik\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+Delete(C:\Users\tonik\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+OnCompleted
+```
+
+**.SetEventDispatcher(<i>IFileSystemEventDispatcher</i>)** sets events dispatcher. *FileSystemEventDispatcher.Instance* uses the API caller's thread to dispatch events.
+
+```csharp
+IFileSystem fs = new FileSystem(path).SetEventDispatcher(FileSystemEventDispatcher.Instance);
+```
+
+*FileSystemEventDispatcherTask.Instance* dispatches events in concurrent threads with Task class.
+
+```csharp
+IFileSystem fs = new FileSystem(path).SetEventDispatcher(FileSystemEventDispatcherTask.Instance);
+```
+
+*IFileSystemEventDispatcher* singleton instances:
+
+| Name                                  | Description                                                                                      |
+|:--------------------------------------|:-------------------------------------------------------------------------------------------------|
+| FileSystemEventDispatcher.Instance    | Dispatches events in the API caller's thread.                                                    |
+| FileSystemEventDispatcherTask.Instance| Dispatches events concurrently in a TaskFactory.                                                 |
+
+
 # Disposing
 
 Disposable objects can be attached to be disposed along with *FileSystem*.
@@ -198,18 +248,18 @@ Disposable objects can be attached to be disposed along with *FileSystem*.
 ```csharp
 // Init
 object obj = new ReaderWriterLockSlim();
-IFileSystemDisposable filesystem = new FileSystem("").AddDisposable(obj);
+IFileSystemDisposable fs = new FileSystem("").AddDisposable(obj);
 
 // ... do work ...
 
 // Dispose both
-filesystem.Dispose();
+fs.Dispose();
 ```
 
 Delegates can be attached to be executed at dispose of *FileSystem*.
 
 ```csharp
-IFileSystemDisposable filesystem = new FileSystem("")
+IFileSystemDisposable fs = new FileSystem("")
     .AddDisposeAction(f => Console.WriteLine("Disposed"));
 ```
 
@@ -217,23 +267,23 @@ IFileSystemDisposable filesystem = new FileSystem("")
 all belate handles are disposed. This can be used for passing the *IFileSystem* to a worker thread. 
 
 ```csharp
-FileSystem filesystem = new FileSystem("");
-filesystem.Browse("");
+FileSystem fs = new FileSystem("");
+fs.Browse("");
 
 // Postpone dispose
-IDisposable belateDisposeHandle = filesystem.BelateDispose();
+IDisposable belateDisposeHandle = fs.BelateDispose();
 // Start concurrent work
 Task.Run(() =>
 {
     // Do work
     Thread.Sleep(1000);
-    filesystem.GetEntry("");
+    fs.GetEntry("");
     // Release belate handle. Disposes here or below, depending which thread runs last.
     belateDisposeHandle.Dispose();
 });
 
 // Start dispose, but postpone it until belatehandle is disposed in another thread.
-filesystem.Dispose();
+fs.Dispose();
 ```
 
 # VirtualFileSystem
@@ -1173,7 +1223,7 @@ string tree =  ram.Print(format: PrintTree.Format.Tree | PrintTree.Format.Path |
 ├── /
 │  ├── /mnt/
 │  ├── /tmp/
-│  │  └── /tmp/helloworld.txt [14]
+│  │  └── /tmp/helloworld.txt 14
 │  └── /usr/
 │     └── /usr/lex/
 ├── c:/
