@@ -214,10 +214,10 @@ class PrintObserver : IObserver<IFileSystemEvent>
 ```
 
 ```none
-Start(C:\Users\tonik\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00)
-Create(C:\Users\tonik\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
-Change(C:\Users\tonik\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
-Delete(C:\Users\tonik\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+Start(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00)
+Create(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+Change(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+Delete(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
 OnCompleted
 ```
 
