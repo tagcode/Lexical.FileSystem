@@ -122,6 +122,11 @@ namespace Lexical.FileSystem
             FileAttributes = 1 << 19,
 
             /// <summary>
+            /// Print physical path [C:\Temp\myfile.txt]
+            /// </summary>
+            PhysicalPath = 1 << 20,
+
+            /// <summary>
             /// Print error on files
             /// 
             /// ├──/

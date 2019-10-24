@@ -76,7 +76,7 @@ namespace Lexical.FileSystem
         public EmbeddedFileSystem(Assembly assembly)
         {
             this.Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
-            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, assembly.Location);
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Lexical.FileSystem
             IFileSystemEntry[] result = new IFileSystemEntry[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
-                result[i] = new FileSystemEntryFile(this, names[i], names[i], writetime, DateTimeOffset.MinValue, -1L);
+                result[i] = new FileSystemEntryFile(this, names[i], names[i], writetime, DateTimeOffset.MinValue, -1L, null);
             }
             return result;
         }

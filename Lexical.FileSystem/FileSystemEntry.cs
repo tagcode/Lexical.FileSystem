@@ -76,7 +76,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File entry.
     /// </summary>
-    public class FileSystemEntryFile : FileSystemEntryBase, IFileSystemEntryFile
+    public class FileSystemEntryFile : FileSystemEntryBase, IFileSystemEntryFile, IFileSystemEntryPhysicalPath
     {
         /// <summary>
         /// Tests if entry represents a file.
@@ -89,6 +89,11 @@ namespace Lexical.FileSystem
         public long Length { get; protected set; }
 
         /// <summary>
+        /// (optional) Physical (OS) path to the file.
+        /// </summary>
+        public string PhysicalPath { get; protected set; }
+
+        /// <summary>
         /// Create entry without file attributes.
         /// </summary>
         /// <param name="filesystem"></param>
@@ -97,9 +102,11 @@ namespace Lexical.FileSystem
         /// <param name="lastModified"></param>
         /// <param name="lastAccess"></param>
         /// <param name="length"></param>
-        public FileSystemEntryFile(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length) : base(filesystem, path, name, lastModified, lastAccess)
+        /// <param name="physicalPath"></param>
+        public FileSystemEntryFile(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess)
         {
-            Length = length;
+            this.Length = length;
+            this.PhysicalPath = physicalPath;
         }
 
         /// <summary>Entry with custom option.</summary>
@@ -108,7 +115,7 @@ namespace Lexical.FileSystem
             /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
             public IFileSystemOption Options { get; protected set; }
             /// <summary>Create entry with custom option</summary>
-            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, length)
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, IFileSystemOption options, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, length, physicalPath)
             {
                 this.Options = options;
             }
@@ -128,7 +135,7 @@ namespace Lexical.FileSystem
             public FileAttributes FileAttributes { get; protected set; }
 
             /// <summary>Create entry with custom option</summary>
-            public WithAttributes(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, FileAttributes fileAttributes) : base(filesystem, path, name, lastModified, lastAccess, length)
+            public WithAttributes(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, FileAttributes fileAttributes, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, length, physicalPath)
             {
                 this.FileAttributes = fileAttributes;
             }
@@ -139,7 +146,7 @@ namespace Lexical.FileSystem
                 /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
                 public IFileSystemOption Options { get; protected set; }
                 /// <summary>Create entry with custom option</summary>
-                public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, FileAttributes fileAttributes, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, length, fileAttributes)
+                public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, FileAttributes fileAttributes, IFileSystemOption options, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, length, fileAttributes, physicalPath)
                 {
                     this.Options = options;
                 }
@@ -151,12 +158,17 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Directory entry.
     /// </summary>
-    public class FileSystemEntryDirectory : FileSystemEntryBase, IFileSystemEntryDirectory
+    public class FileSystemEntryDirectory : FileSystemEntryBase, IFileSystemEntryDirectory, IFileSystemEntryPhysicalPath
     {
         /// <summary>
         /// Tests if entry represents a directory.
         /// </summary>
         public bool IsDirectory => true;
+
+        /// <summary>
+        /// (optional) Physical path
+        /// </summary>
+        public string PhysicalPath { get; protected set; }
 
         /// <summary>
         /// Create entry
@@ -166,8 +178,10 @@ namespace Lexical.FileSystem
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
         /// <param name="lastAccess"></param>
-        public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess) : base(filesystem, path, name, lastModified, lastAccess)
+        /// <param name="physicalPath"></param>
+        public FileSystemEntryDirectory(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess)
         {
+            this.PhysicalPath = physicalPath;
         }
 
         /// <summary>Directory with custom option.</summary>
@@ -177,7 +191,7 @@ namespace Lexical.FileSystem
             public IFileSystemOption Options { get; protected set; }
 
             /// <summary>Create entry with custom option</summary>
-            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess)
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, string physicalPath, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, physicalPath)
             {
                 this.Options = options;
             }
@@ -197,7 +211,7 @@ namespace Lexical.FileSystem
             public FileAttributes FileAttributes { get; protected set; }
 
             /// <summary>Create entry with custom option</summary>
-            public WithAttributes(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileAttributes fileAttributes) : base(filesystem, path, name, lastModified, lastAccess)
+            public WithAttributes(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileAttributes fileAttributes, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, physicalPath)
             {
                 this.FileAttributes = fileAttributes;
             }
@@ -208,7 +222,7 @@ namespace Lexical.FileSystem
                 /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
                 public IFileSystemOption Options { get; protected set; }
                 /// <summary>Create entry with custom option</summary>
-                public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileAttributes fileAttributes, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, fileAttributes)
+                public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileAttributes fileAttributes, IFileSystemOption options, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, fileAttributes, physicalPath)
                 {
                     this.Options = options;
                 }
@@ -220,7 +234,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Drive entry.
     /// </summary>
-    public class FileSystemEntryDrive : FileSystemEntryBase, IFileSystemEntryDrive, IFileSystemEntryDirectory
+    public class FileSystemEntryDrive : FileSystemEntryBase, IFileSystemEntryDrive, IFileSystemEntryDirectory, IFileSystemEntryPhysicalPath
     {
         /// <summary>
         /// Tests if entry represents a directory.
@@ -264,6 +278,11 @@ namespace Lexical.FileSystem
         public String DriveFormat { get; protected set; }
 
         /// <summary>
+        /// (optional) Physical path
+        /// </summary>
+        public string PhysicalPath { get; protected set; }
+
+        /// <summary>
         /// Create entry
         /// </summary>
         /// <param name="filesystem"></param>
@@ -277,7 +296,8 @@ namespace Lexical.FileSystem
         /// <param name="driveLabel"></param>
         /// <param name="driveFormat"></param>
         /// <param name="isDirectory">Does entry represent a directory (is entry ready, mounted and readable)</param>
-        public FileSystemEntryDrive(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, System.IO.DriveType driveType, long driveFreeSpace, long driveSize, string driveLabel, string driveFormat, bool isDirectory) : base(filesystem, path, name, lastModified, lastAccess)
+        /// <param name="physicalPath"></param>
+        public FileSystemEntryDrive(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, System.IO.DriveType driveType, long driveFreeSpace, long driveSize, string driveLabel, string driveFormat, bool isDirectory, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess)
         {
             this.DriveType = driveType;
             this.DriveFreeSpace = driveFreeSpace;
@@ -285,6 +305,7 @@ namespace Lexical.FileSystem
             this.DriveLabel = driveLabel;
             this.DriveFormat = driveFormat;
             this.IsDirectory = isDirectory;
+            this.PhysicalPath = physicalPath;
         }
 
         /// <summary>Entry with custom option.</summary>
@@ -293,7 +314,7 @@ namespace Lexical.FileSystem
             /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
             public IFileSystemOption Options { get; protected set; }
             /// <summary>Create entry with custom option</summary>
-            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, System.IO.DriveType driveType, long driveFreeSpace, long driveSize, string driveLabel, string driveFormat, bool isDirectory, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, driveType, driveFreeSpace, driveSize, driveLabel, driveFormat, isDirectory)
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, System.IO.DriveType driveType, long driveFreeSpace, long driveSize, string driveLabel, string driveFormat, bool isDirectory, IFileSystemOption options, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, driveType, driveFreeSpace, driveSize, driveLabel, driveFormat, isDirectory, physicalPath)
             {
                 this.Options = options;
             }
@@ -325,8 +346,9 @@ namespace Lexical.FileSystem
         /// <param name="name"></param>
         /// <param name="lastModified"></param>
         /// <param name="lastAccess"></param>
+        /// <param name="physicalPath"></param>
         /// <param name="mounts"></param>
-        public FileSystemEntryMount(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileSystemAssignment[] mounts) : base(filesystem, path, name, lastModified, lastAccess)
+        public FileSystemEntryMount(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, string physicalPath, FileSystemAssignment[] mounts) : base(filesystem, path, name, lastModified, lastAccess, physicalPath)
         {
             this.Mounts = mounts;
         }
@@ -337,7 +359,7 @@ namespace Lexical.FileSystem
             /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
             public IFileSystemOption Options { get; protected set; }
             /// <summary>Create entry with custom option</summary>
-            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileSystemAssignment[] mounts, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, mounts)
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, string physicalPath, FileSystemAssignment[] mounts, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, physicalPath, mounts)
             {
                 this.Options = options;
             }
@@ -357,7 +379,7 @@ namespace Lexical.FileSystem
             public FileAttributes FileAttributes { get; protected set; }
 
             /// <summary>Create entry with custom option</summary>
-            public WithAttributes(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileSystemAssignment[] mounts, FileAttributes fileAttributes) : base(filesystem, path, name, lastModified, lastAccess, mounts)
+            public WithAttributes(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, string physicalPath, FileSystemAssignment[] mounts, FileAttributes fileAttributes) : base(filesystem, path, name, lastModified, lastAccess, physicalPath, mounts)
             {
                 this.FileAttributes = fileAttributes;
             }
@@ -368,7 +390,7 @@ namespace Lexical.FileSystem
                 /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
                 public IFileSystemOption Options { get; protected set; }
                 /// <summary>Create entry with custom option</summary>
-                public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, FileSystemAssignment[] mounts, FileAttributes fileAttributes, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, mounts, fileAttributes)
+                public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, string physicalPath, FileSystemAssignment[] mounts, FileAttributes fileAttributes, IFileSystemOption options) : base(filesystem, path, name, lastModified, lastAccess, physicalPath, mounts, fileAttributes)
                 {
                     this.Options = options;
                 }

@@ -65,7 +65,7 @@ namespace Lexical.FileSystem.Decoration
         protected bool isPhysicalFileProvider;
 
         /// <summary>
-        /// Root entry.
+        /// Root entry. Constructed only for PhysicalFileProvider. For other, is constructed at runtime.
         /// </summary>
         protected IFileSystemEntry rootEntry;
 
@@ -83,7 +83,16 @@ namespace Lexical.FileSystem.Decoration
             this.canObserve = canObserve;
             this.CanOpen = this.CanRead = canOpen;
             this.isPhysicalFileProvider = sourceFileProvider.GetType().FullName == "Microsoft.Extensions.FileProviders.PhysicalFileProvider";
-            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+            if (this.isPhysicalFileProvider)
+            {
+                // Get physical path with reflection
+                try
+                {
+                    string physicalPath = sourceFileProvider.GetType().GetProperty("Root").GetValue(sourceFileProvider) as string;
+                    this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, physicalPath);
+                }
+                catch (Exception) { } // Reflection error
+            }
         }
 
         /// <summary>
@@ -175,12 +184,12 @@ namespace Lexical.FileSystem.Decoration
                 {
                     if (info.IsDirectory)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue);
+                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue, info.PhysicalPath);
                         list.Add(e);
                     }
                     else
                     {
-                        IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(path) ? info.Name : path + "/" + info.Name, info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length);
+                        IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(path) ? info.Name : path + "/" + info.Name, info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length, info.PhysicalPath);
                         list.Add(e);
                     }
                 }
@@ -190,7 +199,7 @@ namespace Lexical.FileSystem.Decoration
             IFileInfo fi = fp.GetFileInfo(path);
             if (fi.Exists)
             {
-                IFileSystemEntry e = new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length);
+                IFileSystemEntry e = new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length, fi.PhysicalPath);
                 return new IFileSystemEntry[] { e };
             }
 
@@ -213,7 +222,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="ObjectDisposedException"/>
         public IFileSystemEntry GetEntry(string path)
         {
-            if (path == "") return rootEntry;
+            if (path == "" && rootEntry != null) return rootEntry;
             // Make path
             if (isPhysicalFileProvider && path.Contains(@"\")) path = path.Replace(@"\", "/");
             // Is disposed?
@@ -227,9 +236,9 @@ namespace Lexical.FileSystem.Decoration
                 if (fi.IsDirectory)
                 {
                     if (path != "" && !path.EndsWith("/") && !path.EndsWith("\\")) path = path + "/";
-                    return new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue);
+                    return new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.PhysicalPath);
                 }
-                else return new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length);
+                else return new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length, fi.PhysicalPath);
             }
 
             // Directory
@@ -251,7 +260,7 @@ namespace Lexical.FileSystem.Decoration
                 {
                     name = Path.GetDirectoryName(path);
                 }
-                return new FileSystemEntryDirectory(this, path, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+                return new FileSystemEntryDirectory(this, path, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
             }
 
             // Nothing was found

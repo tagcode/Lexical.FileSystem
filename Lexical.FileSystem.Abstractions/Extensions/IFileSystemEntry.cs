@@ -145,6 +145,13 @@ namespace Lexical.FileSystem
         public static FileAttributes FileAttributes(this IFileSystemEntry entry)
             => entry is IFileSystemEntryFileAttributes attributes ? attributes.FileAttributes : 0;
 
+        /// <summary>
+        /// Gets physical (OS) file or directory path of <paramref name="entry"/>.
+        /// </summary>
+        /// <returns>(optional) file path</returns>
+        public static string PhysicalPath(this IFileSystemEntry entry)
+            => entry is IFileSystemEntryPhysicalPath physicalPath ? physicalPath.PhysicalPath : null;
+
     }
 
 }

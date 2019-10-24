@@ -1220,8 +1220,8 @@ namespace Lexical.FileSystem
             /// <returns></returns>
             public override IFileSystemEntry CreateEntry() =>
                 parent == null ? 
-                /*Root*/     (IFileSystemEntry) new FileSystemEntryDrive(filesystem, Path, name, lastModified, lastAccess, DriveType.Ram, filesystem.blockPool.BytesAvailable, filesystem.blockPool.MaxBlockCount*filesystem.blockPool.BlockSize, null, null, true) : 
-                /*non-root*/ (IFileSystemEntry) new FileSystemEntryDirectory(filesystem, Path, name, lastModified, lastAccess);
+                /*Root*/     (IFileSystemEntry) new FileSystemEntryDrive(filesystem, Path, name, lastModified, lastAccess, DriveType.Ram, filesystem.blockPool.BytesAvailable, filesystem.blockPool.MaxBlockCount*filesystem.blockPool.BlockSize, null, null, true, null) : 
+                /*non-root*/ (IFileSystemEntry) new FileSystemEntryDirectory(filesystem, Path, name, lastModified, lastAccess, null);
 
             /// <summary>
             /// Flush cached array of child entries.
@@ -1303,7 +1303,7 @@ namespace Lexical.FileSystem
             public override IFileSystemEntry CreateEntry()
             {
                 // Create entry snapshot
-                return new FileSystemEntryFile(filesystem, Path, name, memoryFile.LastModified, memoryFile.LastModified > lastAccess ? memoryFile.LastModified : lastAccess, memoryFile.Length);
+                return new FileSystemEntryFile(filesystem, Path, name, memoryFile.LastModified, memoryFile.LastModified > lastAccess ? memoryFile.LastModified : lastAccess, memoryFile.Length, null);
             }
 
             void IObserver<MemoryFile.ModifiedEvent>.OnCompleted() { }

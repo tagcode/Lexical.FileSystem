@@ -138,7 +138,7 @@ namespace Lexical.FileSystem.Decoration
             /// <inheritdoc/>
             public long Length => Entry.Length();
             /// <inheritdoc/>
-            public string PhysicalPath => null;
+            public string PhysicalPath => Entry.PhysicalPath();
             /// <inheritdoc/>
             public string Name => Entry.Name;
             /// <inheritdoc/>

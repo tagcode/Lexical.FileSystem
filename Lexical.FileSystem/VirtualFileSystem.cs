@@ -370,7 +370,7 @@ namespace Lexical.FileSystem
                     IFileSystemEntryMount e = _mount.GetEntry(Path) as IFileSystemEntryMount;
                     if (e != null) return e;
                 }
-                return new FileSystemEntryMount(vfs, Path, name, lastModified, lastAccess, null);
+                return new FileSystemEntryMount(vfs, Path, name, lastModified, lastAccess, null, null);
             }
 
             /// <summary>

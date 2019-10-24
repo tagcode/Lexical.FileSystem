@@ -22,6 +22,7 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IFileSystemEntryMount"/></item>
     ///     <item><see cref="IFileSystemEntryOptions"/></item>
     ///     <item><see cref="IFileSystemEntryFileAttributes"/></item>
+    ///     <item><see cref="IFileSystemEntryPhysicalPath"/></item>
     /// </list>    
     /// </summary>
     public interface IFileSystemEntry
@@ -197,5 +198,16 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemEntryFileAttributes>
 
-
+    // <IFileSystemEntryPhysicalPath>
+    /// <summary>
+    /// Optional interface for entries that may have a physical file or directory path.
+    /// </summary>
+    public interface IFileSystemEntryPhysicalPath : IFileSystemEntry
+    {
+        /// <summary>
+        /// (optional) Physical (OS) path to file or directory.
+        /// </summary>
+        String PhysicalPath { get; }
+    }
+    // </IFileSystemEntryPhysicalPath>
 }

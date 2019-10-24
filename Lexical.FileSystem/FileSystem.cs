@@ -146,7 +146,7 @@ namespace Lexical.FileSystem
             if (isWindows) this.CaseSensitivity = FileSystemCaseSensitivity.Inconsistent; /*Smb drives may have sensitive names*/
             if (isLinux || isOsx) this.CaseSensitivity = FileSystemCaseSensitivity.Inconsistent; /*Smb drives may have insensitive names*/
 
-            rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+            rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, AbsolutePath);
         }
 
         /// <summary>
@@ -349,12 +349,12 @@ namespace Lexical.FileSystem
                 {
                     if (fsi is DirectoryInfo di)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory.WithAttributes(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), di.Attributes);
+                        IFileSystemEntry e = new FileSystemEntryDirectory.WithAttributes(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), di.Attributes, di.FullName);
                         list.Add(e);
                     }
                     else if (fsi is FileInfo _fi)
                     {
-                        IFileSystemEntry e = new FileSystemEntryFile.WithAttributes(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length, _fi.Attributes);
+                        IFileSystemEntry e = new FileSystemEntryFile.WithAttributes(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length, _fi.Attributes, _fi.FullName);
                         list.Add(e);
                     }
                 }
@@ -364,7 +364,7 @@ namespace Lexical.FileSystem
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists)
             {
-                IFileSystemEntry e = new FileSystemEntryFile.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes);
+                IFileSystemEntry e = new FileSystemEntryFile.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes, fi.FullName);
                 return new IFileSystemEntry[] { e };
             }
 
@@ -396,10 +396,10 @@ namespace Lexical.FileSystem
             if (path == null) return null;
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists) return new FileSystemEntryDirectory.WithAttributes(this, path + "/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), dir.Attributes);
+            if (dir.Exists) return new FileSystemEntryDirectory.WithAttributes(this, path + "/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), dir.Attributes, dir.FullName);
 
             FileInfo fi = new FileInfo(absolutePath);
-            if (fi.Exists) return new FileSystemEntryFile.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes);
+            if (fi.Exists) return new FileSystemEntryFile.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes, fi.FullName);
 
             return null;
         }
@@ -422,7 +422,7 @@ namespace Lexical.FileSystem
                 DriveInfo rootInfo = null;
                 foreach (DriveInfo _di in driveInfos) if (_di.Name == "/") { rootInfo = _di; break; }
                 DirectoryInfo di = new DirectoryInfo("/");
-                IFileSystemEntry e = new FileSystemEntryDrive(this, "/", "", di.LastWriteTimeUtcUnchecked(), DateTimeOffset.MinValue, DriveType.Fixed, rootInfo.AvailableFreeSpace, rootInfo.TotalSize, rootInfo.VolumeLabel, rootInfo.DriveFormat, true);
+                IFileSystemEntry e = new FileSystemEntryDrive(this, "/", "", di.LastWriteTimeUtcUnchecked(), DateTimeOffset.MinValue, DriveType.Fixed, rootInfo.AvailableFreeSpace, rootInfo.TotalSize, rootInfo.VolumeLabel, rootInfo.DriveFormat, true, di.FullName);
                 return new IFileSystemEntry[] { e };
             }
 
@@ -439,7 +439,7 @@ namespace Lexical.FileSystem
                 DirectoryInfo di = driveInfo.RootDirectory;
                 path = path + "/";
 
-                IFileSystemEntry e = new FileSystemEntryDrive(this, path, name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), driveInfo.DriveType, driveInfo.AvailableFreeSpace, driveInfo.TotalSize, driveInfo.VolumeLabel, driveInfo.DriveFormat, driveInfo.IsReady);
+                IFileSystemEntry e = new FileSystemEntryDrive(this, path, name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), driveInfo.DriveType, driveInfo.AvailableFreeSpace, driveInfo.TotalSize, driveInfo.VolumeLabel, driveInfo.DriveFormat, driveInfo.IsReady, di.FullName);
                 list.Add(e);
             }
 

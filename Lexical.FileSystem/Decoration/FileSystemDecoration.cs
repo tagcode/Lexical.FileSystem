@@ -118,7 +118,7 @@ namespace Lexical.FileSystem.Decoration
             this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
 
             this.sourceFileSystem = parentFileSystem ?? this;
-            this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, assignments, Option);
+            this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
         }
 
         /// <summary>FileSystem (as component of composition) specific information</summary>
@@ -204,7 +204,7 @@ namespace Lexical.FileSystem.Decoration
                 // Update options
                 this.assignments = assignments;
                 this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
-                this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, assignments, Option);
+                this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
             }
 
         }

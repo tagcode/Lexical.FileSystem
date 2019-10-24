@@ -279,6 +279,13 @@ namespace Lexical.FileSystem
                     else  infos.Add(Error.GetType().Name + ": " + Error.Message);
                 }
 
+                // Print physical path
+                if (format.HasFlag(Format.PhysicalPath))
+                {
+                    string physicalPath = Entry.PhysicalPath();
+                    if (!String.IsNullOrEmpty(physicalPath)) infos.Add(physicalPath);
+                }
+                
                 // Print colon infos
                 if (infos.Count > 0)
                 {
@@ -412,6 +419,13 @@ namespace Lexical.FileSystem
                 {
                     if (String.IsNullOrEmpty(Error.Message)) infos.Add(Error.GetType().Name);
                     else infos.Add(Error.GetType().Name + ": " + Error.Message);
+                }
+
+                // Print physical path
+                if (format.HasFlag(Format.PhysicalPath))
+                {
+                    string physicalPath = Entry.PhysicalPath();
+                    if (!String.IsNullOrEmpty(physicalPath)) infos.Add(physicalPath);
                 }
 
                 // Print colon infos
