@@ -39,25 +39,12 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         public static void Transfer(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath)
         {
-            using (var s = new FileOperation.Session(FileOperation.Policy.FailIfExists | FileOperation.Policy.OmitAutoMounts | FileOperation.Policy.CancelIfError))
+            using (var s = new FileOperation.Session(FileOperation.Policy.FailIfExists | FileOperation.Policy.OmitAutoMounts | FileOperation.Policy.SignalCancelOnError))
             {
-                FileOperation op = new FileOperation.MoveTree(s, filesystem, srcPath, dstFileSystem, dstPath);
+                FileOperation op = new FileOperation.TransferTree(s, filesystem, srcPath, dstFileSystem, dstPath);
                 op.Estimate();
-                try
-                {
-                    op.Run();
-                }
-                // Rollback but let exception fly
-                catch (Exception) when (Rollback(s, op)) { }
-            }
-
-            // Rollback
-            bool Rollback(FileOperation.Session s, FileOperation op)
-            {
-                s.SetPolicy(FileOperation.Policy.SkipIfExists | FileOperation.Policy.OmitAutoMounts);
-                FileOperation rollback = op.CreateRollback();
-                if (rollback != null) rollback.Run();
-                return false;
+                op.Run(rollbackOnError: true);
+                op.AssertSuccessful();
             }
         }
     }

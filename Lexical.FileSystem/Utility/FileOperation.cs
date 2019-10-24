@@ -53,15 +53,13 @@ namespace Lexical.FileSystem.Utility
             /// <summary>If file already exists, throw exception.</summary>
             FailIfExists = 0x03,
 
-            /// <summary>If one operation fails, cancel the whole operation. If this is not set, then continues with other files.</summary>
-            CancelIfError = 0x0100,
-            /// <summary>Operation fails, rollback changes before returning.</summary>
-            RollbackOnFail = 0x0200,
+            /// <summary>If one operation fails, signals cancel on <see cref="Session.CancelSrc"/>.</summary>
+            SignalCancelOnError = 0x0100,
             /// <summary>Policy whether to omit directories that are automatically mounted. These are typically package files, such as .zip, exposed as part of the filesystem.</summary>
             OmitAutoMounts = 0x0400,
 
             /// <summary>Default policy</summary>
-            Default = OmitAutoMounts | CancelIfError | RollbackOnFail | FailIfExists
+            Default = OmitAutoMounts | SignalCancelOnError | FailIfExists
         }
 
         /// <summary>The session where the op is ran in.</summary>
@@ -105,15 +103,63 @@ namespace Lexical.FileSystem.Utility
         /// Creates an action plan, and adds them to <see cref="Children"/>.
         /// 
         /// May change <see cref="CanRollback"/> value to true from default false.
+        /// 
+        /// If caller needs rollback capability, the caller may call <see cref="AssertCanRollback"/> right after estimate.
         /// </summary>
-        public virtual void Estimate() { }
+        /// <exception cref="Exception">If operation is not viable</exception>
+        public virtual FileOperation Estimate() => this;
 
         /// <summary>
         /// Run the operation.
+        /// 
+        /// Throws exception on unexpected error.
+        /// 
+        /// The caller should test <see cref="CurrentState"/> to see wheter operation was ran completely.
+        /// <list type="bullet">
+        ///     <item>If canceltoken was canelled then state is set to <see cref="State.Cancelled"/>.</item>
+        ///     <item>If file already existed and policy had <see cref="Policy.SkipIfExists"/>, then state is set to <see cref="State.Skipped"/>.</item>
+        ///     <item>If unexpected error was thrown, then state is set to <see cref="State.Error"/>.</item>
+        ///     <item>If operation was ran to end, then state is set to <see cref="State.Completed"/>.</item>
+        /// </list>
+        /// The caller may call <see cref="AssertSuccessful"/> to assert that operation ran into successful state.
         /// </summary>
         /// <exception cref="IOException"></exception>
         /// <exception cref="Exception"></exception>
-        public abstract void Run();
+        public virtual FileOperation Run() => this;
+
+        /// <summary>
+        /// Asserts that <see cref="CanRollback"/> is true..
+        /// </summary>
+        /// <returns>this</returns>
+        /// <exception cref="Exception">If <see cref="CanRollback"/> is false.</exception>
+        public FileOperation AssertCanRollback()
+        {
+            // Not Ok
+            if (!CanRollback) throw new Exception("Cannot rollback "+this);
+            // Ok
+            return this;
+        }
+
+        /// <summary>
+        /// Asserts that <see cref="CurrentState"/> is either <see cref="State.Completed"/> or <see cref="State.Skipped"/>.
+        /// </summary>
+        /// <returns>this</returns>
+        /// <exception cref="OperationCanceledException">If state is <see cref="State.Cancelled"/></exception>
+        /// <exception cref="AggregateException">If state is <see cref="State.Error"/></exception>
+        /// <exception cref="Exception">If state is unexpected</exception>
+        public FileOperation AssertSuccessful()
+        {
+            // Get snapshot
+            var _state = CurrentState;
+            // Ok
+            if (_state == State.Completed || CurrentState == State.Skipped) return this;
+            // Cancelled
+            if (_state == State.Cancelled) throw new OperationCanceledException();
+            // Error
+            if (_state == State.Error) throw new AggregateException(Errors.ToArray());
+            // Unexpected
+            throw new Exception("Unexpected state: "+_state);
+        }
 
         /// <summary>
         /// Create rollback operation that reverts already executed operations.
@@ -122,11 +168,46 @@ namespace Lexical.FileSystem.Utility
         public virtual FileOperation CreateRollback() => null;
 
         /// <summary>
+        /// Run operation. If error occurs, rollbacks if possible.
+        /// The caller should check <see cref="CanRollback"/> before calling to test revertability.
+        /// 
+        /// Throws exception on unexpected error.
+        /// 
+        /// The caller should test <see cref="FileOperation.State"/> to see wheter operation was ran completely.
+        /// </summary>
+        /// <param name="rollbackOnError"></param>
+        /// <exception cref="Exception">On run or rollback error.</exception>
+        public void Run(bool rollbackOnError)
+        {
+            try
+            {
+                // Run operation
+                this.Run();
+            } catch (Exception) when (rollbackOnError && rollback()) { } // never goes here
+
+            bool rollback()
+            {
+                Policy policy = this.session.Policy;
+                this.session.SetPolicy(policy | Policy.SkipIfExists);
+                try
+                {
+                    FileOperation rollbackOp = CreateRollback();
+                    if (rollbackOp != null) rollbackOp.Run();
+                } finally
+                {
+                    this.session.SetPolicy(policy);
+                }
+                return false;
+            }
+
+        }
+
+        /// <summary>
         /// Captures and handles exception.
         /// 
         /// Sets state to <see cref="State.Error"/>.
         /// Adds event to event log.
-        /// If <see cref="Policy.CancelIfError"/> is set, then cancels the cancel token.
+        /// If <see cref="Policy.SignalCancelOnError"/> is set, then cancels the cancel token.
         /// </summary>
         /// <param name="error"></param>
         /// <returns>false</returns>
@@ -135,7 +216,7 @@ namespace Lexical.FileSystem.Utility
             // Set state to error
             currentState = (int)State.Error;
             // Cancel token
-            if (session.Policy.HasFlag(Policy.CancelIfError)) session.CancelSrc.Cancel();
+            if (session.Policy.HasFlag(Policy.SignalCancelOnError)) session.CancelSrc.Cancel();
             // Change state
             if ((State)Interlocked.Exchange(ref currentState, (int)State.Error) != State.Error) session.AddAndDispatchEvent(new Event.Error(this, error));
             // Return
@@ -202,12 +283,12 @@ namespace Lexical.FileSystem.Utility
 
             /// <summary>Estimate child ops</summary>
             /// <exception cref="Exception">On error</exception>
-            public override void Estimate()
+            public override FileOperation Estimate()
             {
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Estimating
-                if (!TrySetState(State.Estimating, State.Initialized)) return;
+                if (!TrySetState(State.Estimating, State.Initialized)) return this;
 
                 try
                 {
@@ -216,33 +297,35 @@ namespace Lexical.FileSystem.Utility
                         try
                         {
                             // Assert session is not cancelled
-                            if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                            if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                             op.Estimate();
                             if (op.Length > 0L) this.Length += op.Length;
                             if (op.Progress > 0L) this.Progress += op.Progress;
                             this.CanRollback &= op.CanRollback;
                         }
-                        catch (Exception) when (!session.Policy.HasFlag(Policy.CancelIfError))
+                        catch (Exception) when (!session.Policy.HasFlag(Policy.SignalCancelOnError))
                         {
                             // CancelIfError not set, continue with other ops.
                         }
                         // Completed
-                        if (!TrySetState(State.Estimated, State.Estimating)) return;
+                        if (!TrySetState(State.Estimated, State.Estimating)) return this;
                     }
                 }
                 // Capture error and set state
                 catch (Exception e) when (SetError(e)) { }
+                // Return self
+                return this;
             }
 
             /// <summary>Run child ops</summary>
-            public override void Run()
+            public override FileOperation Run()
             {
                 // Estimate viability of operation
                 Estimate();
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Running
-                if (!TrySetState(State.Running, State.Estimated)) return;
+                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     long progressReminder = this.Progress;
@@ -253,7 +336,7 @@ namespace Lexical.FileSystem.Utility
                         try
                         {
                             // Assert session is not cancelled
-                            if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                            if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                             // Run op
                             op.Run();
                             // 
@@ -272,16 +355,18 @@ namespace Lexical.FileSystem.Utility
                                 }
                             }
                         }
-                        catch (Exception) when (!session.Policy.HasFlag(Policy.CancelIfError))
+                        catch (Exception) when (!session.Policy.HasFlag(Policy.SignalCancelOnError))
                         {
                             // CancelIfError not set, continue with other ops.
                         }
                     }
                     // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return;
+                    if (!TrySetState(State.Completed, State.Running)) return this;
                 }
                 // Capture error and set state
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Create rollback operation.</summary>
@@ -347,12 +432,12 @@ namespace Lexical.FileSystem.Utility
 
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override void Estimate()
+            public override FileOperation Estimate()
             {
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Estimating
-                if (!TrySetState(State.Estimating, State.Initialized)) return;
+                if (!TrySetState(State.Estimating, State.Initialized)) return this;
 
                 try
                 {
@@ -368,31 +453,35 @@ namespace Lexical.FileSystem.Utility
                         catch (NotSupportedException) { }
                     }
                     // Estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return;
+                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
                 }
                 // Capture error and set state to error
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Run op</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override void Run()
+            public override FileOperation Run()
             {
                 // Estimate viability of operation
                 Estimate();
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Running
-                if (!TrySetState(State.Running, State.Estimated)) return;
+                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     // Delete directory
                     FileSystem.Delete(Path, Recurse);
                     // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return;
+                    if (!TrySetState(State.Completed, State.Running)) return this;
                 }
                 // Capture error and set state
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Print info</summary>
@@ -421,12 +510,12 @@ namespace Lexical.FileSystem.Utility
 
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override void Estimate()
+            public override FileOperation Estimate()
             {
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Estimating
-                if (!TrySetState(State.Estimating, State.Initialized)) return;
+                if (!TrySetState(State.Estimating, State.Initialized)) return this;
 
                 try
                 {
@@ -448,31 +537,35 @@ namespace Lexical.FileSystem.Utility
                     if (!FileSystem.CanCreateDirectory()) throw new NotSupportedException("CreateDirectory");
 
                     // Estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return;
+                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
                 }
                 // Capture error and set state to error
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Run op</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override void Run()
+            public override FileOperation Run()
             {
                 // Estimate viability of operation
                 Estimate();
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Running
-                if (!TrySetState(State.Running, State.Estimated)) return;
+                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     // Create directory
                     FileSystem.CreateDirectory(Path);
                     // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return;
+                    if (!TrySetState(State.Completed, State.Running)) return this;
                 }
                 // Capture error and set state
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Create rollback</summary>
@@ -512,12 +605,12 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="SrcPath"/> is not found.</exception>
             /// <exception cref="FileSystemExceptionFileExists">If <see cref="DstPath"/> already exists.</exception>
-            public override void Estimate()
+            public override FileOperation Estimate()
             {
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Set state to estimating and allow only one thread to estimate
-                if (!TrySetState(State.Estimating, State.Initialized)) return;
+                if (!TrySetState(State.Estimating, State.Initialized)) return this;
 
                 try
                 {
@@ -576,23 +669,25 @@ namespace Lexical.FileSystem.Utility
                     }
 
                     // Set state to estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return;
+                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
                 }
                 // Capture error and set state to error
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Run operation</summary>
             /// <exception cref="IOException"></exception>
             /// <exception cref="Exception">Unexpected error</exception>
-            public override void Run()
+            public override FileOperation Run()
             {
                 // Estimate viability of operation
                 Estimate();
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Running
-                if (!TrySetState(State.Running, State.Estimated)) return;
+                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     // CancelToken to monitor
@@ -616,7 +711,7 @@ namespace Lexical.FileSystem.Utility
                     {
                         if (session.Policy.HasFlag(Policy.FailIfExists)) throw new FileSystemExceptionFileExists(DstFileSystem, DstPath);
                         else if (session.Policy.HasFlag(Policy.OverwriteIfExists)) DstFileSystem.Delete(DstPath, false);
-                        else if (session.Policy.HasFlag(Policy.SkipIfExists)) { TrySetState(State.Skipped, State.Running); return; }
+                        else if (session.Policy.HasFlag(Policy.SkipIfExists)) { TrySetState(State.Skipped, State.Running); return this; }
                         CanRollback = false;
                     }
 
@@ -624,10 +719,12 @@ namespace Lexical.FileSystem.Utility
                     SrcFileSystem.Move(SrcPath, DstPath);
 
                     // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return;
+                    if (!TrySetState(State.Completed, State.Running)) return this;
                 }
                 // Capture error and set state
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Create rollback</summary>
@@ -668,12 +765,12 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="SrcPath"/> is not found.</exception>
             /// <exception cref="FileSystemExceptionFileExists">If <see cref="DstPath"/> already exists.</exception>
-            public override void Estimate()
+            public override FileOperation Estimate()
             {
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Set state to estimating and allow only one thread to estimate
-                if (!TrySetState(State.Estimating, State.Initialized)) return;
+                if (!TrySetState(State.Estimating, State.Initialized)) return this;
 
                 try
                 {
@@ -729,25 +826,27 @@ namespace Lexical.FileSystem.Utility
                     }
 
                     // Set state to estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return;
+                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
                 }
                 // Capture error and set state to error
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Run operation</summary>
             /// <exception cref="IOException"></exception>
             /// <exception cref="Exception">Unexpected error</exception>
-            public override void Run()
+            public override FileOperation Run()
             {
                 // Estimate viability of operation
                 Estimate();
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Queue of blocks
                 BlockingCollection<Block> queue = new BlockingCollection<Block>();
                 // Running
-                if (!TrySetState(State.Running, State.Estimated)) return;
+                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     // CancelToken to monitor
@@ -760,7 +859,7 @@ namespace Lexical.FileSystem.Utility
                     {
                         dstEntry = DstFileSystem.GetEntry(DstPath);
                         prevExisted = dstEntry != null;
-                        if (session.Policy.HasFlag(Policy.SkipIfExists) && prevExisted) { SetState(State.Skipped); return; }
+                        if (session.Policy.HasFlag(Policy.SkipIfExists) && prevExisted) { SetState(State.Skipped); return this; }
                     } catch (NotSupportedException)
                     {
                         // Dst cannot get entry
@@ -787,7 +886,7 @@ namespace Lexical.FileSystem.Utility
                             try
                             {
                                 // Assert session is not cancelled
-                                if (session.CancelSrc.IsCancellationRequested && CurrentState != State.Error) { SetState(State.Cancelled); return; }
+                                if (session.CancelSrc.IsCancellationRequested && CurrentState != State.Error) { SetState(State.Cancelled); return this; }
                                 // Read error, abort
                                 if (CurrentState != State.Running) break;
                                 // We got some data
@@ -816,7 +915,7 @@ namespace Lexical.FileSystem.Utility
                     }
 
                     // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return;
+                    if (!TrySetState(State.Completed, State.Running)) return this;
                 }
                 // Capture error and set state
                 catch (Exception e) when (SetError(e)) { }
@@ -826,6 +925,8 @@ namespace Lexical.FileSystem.Utility
                     Block b;
                     while (queue.TryTake(out b)) if (b.data != null) session.BlockPool.Return(b.data);
                 }
+
+                return this;
             }
 
             /// <summary>
@@ -924,12 +1025,12 @@ namespace Lexical.FileSystem.Utility
 
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override void Estimate()
+            public override FileOperation Estimate()
             {
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Estimating
-                if (!TrySetState(State.Estimating, State.Initialized)) return;
+                if (!TrySetState(State.Estimating, State.Initialized)) return this;
 
                 try
                 {
@@ -945,31 +1046,35 @@ namespace Lexical.FileSystem.Utility
                         catch (NotSupportedException) { }
                     }
                     // Estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return;
+                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
                 }
                 // Capture error and set state to error
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Run op</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override void Run()
+            public override FileOperation Run()
             {
                 // Estimate viability of operation
                 Estimate();
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
                 // Running
-                if (!TrySetState(State.Running, State.Estimated)) return;
+                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     // Delete file
                     FileSystem.Delete(Path);
                     // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return;
+                    if (!TrySetState(State.Completed, State.Running)) return this;
                 }
                 // Capture error and set state
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             /// <summary>Print info</summary>
@@ -1000,11 +1105,11 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="SrcPath"/> is not found.</exception>
             /// <exception cref="FileSystemExceptionFileExists">If <see cref="DstPath"/> already exists.</exception>
-            public override void Estimate()
+            public override FileOperation Estimate()
             {
-                if (CurrentState != State.Initialized) return;
+                if (CurrentState != State.Initialized) return this;
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
 
                 try
                 {
@@ -1058,6 +1163,8 @@ namespace Lexical.FileSystem.Utility
                 }
                 // Capture error and set state to error
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             // /// <summary>Print info</summary>
@@ -1082,11 +1189,11 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
             /// <exception cref="FileSystemExceptionFileExists">If <see cref="Path"/> already exists.</exception>
-            public override void Estimate()
+            public override FileOperation Estimate()
             {
-                if (CurrentState != State.Initialized) return;
+                if (CurrentState != State.Initialized) return this;
                 // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
 
                 try
                 {
@@ -1144,6 +1251,8 @@ namespace Lexical.FileSystem.Utility
                 }
                 // Capture error and set state to error
                 catch (Exception e) when (SetError(e)) { }
+
+                return this;
             }
 
             // /// <summary>Print info</summary>
@@ -1151,7 +1260,7 @@ namespace Lexical.FileSystem.Utility
         }
 
         /// <summary>Move/rename a file or directory tree by copying and deleting files</summary>
-        public class MoveTree : Batch
+        public class TransferTree : Batch
         {
             /// <summary></summary>
             public IFileSystem SrcFileSystem { get; protected set; }
@@ -1163,7 +1272,7 @@ namespace Lexical.FileSystem.Utility
             public string DstPath { get; protected set; }
 
             /// <summary>Create move op.</summary>
-            public MoveTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath) : base(session)
+            public TransferTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath) : base(session)
             {
                 this.SrcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
                 this.DstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
@@ -1190,7 +1299,7 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Observers</summary>
             internal ArrayList<ObserverHandle> observers = new ArrayList<ObserverHandle>();
             /// <summary>Shared cancellation token</summary>
-            public CancellationTokenSource CancelSrc { get; protected set; } = new CancellationTokenSource();
+            public CancellationTokenSource CancelSrc { get; protected set; }
             /// <summary>Operation policies</summary>
             public Policy Policy { get; protected set; }
             /// <summary>Accumulated events</summary>
@@ -1202,20 +1311,34 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Pool that allocates byte buffers</summary>
             public IBlockPool BlockPool { get; protected set; }
             /// <summary>Interval of bytes interval to report progress on copying files.</summary>
-            public long ProgressInterval { get; protected set; }
+            public long ProgressInterval { get; protected set; } = 524288L;
 
             /// <summary>Create session</summary>
-            public Session(Policy policy = Policy.Default, IBlockPool blockPool = default, long progressInterval = 524288L)
+            public Session(Policy policy = Policy.Default, IBlockPool blockPool = default, CancellationTokenSource cancelSrc = default)
             {
                 this.Policy = policy;
                 this.BlockPool = blockPool ?? new BlockPool();
-                this.ProgressInterval = progressInterval;
+                this.CancelSrc = cancelSrc ?? new CancellationTokenSource();
             }
 
             /// <summary>Set new policy</summary>
             public Session SetPolicy(Policy newPolicy)
             {
                 this.Policy = newPolicy;
+                return this;
+            }
+
+            /// <summary>Set new policy</summary>
+            public Session SetProgressInterval(long progressInterval)
+            {
+                this.ProgressInterval = progressInterval;
+                return this;
+            }
+
+            /// <summary>Set new policy</summary>
+            public Session SetCancellationSource(CancellationTokenSource cancelSrc)
+            {
+                this.CancelSrc = cancelSrc;
                 return this;
             }
 
