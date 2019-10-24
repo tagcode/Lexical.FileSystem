@@ -6,6 +6,17 @@ NuGet Packages:
 * Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
 
 
+
+Contents:
+* [FileSystem](#FileSystem)
+* [VirtualFileSystem](#VirtualFileSystem)
+* [Decoration](#Decoration)
+* [IFileProvider](#IFileProvider)
+* [MemoryFileSystem](#MemoryFileSystem)
+* [FileScanner](#FileScanner)
+* [VisitTree](#VisitTree)
+
+
 # FileSystem
 
 **new FileSystem(<i>path</i>)** creates an instance of filesystem at *path*. 
