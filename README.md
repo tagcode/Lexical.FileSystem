@@ -1007,6 +1007,52 @@ Task.Run(() =>
 filesystem.Dispose();
 ```
 
+# Quota
+
+Constructor **new MemoryFileSystem(<i>blockSize</i>, <i>maxSpace</i>)** creates memory limited filesystem. Memory limitation applies to files only, not to directory structure.
+
+```csharp
+IFileSystem ms = new MemoryFileSystem(blockSize: 1024, maxSpace: 1L << 34);
+```
+
+Printing with **PrintTree.Format.DriveFreespace | PrintTree.Format.DriveSize** flags show drive size.
+
+```csharp
+IFileSystem ms = new MemoryFileSystem(blockSize: 1024, maxSpace: 1L << 34);
+ms.CreateFile("file", new byte[1 << 30]);
+ms.PrintTo(Console.Out, format: PrintTree.Format.AllWithName);
+```
+
+```none
+"" [Freespace: 15G, Size: 1G/16G, Ram]
+└── "file" [1073741824]
+```
+
+If filesystem runs out of space, it throws **FileSystemExceptionOutOfDiskSpace**.
+
+```csharp
+IFileSystem ms = new MemoryFileSystem(blockSize: 1024, maxSpace: 2048);
+ms.CreateFile("file1", new byte[1024]);
+ms.CreateFile("file2", new byte[1024]);
+
+// throws FileSystemExceptionOutOfDiskSpace
+ms.CreateFile("file3", new byte[1024]);
+```
+
+Available space can be shared between *MemoryFileSystem* instances with **IBlockPool**.
+
+```csharp
+IBlockPool pool = new BlockPool(blockSize: 1024, maxBlockCount: 3, maxRecycleQueue: 3);
+IFileSystem ms1 = new MemoryFileSystem(pool);
+IFileSystem ms2 = new MemoryFileSystem(pool);
+
+// Reserve 2048 from shared pool
+ms1.CreateFile("file1", new byte[2048]);
+
+// Not enough for anohter 3048, throws FileSystemExceptionOutOfDiskSpace
+ms2.CreateFile("file2", new byte[2048]);
+```
+
 # FileScanner
 **FileScanner** scans the tree structure of a filesystem for files that match its configured criteria. It uses concurrent threads.
 

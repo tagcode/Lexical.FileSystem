@@ -227,14 +227,21 @@ namespace Lexical.FileSystem
                     if (!String.IsNullOrEmpty(label)) infos.Add(label);
                 }
 
-                // Append drive label [Tank]
-                if (format.HasFlag(Format.DriveFreespace) || format.HasFlag(Format.DriveSize))
+                // Append free space [Freespace: 10G]
+                if (format.HasFlag(Format.DriveFreespace))
+                {
+                    long freespace = format.HasFlag(Format.DriveFreespace) ? Entry.DriveFreeSpace() : -1L;
+                    if (freespace > 0) infos.Add("Freespace: "+(freespace >> 30) + "G");
+                }
+
+                // Append total size [Size: 8G/32G]
+                if (format.HasFlag(Format.DriveSize))
                 {
                     long freespace = format.HasFlag(Format.DriveFreespace) ? Entry.DriveFreeSpace() : -1L;
                     long size = format.HasFlag(Format.DriveSize) ? Entry.DriveSize() : -1L;
-                    if (freespace > 0 && size > 0) infos.Add((freespace >> 30) + "G/" + (size >> 30) + "G");
-                    else if (freespace > 0) infos.Add((freespace >> 30) + "G");
-                    else if (size > 0) infos.Add((size >> 30) + "G");
+                    long reserved = freespace < 0L ? -1L : size - freespace;
+                    if (reserved > 0 && size > 0) infos.Add("Size: "+(reserved >> 30) + "G/" + (size >> 30) + "G");
+                    else if (size > 0) infos.Add("Size: "+(size >> 30) + "G");
                 }
 
                 // Append drive type [Ram]
@@ -355,14 +362,21 @@ namespace Lexical.FileSystem
                     if (!String.IsNullOrEmpty(label)) infos.Add(label);
                 }
 
-                // Write drive label [Tank]
-                if (format.HasFlag(Format.DriveFreespace) || format.HasFlag(Format.DriveSize))
+                // Append free space [Freespace: 10G]
+                if (format.HasFlag(Format.DriveFreespace))
+                {
+                    long freespace = format.HasFlag(Format.DriveFreespace) ? Entry.DriveFreeSpace() : -1L;
+                    if (freespace > 0) infos.Add("Freespace: " + (freespace >> 30) + "G");
+                }
+
+                // Append total size [Size: 8G/32G]
+                if (format.HasFlag(Format.DriveSize))
                 {
                     long freespace = format.HasFlag(Format.DriveFreespace) ? Entry.DriveFreeSpace() : -1L;
                     long size = format.HasFlag(Format.DriveSize) ? Entry.DriveSize() : -1L;
-                    if (freespace > 0 && size > 0) infos.Add((freespace >> 30) + "G/" + (size >> 30) + "G");
-                    else if (freespace > 0) infos.Add((freespace >> 30) + "G");
-                    else if (size > 0) infos.Add((size >> 30) + "G");
+                    long reserved = freespace < 0L ? -1L : size - freespace;
+                    if (reserved > 0 && size > 0) infos.Add("Size: " + (reserved >> 30) + "G/" + (size >> 30) + "G");
+                    else if (size > 0) infos.Add("Size: " + (size >> 30) + "G");
                 }
 
                 // Write drive type [Ram]

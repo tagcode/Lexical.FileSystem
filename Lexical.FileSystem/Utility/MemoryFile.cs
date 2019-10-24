@@ -23,14 +23,14 @@ namespace Lexical.FileSystem.Utility
     public class MemoryFile : IObservable<MemoryFile.ModifiedEvent>, IDisposable
     {
         /// <summary>
-        /// Data
+        /// Allocated blocks
         /// </summary>
         protected internal List<byte[]> blocks = new List<byte[]>();
 
         /// <summary>
         /// Lock for modifying <see cref="blocks"/>.
         /// </summary>
-        protected ReaderWriterLock m_lock = new ReaderWriterLock();
+        protected ReaderWriterLock blockLock = new ReaderWriterLock();
 
         /// <summary>
         /// Critical section lock for opening streams, checks read/write permission.
@@ -85,10 +85,10 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Block pool that allocates memory blocks.
         /// </summary>
-        protected IBlockPool blockPool; // <- TODO Currently not used. // 
+        protected IBlockPool blockPool;
 
-        /// <summary>Path hint (for exceptions)</summary>
-        protected string Path;
+        /// <summary>Path hint provided in construction. Used in exceptions and in ToString(). Readable as public property.</summary>
+        public string Path { get; protected set; }
 
         /// <summary>
         /// Create memory based file.
@@ -96,7 +96,7 @@ namespace Lexical.FileSystem.Utility
         public MemoryFile()
         {
             this.BlockSize = 1024;
-            this.blockPool = new BlockPool((int)BlockSize, int.MaxValue, 0, true);
+            this.blockPool = new BlockPoolPseudo((int)BlockSize);
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Lexical.FileSystem.Utility
         {
             if (blockSize < 16) throw new ArgumentOutOfRangeException(nameof(blockSize));
             this.BlockSize = blockSize;
-            this.blockPool = new BlockPool(blockSize, int.MaxValue, 0, true);
+            this.blockPool = new BlockPoolPseudo(blockSize);
         }
 
         /// <summary>
@@ -124,7 +124,7 @@ namespace Lexical.FileSystem.Utility
         /// Create memory based file.
         /// </summary>
         /// <param name="blockPool"></param>
-        /// <param name="pathHint"></param>
+        /// <param name="pathHint">Path to use in ToString()</param>
         public MemoryFile(IBlockPool blockPool, string pathHint = null)
         {
             this.blockPool = blockPool ?? throw new ArgumentNullException(nameof(blockPool));
@@ -193,6 +193,36 @@ namespace Lexical.FileSystem.Utility
         }
 
         /// <summary>
+        /// Disconnects this file from the associated blockpool.
+        /// This releases the amount of allocated bytes from blockpool.
+        /// 
+        /// Sets blockpool to <see cref="BlockPoolPseudo"/>.
+        /// </summary>
+        public void DisconnectFromBlockPool()
+        {
+            // Take reference of blockpool
+            var _blockPool = this.blockPool;
+
+            // Does nothing
+            if (_blockPool is BlockPoolPseudo) return;
+
+            // Array of blocks
+            byte[][] blocksToDisconnect;
+            blockLock.AcquireWriterLock(int.MaxValue);
+            try
+            {
+                this.blockPool = BlockSize == BlockPoolPseudo.Instance.BlockSize ? BlockPoolPseudo.Instance : new BlockPoolPseudo((int)BlockSize);
+                blocksToDisconnect = blocks.ToArray();
+            } finally
+            {
+                blockLock.ReleaseWriterLock();
+            }
+
+            // Disconnect blocks
+            _blockPool.Disconnect(blocksToDisconnect);
+        }
+
+        /// <summary>
         /// Dispose memory file.
         /// </summary>
         public void Dispose()
@@ -207,12 +237,36 @@ namespace Lexical.FileSystem.Utility
         /// <param name="disposing">if false, called from finalized and needs to dispose only unmanaged resources</param>
         protected virtual void Dispose(bool disposing)
         {
+            // Mark disposed
+            isDisposed = true;
+
+            // Return blocks
+            {
+                var _blockPool = this.blockPool;
+                if (_blockPool is BlockPoolPseudo == false)
+                {
+                    // Array of blocks
+                    byte[][] blocksToReturn = null;
+                    blockLock.AcquireWriterLock(int.MaxValue);
+                    try
+                    {
+                        this.blockPool = new BlockPoolPseudo((int)this.BlockSize);
+                        blocksToReturn = blocks.Count == 0 ? null : blocks.ToArray();
+                        blocks.Clear();
+                        length = 0L;
+                    }
+                    finally
+                    {
+                        blockLock.ReleaseWriterLock();
+                    }
+                    // Return blocks
+                    if (blocks!=null) _blockPool.Return(blocksToReturn);
+                }
+            }
+
             // Dispose managed resources
             if (disposing)
             {
-                // Mark disposed
-                isDisposed = true;
-
                 // Remove observers
                 while (observers.Count > 0)
                 {
@@ -292,14 +346,14 @@ namespace Lexical.FileSystem.Utility
             protected MemoryFile parent;
 
             /// <summary>
-            /// Bytes
+            /// Blocks
             /// </summary>
             protected List<byte[]> blocks;
 
             /// <summary>
-            /// Lock object for modifying <see cref="blocks"/>.
+            /// Block lock object for modifying <see cref="blocks"/>.
             /// </summary>
-            protected ReaderWriterLock m_lock;
+            protected ReaderWriterLock blockLock;
 
             /// <summary>
             /// Block size
@@ -359,7 +413,7 @@ namespace Lexical.FileSystem.Utility
             {
                 this.parent = parent;
                 this.blocks = parent.blocks;
-                this.m_lock = parent.m_lock;
+                this.blockLock = parent.blockLock;
                 this.blockSize = parent.BlockSize;
                 this.FileAccess = fileAccess;
                 this.FileShare = fileShare;
@@ -394,7 +448,7 @@ namespace Lexical.FileSystem.Utility
                 if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
 
                 // Read
-                m_lock.AcquireReaderLock(int.MaxValue);
+                blockLock.AcquireReaderLock(int.MaxValue);
                 try
                 {
                     // Position for this thread.
@@ -424,7 +478,7 @@ namespace Lexical.FileSystem.Utility
                 }
                 finally
                 {
-                    m_lock.ReleaseReaderLock();
+                    blockLock.ReleaseReaderLock();
                 }
             }
 
@@ -441,7 +495,7 @@ namespace Lexical.FileSystem.Utility
                 if (!canRead) throw new FileSystemExceptionNoReadAccess();
 
                 // Read
-                m_lock.AcquireReaderLock(int.MaxValue);
+                blockLock.AcquireReaderLock(int.MaxValue);
                 try
                 {
                     // Position for this thread.
@@ -458,7 +512,7 @@ namespace Lexical.FileSystem.Utility
                 }
                 finally
                 {
-                    m_lock.ReleaseReaderLock();
+                    blockLock.ReleaseReaderLock();
                 }
             }
 
@@ -497,7 +551,7 @@ namespace Lexical.FileSystem.Utility
                 if (newLength < 0 || newLength > Int32.MaxValue) throw new ArgumentOutOfRangeException(nameof(newLength));
 
                 // Write
-                m_lock.AcquireWriterLock(int.MaxValue);
+                blockLock.AcquireWriterLock(int.MaxValue);
                 try
                 {
                     // Nothing to do
@@ -505,18 +559,28 @@ namespace Lexical.FileSystem.Utility
                     // Clear
                     else if (newLength == 0L)
                     {
-                        blocks.Clear();
+                        if (blocks.Count > 0)
+                        {
+                            parent.blockPool.Return(blocks.ToArray());
+                            blocks.Clear();
+                        }
                         parent.length = 0L;
                     }
                     else
                     {
                         // Count
                         int newBlockCount = (int)((newLength + blockSize - 1) / blockSize);
-                        // Shorten
+                        // Reduce block count
                         if (newLength < parent.Length)
                         {
                             // Remove blocks
-                            while (newBlockCount < blocks.Count) blocks.RemoveAt(blocks.Count - 1);
+                            while (newBlockCount < blocks.Count)
+                            {
+                                int blockIx = blocks.Count - 1;
+                                byte[] block = blocks[blockIx];
+                                blocks.RemoveAt(blockIx);
+                                parent.blockPool.Return(block);
+                            }
                         }
                         else
                         // Grow
@@ -531,7 +595,22 @@ namespace Lexical.FileSystem.Utility
                                 for (int i = lastByteInLastBlock; i < lastByteInLastBlockInNewLength; i++) block[i] = 0;
                             }
                             // Add blocks
-                            while (newBlockCount > blocks.Count) blocks.Add(new byte[blockSize]);
+                            while (newBlockCount > blocks.Count)
+                            {
+                                byte[] block;
+                                // Allocate block
+                                if (parent.blockPool.TryAllocate(out block))
+                                {
+                                    // Clean block if needed
+                                    if (!parent.blockPool.ClearsRecycledBlocks) WipeBlock(block);
+                                    // Add block
+                                    blocks.Add(block);
+                                    // Set length
+                                    parent.length = Math.Min(newLength, blocks.Count * blockSize);
+                                }
+                                // Ran out of disk space
+                                else throw new FileSystemExceptionOutOfDiskSpace(null, parent.Path);
+                            }
                         }
                     }
                     // Set new length
@@ -540,12 +619,16 @@ namespace Lexical.FileSystem.Utility
                 }
                 finally
                 {
-                    m_lock.ReleaseWriterLock();
+                    blockLock.ReleaseWriterLock();
                 }
 
                 // Send event
                 parent.SendChangeEvent();
             }
+
+            /// <summary>Zero <paramref name="block"/> contents.</summary>
+            /// <param name="block"></param>
+            static void WipeBlock(byte[] block) { for (int i = 0; i < block.Length; i++) block[i] = 0; }
 
             /// <summary>
             /// Writes a sequence of bytes to the current stream and advances the current position within this stream by the number of bytes written.
@@ -573,7 +656,7 @@ namespace Lexical.FileSystem.Utility
                 if (count == 0) return;
 
                 // Write
-                m_lock.AcquireWriterLock(int.MaxValue);
+                blockLock.AcquireWriterLock(int.MaxValue);
                 try
                 {
                     // Assert
@@ -609,8 +692,12 @@ namespace Lexical.FileSystem.Utility
                     {
                         while (count > 0)
                         {
-                            byte[] block = new byte[blockSize];
-                            blocks.Add(block);
+                            byte[] block;
+                            // Allocate block
+                            if (parent.blockPool.TryAllocate(out block)) blocks.Add(block);
+                            // Ran out of disk space
+                            else throw new FileSystemExceptionOutOfDiskSpace(null, parent.Path);
+
                             int bytesToWriteToThisBlock = (int)Math.Min(/*bytes remaining in block*/block.Length, /*bytes to write*/count);
                             Array.Copy(buffer, offset, block, 0, bytesToWriteToThisBlock);
                             offset += bytesToWriteToThisBlock;
@@ -626,7 +713,7 @@ namespace Lexical.FileSystem.Utility
                 }
                 finally
                 {
-                    m_lock.ReleaseWriterLock();
+                    blockLock.ReleaseWriterLock();
                 }
 
                 // Send event
@@ -647,7 +734,7 @@ namespace Lexical.FileSystem.Utility
                 if (!canWrite) throw new FileSystemExceptionNoWriteAccess();
 
                 // Write
-                m_lock.AcquireWriterLock(int.MaxValue);
+                blockLock.AcquireWriterLock(int.MaxValue);
                 try
                 {
                     // Assert
@@ -672,10 +759,10 @@ namespace Lexical.FileSystem.Utility
                         byte[] block = null;
                         while (_position >= blocks.Count * blockSize)
                         {
-                            // TODO Allocate and Return blocks -- also when deleting files in MemoryFileSystem.
-                            //if (!parent.blockPool.TryAllocate(out block)) throw new FileSystemExceptionOutOfDiskSpace(null, parent.Path);
-                            block = new byte[blockSize];
-                            blocks.Add(block);
+                            // Allocate block
+                            if (parent.blockPool.TryAllocate(out block)) blocks.Add(block);
+                            // Ran out of disk space
+                            else throw new FileSystemExceptionOutOfDiskSpace(null, parent.Path);
                         }
                         int blockPosition = (int)(_position % blockSize);
                         block[blockPosition] = value;
@@ -686,7 +773,7 @@ namespace Lexical.FileSystem.Utility
                 }
                 finally
                 {
-                    m_lock.ReleaseWriterLock();
+                    blockLock.ReleaseWriterLock();
                 }
 
                 // Send event

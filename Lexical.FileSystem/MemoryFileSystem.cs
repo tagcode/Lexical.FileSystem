@@ -84,8 +84,8 @@ namespace Lexical.FileSystem
         public MemoryFileSystem() : base()
         {
             this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
-            this.BlockSize = 1024L;
-            this.blockPool = new BlockPool((int)BlockSize, int.MaxValue, 0, true);
+            this.blockPool = BlockPoolPseudo.Instance;
+            this.BlockSize = this.blockPool.BlockSize;
         }
 
         /// <summary>
@@ -97,8 +97,7 @@ namespace Lexical.FileSystem
             this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
             if (blockSize < 16L) throw new ArgumentOutOfRangeException(nameof(blockSize));
             this.BlockSize = blockSize;
-            long maxBlockCount = int.MaxValue;
-            this.blockPool = new BlockPool(blockSize, maxBlockCount, 0, true);
+            this.blockPool = new BlockPoolPseudo(blockSize);
         }
 
         /// <summary>
@@ -122,14 +121,8 @@ namespace Lexical.FileSystem
         /// <paramref name="blockPool"/> can be shared with other <see cref="MemoryFileSystem"/> implementations for shared free space quota.
         /// </summary>
         /// <param name="blockPool"></param>
-        internal MemoryFileSystem(IBlockPool blockPool) : base()
+        public MemoryFileSystem(IBlockPool blockPool) : base()
         {
-            // Is not implemented yet completely //
-            // TODO
-            //   When disposed release blocks
-            //   When delete files or directories, release blocks
-            //   When file is truncated release blocks
-            //   When file allocates blocks use blockPool
             this.root = new Directory(this, null, "", DateTimeOffset.UtcNow);
             this.blockPool = blockPool ?? throw new ArgumentNullException(nameof(blockPool));
             this.BlockSize = blockPool.BlockSize;
@@ -1119,7 +1112,7 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Get or create entry.
             /// </summary>
-            public IFileSystemEntry Entry => entry ?? (entry = CreateEntry());
+            public IFileSystemEntry Entry =>  parent == null /*root*/ ? CreateEntry() : entry ?? (entry = CreateEntry());
 
             /// <summary>
             /// Path to the entry.
@@ -1227,7 +1220,7 @@ namespace Lexical.FileSystem
             /// <returns></returns>
             public override IFileSystemEntry CreateEntry() =>
                 parent == null ? 
-                /*Root*/     (IFileSystemEntry) new FileSystemEntryDrive(filesystem, Path, name, lastModified, lastAccess, DriveType.Ram, -1L, -1L, null, null, true) : 
+                /*Root*/     (IFileSystemEntry) new FileSystemEntryDrive(filesystem, Path, name, lastModified, lastAccess, DriveType.Ram, filesystem.blockPool.BytesAvailable, filesystem.blockPool.MaxBlockCount*filesystem.blockPool.BlockSize, null, null, true) : 
                 /*non-root*/ (IFileSystemEntry) new FileSystemEntryDirectory(filesystem, Path, name, lastModified, lastAccess);
 
             /// <summary>
@@ -1286,6 +1279,11 @@ namespace Lexical.FileSystem
             }
 
             /// <summary>
+            /// Handle for modification notification subscription.
+            /// </summary>
+            IDisposable subscriptionHandle;
+
+            /// <summary>
             /// Create file entry.
             /// </summary>
             /// <param name="filesystem"></param>
@@ -1295,7 +1293,7 @@ namespace Lexical.FileSystem
             public File(MemoryFileSystem filesystem, Directory parent, string name, DateTimeOffset lastModified) : base(filesystem, parent, name, lastModified)
             {
                 memoryFile = new MemoryFile(filesystem.blockPool, Path);
-                memoryFile.Subscribe(this);
+                subscriptionHandle = memoryFile.Subscribe(this);
             }
 
             /// <summary>
@@ -1378,7 +1376,12 @@ namespace Lexical.FileSystem
             public override void Dispose()
             {
                 base.Dispose();
-                memoryFile.Dispose();
+
+                // Unsubscribe
+                Interlocked.CompareExchange(ref subscriptionHandle, null, subscriptionHandle)?.Dispose();
+
+                // Disconnect blocks from MemoryFileSystem. The blocks will be garbage collected once all streams are closed.
+                memoryFile.DisconnectFromBlockPool();
                 memoryFile = null;
             }
         }
