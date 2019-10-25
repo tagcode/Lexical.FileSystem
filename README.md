@@ -16,7 +16,6 @@ Contents:
 * [FileScanner](#FileScanner)
 * [VisitTree](#VisitTree)
 
-
 # FileSystem
 
 **new FileSystem(<i>path</i>)** creates an instance of filesystem at *path*. 
@@ -175,8 +174,7 @@ FileSystem.Temp.PrintTo(Console.Out, depth: 1);
 ""
 ├── "dmk55ohj.jjp"
 ├── "wrz4cms5.r2f"
-├── "18e1904137f065db88dfbd23609eb877"
-└── "82e759b7-b237-45f7-91b9-8450b0732a6e.tmp"
+└── "18e1904137f065db88dfbd23609eb877"
 </pre>
 
 **Singleton** instances:
@@ -192,6 +190,28 @@ FileSystem.Temp.PrintTo(Console.Out, depth: 1);
 | FileSystem.ApplicationData       | A common repository for application-specific data for the current roaming user.                  | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
 | FileSysten.LocalApplicationData  | A common repository for application-specific data that is used by the current, non-roaming user. | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
 | FileSysten.CommonApplicationData | A common repository for application-specific data that is used by all users.                     | "C:\\ProgramData"                                     | "/usr/share"                             |
+
+**IFileEntry.PhysicalPath()** returns physical path of file entry.
+
+```csharp
+foreach(var line in FileSystem.Temp.VisitTree(depth:2))
+    Console.WriteLine(line.Entry.PhysicalPath());
+```
+
+TreeVisitor prints physical path with **PrintTree.Format.PhysicalPath** flag.
+
+```csharp
+FileSystem.Temp.PrintTo(
+    output: Console.Out, 
+    depth: 2, 
+    format: PrintTree.Format.Default | PrintTree.Format.PhysicalPath);
+```
+<pre style="line-height:1.2;">
+"" [C:\Users\user\AppData\Local\Temp\]
+├── "dmk55ohj.jjp" [C:\Users\user\AppData\Local\Temp\dmk55ohj.jjp]
+├── "wrz4cms5.r2f" [C:\Users\user\AppData\Local\Temp\wrz4cms5.r2f]
+└── "18e1904137f065db88dfbd23609eb877" [C:\Users\user\AppData\Local\Temp\18e1904137f065db88dfbd23609eb877]
+</pre>
 
 # Observing
 
@@ -1060,7 +1080,7 @@ IFileSystem ms2 = new MemoryFileSystem(pool);
 // Reserve 2048 from shared pool
 ms1.CreateFile("file1", new byte[2048]);
 
-// Not enough for anohter 3048, throws FileSystemExceptionOutOfDiskSpace
+// Not enough for another 3048, throws FileSystemExceptionOutOfDiskSpace
 ms2.CreateFile("file2", new byte[2048]);
 ```
 
@@ -1309,6 +1329,7 @@ string tree =  ram.Print(format: PrintTree.Format.Tree | PrintTree.Format.Path |
 | <i>PrintTree.Format.</i>DriveType| Drive or volume type, such as: Fixed, Removeable, Network, Ram |
 | <i>PrintTree.Format.</i>DriveFormat| FileSystem format, such as: NTFS, FAT32, EXT4 |
 | <i>PrintTree.Format.</i>FileAttributes| File attributes, such as: ReadOnly, Hidden, System, Directory, Archive |
+| <i>PrintTree.Format.</i>PhysicalPath| Physical path |
 ||
 | <i>PrintTree.Format.</i>Default  | <i>PrintTree.Format.</i>Tree &#124; <i>PrintTree.Format.</i>Name &#124; <i>PrintTree.Format.</i>Error |
 | <i>PrintTree.Format.</i>DefaultPath | <i>PrintTree.Format.</i>Tree &#124; <i>PrintTree.Format.</i>Path &#124; <i>PrintTree.Format.</i>Error |
