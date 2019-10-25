@@ -119,9 +119,26 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>
+    /// Entry already exists when not expected
+    /// </summary>
+    public class FileSystemExceptionEntryExists : FileSystemException
+    {
+        /// <summary>
+        /// Create exception
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path"></param>
+        /// <param name="message"></param>
+        public FileSystemExceptionEntryExists(IFileSystem filesystem = null, string path = null, string message = null) : base(filesystem, path, message??"Entry exists") { }
+
+        /// <inheritdoc/>
+        protected FileSystemExceptionEntryExists(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+    /// <summary>
     /// File exists when not expected
     /// </summary>
-    public class FileSystemExceptionFileExists : FileSystemException
+    public class FileSystemExceptionFileExists : FileSystemExceptionEntryExists
     {
         /// <summary>
         /// Create exception
@@ -137,7 +154,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Invalid name for file or directory
     /// </summary>
-    public class FileSystemExceptionInvalidName : FileSystemException
+    public class FileSystemExceptionInvalidName : FileSystemExceptionEntryExists
     {
         /// <summary>
         /// Create exception

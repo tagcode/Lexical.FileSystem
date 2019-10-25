@@ -42,24 +42,69 @@ namespace Lexical.FileSystem.Utility
             Error = 7,
         }
 
-        /// <summary>File operation policies</summary>
+        /// <summary>File operation policy</summary>
         [Flags]
-        public enum Policy : int
+        public enum Policy : ulong
         {
-            /// <summary>If file already exists, overwrite it.</summary>
-            OverwriteIfExists = 0x01,
-            /// <summary>If file already exists, skip it.</summary>
-            SkipIfExists = 0x02,
-            /// <summary>If file already exists, throw exception.</summary>
-            FailIfExists = 0x03,
+            /// <summary>Policy is not set. If used in FileOperation, then inherits policy from its session.</summary>
+            Unset = 0UL,
 
-            /// <summary>If one operation fails, signals cancel on <see cref="Session.CancelSrc"/>.</summary>
-            SignalCancelOnError = 0x0100,
+            // Policy on source files (choose one)
+            /// <summary>Source policy is not set.</summary>
+            SrcUnset = 0x00UL,
+            /// <summary>Throw <see cref="FileNotFoundException"/> or <see cref="DirectoryNotFoundException"/> if source files or directories are not found.</summary>
+            SrcThrow = 0x01UL,
+            /// <summary>If source files or directories are not found, then operation is skipped</summary>
+            SrcSkip = 0x02UL,
+            /// <summary>Source policy mask</summary>
+            SrcMask = 0xffUL,
+
+            // Policy on destination files (choose one)
+            /// <summary>Destination policy is not set.</summary>
+            DstUnset = 0x00UL << 8,
+            /// <summary>If destination file already exists (or doesn't exist on delete), throw <see cref="FileSystemExceptionFileExists"/> or <see cref="FileSystemExceptionDirectoryExists"/>.</summary>
+            DstThrow = 0x01UL << 8,
+            /// <summary>If destination file already exists, skip the operation on them.</summary>
+            DstSkip = 0x02UL << 8,
+            /// <summary>If destination file already exists, overwrite it.</summary>
+            DstOverwrite = 0x03UL << 8,
+            /// <summary>Destination policy mask</summary>
+            DstMask = 0xffUL << 8,
+
+            // Estimate policies
+            /// <summary>No estimate flags</summary>
+            EstimateUnset = 0x00UL << 16,
+            /// <summary>Estimate on Run(). Public method Estimate() does nothing.</summary>
+            EstimateOnRun = 0x01UL << 16,
+            /// <summary>Re-estimate on Run(). Runs on Estimate() and Run().</summary>
+            ReEstimateOnRun = 0x01UL << 16,
+            /// <summary>Estimate flags mask</summary>
+            EstimateMask = 0xffUL << 16,
+
+            // Rollback policies
+            /// <summary>No rollback flags</summary>
+            RollbackUnset = 0x00UL << 24,
+            /// <summary>Rollback flags mask</summary>
+            RollbackMask = 0xffUL << 24,
+
+            // Other flags
+            /// <summary>If one operation fails, signals cancel on <see cref="Session.CancelSrc"/> cancel token source.</summary>
+            CancelOnError = 0x0001UL << 32,
             /// <summary>Policy whether to omit directories that are automatically mounted. These are typically package files, such as .zip, exposed as part of the filesystem.</summary>
-            OmitAutoMounts = 0x0400,
+            OmitAutoMounts = 0x0002UL << 32,
+            /// <summary>Batch operation continues on child op error. Throws <see cref="AggregateException"/> on errors, but only after all child ops have been ran.</summary>
+            BatchContinueOnError = 0x0004UL << 32,
+            /// <summary>Suppress exception in Estimate() and Run().</summary>
+            SuppressException = 0x0008UL << 32,
+            /// <summary>Log events to session.</summary>
+            LogEvents = 0x0010UL << 32,
+            /// <summary>Dispatch events to subscribers.</summary>
+            DispatchEvents = 0x0020UL << 32,
+            /// <summary>Mask for flags</summary>
+            FlagsMask = 0xffffUL << 32,
 
             /// <summary>Default policy</summary>
-            Default = OmitAutoMounts | SignalCancelOnError | FailIfExists
+            Default = SrcSkip | DstThrow | OmitAutoMounts | LogEvents | DispatchEvents
         }
 
         /// <summary>The session where the op is ran in.</summary>
@@ -78,23 +123,63 @@ namespace Lexical.FileSystem.Utility
         /// <summary>Child operations</summary>
         public virtual FileOperation[] Children => null;
 
-        /// <summary>Length of operation in bytes. -1 if unknown.</summary>
-        public long Length { get; protected set; }
-        /// <summary>Progress of operation in bytes. -1 if unknown.</summary>
+        /// <summary>Target filesystem, if applicable for the operation</summary>
+        public virtual IFileSystem FileSystem => null;
+        /// <summary>Target path, if applicable for the operation.</summary>
+        public virtual string Path => null;
+        /// <summary>Source filesystem, if applicable for the operation. Copy, move and transfer operation use this.</summary>
+        public virtual IFileSystem SrcFileSystem => null;
+        /// <summary>Source path, if applicable for the operation. Copy, move and transfer operations use this.</summary>
+        public virtual string SrcPath => null;
+
+        /// <summary>Current progress of operation in bytes. -1 if unknown.</summary>
         public long Progress { get; protected set; }
+        /// <summary>Total length of operation in bytes. -1 if unknown.</summary>
+        public long TotalLength { get; protected set; }
+
+        /// <summary>Operation overriding policy. If set to <see cref="Policy.Unset"/>, then uses policy from session.</summary>
+        public Policy OpPolicy { get; protected set; }
 
         /// <summary>
-        /// Is operation capable of rollback. Value may change after <see cref="Estimate"/>.
+        /// Effective policy for the operation. 
+        /// 
+        /// For source and destination file policies prioritizes the policy on the operation, then fallback to policy on session.
+        /// For other flags uses union of the policy in operation and the policy on session.
+        /// </summary>
+        public Policy EffectivePolicy
+        {
+            get
+            {
+                Policy result = Policy.Unset;
+                // Add src policy
+                result |= ((OpPolicy & Policy.SrcMask) == Policy.SrcUnset ? OpSession.Policy : OpPolicy) & Policy.SrcMask;
+                // Add dst policy
+                result |= ((OpPolicy & Policy.DstMask) == Policy.DstUnset ? OpSession.Policy : OpPolicy) & Policy.DstMask;
+                // Add rollback policy
+                result |= ((OpPolicy & Policy.RollbackMask) == Policy.RollbackUnset ? OpSession.Policy : OpPolicy) & Policy.RollbackMask;
+                // Add estimate policy
+                result |= ((OpPolicy & Policy.EstimateMask) == Policy.EstimateUnset ? OpSession.Policy : OpPolicy) & Policy.EstimateMask;
+                // Union of flags
+                result |= (OpPolicy & Policy.FlagsMask) | (OpSession.Policy & Policy.FlagsMask);
+                // Return the effective policy
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Is operation capable of rollback. Value may change after <see cref="Estimate()"/> and <see cref="Run"/>.
         /// </summary>
         public bool CanRollback { get; protected set; } = false;
 
         /// <summary>
         /// Create filesystem operation
         /// </summary>
-        /// <param name="session"></param>
-        public FileOperation(Session session)
+        /// <param name="session">operation session</param>
+        /// <param name="policy">operation specific policy</param>
+        public FileOperation(Session session, Policy policy)
         {
             this.session = session ?? throw new ArgumentNullException(nameof(session));
+            this.OpPolicy = policy;
         }
 
         /// <summary>
@@ -107,25 +192,116 @@ namespace Lexical.FileSystem.Utility
         /// If caller needs rollback capability, the caller may call <see cref="AssertCanRollback"/> right after estimate.
         /// </summary>
         /// <exception cref="Exception">If operation is not viable</exception>
-        public virtual FileOperation Estimate() => this;
+        public FileOperation Estimate()
+        {
+            // Assert session is not cancelled
+            if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
+            // Estimate is post-poned
+            if (EffectivePolicy.HasFlag(Policy.EstimateOnRun)) return this;
+
+            // Start estimating
+            if (TrySetState(State.Estimating, State.Initialized)) 
+            try
+            {
+                // Do
+                InnerEstimate();
+                // Estimated
+                TrySetState(State.Estimated, State.Estimating);
+            }
+            // Capture error and set state to error
+            catch (Exception e) when (SetError(e)) { }
+
+            // Self
+            return this;
+        }
+
+        /// <summary>
+        /// Estimate viability and size of the operation.
+        /// 
+        /// Creates an action plan, and adds them to <see cref="Children"/>.
+        /// 
+        /// May change <see cref="CanRollback"/> value to true from default false.
+        /// 
+        /// If caller needs rollback capability, the caller may call <see cref="AssertCanRollback"/> right after estimate.
+        /// </summary>
+        /// <exception cref="Exception">On any error, captured and processed by calling Run()</exception>
+        protected abstract void InnerEstimate();
 
         /// <summary>
         /// Run the operation.
         /// 
         /// Throws exception on unexpected error.
         /// 
-        /// The caller should test <see cref="CurrentState"/> to see wheter operation was ran completely.
+        /// The caller should test <see cref="CurrentState"/> to see how operation completed.
         /// <list type="bullet">
         ///     <item>If canceltoken was canelled then state is set to <see cref="State.Cancelled"/>.</item>
-        ///     <item>If file already existed and policy had <see cref="Policy.SkipIfExists"/>, then state is set to <see cref="State.Skipped"/>.</item>
+        ///     <item>If file already existed and policy has <see cref="Policy.SrcSkip"/> or <see cref="Policy.DstSkip"/>, then state is set to <see cref="State.Skipped"/>.</item>
         ///     <item>If unexpected error was thrown, then state is set to <see cref="State.Error"/>.</item>
         ///     <item>If operation was ran to end, then state is set to <see cref="State.Completed"/>.</item>
         /// </list>
-        /// The caller may call <see cref="AssertSuccessful"/> to assert that operation ran into successful state.
+        /// Or the caller may call <see cref="AssertSuccessful"/> to assert that operation ran into successful state.
         /// </summary>
+        /// <param name="rollbackOnError"></param>
         /// <exception cref="IOException"></exception>
         /// <exception cref="Exception"></exception>
-        public virtual FileOperation Run() => this;
+        public FileOperation Run(bool rollbackOnError = false)
+        {
+            // Assert session is not cancelled
+            if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
+
+            try
+            {
+                // Has estimate been ran on this Run() method
+                try
+                {
+                    // Start estimating
+                    if (EffectivePolicy.HasFlag(Policy.ReEstimateOnRun) || CurrentState == State.Initialized)
+                    {
+                        TrySetState(State.Estimating, State.Initialized);
+                        // Estimate
+                        InnerEstimate();
+                        // Estimated
+                        TrySetState(State.Estimated, State.Estimating);
+                    }
+
+                    // Start run
+                    if (TrySetState(State.Running, State.Estimated))
+                    {
+                        // Run
+                        InnerRun();
+                        // Completed
+                        if (!TrySetState(State.Completed, State.Running)) return this;
+                    }
+                }
+                // Capture error and set state to error
+                catch (Exception e) when (SetError(e)) { }
+            }
+            // Rollback
+            catch (Exception) when (rollbackOnError && tryRollback()) { } // never goes here
+
+            // Return
+            return this;
+
+            // TryRollback
+            bool tryRollback() { CreateRollback()?.Run(); return false; }
+        }
+
+        /// <summary>
+        /// Run the operation.
+        /// 
+        /// Throws exception on unexpected error.
+        /// 
+        /// The caller should test <see cref="CurrentState"/> to see how operation completed.
+        /// <list type="bullet">
+        ///     <item>If canceltoken was canelled then state is set to <see cref="State.Cancelled"/>.</item>
+        ///     <item>If file already existed and policy has <see cref="Policy.SrcSkip"/> or <see cref="Policy.DstSkip"/>, then state is set to <see cref="State.Skipped"/>.</item>
+        ///     <item>If unexpected error was thrown, then state is set to <see cref="State.Error"/>.</item>
+        ///     <item>If operation was ran to end, then state is set to <see cref="State.Completed"/>.</item>
+        /// </list>
+        /// Or the caller may call <see cref="AssertSuccessful"/> to assert that operation ran into successful state.
+        /// </summary>
+        /// <exception cref="Exception">On any error, captured and processed by calling Run()</exception>
+        protected abstract void InnerRun();
 
         /// <summary>
         /// Asserts that <see cref="CanRollback"/> is true..
@@ -135,7 +311,7 @@ namespace Lexical.FileSystem.Utility
         public FileOperation AssertCanRollback()
         {
             // Not Ok
-            if (!CanRollback) throw new Exception("Cannot rollback "+this);
+            if (!CanRollback) throw new Exception("Cannot rollback " + this);
             // Ok
             return this;
         }
@@ -158,7 +334,7 @@ namespace Lexical.FileSystem.Utility
             // Error
             if (_state == State.Error) throw new AggregateException(Errors.ToArray());
             // Unexpected
-            throw new Exception("Unexpected state: "+_state);
+            throw new Exception("Unexpected state: " + _state);
         }
 
         /// <summary>
@@ -168,59 +344,29 @@ namespace Lexical.FileSystem.Utility
         public virtual FileOperation CreateRollback() => null;
 
         /// <summary>
-        /// Run operation. If error occurs, rollbacks if possible.
-        /// The caller should check <see cref="CanRollback"/> before calling to test revertability.
-        /// 
-        /// Throws exception on unexpected error.
-        /// 
-        /// The caller should test <see cref="FileOperation.State"/> to see wheter operation was ran completely.
-        /// </summary>
-        /// <param name="rollbackOnError"></param>
-        /// <exception cref="Exception">On run or rollback error.</exception>
-        public void Run(bool rollbackOnError)
-        {
-            try
-            {
-                // Run operation
-                this.Run();
-            } catch (Exception) when (rollbackOnError && rollback()) { } // never goes here
-
-            bool rollback()
-            {
-                Policy policy = this.session.Policy;
-                this.session.SetPolicy(policy | Policy.SkipIfExists);
-                try
-                {
-                    FileOperation rollbackOp = CreateRollback();
-                    if (rollbackOp != null) rollbackOp.Run();
-                } finally
-                {
-                    this.session.SetPolicy(policy);
-                }
-                return false;
-            }
-
-        }
-
-        /// <summary>
         /// Captures and handles exception.
         /// 
         /// Sets state to <see cref="State.Error"/>.
         /// Adds event to event log.
-        /// If <see cref="Policy.SignalCancelOnError"/> is set, then cancels the cancel token.
+        /// If <see cref="Policy.CancelOnError"/> is set, then cancels the cancel token.
         /// </summary>
         /// <param name="error"></param>
-        /// <returns>false</returns>
+        /// <returns>value of <see cref="Policy.SuppressException"/></returns>
         protected bool SetError(Exception error)
         {
             // Set state to error
             currentState = (int)State.Error;
             // Cancel token
-            if (session.Policy.HasFlag(Policy.SignalCancelOnError)) session.CancelSrc.Cancel();
+            if (session.Policy.HasFlag(Policy.CancelOnError)) session.CancelSrc.Cancel();
             // Change state
-            if ((State)Interlocked.Exchange(ref currentState, (int)State.Error) != State.Error) session.AddAndDispatchEvent(new Event.Error(this, error));
-            // Return
-            return false;
+            if ((State)Interlocked.Exchange(ref currentState, (int)State.Error) != State.Error)
+            {
+                if (((EffectivePolicy & (Policy.LogEvents | Policy.DispatchEvents)) == (Policy.LogEvents | Policy.DispatchEvents))) session.LogAndDispatchEvent(new Event.Error(this, error));
+                else if ((EffectivePolicy & Policy.LogEvents) == Policy.LogEvents) session.Events.TryAdd(new Event.Error(this, error));
+                else if ((EffectivePolicy & Policy.DispatchEvents) == Policy.DispatchEvents) session.DispatchEvent(new Event.Error(this, error));
+            }
+            // Return true if has SuppressException
+            return EffectivePolicy.HasFlag(Policy.SuppressException);
         }
 
         /// <summary>
@@ -237,7 +383,9 @@ namespace Lexical.FileSystem.Utility
             if ((State)Interlocked.CompareExchange(ref currentState, (int)newState, (int)expectedState) != expectedState) return false;
 
             // Send event of new state
-            session.AddAndDispatchEvent(new Event.State(this, newState));
+            if (((EffectivePolicy & (Policy.LogEvents | Policy.DispatchEvents)) == (Policy.LogEvents | Policy.DispatchEvents))) session.LogAndDispatchEvent(new Event.State(this, newState));
+            else if ((EffectivePolicy & Policy.LogEvents) == Policy.LogEvents) session.Events.TryAdd(new Event.State(this, newState));
+            else if ((EffectivePolicy & Policy.DispatchEvents) == Policy.DispatchEvents) session.DispatchEvent(new Event.State(this, newState));
             return true;
         }
 
@@ -253,7 +401,9 @@ namespace Lexical.FileSystem.Utility
             if ((State)Interlocked.Exchange(ref currentState, (int)newState) == newState) return false;
 
             // Send event of new state
-            session.AddAndDispatchEvent(new Event.State(this, newState));
+            if (((EffectivePolicy & (Policy.LogEvents | Policy.DispatchEvents)) == (Policy.LogEvents | Policy.DispatchEvents))) session.LogAndDispatchEvent(new Event.State(this, newState));
+            else if ((EffectivePolicy & Policy.LogEvents) == Policy.LogEvents) session.Events.TryAdd(new Event.State(this, newState));
+            else if ((EffectivePolicy & Policy.DispatchEvents) == Policy.DispatchEvents) session.DispatchEvent(new Event.State(this, newState));
             return true;
         }
 
@@ -264,18 +414,24 @@ namespace Lexical.FileSystem.Utility
             public ArrayList<FileOperation> Ops = new ArrayList<FileOperation>();
             /// <summary>Child operations</summary>
             public override FileOperation[] Children => Ops.Array;
-            /// <summary></summary>
-            public bool ThrowIfError = false;
+            /// <summary>Target filesystem if same for all ops, otherwise null</summary>
+            public override IFileSystem FileSystem => Ops.Count == 0 ? null : Ops.Count == 1 ? Ops[0].FileSystem : (Ops.All(fo => fo.FileSystem == Ops[0].FileSystem) ? Ops[0].FileSystem : null);
+            /// <summary>Target path if same for all ops, otherwise null</summary>
+            public override String Path => Ops.Count == 0 ? null : Ops.Count == 1 ? Ops[0].Path : (Ops.All(fo => fo.Path == Ops[0].Path) ? Ops[0].Path : null);
+            /// <summary>Source filesystem if same for all ops, otherwise null</summary>
+            public override IFileSystem SrcFileSystem => Ops.Count == 0 ? null : Ops.Count == 1 ? Ops[0].SrcFileSystem : (Ops.All(fo => fo.SrcFileSystem == Ops[0].SrcFileSystem) ? Ops[0].SrcFileSystem : null);
+            /// <summary>Source path if same for all ops, otherwise null</summary>
+            public override String SrcPath => Ops.Count == 0 ? null : Ops.Count == 1 ? Ops[0].SrcPath : (Ops.All(fo => fo.SrcPath == Ops[0].SrcPath) ? Ops[0].SrcPath : null);
 
             /// <summary>Create batch op.</summary>
-            public Batch(Session session, IEnumerable<FileOperation> ops) : base(session)
+            public Batch(Session session, Policy policy, IEnumerable<FileOperation> ops) : base(session, policy)
             {
                 if (ops != null) this.Ops.AddRange(ops);
                 this.CanRollback = true;
             }
 
             /// <summary>Create batch op.</summary>
-            public Batch(Session session, params FileOperation[] ops) : base(session)
+            public Batch(Session session, Policy policy, params FileOperation[] ops) : base(session, policy)
             {
                 if (ops != null) this.Ops.AddRange(ops);
                 this.CanRollback = true;
@@ -283,90 +439,69 @@ namespace Lexical.FileSystem.Utility
 
             /// <summary>Estimate child ops</summary>
             /// <exception cref="Exception">On error</exception>
-            public override FileOperation Estimate()
+            protected override void InnerEstimate()
             {
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Estimating
-                if (!TrySetState(State.Estimating, State.Initialized)) return this;
-
-                try
+                StructList2<Exception> errors = new StructList2<Exception>();
+                foreach (FileOperation op in Ops)
                 {
-                    foreach (FileOperation op in Ops)
+                    try
                     {
-                        try
-                        {
-                            // Assert session is not cancelled
-                            if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                            op.Estimate();
-                            if (op.Length > 0L) this.Length += op.Length;
-                            if (op.Progress > 0L) this.Progress += op.Progress;
-                            this.CanRollback &= op.CanRollback;
-                        }
-                        catch (Exception) when (!session.Policy.HasFlag(Policy.SignalCancelOnError))
-                        {
-                            // CancelIfError not set, continue with other ops.
-                        }
-                        // Completed
-                        if (!TrySetState(State.Estimated, State.Estimating)) return this;
+                        // Assert session is not cancelled
+                        if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                        op.Estimate();
+                        if (op.TotalLength > 0L) this.TotalLength += op.TotalLength;
+                        if (op.Progress > 0L) this.Progress += op.Progress;
+                        this.CanRollback &= op.CanRollback | op.EffectivePolicy.HasFlag(Policy.EstimateOnRun);
+                    }
+                    catch (Exception e) when (session.Policy.HasFlag(Policy.BatchContinueOnError))
+                    {
+                        errors.Add(e);
                     }
                 }
-                // Capture error and set state
-                catch (Exception e) when (SetError(e)) { }
-                // Return self
-                return this;
+                // Throw captured exceptions
+                if (errors.Count > 0) throw new AggregateException(errors.ToArray());
             }
 
             /// <summary>Run child ops</summary>
-            public override FileOperation Run()
+            protected override void InnerRun()
             {
-                // Estimate viability of operation
-                Estimate();
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Running
-                if (!TrySetState(State.Running, State.Estimated)) return this;
-                try
+                StructList2<Exception> errors = new StructList2<Exception>();
+                long progressReminder = this.Progress;
+                foreach (FileOperation op in Ops)
                 {
-                    long progressReminder = this.Progress;
-                    foreach (FileOperation op in Ops)
+                    if (op.CurrentState == State.Completed) continue;
+                    if (op.CurrentState == State.Skipped) continue;
+                    try
                     {
-                        if (op.CurrentState == State.Completed) continue;
-                        if (op.CurrentState == State.Skipped) continue;
-                        try
+                        // Assert session is not cancelled
+                        if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return; }
+                        // Run op
+                        op.Run();
+                        // 
+                        if (!EffectivePolicy.HasFlag(Policy.BatchContinueOnError) && op.CurrentState == State.Error) throw new AggregateException(op.Errors);
+                        // Move progress
+                        if (op.Progress > 0L) this.Progress += op.Progress;
+                        if (op.TotalLength > 0L) this.TotalLength += op.TotalLength;
+
+                        if (op.Progress > 0L || op.TotalLength > 0L)
                         {
-                            // Assert session is not cancelled
-                            if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                            // Run op
-                            op.Run();
-                            // 
-                            if (ThrowIfError && op.CurrentState == State.Error) throw new AggregateException(op.Errors);
-                            // Move progress
-                            if (op.Progress > 0L)
+                            // Update progress position
+                            progressReminder += op.Progress;
+                            // Time to send progress event
+                            if (session.ProgressInterval > 0L && progressReminder > session.ProgressInterval && session.HasObservers)
                             {
-                                // Update progress position
-                                this.Progress += op.Progress;
-                                progressReminder += op.Progress;
-                                // Time to send progress event
-                                if (session.ProgressInterval > 0L && progressReminder > session.ProgressInterval && session.HasObservers)
-                                {
-                                    progressReminder %= session.ProgressInterval;
-                                    session.DispatchEvent(new Event.Progress(this, Progress, Length));
-                                }
+                                progressReminder %= session.ProgressInterval;
+                                session.DispatchEvent(new Event.Progress(this, Progress, TotalLength));
                             }
                         }
-                        catch (Exception) when (!session.Policy.HasFlag(Policy.SignalCancelOnError))
-                        {
-                            // CancelIfError not set, continue with other ops.
-                        }
                     }
-                    // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return this;
+                    catch (Exception e) when (session.Policy.HasFlag(Policy.BatchContinueOnError))
+                    {
+                        errors.Add(e);
+                    }
                 }
-                // Capture error and set state
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
+                // Throw captured exceptions
+                if (errors.Count > 0) throw new AggregateException(errors.ToArray());
             }
 
             /// <summary>Create rollback operation.</summary>
@@ -375,16 +510,8 @@ namespace Lexical.FileSystem.Utility
             {
                 if (CanRollback)
                 {
-                    List<FileOperation> rollbacks = new List<FileOperation>();
-                    for(int i=Ops.Count-1; i>=0; i--)
-                    {
-                        FileOperation rollback = Ops[i].CreateRollback();
-                        if (rollback == null) return null;
-                        rollbacks.Add(rollback);
-                    }
-                    return new Batch(session, rollbacks);
+                    return new Batch(session, OpPolicy, Ops.Select(op => op.CreateRollback()).Where(rb => rb != null).Reverse());
                 }
-
                 return null;
             }
 
@@ -406,15 +533,22 @@ namespace Lexical.FileSystem.Utility
             }
         }
 
-        /// <summary>Delete directory</summary>
-        public class DeleteDirectory : FileOperation
+        /// <summary>Delete file or directory</summary>
+        public class Delete : FileOperation
         {
-            /// <summary></summary>
-            public IFileSystem FileSystem { get; protected set; }
-            /// <summary></summary>
-            public string Path { get; protected set; }
-            /// <summary></summary>
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem fileSystem;
+            /// <summary>Target path</summary>
+            protected string path;
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => fileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => path;
+            /// <summary>Delete tree recursively</summary>
             public bool Recurse { get; protected set; }
+
+            /// <summary>Rollback operation.</summary>
+            protected FileOperation rollback;
 
             /// <summary>
             /// Create delete directory op.
@@ -423,78 +557,75 @@ namespace Lexical.FileSystem.Utility
             /// <param name="filesystem"></param>
             /// <param name="path"></param>
             /// <param name="recurse"></param>
-            public DeleteDirectory(Session session, IFileSystem filesystem, string path, bool recurse) : base(session)
+            /// <param name="policy">(optional) Responds to <see cref="Policy.DstThrow"/> and <see cref="Policy.DstSkip"/> policies.</param>
+            /// <param name="rollback">(optional) Rollback operation</param>
+            public Delete(Session session, IFileSystem filesystem, string path, bool recurse, Policy policy = Policy.Unset, FileOperation rollback = null) : base(session, policy)
             {
-                this.FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
-                this.Path = path ?? throw new ArgumentNullException(nameof(path));
+                this.fileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
+                this.path = path ?? throw new ArgumentNullException(nameof(path));
                 this.Recurse = recurse;
+                this.rollback = rollback;
+                this.CanRollback = rollback != null;
             }
 
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override FileOperation Estimate()
+            protected override void InnerEstimate()
             {
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Estimating
-                if (!TrySetState(State.Estimating, State.Initialized)) return this;
-
-                try
+                // Assert dest
+                if (EffectivePolicy.HasFlag(Policy.DstThrow) && FileSystem.CanGetEntry())
                 {
-                    // Test that source file exists, if we can browse
-                    if (FileSystem.CanGetEntry())
+                    try
                     {
-                        try
+                        IFileSystemEntry e = FileSystem.GetEntry(Path);
+                        // Not found
+                        if (e == null)
                         {
-                            IFileSystemEntry e = FileSystem.GetEntry(Path);
-                            if (e == null) throw new DirectoryNotFoundException(Path);
-                            if (!e.IsDirectory()) throw new DirectoryNotFoundException(Path);
+                            // Skip
+                            if (EffectivePolicy.HasFlag(Policy.DstSkip)) { CanRollback = true; SetState(State.Skipped); return; }
+                            // Throw
+                            if (EffectivePolicy.HasFlag(Policy.DstThrow)) throw new FileNotFoundException(Path);
                         }
-                        catch (NotSupportedException) { }
                     }
-                    // Estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
+                    catch (NotSupportedException) { }
                 }
-                // Capture error and set state to error
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
             }
 
             /// <summary>Run op</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override FileOperation Run()
+            protected override void InnerRun()
             {
-                // Estimate viability of operation
-                Estimate();
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Running
-                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     // Delete directory
                     FileSystem.Delete(Path, Recurse);
-                    // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return this;
                 }
-                // Capture error and set state
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
+                catch (FileNotFoundException) when (!EffectivePolicy.HasFlag(Policy.DstThrow)) { }
+                catch (DirectoryNotFoundException) when (!EffectivePolicy.HasFlag(Policy.DstThrow)) { }
             }
 
+            /// <summary>Create rollback op</summary>
+            /// <returns></returns>
+            public override FileOperation CreateRollback()
+                => CurrentState == State.Completed ? rollback : null;
+
             /// <summary>Print info</summary>
-            public override string ToString() => $"DeleteDirectory(Path={Path}, Recurse={Recurse}, State={CurrentState})";
+            public override string ToString() => $"Delete(Path={Path}, Recurse={Recurse}, State={CurrentState})";
         }
 
         /// <summary>Create directory</summary>
         public class CreateDirectory : FileOperation
         {
-            /// <summary></summary>
-            public IFileSystem FileSystem { get; protected set; }
-            /// <summary></summary>
-            public string Path { get; protected set; }
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem fileSystem;
+            /// <summary>Target path</summary>
+            protected string path;
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => fileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => path;
+            /// <summary>Directories created in Run().</summary>
+            protected List<string> DirectoriesCreated = new List<string>();
 
             /// <summary>
             /// Create create directory op.
@@ -502,78 +633,146 @@ namespace Lexical.FileSystem.Utility
             /// <param name="session"></param>
             /// <param name="filesystem"></param>
             /// <param name="path"></param>
-            public CreateDirectory(Session session, IFileSystem filesystem, string path) : base(session)
+            /// <param name="policy">(optional) Responds to <see cref="Policy.DstThrow"/>, <see cref="Policy.DstSkip"/> and <see cref="Policy.DstOverwrite"/> policies</param>
+            public CreateDirectory(Session session, IFileSystem filesystem, string path, Policy policy = Policy.Unset) : base(session, policy)
             {
-                this.FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
-                this.Path = path ?? throw new ArgumentNullException(nameof(path));
+                this.fileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
+                this.path = path ?? throw new ArgumentNullException(nameof(path));
+                // Can rollback if can delete
+                this.CanRollback = filesystem.CanDelete();
             }
 
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override FileOperation Estimate()
+            protected override void InnerEstimate()
             {
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Estimating
-                if (!TrySetState(State.Estimating, State.Initialized)) return this;
+                // Cannot create directory
+                if (!FileSystem.CanCreateDirectory()) throw new NotSupportedException("CreateDirectory");
+                // Test that directory already exists
+                if (FileSystem.CanGetEntry())
+                {
+                    try
+                    {
+                        IFileSystemEntry e = FileSystem.GetEntry(Path);
+                        // Directory already exists
+                        if (e != null)
+                        {
+                            // Overwrite
+                            if (EffectivePolicy.HasFlag(Policy.DstThrow))
+                            {
+                                // Nothing will be done
+                                CanRollback = true;
+                                if (e.IsDirectory()) throw new FileSystemExceptionDirectoryExists(FileSystem, Path);
+                                else if (e.IsFile()) throw new FileSystemExceptionFileExists(FileSystem, Path);
+                                else throw new FileSystemExceptionEntryExists(FileSystem, Path);
+                            }
+                            // Skip
+                            if (EffectivePolicy.HasFlag(Policy.DstSkip)) { CanRollback = true; SetState(State.Skipped); return; }
+                            // Delete prev
+                            if (EffectivePolicy.HasFlag(Policy.DstOverwrite)) 
+                            {
+                                // Is going to be deleted
+                                if (e.IsFile()) CanRollback = false;
+                                // Is going to be skipped
+                                else if (e.IsDirectory()) CanRollback = true;
+                            }
+                        } else
+                        {
+                            // Directory not found, can rollback
+                            CanRollback = true;
+                        }
+                    }
+                    catch (NotSupportedException) { }
+                }
+            }
+
+            /// <summary>Create direcotry</summary>
+            /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
+            /// <exception cref="FileSystemExceptionEntryExists">If file or directory already existed at <see cref="Path"/> and <see cref="Policy.DstThrow"/> is true.</exception>
+            protected override void InnerRun()
+            {
+                // Cannot get entry
+                if (!FileSystem.CanGetEntry()) { CreateBlind(); return; }
 
                 try
                 {
-                    // Test that source file exists, if we can browse
+
+                    // Test that directory already exists
                     if (FileSystem.CanGetEntry())
                     {
                         try
                         {
                             IFileSystemEntry e = FileSystem.GetEntry(Path);
                             // Directory already exists
-                            if (e != null && !e.IsDirectory()) throw new FileSystemExceptionFileExists(FileSystem, Path);
-                            // Can rollback if directory didn't exist.
-                            CanRollback = e == null;
+                            if (e != null)
+                            {
+                                // Throw
+                                if (EffectivePolicy.HasFlag(Policy.DstThrow))
+                                {
+                                    // Nothing is done
+                                    CanRollback = true;
+                                    if (e.IsDirectory()) throw new FileSystemExceptionDirectoryExists(FileSystem, Path);
+                                    else if (e.IsFile()) throw new FileSystemExceptionFileExists(FileSystem, Path);
+                                    else throw new FileSystemExceptionEntryExists(FileSystem, Path);
+                                }
+                                // Skip
+                                if (EffectivePolicy.HasFlag(Policy.DstSkip)) { CanRollback = true; SetState(State.Skipped); return; }
+                                // Delete prev
+                                if (EffectivePolicy.HasFlag(Policy.DstOverwrite))
+                                {
+                                    // Delete File
+                                    if (e.IsFile()) { CanRollback = false; FileSystem.Delete(Path); }
+                                    // Skip
+                                    else if (e.IsDirectory()) { CanRollback = true; SetState(State.Skipped); return; }
+                                }
+                            }
                         }
                         catch (NotSupportedException) { }
                     }
 
-                    // Cannot create directory
-                    if (!FileSystem.CanCreateDirectory()) throw new NotSupportedException("CreateDirectory");
+                    // Enumerate paths
+                    PathEnumerator etor = new PathEnumerator(Path, true);
+                    while (etor.MoveNext())
+                    {
+                        string path = Path.Substring(0, etor.Current.Length+etor.Current.Start);
+                        IFileSystemEntry e = FileSystem.GetEntry(path);
 
-                    // Estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
+                        // Entry exists
+                        if (e != null) continue;
+
+                        FileSystem.CreateDirectory(path);
+                        DirectoriesCreated.Add(path);
+                    }
                 }
-                // Capture error and set state to error
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
+                catch (NotSupportedException) {
+                    CreateBlind();
+                }
             }
 
-            /// <summary>Run op</summary>
-            /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override FileOperation Run()
+            /// <summary>Create directory blind</summary>
+            void CreateBlind()
             {
-                // Estimate viability of operation
-                Estimate();
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Running
-                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     // Create directory
                     FileSystem.CreateDirectory(Path);
-                    // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return this;
+                    //
+                    DirectoriesCreated.Add(Path);
                 }
-                // Capture error and set state
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
+                catch (FileSystemExceptionFileExists) when (!EffectivePolicy.HasFlag(Policy.DstThrow)) { }
+                catch (FileSystemExceptionDirectoryExists) when (!EffectivePolicy.HasFlag(Policy.DstThrow)) { }
             }
 
             /// <summary>Create rollback</summary>
             /// <returns>op or null</returns>
             public override FileOperation CreateRollback()
             {
-                if (CanRollback) return new DeleteDirectory(session, FileSystem, Path, false);
-                return null;
+                // Nothing to do
+                if (DirectoriesCreated.Count == 0) return null;
+                // Delete the one directory we created
+                if (DirectoriesCreated.Count == 1) return new Delete(session, FileSystem, DirectoriesCreated[0], false, OpPolicy);
+                // Delete the directories we created, in reverse order
+                return new Batch(session, OpPolicy, DirectoriesCreated.Select(d => new Delete(session, FileSystem, d, false, OpPolicy)).Reverse());
             }
 
             /// <summary>Print info</summary>
@@ -583,294 +782,304 @@ namespace Lexical.FileSystem.Utility
         /// <summary>Move/rename file or directory</summary>
         public class Move : FileOperation
         {
-            /// <summary></summary>
-            public IFileSystem SrcFileSystem { get; protected set; }
-            /// <summary></summary>
-            public string SrcPath { get; protected set; }
-            /// <summary></summary>
-            public IFileSystem DstFileSystem { get; protected set; }
-            /// <summary></summary>
-            public string DstPath { get; protected set; }
+            /// <summary>Source filesystem</summary>
+            protected IFileSystem srcFileSystem;
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem dstFileSystem;
+            /// <summary>Source path</summary>
+            protected string srcPath;
+            /// <summary>Target path</summary>
+            protected string dstPath;
+
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => dstFileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => dstPath;
+            /// <summary>Source filesystem</summary>
+            public override IFileSystem SrcFileSystem => srcFileSystem;
+            /// <summary>Source path</summary>
+            public override string SrcPath => srcPath;
+
+            /// <summary>Set to true if <see cref="Run"/> moved src.</summary>
+            bool moved;
+            /// <summary>Set to true if <see cref="Run"/> deleted previous dst.</summary>
+            bool deletedPrev;
 
             /// <summary>Create move op.</summary>
-            public Move(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath) : base(session)
+            public Move(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, Policy policy = Policy.Unset) : base(session, policy)
             {
-                this.SrcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
-                this.DstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
-                this.SrcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
-                this.DstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
-                if (SrcFileSystem != DstFileSystem) throw new ArgumentException($"Move implementation requires that {nameof(srcFilesystem)} and {nameof(dstFilesystem)} are same. Use MoveTree instead.");
+                this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
+                this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
+                this.srcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
+                this.dstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
+                if (srcFileSystem != dstFileSystem) throw new ArgumentException($"Move implementation requires that {nameof(srcFilesystem)} and {nameof(dstFilesystem)} are same. Use MoveTree instead.");
             }
 
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="SrcPath"/> is not found.</exception>
-            /// <exception cref="FileSystemExceptionFileExists">If <see cref="DstPath"/> already exists.</exception>
-            public override FileOperation Estimate()
+            /// <exception cref="FileSystemExceptionEntryExists">If entry at <see cref="Path"/> already exists.</exception>
+            protected override void InnerEstimate()
             {
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Set state to estimating and allow only one thread to estimate
-                if (!TrySetState(State.Estimating, State.Initialized)) return this;
+                // Cannot move
+                if (!SrcFileSystem.CanMove()) throw new NotSupportedException("Move");
 
-                try
+                // Test that source file exists
+                if (SrcFileSystem.CanGetEntry())
                 {
-                    // Test that source file exists
-                    if (SrcFileSystem.CanGetEntry())
+                    try
                     {
-                        try
+                        IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath);
+                        // Src not found
+                        if (e == null)
                         {
-                            IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath);
-                            if (e == null) throw new FileNotFoundException(SrcPath);
-                        }
-                        catch (NotSupportedException)
-                        {
-                            // GetEntry is not supported
+                            // Throw
+                            if (EffectivePolicy.HasFlag(Policy.SrcThrow)) throw new FileNotFoundException(SrcPath);
+                            // Skip
+                            if (EffectivePolicy.HasFlag(Policy.SrcSkip)) { SetState(State.Skipped); return; }
                         }
                     }
-
-                    // Test that dest file doesn't exist
-                    if (DstFileSystem.CanGetEntry())
+                    catch (NotSupportedException)
                     {
-                        try
+                        // GetEntry is not supported
+                    }
+                }
+
+                // Test that dest file doesn't exist
+                if (dstFileSystem.CanGetEntry())
+                {
+                    try
+                    {
+                        IFileSystemEntry dstEntry = dstFileSystem.GetEntry(Path);
+                        if (dstEntry != null)
                         {
-                            if (DstFileSystem.Exists(DstPath))
+                            // Dst exists
+                            if (EffectivePolicy.HasFlag(Policy.DstThrow))
                             {
-                                // Fail, prev file exists
-                                if (session.Policy.HasFlag(Policy.FailIfExists)) throw new FileSystemExceptionFileExists(DstFileSystem, DstPath);
-
-                                // Skip op
-                                else if (session.Policy.HasFlag(Policy.SkipIfExists))
-                                {
-                                    // Nothing to rollback, essentially ok
-                                    CanRollback = true;
-                                    // Nothing to do. Set state to completed.
-                                    Interlocked.CompareExchange(ref currentState, (int)State.Skipped, (int)State.Estimating);
-                                }
-
-                                // Overwrite
-                                else if (session.Policy.HasFlag(Policy.OverwriteIfExists))
-                                {
-                                    // Cannot rollback
-                                    CanRollback = false;
-                                }
+                                if (dstEntry.IsFile()) throw new FileSystemExceptionFileExists(FileSystem, Path);
+                                else if (dstEntry.IsDirectory()) throw new FileSystemExceptionDirectoryExists(FileSystem, Path);
+                                else throw new FileSystemExceptionEntryExists(FileSystem, Path);
                             }
-                            else
+
+                            // Skip op
+                            else if (EffectivePolicy.HasFlag(Policy.DstSkip))
                             {
-                                // Prev file didn't exist, can be rollbacked
+                                SetState(State.Skipped);
+                                // Nothing to rollback, essentially ok
                                 CanRollback = true;
                             }
+
+                            // Overwrite
+                            else if (EffectivePolicy.HasFlag(Policy.DstOverwrite))
+                            {
+                                // Cannot rollback
+                                CanRollback = false;
+                            }
                         }
-                        catch (NotSupportedException)
+                        else
                         {
-                            // GetEntry is not supported
+                            // Prev file didn't exist, can be rollbacked
+                            CanRollback = true;
                         }
-
-                        if (!SrcFileSystem.CanMove()) throw new NotSupportedException("Move");
                     }
-
-                    // Set state to estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
+                    catch (NotSupportedException)
+                    {
+                        // GetEntry is not supported
+                    }
                 }
-                // Capture error and set state to error
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
             }
 
             /// <summary>Run operation</summary>
             /// <exception cref="IOException"></exception>
             /// <exception cref="Exception">Unexpected error</exception>
-            public override FileOperation Run()
+            protected override void InnerRun()
             {
-                // Estimate viability of operation
-                Estimate();
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Running
-                if (!TrySetState(State.Running, State.Estimated)) return this;
+                // Test dst
                 try
                 {
-                    // CancelToken to monitor
-                    CancellationToken token = session.CancelSrc.Token;
+                    IFileSystemEntry dstEntry = dstFileSystem.GetEntry(dstPath);
+                    
+                    // Dst exists
+                    if (dstEntry != null)
+                    {
+                        // Dst exists
+                        if (EffectivePolicy.HasFlag(Policy.DstThrow))
+                        {
+                            if (dstEntry.IsFile()) throw new FileSystemExceptionFileExists(FileSystem, Path);
+                            else if (dstEntry.IsDirectory()) throw new FileSystemExceptionDirectoryExists(FileSystem, Path);
+                            else throw new FileSystemExceptionEntryExists(FileSystem, Path);
+                        }
 
-                    // Skip if exists
-                    IFileSystemEntry dstEntry = null;
-                    bool dstExists = false;
-                    try
-                    {
-                        dstEntry = DstFileSystem.GetEntry(DstPath);
-                        dstExists = dstEntry != null;
-                    }
-                    catch (NotSupportedException)
-                    {
-                        // Dst cannot get entry
-                    }
+                        // Skip op
+                        if (EffectivePolicy.HasFlag(Policy.DstSkip)) { CanRollback = true; moved = false; deletedPrev = false; return; }
 
-                    // Handle dst exists
-                    if (dstExists)
+                        // Delete prev
+                        if (EffectivePolicy.HasFlag(Policy.DstOverwrite)) { FileSystem.Delete(Path); deletedPrev = true; CanRollback = false; }
+                    } else
                     {
-                        if (session.Policy.HasFlag(Policy.FailIfExists)) throw new FileSystemExceptionFileExists(DstFileSystem, DstPath);
-                        else if (session.Policy.HasFlag(Policy.OverwriteIfExists)) DstFileSystem.Delete(DstPath, false);
-                        else if (session.Policy.HasFlag(Policy.SkipIfExists)) { TrySetState(State.Skipped, State.Running); return this; }
-                        CanRollback = false;
+                        CanRollback = true;
                     }
 
-                    // Move
-                    SrcFileSystem.Move(SrcPath, DstPath);
-
-                    // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return this;
                 }
-                // Capture error and set state
-                catch (Exception e) when (SetError(e)) { }
+                catch (NotSupportedException)
+                {
+                    // Dst cannot get entry
+                }
 
-                return this;
+                // Move
+                SrcFileSystem.Move(SrcPath, dstPath);
+                moved = true;
             }
 
             /// <summary>Create rollback</summary>
             /// <returns>rollback or null</returns>
             public override FileOperation CreateRollback()
             {
-                if (CanRollback) return new Move(session, DstFileSystem, DstPath, SrcFileSystem, SrcPath);
+                if (moved && !deletedPrev) return new Move(session, dstFileSystem, dstPath, SrcFileSystem, SrcPath, OpPolicy);
                 return null;
             }
 
             /// <summary>Print info</summary>
-            public override string ToString() => $"Move(Src={SrcPath}, Dst={DstPath}, State={CurrentState})";
+            public override string ToString() => $"Move(Src={srcPath}, Dst={dstPath}, State={CurrentState})";
         }
 
         /// <summary>Copy file</summary>
         public class CopyFile : FileOperation
         {
-            /// <summary></summary>
-            public IFileSystem SrcFileSystem { get; protected set; }
-            /// <summary></summary>
-            public string SrcPath { get; protected set; }
-            /// <summary></summary>
-            public IFileSystem DstFileSystem { get; protected set; }
-            /// <summary></summary>
-            public string DstPath { get; protected set; }
+            /// <summary>Source filesystem</summary>
+            protected IFileSystem srcFileSystem;
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem dstFileSystem;
+            /// <summary>Source path</summary>
+            protected string srcPath;
+            /// <summary>Target path</summary>
+            protected string dstPath;
+
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => dstFileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => dstPath;
+            /// <summary>Source filesystem</summary>
+            public override IFileSystem SrcFileSystem => srcFileSystem;
+            /// <summary>Source path</summary>
+            public override string SrcPath => srcPath;
+
             /// <summary>Was file overwritten</summary>
             public bool Overwritten { get; protected set; }
 
+            /// <summary>Set to true if <see cref="Run"/> created file.</summary>
+            protected bool createdFile;
+            /// <summary>Set to true if <see cref="Run"/> copied.</summary>
+            protected bool copied;
+            /// <summary>Set to true if <see cref="Run"/> previous entry existed.</summary>
+            protected bool prevExisted;
+
             /// <summary>Create copy file op.</summary>
-            public CopyFile(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath) : base(session)
+            public CopyFile(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, Policy policy = Policy.Unset) : base(session, policy)
             {
-                this.SrcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
-                this.DstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
-                this.SrcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
-                this.DstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
+                this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
+                this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
+                this.srcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
+                this.dstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
             }
 
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="SrcPath"/> is not found.</exception>
-            /// <exception cref="FileSystemExceptionFileExists">If <see cref="DstPath"/> already exists.</exception>
-            public override FileOperation Estimate()
+            /// <exception cref="FileSystemExceptionEntryExists">If <see cref="Path"/> already exists.</exception>
+            protected override void InnerEstimate()
             {
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Set state to estimating and allow only one thread to estimate
-                if (!TrySetState(State.Estimating, State.Initialized)) return this;
+                // Cannot create
+                if (!FileSystem.CanOpen() || !FileSystem.CanCreateFile()) throw new NotSupportedException("Copy");
 
-                try
+                // Test that source file exists
+                if (SrcFileSystem.CanGetEntry())
                 {
-                    // Test that source file exists, if we can browse
-                    if (SrcFileSystem.CanGetEntry())
+                    try
                     {
-                        try
+                        IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath);
+                        // Src not found
+                        if (e == null)
                         {
-                            IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath);
-                            if (e == null) throw new FileNotFoundException(SrcPath);
-                            this.Length = e.Length();
-                        } catch (NotSupportedException) 
-                        {
-                            // GetEntry is not supported
+                            // Throw
+                            if (EffectivePolicy.HasFlag(Policy.SrcThrow)) throw new FileNotFoundException(SrcPath);
+                            // Skip
+                            if (EffectivePolicy.HasFlag(Policy.SrcSkip)) { SetState(State.Skipped); return; }
                         }
+                        // Set length
+                        if (e.Length() > 0L) this.TotalLength = e.Length();
                     }
-
-                    // Test that dest file doesn't exist, if it matters
-                    if (DstFileSystem.CanGetEntry())
+                    catch (NotSupportedException)
                     {
-                        try
+                        // GetEntry is not supported
+                    }
+                }
+
+                // Test that dest file doesn't exist
+                if (FileSystem.CanGetEntry())
+                {
+                    try
+                    {
+                        IFileSystemEntry dstEntry = dstFileSystem.GetEntry(Path);
+                        prevExisted = dstEntry != null;
+                        if (dstEntry != null)
                         {
-                            if (DstFileSystem.Exists(DstPath))
+                            // Dst exists
+                            if (EffectivePolicy.HasFlag(Policy.DstThrow))
                             {
-                                // Fail, prev file exists
-                                if (session.Policy.HasFlag(Policy.FailIfExists)) throw new FileSystemExceptionFileExists(DstFileSystem, DstPath);
-
-                                // Skip op
-                                else if (session.Policy.HasFlag(Policy.SkipIfExists))
-                                {
-                                    // Nothing to rollback, essentially ok
-                                    CanRollback = true;
-                                    // Nothing to do. Set state to completed.
-                                    Interlocked.CompareExchange(ref currentState, (int)State.Skipped, (int)State.Estimating);
-                                }
-
-                                // Overwrite
-                                else if (session.Policy.HasFlag(Policy.OverwriteIfExists))
-                                {
-                                    // Cannot rollback
-                                    CanRollback = false;
-                                }
+                                if (dstEntry.IsFile()) throw new FileSystemExceptionFileExists(FileSystem, Path);
+                                else if (dstEntry.IsDirectory()) throw new FileSystemExceptionDirectoryExists(FileSystem, Path);
+                                else throw new FileSystemExceptionEntryExists(FileSystem, Path);
                             }
-                            else
+
+                            // Skip op
+                            else if (EffectivePolicy.HasFlag(Policy.DstSkip))
                             {
-                                // Prev file didn't exist, can be rollbacked
+                                SetState(State.Skipped);
+                                // Nothing to rollback, essentially ok
                                 CanRollback = true;
                             }
+
+                            // Overwrite
+                            else if (EffectivePolicy.HasFlag(Policy.DstOverwrite))
+                            {
+                                // Cannot rollback
+                                CanRollback = false;
+                            }
                         }
-                        catch (NotSupportedException) { 
-                            // GetEntry is not supported
+                        else
+                        {
+                            // Prev file didn't exist, can be rollbacked
+                            CanRollback = true;
                         }
                     }
-
-                    // Set state to estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
+                    catch (NotSupportedException)
+                    {
+                        // GetEntry is not supported
+                    }
                 }
-                // Capture error and set state to error
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
             }
 
             /// <summary>Run operation</summary>
             /// <exception cref="IOException"></exception>
             /// <exception cref="Exception">Unexpected error</exception>
-            public override FileOperation Run()
+            protected override void InnerRun()
             {
-                // Estimate viability of operation
-                Estimate();
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
+                InnerEstimate();
+
                 // Queue of blocks
                 BlockingCollection<Block> queue = new BlockingCollection<Block>();
-                // Running
-                if (!TrySetState(State.Running, State.Estimated)) return this;
                 try
                 {
                     // CancelToken to monitor
                     CancellationToken token = session.CancelSrc.Token;
 
-                    // Skip if exists
-                    IFileSystemEntry dstEntry = null;
-                    bool prevExisted = false;
-                    try
-                    {
-                        dstEntry = DstFileSystem.GetEntry(DstPath);
-                        prevExisted = dstEntry != null;
-                        if (session.Policy.HasFlag(Policy.SkipIfExists) && prevExisted) { SetState(State.Skipped); return this; }
-                    } catch (NotSupportedException)
-                    {
-                        // Dst cannot get entry
-                    }
-
                     // Create mode
-                    FileMode createMode = session.Policy.HasFlag(Policy.OverwriteIfExists) ? FileMode.Create : FileMode.CreateNew;
+                    FileMode createMode = session.Policy.HasFlag(Policy.DstOverwrite) ? FileMode.Create : FileMode.CreateNew;
 
                     // Write stream
-                    using (Stream s = DstFileSystem.Open(DstPath, createMode, FileAccess.Write, FileShare.ReadWrite))
+                    using (Stream s = dstFileSystem.Open(dstPath, createMode, FileAccess.Write, FileShare.ReadWrite))
                     {
+                        // Created file
+                        this.createdFile = !prevExisted;
                         // We have overwritten the prev file
                         this.Overwritten = prevExisted && createMode == FileMode.Create;
 
@@ -886,7 +1095,7 @@ namespace Lexical.FileSystem.Utility
                             try
                             {
                                 // Assert session is not cancelled
-                                if (session.CancelSrc.IsCancellationRequested && CurrentState != State.Error) { SetState(State.Cancelled); return this; }
+                                if (session.CancelSrc.IsCancellationRequested && CurrentState != State.Error) { SetState(State.Cancelled); return; }
                                 // Read error, abort
                                 if (CurrentState != State.Running) break;
                                 // We got some data
@@ -901,21 +1110,21 @@ namespace Lexical.FileSystem.Utility
                                     if (session.ProgressInterval > 0L && progressReminder > session.ProgressInterval && session.HasObservers)
                                     {
                                         progressReminder %= session.ProgressInterval;
-                                        session.DispatchEvent(new Event.Progress(this, Progress, Length));
+                                        session.DispatchEvent(new Event.Progress(this, Progress, TotalLength));
                                     }
                                 }
                                 // EOF or error
                                 else if (block.count <= 0) break;
-                            } finally
+                            }
+                            finally
                             {
                                 // Return block to pool
                                 if (block.data != null) session.BlockPool.Return(block.data);
                             }
                         }
-                    }
 
-                    // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return this;
+                        copied = true;
+                    }
                 }
                 // Capture error and set state
                 catch (Exception e) when (SetError(e)) { }
@@ -925,8 +1134,6 @@ namespace Lexical.FileSystem.Utility
                     Block b;
                     while (queue.TryTake(out b)) if (b.data != null) session.BlockPool.Return(b.data);
                 }
-
-                return this;
             }
 
             /// <summary>
@@ -982,141 +1189,151 @@ namespace Lexical.FileSystem.Utility
                 }
             }
 
-            /// <summary>
-            /// Create rollback operation.
-            /// </summary>
+            /// <summary>Create rollback operation.</summary>
             /// <returns>null or rollback operation</returns>
             public override FileOperation CreateRollback()
-            {
-                // Create rollback op
-                if (CurrentState == State.Skipped || (!Overwritten && CurrentState == State.Completed)) return new DeleteFile(session, DstFileSystem, DstPath);
-                // No rollback
-                return null;
-            }
+                => createdFile && !Overwritten ? new Delete(session, FileSystem, Path, false, OpPolicy) : null;
 
-            struct Block {
+            struct Block
+            {
                 public byte[] data;
                 public int count;
             }
 
             /// <summary>Print info</summary>
-            public override string ToString() => $"CopyFile(Src={SrcPath}, Dst={DstPath}, State={CurrentState})";
-        }
-
-        /// <summary>Delete file</summary>
-        public class DeleteFile : FileOperation
-        {
-            /// <summary></summary>
-            public IFileSystem FileSystem { get; protected set; }
-            /// <summary></summary>
-            public string Path { get; protected set; }
-
-            /// <summary>
-            /// Create delete file op.
-            /// </summary>
-            /// <param name="session"></param>
-            /// <param name="filesystem"></param>
-            /// <param name="path"></param>
-            public DeleteFile(Session session, IFileSystem filesystem, string path) : base(session)
-            {
-                this.FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
-                this.Path = path ?? throw new ArgumentNullException(nameof(path));
-            }
-
-            /// <summary>Estimate viability of operation.</summary>
-            /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override FileOperation Estimate()
-            {
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Estimating
-                if (!TrySetState(State.Estimating, State.Initialized)) return this;
-
-                try
-                {
-                    // Test that source file exists, if we can browse
-                    if (FileSystem.CanGetEntry())
-                    {
-                        try
-                        {
-                            IFileSystemEntry e = FileSystem.GetEntry(Path);
-                            if (e == null) throw new FileNotFoundException(Path);
-                            if (!e.IsFile()) throw new FileNotFoundException(Path);
-                        }
-                        catch (NotSupportedException) { }
-                    }
-                    // Estimated
-                    if (!TrySetState(State.Estimated, State.Estimating)) return this;
-                }
-                // Capture error and set state to error
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
-            }
-
-            /// <summary>Run op</summary>
-            /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            public override FileOperation Run()
-            {
-                // Estimate viability of operation
-                Estimate();
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-                // Running
-                if (!TrySetState(State.Running, State.Estimated)) return this;
-                try
-                {
-                    // Delete file
-                    FileSystem.Delete(Path);
-                    // Completed
-                    if (!TrySetState(State.Completed, State.Running)) return this;
-                }
-                // Capture error and set state
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
-            }
-
-            /// <summary>Print info</summary>
-            public override string ToString() => $"DeleteFile(Path={Path}, State={CurrentState})";
+            public override string ToString() => $"CopyFile(Src={srcPath}, Dst={dstPath}, State={CurrentState})";
         }
 
         /// <summary>Copy a file or directory tree</summary>
         public class CopyTree : Batch
         {
-            /// <summary></summary>
-            public IFileSystem SrcFileSystem { get; protected set; }
-            /// <summary></summary>
-            public string SrcPath { get; protected set; }
-            /// <summary></summary>
-            public IFileSystem DstFileSystem { get; protected set; }
-            /// <summary></summary>
-            public string DstPath { get; protected set; }
+            /// <summary>Source filesystem</summary>
+            protected IFileSystem srcFileSystem;
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem dstFileSystem;
+            /// <summary>Source path</summary>
+            protected string srcPath;
+            /// <summary>Target path</summary>
+            protected string dstPath;
+
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => dstFileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => dstPath;
+            /// <summary>Source filesystem</summary>
+            public override IFileSystem SrcFileSystem => srcFileSystem;
+            /// <summary>Source path</summary>
+            public override string SrcPath => srcPath;
 
             /// <summary>Create move op.</summary>
-            public CopyTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath) : base(session)
+            public CopyTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, Policy policy = Policy.Unset) : base(session, policy)
             {
-                this.SrcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
-                this.DstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
-                this.SrcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
-                this.DstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
+                this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
+                this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
+                this.srcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
+                this.dstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
             }
 
             /// <summary>Estimate viability of operation.</summary>
             /// <exception cref="FileNotFoundException">If <see cref="SrcPath"/> is not found.</exception>
-            /// <exception cref="FileSystemExceptionFileExists">If <see cref="DstPath"/> already exists.</exception>
-            public override FileOperation Estimate()
+            /// <exception cref="FileSystemExceptionFileExists">If <see cref="Path"/> already exists.</exception>
+            protected override void InnerEstimate()
             {
-                if (CurrentState != State.Initialized) return this;
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
+                PathConverter pathConverter = new PathConverter(SrcPath, Path);
+                List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
 
+                // Src
+                IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath);
+                // Src not found
+                if (e == null)
+                {
+                    // Throw
+                    if (EffectivePolicy.HasFlag(Policy.SrcThrow)) throw new FileNotFoundException(SrcPath);
+                    // Skip
+                    if (EffectivePolicy.HasFlag(Policy.SrcSkip)) { SetState(State.Skipped); return; }
+                    // Fail anywa
+                    throw new FileNotFoundException(SrcPath);
+                }
+
+                queue.Add(e);
+                while (queue.Count > 0)
+                {
+                    try
+                    {
+                        // Next entry
+                        int lastIx = queue.Count - 1;
+                        IFileSystemEntry entry = queue[lastIx];
+                        queue.RemoveAt(lastIx);
+
+                        // Omit automounted entries 
+                        if (session.Policy.HasFlag(Policy.OmitAutoMounts) && entry.IsAutoMounted()) continue;
+
+                        // Process directory
+                        if (entry.IsDirectory())
+                        {
+                            // Browse children
+                            IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path);
+                            // Assert children don't refer to the parent of the parent
+                            foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
+                            // Visit child
+                            for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
+                            // Convert path
+                            string _dstPath;
+                            if (!pathConverter.ParentToChild(entry.Path, out _dstPath)) throw new Exception("Failed to convert path");
+                            // Add op
+                            if (_dstPath != "") Ops.Add(new CreateDirectory(session, FileSystem, _dstPath, OpPolicy));
+                        }
+
+                        // Process file
+                        else if (entry.IsFile())
+                        {
+                            // Convert path
+                            string _dstPath;
+                            if (!pathConverter.ParentToChild(entry.Path, out _dstPath)) throw new Exception("Failed to convert path");
+                            // Add op
+                            Ops.Add(new CopyFile(session, SrcFileSystem, entry.Path, FileSystem, _dstPath, OpPolicy));
+                        }
+                    }
+                    catch (Exception error) when (SetError(error)) { }
+                }
+
+                base.InnerEstimate();
+            }
+
+            /// <summary>Print info</summary>
+            public override string ToString() => $"CopyTree(Src={SrcPath}, Dst={Path})";
+        }
+
+        /// <summary>Delete a file or directory tree</summary>
+        public class DeleteTree : Batch
+        {
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem fileSystem;
+            /// <summary>Target path</summary>
+            protected string path;
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => fileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => path;
+
+            /// <summary>Create move op.</summary>
+            public DeleteTree(Session session, IFileSystem filesystem, string path, Policy policy = Policy.Unset) : base(session, policy)
+            {
+                this.fileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
+                this.path = path ?? throw new ArgumentNullException(nameof(path));
+            }
+
+            /// <summary>Estimate viability of operation.</summary>
+            /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
+            /// <exception cref="FileSystemExceptionFileExists">If <see cref="Path"/> already exists.</exception>
+            protected override void InnerEstimate()
+            {
+                List<Delete> dirDeletes = new List<Delete>();
                 try
                 {
-                    PathConverter pathConverter = new PathConverter(SrcPath, DstPath);
                     List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
-                    IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath);
-                    if (e == null) throw new FileNotFoundException(SrcPath);
+                    IFileSystemEntry e = FileSystem.GetEntry(Path);
+                    if (e == null) throw new FileNotFoundException(Path);
                     queue.Add(e);
                     while (queue.Count > 0)
                     {
@@ -1134,161 +1351,288 @@ namespace Lexical.FileSystem.Utility
                             if (entry.IsDirectory())
                             {
                                 // Browse children
-                                IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path);
+                                IFileSystemEntry[] children = FileSystem.Browse(entry.Path);
                                 // Assert children don't refer to the parent of the parent
                                 foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
-                                // Visit child
+                                // Visit children
                                 for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
-                                // Convert path
-                                string dstPath;
-                                if (!pathConverter.ParentToChild(entry.Path, out dstPath)) throw new Exception("Failed to convert path");
                                 // Add op
-                                if (dstPath != "") Ops.Add(new CreateDirectory(session, DstFileSystem, dstPath));
+                                dirDeletes.Add(new Delete(session, FileSystem, entry.Path, false));
                             }
 
                             // Process file
                             else if (entry.IsFile())
                             {
-                                // Convert path
-                                string dstPath;
-                                if (!pathConverter.ParentToChild(entry.Path, out dstPath)) throw new Exception("Failed to convert path");
                                 // Add op
-                                Ops.Add(new CopyFile(session, SrcFileSystem, entry.Path, DstFileSystem, dstPath));
+                                Ops.Add(new Delete(session, FileSystem, entry.Path, false, OpPolicy));
                             }
                         }
                         catch (Exception error) when (SetError(error)) { }
                     }
-
-                    base.Estimate();
                 }
-                // Capture error and set state to error
-                catch (Exception e) when (SetError(e)) { }
-
-                return this;
-            }
-
-            // /// <summary>Print info</summary>
-            //public override string ToString() => $"CopyTree(Src={SrcPath}, Dst={DstPath})";
-        }
-
-        /// <summary>Delete a file or directory tree</summary>
-        public class DeleteTree : Batch
-        {
-            /// <summary></summary>
-            public IFileSystem FileSystem { get; protected set; }
-            /// <summary></summary>
-            public string Path { get; protected set; }
-
-            /// <summary>Create move op.</summary>
-            public DeleteTree(Session session, IFileSystem filesystem, string path) : base(session)
-            {
-                this.FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
-                this.Path = path ?? throw new ArgumentNullException(nameof(path));
-            }
-
-            /// <summary>Estimate viability of operation.</summary>
-            /// <exception cref="FileNotFoundException">If <see cref="Path"/> is not found.</exception>
-            /// <exception cref="FileSystemExceptionFileExists">If <see cref="Path"/> already exists.</exception>
-            public override FileOperation Estimate()
-            {
-                if (CurrentState != State.Initialized) return this;
-                // Assert session is not cancelled
-                if (session.CancelSrc.IsCancellationRequested) { SetState(State.Cancelled); return this; }
-
-                try
+                finally
                 {
-                    List<DeleteDirectory> dirDeletes = new List<DeleteDirectory>();
-                    try
-                    {
-                        List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
-                        IFileSystemEntry e = FileSystem.GetEntry(Path);
-                        if (e == null) throw new FileNotFoundException(Path);
-                        queue.Add(e);
-                        while (queue.Count > 0)
-                        {
-                            try
-                            {
-                                // Next entry
-                                int lastIx = queue.Count - 1;
-                                IFileSystemEntry entry = queue[lastIx];
-                                queue.RemoveAt(lastIx);
-
-                                // Omit automounted entries 
-                                if (session.Policy.HasFlag(Policy.OmitAutoMounts) && entry.IsAutoMounted()) continue;
-
-                                // Process directory
-                                if (entry.IsDirectory())
-                                {
-                                    // Browse children
-                                    IFileSystemEntry[] children = FileSystem.Browse(entry.Path);
-                                    // Assert children don't refer to the parent of the parent
-                                    foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
-                                    // Visit children
-                                    for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
-                                    // Add op
-                                    dirDeletes.Add(new DeleteDirectory(session, FileSystem, entry.Path, false));
-                                }
-
-                                // Process file
-                                else if (entry.IsFile())
-                                {
-                                    // Add op
-                                    Ops.Add(new DeleteFile(session, FileSystem, entry.Path));
-                                }
-                            }
-                            catch (Exception error) when (SetError(error)) { }
-                        }
-                    }
-                    finally
-                    {
-                        // Add directory deletes
-                        for (int i=dirDeletes.Count-1; i>=0; i--)
-                            Ops.Add(dirDeletes[i]);
-                    }
-
-                    // Estimate added ops
-                    base.Estimate();
+                    // Add directory deletes
+                    for (int i = dirDeletes.Count - 1; i >= 0; i--)
+                        Ops.Add(dirDeletes[i]);
                 }
-                // Capture error and set state to error
-                catch (Exception e) when (SetError(e)) { }
 
-                return this;
+                // Estimate added ops
+                base.InnerEstimate();
             }
 
-            // /// <summary>Print info</summary>
-            //public override string ToString() => $"DeleteTree({Path})";
+            /// <summary>Print info</summary>
+            public override string ToString() => $"DeleteTree({Path})";
         }
 
-        /// <summary>Move/rename a file or directory tree by copying and deleting files</summary>
+        /*
+        /// <summary>Copy+Delete file</summary>
+        internal class TransferFile : FileOperation
+        {
+            /// <summary>Source filesystem</summary>
+            protected IFileSystem srcFileSystem;
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem dstFileSystem;
+            /// <summary>Source path</summary>
+            protected string srcPath;
+            /// <summary>Target path</summary>
+            protected string dstPath;
+
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => dstFileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => dstPath;
+            /// <summary>Source filesystem</summary>
+            public override IFileSystem SrcFileSystem => srcFileSystem;
+            /// <summary>Source path</summary>
+            public override string SrcPath => srcPath;
+
+            /// <summary></summary>
+            public readonly CopyFile copyFile;
+            /// <summary></summary>
+            public readonly Delete deleteFile;
+
+            /// <summary>Child operations</summary>
+            public override FileOperation[] Children => new FileOperation[] { copyFile, deleteFile };
+
+            /// <summary>Create directory op.</summary>
+            public TransferFile(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, Policy policy = Policy.Unset) : base(session, policy)
+            {
+                this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
+                this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
+                this.srcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
+                this.dstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
+                this.copyFile = new CopyFile(session, srcFilesystem, srcPath, dstFilesystem, dstPath, policy);
+                this.deleteFile = new Delete(session, srcFilesystem, srcPath, false, policy);
+            }
+
+            /// <summary>Estimate both</summary>
+            protected override void InnerEstimate()
+            {
+                copyFile.Estimate();
+                CanRollback = copyFile.CanRollback;
+            }
+
+            /// <summary>If ok, creates reverse transfer</summary>
+            protected override void InnerRun()
+            {
+                copyFile.Run();
+                if (copyFile.CurrentState == State.Completed) deleteFile.Run();
+                CanRollback = copyFile.CanRollback && deleteFile.CanRollback;
+            }
+
+            /// <summary>If ok, creates reverse transfer</summary>
+            public override FileOperation CreateRollback()
+                => (copyFile.CurrentState == State.Completed || copyFile.CurrentState == State.Skipped) &&
+                   (deleteFile.CurrentState == State.Completed || deleteFile.CurrentState == State.Skipped) ?
+                    new TransferFile(OpSession, FileSystem, Path, SrcFileSystem, SrcPath, OpPolicy) :
+                    null;
+
+
+            /// <summary>Print info</summary>
+            public override string ToString() => $"TransferFile(Src={srcPath}, Dst={dstPath}, State={CurrentState})";
+        }*/
+        /*
+        /// <summary>Copy+Delete empty directory (non-recursive), use TransferTree for recursive</summary>
+        internal class TransferDirectory : FileOperation
+        {
+            /// <summary>Source filesystem</summary>
+            protected IFileSystem srcFileSystem;
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem dstFileSystem;
+            /// <summary>Source path</summary>
+            protected string srcPath;
+            /// <summary>Target path</summary>
+            protected string dstPath;
+
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => dstFileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => dstPath;
+            /// <summary>Source filesystem</summary>
+            public override IFileSystem SrcFileSystem => srcFileSystem;
+            /// <summary>Source path</summary>
+            public override string SrcPath => srcPath;
+
+            /// <summary></summary>
+            public readonly CreateDirectory createDir;
+            /// <summary></summary>
+            public readonly Delete deleteDir;
+
+            /// <summary>Child operations</summary>
+            public override FileOperation[] Children => new FileOperation[] { createDir, deleteDir };
+
+            /// <summary>Create directory op.</summary>
+            public TransferDirectory(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, Policy policy = Policy.Unset) : base(session, policy)
+            {
+                this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
+                this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
+                this.srcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
+                this.dstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
+                this.createDir = new CreateDirectory(session, dstFilesystem, dstPath, policy);
+                this.deleteDir = new Delete(session, srcFilesystem, srcPath, false, policy);
+            }
+
+            /// <summary>Estimate both</summary>
+            protected override void InnerEstimate()
+            {
+                createDir.Estimate();
+                CanRollback = createDir.CanRollback;
+            }
+
+            /// <summary>If ok, creates reverse transfer</summary>
+            protected override void InnerRun()
+            {
+                createDir.Run();
+                if (createDir.CurrentState == State.Completed) deleteDir.Run();
+                CanRollback = createDir.CanRollback && deleteDir.CanRollback;
+            }
+
+            /// <summary>If ok, creates reverse transfer</summary>
+            public override FileOperation CreateRollback()
+                => (createDir.CurrentState == State.Completed) &&
+                   (deleteDir.CurrentState == State.Completed) ?
+                    new TransferDirectory(OpSession, FileSystem, Path, SrcFileSystem, SrcPath, OpPolicy) : 
+                    null;
+
+
+            /// <summary>Print info</summary>
+            public override string ToString() => $"TransferDirectory(Src={srcPath}, Dst={dstPath}, State={CurrentState})";
+        }
+        */
+
+        /// <summary>
+        /// Move/rename a file or directory tree by copying and deleting files.
+        /// </summary>
         public class TransferTree : Batch
         {
-            /// <summary></summary>
-            public IFileSystem SrcFileSystem { get; protected set; }
-            /// <summary></summary>
-            public string SrcPath { get; protected set; }
-            /// <summary></summary>
-            public IFileSystem DstFileSystem { get; protected set; }
-            /// <summary></summary>
-            public string DstPath { get; protected set; }
+            /// <summary>Source filesystem</summary>
+            protected IFileSystem srcFileSystem;
+            /// <summary>Target filesystem</summary>
+            protected IFileSystem dstFileSystem;
+            /// <summary>Source path</summary>
+            protected string srcPath;
+            /// <summary>Target path</summary>
+            protected string dstPath;
+
+            /// <summary>Target filesystem</summary>
+            public override IFileSystem FileSystem => dstFileSystem;
+            /// <summary>Target path</summary>
+            public override String Path => dstPath;
+            /// <summary>Source filesystem</summary>
+            public override IFileSystem SrcFileSystem => srcFileSystem;
+            /// <summary>Source path</summary>
+            public override string SrcPath => srcPath;
 
             /// <summary>Create move op.</summary>
-            public TransferTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath) : base(session)
+            public TransferTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, Policy policy = Policy.Unset) : base(session, policy)
             {
-                this.SrcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
-                this.DstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
-                this.SrcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
-                this.DstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
-
-                Batch copy = new CopyTree(session, SrcFileSystem, SrcPath, DstFileSystem, DstPath);
-                Batch delete = new DeleteTree(session, SrcFileSystem, SrcPath);
-                copy.ThrowIfError = true;
-                delete.ThrowIfError = true;
-                Ops.Add(copy);
-                Ops.Add(delete);
+                this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
+                this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
+                this.srcPath = srcPath ?? throw new ArgumentNullException(nameof(srcPath));
+                this.dstPath = dstPath ?? throw new ArgumentNullException(nameof(dstPath));
             }
 
-            // /// <summary>Print info</summary>
-            //public override string ToString() => $"MoveTree(Src={SrcPath}, Dst={DstPath})";
+            /// <summary>Scan tree, and add ops</summary>
+            protected override void InnerEstimate()
+            {
+                PathConverter pathConverter = new PathConverter(SrcPath, Path);
+                List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
+
+                // Src
+                IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath);
+
+                // Src not found
+                if (e == null)
+                {
+                    // Throw
+                    if (EffectivePolicy.HasFlag(Policy.SrcThrow)) throw new FileNotFoundException(SrcPath);
+                    // Skip
+                    if (EffectivePolicy.HasFlag(Policy.SrcSkip)) { SetState(State.Skipped); return; }
+                    // Fail anyway
+                    throw new FileNotFoundException(SrcPath);
+                }
+
+                List<Delete> deleteDirs = new List<Delete>();
+                queue.Add(e);
+                while (queue.Count > 0)
+                {
+                    try
+                    {
+                        // Next entry
+                        int lastIx = queue.Count - 1;
+                        IFileSystemEntry entry = queue[lastIx];
+                        queue.RemoveAt(lastIx);
+
+                        // Omit automounted entries 
+                        if (session.Policy.HasFlag(Policy.OmitAutoMounts) && entry.IsAutoMounted()) continue;
+
+                        // Process directory
+                        if (entry.IsDirectory())
+                        {
+                            // Browse children
+                            IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path);
+                            // Assert children don't refer to the parent of the parent
+                            foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
+                            // Visit child
+                            for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
+                            // Convert path
+                            string _dstPath;
+                            if (!pathConverter.ParentToChild(entry.Path, out _dstPath)) throw new Exception("Failed to convert path");
+                            // Add op
+                            if (_dstPath != "")
+                            {
+                                Ops.Add(new CreateDirectory(session, FileSystem, _dstPath, OpPolicy));
+                                deleteDirs.Add(new Delete(session, SrcFileSystem, entry.Path, false, OpPolicy|Policy.EstimateOnRun,
+                                    rollback: new CreateDirectory(session, SrcFileSystem, entry.Path, OpPolicy)));
+                            }
+                        }
+
+                        // Process file
+                        else if (entry.IsFile())
+                        {
+                            // Convert path
+                            string _dstPath;
+                            if (!pathConverter.ParentToChild(entry.Path, out _dstPath)) throw new Exception("Failed to convert path");
+                            // Add op
+                            Ops.Add(new CopyFile(session, SrcFileSystem, entry.Path, FileSystem, _dstPath, OpPolicy));
+                            Ops.Add(new Delete(session, SrcFileSystem, entry.Path, false, OpPolicy, 
+                                rollback: new CopyFile(session, FileSystem, _dstPath, SrcFileSystem, entry.Path, OpPolicy)));
+                        }
+
+                    }
+                    catch (Exception error) when (SetError(error)) { }
+                }
+
+                // Add delete directories
+                for (int i=deleteDirs.Count-1; i>=0; i--)
+                    Ops.Add(deleteDirs[i]);
+
+                base.InnerEstimate();
+            }
+
+            /// <summary>Print info</summary>
+            public override string ToString() => $"TransferTree(Src={SrcPath}, Dst={Path})";
         }
 
 
@@ -1360,7 +1704,8 @@ namespace Lexical.FileSystem.Utility
                         try
                         {
                             handle.observer.OnCompleted();
-                        } catch (Exception e)
+                        }
+                        catch (Exception e)
                         {
                             // Add observer exception as error event, but don't dispatch it.
                             Events.TryAdd(new Event.Error(null, e));
@@ -1396,7 +1741,7 @@ namespace Lexical.FileSystem.Utility
             }
 
             /// <summary>Add event to session log and dispatch it. <see cref="Event.Progress"/> events are not added to event log.</summary>
-            public void AddAndDispatchEvent(Event @event)
+            public void LogAndDispatchEvent(Event @event)
             {
                 if (@event is Event.Progress == false) this.Events.TryAdd(@event);
                 DispatchEvent(@event);
@@ -1434,6 +1779,8 @@ namespace Lexical.FileSystem.Utility
                 public FileOperation.State OpState { get; protected set; }
                 /// <summary>Create error event</summary>
                 public State(FileOperation op, FileOperation.State opState) : base(op) { this.OpState = opState; }
+                /// <summary>Print info</summary>
+                public override string ToString() => Op+" = "+OpState;
             }
 
             /// <summary>Error state event</summary>
@@ -1443,6 +1790,8 @@ namespace Lexical.FileSystem.Utility
                 public Exception Exception { get; protected set; }
                 /// <summary>Create error event</summary>
                 public Error(FileOperation op, Exception exception) : base(op, FileOperation.State.Error) { Exception = exception; }
+                /// <summary>Print info</summary>
+                public override string ToString() => Op + " = " + Exception;
             }
 
             /// <summary>Progress event</summary>
@@ -1454,6 +1803,11 @@ namespace Lexical.FileSystem.Utility
                 public long TotalLength { get; protected set; }
                 /// <summary>Create progress event</summary>
                 public Progress(FileOperation op, long length, long totalLength) : base(op) { this.Length = length; this.TotalLength = totalLength; }
+                /// <summary>Print info</summary>
+                public override string ToString() =>
+                    TotalLength > 0 ?
+                    "Progress(" + Op + ", " + (int)((Length*100L) / TotalLength) + "%)" :
+                    "Progress(" + Op + ")";
             }
         }
 

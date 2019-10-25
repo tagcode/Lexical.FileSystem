@@ -221,6 +221,27 @@ namespace Lexical.FileSystem.Internal
         }
 
         /// <summary>
+        /// Reverse elements.
+        /// </summary>
+        public void Reverse()
+        {
+            lock (SyncRoot)
+            {
+                // Nothing to do
+                if (list.Count <= 1) return;
+                int mid = list.Count / 2;
+                for (int i = 0, j = list.Count - 1; i < mid; i++, j--)
+                {
+                    // Swap list[i] and list[j]
+                    T tmp = list[i];
+                    list[i] = list[j];
+                    list[j] = tmp;
+                }
+                ClearCache();
+            }
+        }
+
+        /// <summary>
         /// Remove element
         /// </summary>
         /// <param name="item"></param>
