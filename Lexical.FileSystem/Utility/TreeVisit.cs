@@ -46,7 +46,9 @@ namespace Lexical.FileSystem
         public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue)
         {
             List<Line> queue = new List<Line>();
-            queue.Add( new Line(filesystem.GetEntry(path), 0, 0UL) );
+            IFileSystemEntry entry = filesystem.GetEntry(path);
+            if (entry == null) yield break;
+            queue.Add( new Line(entry, 0, 0UL) );
             while (queue.Count > 0)
             {
                 // Next entry
