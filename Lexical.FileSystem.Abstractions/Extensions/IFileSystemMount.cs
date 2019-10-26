@@ -64,21 +64,21 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns></returns>
         public static bool CanMount(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanMount : false;
+            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanMount : false;
 
         /// <summary>
         /// Is filesystem allowed to list mountpoints.
         /// </summary>
         /// <returns></returns>
         public static bool CanListMountPoints(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanListMountPoints : false;
+            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanListMountPoints : false;
 
         /// <summary>
         /// Is filesystem allowed to unmount a mount.
         /// </summary>
         /// <returns></returns>
         public static bool CanUnmount(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanUnmount : false;
+            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanUnmount : false;
 
         /// <summary>
         /// Get automounters.
@@ -86,7 +86,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <returns></returns>
         public static IFileSystemPackageLoader[] AutoMounters(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionAutoMount>() is IFileSystemOptionAutoMount automount ? automount.AutoMounters : null;
+            => filesystemOption.AsOption<IFileSystemOptionAutoMount>() is IFileSystemOptionAutoMount automount ? automount.AutoMounters : null;
 
         /// <summary>
         /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IFileSystemOption"/> in the parent filesystem.

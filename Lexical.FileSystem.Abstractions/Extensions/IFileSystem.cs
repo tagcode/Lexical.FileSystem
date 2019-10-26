@@ -18,7 +18,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>mount path or null</returns>
         public static FileSystemCaseSensitivity CaseSensitivity(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionPath>() is IFileSystemOptionPath op ? op.CaseSensitivity : FileSystemCaseSensitivity.Unknown;
+            => filesystemOption.AsOption<IFileSystemOptionPath>() is IFileSystemOptionPath op ? op.CaseSensitivity : FileSystemCaseSensitivity.Unknown;
 
         /// <summary>
         /// Get option for Filesystem allows empty string "" directory names.
@@ -26,7 +26,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>mount path or null</returns>
         public static bool EmptyDirectoryName(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionPath>() is IFileSystemOptionPath op ? op.EmptyDirectoryName : false;
+            => filesystemOption.AsOption<IFileSystemOptionPath>() is IFileSystemOptionPath op ? op.EmptyDirectoryName : false;
 
     }
 

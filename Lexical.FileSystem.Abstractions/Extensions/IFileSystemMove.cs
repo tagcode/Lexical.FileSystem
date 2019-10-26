@@ -22,7 +22,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has Move capability</returns>
         public static bool CanMove(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionMove>() is IFileSystemOptionMove mover ? mover.CanMove : false;
+            => filesystemOption.AsOption<IFileSystemOptionMove>() is IFileSystemOptionMove mover ? mover.CanMove : false;
 
         /// <summary>
         /// Move/rename a file or directory. 

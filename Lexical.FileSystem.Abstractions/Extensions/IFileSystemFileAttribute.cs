@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <returns>true if has SetFileAttribute capability</returns>
         public static bool CanSetFileAttribute(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionFileAttribute>() is IFileSystemOptionFileAttribute attributer ? attributer.CanSetFileAttribute : false;
+            => filesystemOption.AsOption<IFileSystemOptionFileAttribute>() is IFileSystemOptionFileAttribute attributer ? attributer.CanSetFileAttribute : false;
 
         /// <summary>
         /// Set <paramref name="fileAttribute"/> on <paramref name="path"/>.

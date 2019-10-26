@@ -22,7 +22,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has Observe capability</returns>
         public static bool CanObserve(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanObserve : false;
+            => filesystemOption.AsOption<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanObserve : false;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Observe capability.
@@ -30,7 +30,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <returns>true, if has Observe capability</returns>
         public static bool CanSetEventDispatcher(this IFileSystemOption filesystemOption)
-            => filesystemOption.As<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanSetEventDispatcher : false;
+            => filesystemOption.AsOption<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanSetEventDispatcher : false;
 
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 

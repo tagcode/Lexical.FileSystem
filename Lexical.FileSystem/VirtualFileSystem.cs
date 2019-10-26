@@ -1328,7 +1328,7 @@ namespace Lexical.FileSystem
             {
                 var fs = mountpoints[i];
                 // Get fs option
-                var option = fs.As<IFileSystemOptionOpen>();
+                var option = fs.AsOption<IFileSystemOptionOpen>();
                 // No feature
                 if (option == null) continue;
                 // fs cannot open
