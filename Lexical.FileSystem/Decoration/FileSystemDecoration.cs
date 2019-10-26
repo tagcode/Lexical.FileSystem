@@ -46,7 +46,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>The decorated filesystems.</summary>
         public IFileSystem[] Decorees => components.Array.Select(c=>c.FileSystem).ToArray();
         /// <summary><see cref="IFileSystem"/> casted to <see cref="IDisposable"/>.</summary>
-        public IEnumerable<IDisposable> DisposableDecorees => components.Array.Where(fs => fs is IDisposable).Cast<IDisposable>();
+        public IEnumerable<IDisposable> DisposableDecorees => components.Array.Where(c => c.FileSystem is IDisposable).Select(c=>c.FileSystem as IDisposable);
 
         /// <inheritdoc/>
         public FileSystemCaseSensitivity CaseSensitivity => Option.CaseSensitivity;
@@ -1293,11 +1293,37 @@ namespace Lexical.FileSystem.Decoration
 
         /// <summary>
         /// Add source <see cref="IFileSystem"/> instances to be disposed along with this decoration.
+        /// 
+        /// Disposes only those assignments at the time of decoration's dispose.
         /// </summary>
         /// <returns>self</returns>
         public FileSystemDecoration AddSourceToBeDisposed()
         {
-            AddDisposables(Decorees);
+            AddDisposeAction(vfs =>
+            {
+                StructList2<IDisposable> disposables = new StructList2<IDisposable>();
+                foreach (IDisposable d in DisposableDecorees) disposables.Add(d);
+
+                if (disposables.Count == 0) return;
+                if (disposables.Count == 1) { disposables[0].Dispose(); return; }
+
+                // Dispose each, aggregate errors
+                StructList1<Exception> errors = new StructList1<Exception>();
+                for (int i = 0; i < disposables.Count; i++)
+                {
+                    try
+                    {
+                        disposables[i].Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
+
+                // Forward errors
+                if (errors.Count > 0) throw new AggregateException(errors.ToArray());
+            });
             return this;
         }
 

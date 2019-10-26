@@ -513,18 +513,18 @@ Disposable objects can be attached to be disposed along with *VirtualFileSystem*
 ```csharp
 // Init
 object obj = new ReaderWriterLockSlim();
-IFileSystemDisposable filesystem = new VirtualFileSystem().AddDisposable(obj);
+IFileSystemDisposable vfs = new VirtualFileSystem().AddDisposable(obj);
 
 // ... do work ...
 
 // Dispose both
-filesystem.Dispose();
+vfs.Dispose();
 ```
 
 Delegates can be attached to be executed at dispose of *VirtualFileSystem*.
 
 ```csharp
-IFileSystemDisposable filesystem = new VirtualFileSystem()
+IFileSystemDisposable vfs = new VirtualFileSystem()
     .AddDisposeAction(f => Console.WriteLine("Disposed"));
 ```
 
@@ -532,23 +532,45 @@ IFileSystemDisposable filesystem = new VirtualFileSystem()
 all belate handles are disposed. This can be used for passing the *IFileSystem* to a worker thread. 
 
 ```csharp
-VirtualFileSystem filesystem = new VirtualFileSystem().Mount("", FileSystem.OS);
-filesystem.Browse("");
+VirtualFileSystem vfs = new VirtualFileSystem().Mount("", FileSystem.OS);
+vfs.Browse("");
 
 // Postpone dispose
-IDisposable belateDisposeHandle = filesystem.BelateDispose();
+IDisposable belateDisposeHandle = vfs.BelateDispose();
 // Start concurrent work
 Task.Run(() =>
 {
     // Do work
     Thread.Sleep(1000);
-    filesystem.GetEntry("");
+    vfs.GetEntry("");
     // Release belate handle. Disposes here or below, depending which thread runs last.
     belateDisposeHandle.Dispose();
 });
 
 // Start dispose, but postpone it until belatehandle is disposed in another thread.
-filesystem.Dispose();
+vfs.Dispose();
+```
+
+**.AddAssignmentsToBeDisposed()** Disposes mounted filesystems at the dispose of the *VirtualFileSystem*.
+
+```csharp
+VirtualFileSystem vfs = new VirtualFileSystem().Mount("", FileSystem.OS);
+vfs.Browse("");
+
+// Postpone dispose
+IDisposable belateDisposeHandle = vfs.BelateDispose();
+// Start concurrent work
+Task.Run(() =>
+{
+    // Do work
+    Thread.Sleep(1000);
+    vfs.GetEntry("");
+    // Release belate handle. Disposes here or below, depending which thread runs last.
+    belateDisposeHandle.Dispose();
+});
+
+// Start dispose, but postpone it until belatehandle is disposed in another thread.
+vfs.Dispose();
 ```
 
 # Decoration

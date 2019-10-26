@@ -914,6 +914,23 @@ namespace Lexical.FileSystem
                 {
                 }
             }
+
+            // Release allocated blocks by deleting nodes
+            m_lock.AcquireWriterLock(int.MaxValue);
+            try
+            {
+                foreach (Node n in root.VisitTree())
+                {
+                    if (n != root) n.Dispose();
+                    n.FlushEntry();
+                }
+                root.children.Clear();
+                root.FlushChildEntries();
+            }
+            finally
+            {
+                m_lock.ReleaseWriterLock();
+            }
         }
 
         /// <summary>
@@ -1242,10 +1259,10 @@ namespace Lexical.FileSystem
                 while (queue.Count > 0)
                 {
                     Node n = queue.Dequeue();
-                    yield return n;
                     if (n is Directory dir)
                         foreach (Node c in dir.children.Values)
                             queue.Enqueue(c);
+                    yield return n;
                 }
             }
         }

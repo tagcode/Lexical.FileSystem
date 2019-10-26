@@ -1808,6 +1808,54 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Add mounted <see cref="IFileSystem"/>s to be disposed along with this decoration.
+        /// 
+        /// Disposes only those filesystems that were mounted at the time of vfs's dispose.
+        /// </summary>
+        /// <returns>self</returns>
+        public VirtualFileSystem AddAssignmentsToBeDisposed()
+        {
+            AddDisposeAction(vfs =>
+            {
+                StructList1<Exception> errors = new StructList1<Exception>();
+
+                // Get disposables
+                StructList4<IDisposable> disposables = new StructList4<IDisposable>();
+                vfsLock.AcquireReaderLock(int.MaxValue);
+                try
+                {
+                    foreach (var node in vfsRoot.Visit(false, true, true))
+                        foreach (IDisposable d in node.mount.DisposableDecorees)
+                            disposables.Add(d);
+                }
+                finally
+                {
+                    vfsLock.ReleaseReaderLock();
+                }
+
+                if (disposables.Count == 0) return;
+                if (disposables.Count == 1) { disposables[0].Dispose(); return; }
+
+                // Dispose each, aggregate errors
+                for (int i=0; i<disposables.Count; i++)
+                {
+                    try
+                    {
+                        disposables[i].Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
+
+                // Forward errors
+                if (errors.Count > 0) throw new AggregateException(errors.ToArray());
+            });
+            return this;
+        }
+
+        /// <summary>
         /// Remove <paramref name="disposable"/> from dispose list.
         /// </summary>
         /// <param name="disposable"></param>
