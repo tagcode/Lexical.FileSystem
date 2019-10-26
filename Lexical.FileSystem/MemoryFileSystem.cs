@@ -1394,12 +1394,11 @@ namespace Lexical.FileSystem
             {
                 base.Dispose();
 
-                // Unsubscribe
+                // Dispose and null subscription
                 Interlocked.CompareExchange(ref subscriptionHandle, null, subscriptionHandle)?.Dispose();
 
-                // Disconnect blocks from MemoryFileSystem. The blocks will be garbage collected once all streams are closed.
-                memoryFile.DisconnectFromBlockPool();
-                memoryFile = null;
+                // Dispose and null memory file
+                Interlocked.CompareExchange(ref memoryFile, null, memoryFile)?.Dispose();
             }
         }
     }

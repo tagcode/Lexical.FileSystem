@@ -193,36 +193,6 @@ namespace Lexical.FileSystem.Utility
         }
 
         /// <summary>
-        /// Disconnects this file from the associated blockpool.
-        /// This releases the amount of allocated bytes from blockpool.
-        /// 
-        /// Sets blockpool to <see cref="BlockPoolPseudo"/>.
-        /// </summary>
-        public void DisconnectFromBlockPool()
-        {
-            // Take reference of blockpool
-            var _blockPool = this.blockPool;
-
-            // Does nothing
-            if (_blockPool is BlockPoolPseudo) return;
-
-            // Array of blocks
-            byte[][] blocksToDisconnect;
-            blockLock.AcquireWriterLock(int.MaxValue);
-            try
-            {
-                this.blockPool = BlockSize == BlockPoolPseudo.Instance.BlockSize ? BlockPoolPseudo.Instance : new BlockPoolPseudo((int)BlockSize);
-                blocksToDisconnect = blocks.ToArray();
-            } finally
-            {
-                blockLock.ReleaseWriterLock();
-            }
-
-            // Disconnect blocks
-            _blockPool.Disconnect(blocksToDisconnect);
-        }
-
-        /// <summary>
         /// Dispose memory file.
         /// </summary>
         public void Dispose()
@@ -245,22 +215,10 @@ namespace Lexical.FileSystem.Utility
                 var _blockPool = this.blockPool;
                 if (_blockPool is BlockPoolPseudo == false)
                 {
-                    // Array of blocks
-                    byte[][] blocksToReturn = null;
-                    blockLock.AcquireWriterLock(int.MaxValue);
-                    try
-                    {
-                        this.blockPool = new BlockPoolPseudo((int)this.BlockSize);
-                        blocksToReturn = blocks.Count == 0 ? null : blocks.ToArray();
-                        blocks.Clear();
-                        length = 0L;
-                    }
-                    finally
-                    {
-                        blockLock.ReleaseWriterLock();
-                    }
-                    // Return blocks
-                    if (blocks!=null) _blockPool.Return(blocksToReturn);
+                    // Clear blocks
+                    bool clear = false;
+                    lock (m_stream_lock) clear = streams.Count == 0;
+                    if (clear) Clear();
                 }
             }
 
@@ -332,6 +290,29 @@ namespace Lexical.FileSystem.Utility
                 Stream stream = new Stream(this, fileAccess, fileShare);
                 streams.Add(stream);
                 return stream;
+            }
+        }
+
+        /// <summary>
+        /// Clear file
+        /// </summary>
+        public void Clear()
+        {
+            // Take reference of blockpool
+            var _blockPool = this.blockPool;
+            if (_blockPool == null) return;
+
+            // Write
+            blockLock.AcquireWriterLock(int.MaxValue);
+            try
+            {
+                foreach (byte[] block in blocks)
+                    _blockPool.Return(block);
+                blocks.Clear();
+                length = 0L;
+            } finally
+            {
+                blockLock.ReleaseWriterLock();
             }
         }
 
@@ -785,8 +766,15 @@ namespace Lexical.FileSystem.Utility
             /// </summary>
             protected override void InnerDispose(ref StructList4<Exception> disposeErrors)
             {
+                bool clearParent = false;
                 // Remove self from parent
-                lock (parent.m_stream_lock) parent.streams.Remove(this);
+                lock (parent.m_stream_lock)
+                {
+                    bool removed = parent.streams.Remove(this);
+                    clearParent = removed && parent.streams.Count == 0 && parent.isDisposed;
+                }
+
+                if (clearParent) parent.Clear();
             }
         }
 
