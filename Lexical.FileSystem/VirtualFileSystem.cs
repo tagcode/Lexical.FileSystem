@@ -1813,7 +1813,7 @@ namespace Lexical.FileSystem
         /// Disposes only those filesystems that were mounted at the time of vfs's dispose.
         /// </summary>
         /// <returns>self</returns>
-        public VirtualFileSystem AddAssignmentsToBeDisposed()
+        public VirtualFileSystem AddMountsToBeDisposed()
         {
             AddDisposeAction(vfs =>
             {

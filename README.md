@@ -551,14 +551,14 @@ Task.Run(() =>
 vfs.Dispose();
 ```
 
-**.AddAssignmentsToBeDisposed()** Disposes mounted filesystems at the dispose of the *VirtualFileSystem*.
+**.AddMountsToBeDisposed()** Disposes mounted filesystems at the dispose of the *VirtualFileSystem*.
 
 ```csharp
 IFileSystemDisposable vfs =
     new VirtualFileSystem()
     .Mount("", new FileSystem(""))
     .Mount("/tmp/", new MemoryFileSystem())
-    .AddAssignmentsToBeDisposed();
+    .AddMountsToBeDisposed();
 ```
 
 # Decoration
