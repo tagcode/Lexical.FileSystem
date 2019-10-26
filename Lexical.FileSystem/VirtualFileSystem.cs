@@ -1271,7 +1271,7 @@ namespace Lexical.FileSystem
             vfsLock.AcquireReaderLock(int.MaxValue);
             try
             {
-                return vfsRoot.Visit(false, true, true).Select(n => n.Entry).ToArray();
+                return vfsRoot.Visit(false, true, true).Where(d=>d.mount!=null).Select(d => d.Entry).ToArray();
             }
             finally
             {
