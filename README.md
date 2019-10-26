@@ -554,23 +554,11 @@ vfs.Dispose();
 **.AddAssignmentsToBeDisposed()** Disposes mounted filesystems at the dispose of the *VirtualFileSystem*.
 
 ```csharp
-VirtualFileSystem vfs = new VirtualFileSystem().Mount("", FileSystem.OS);
-vfs.Browse("");
-
-// Postpone dispose
-IDisposable belateDisposeHandle = vfs.BelateDispose();
-// Start concurrent work
-Task.Run(() =>
-{
-    // Do work
-    Thread.Sleep(1000);
-    vfs.GetEntry("");
-    // Release belate handle. Disposes here or below, depending which thread runs last.
-    belateDisposeHandle.Dispose();
-});
-
-// Start dispose, but postpone it until belatehandle is disposed in another thread.
-vfs.Dispose();
+IFileSystemDisposable vfs =
+    new VirtualFileSystem()
+    .Mount("", new FileSystem(""))
+    .Mount("/tmp/", new MemoryFileSystem())
+    .AddAssignmentsToBeDisposed();
 ```
 
 # Decoration
@@ -1060,9 +1048,9 @@ Task.Run(() =>
 filesystem.Dispose();
 ```
 
-# Quota
+# Size Limit
 
-Constructor **new MemoryFileSystem(<i>blockSize</i>, <i>maxSpace</i>)** creates memory limited filesystem. Memory limitation applies to files only, not to directory structure.
+Constructor **new MemoryFileSystem(<i>blockSize</i>, <i>maxSpace</i>)** creates size limited filesystem. Memory limitation applies to files only, not to directory structure.
 
 ```csharp
 IFileSystem ms = new MemoryFileSystem(blockSize: 1024, maxSpace: 1L << 34);
