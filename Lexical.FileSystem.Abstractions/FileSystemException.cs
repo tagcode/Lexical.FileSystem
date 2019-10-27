@@ -4,7 +4,6 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
@@ -83,7 +82,19 @@ namespace Lexical.FileSystem
         /// <summary>Deserialize exception.</summary>
         /// <param name="info"></param>
         /// <param name="context"></param>
-        protected FileSystemException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        protected FileSystemException(SerializationInfo info, StreamingContext context) : base(info, context) { this.path = info.GetString(nameof(Path)); }
+
+        /// <summary>
+        /// Serialize object data to <paramref name="context"/>.
+        /// </summary>
+        /// <param name="info"></param>
+        /// <param name="context"></param>
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue(nameof(Path), path);
+            base.GetObjectData(info, context);
+        }
+
     }
 
     /// <summary>
@@ -129,7 +140,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <param name="message"></param>
-        public FileSystemExceptionEntryExists(IFileSystem filesystem = null, string path = null, string message = null) : base(filesystem, path, message??"Entry exists") { }
+        public FileSystemExceptionEntryExists(IFileSystem filesystem = null, string path = null, string message = null) : base(filesystem, path, message ?? "Entry exists") { }
 
         /// <inheritdoc/>
         protected FileSystemExceptionEntryExists(SerializationInfo info, StreamingContext context) : base(info, context) { }

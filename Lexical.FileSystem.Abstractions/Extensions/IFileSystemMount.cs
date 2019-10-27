@@ -3,6 +3,7 @@
 // Date:           12.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Package;
 using System;
 using System.Linq;
 
@@ -85,7 +86,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystemOption"></param>
         /// <returns></returns>
-        public static IFileSystemPackageLoader[] AutoMounters(this IFileSystemOption filesystemOption)
+        public static IPackageLoader[] AutoMounters(this IFileSystemOption filesystemOption)
             => filesystemOption.AsOption<IFileSystemOptionAutoMount>() is IFileSystemOptionAutoMount automount ? automount.AutoMounters : null;
 
         /// <summary>

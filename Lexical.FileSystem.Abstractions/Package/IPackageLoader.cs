@@ -6,22 +6,22 @@
 using System;
 using System.IO;
 
-namespace Lexical.FileSystem
+namespace Lexical.FileSystem.Package
 {
-    // <IFileSystemPackageLoader>
+    // <IPackageLoader>
     /// <summary>
     /// Interace for loaders that read package files, such as .zip, as <see cref="IFileSystem"/>.
     /// 
     /// The implementing class must implement one or more of the following sub-interfaces:
     /// <list type="bullet">
-    ///    <item><see cref="IFileSystemPackageLoaderOpenFile"/></item>
-    ///    <item><see cref="IFileSystemPackageLoaderLoadFile"/></item>
-    ///    <item><see cref="IFileSystemPackageLoaderUseStream"/></item>
-    ///    <item><see cref="IFileSystemPackageLoaderLoadFromStream"/></item>
-    ///    <item><see cref="IFileSystemPackageLoaderUseBytes"/></item>
+    ///    <item><see cref="IPackageLoaderOpenFile"/></item>
+    ///    <item><see cref="IPackageLoaderLoadFile"/></item>
+    ///    <item><see cref="IPackageLoaderUseStream"/></item>
+    ///    <item><see cref="IPackageLoaderLoadFromStream"/></item>
+    ///    <item><see cref="IPackageLoaderUseBytes"/></item>
     /// </list>
     /// </summary>
-    public interface IFileSystemPackageLoader
+    public interface IPackageLoader
     {
         /// <summary>
         /// The file extension(s) this format can open.
@@ -37,13 +37,13 @@ namespace Lexical.FileSystem
         /// </summary>
         String FileExtensionPattern { get; }
     }
-    // </IFileSystemPackageLoader>
+    // </IPackageLoader>
 
-    // <IFileSystemPackageLoaderOpenFile>
+    // <IPackageLoaderOpenFile>
     /// <summary>
     /// Package loader that can open a package file as <see cref="IFileSystem"/>.
     /// </summary>
-    public interface IFileSystemPackageLoaderOpenFile : IFileSystemPackageLoader
+    public interface IPackageLoaderOpenFile : IPackageLoader
     {
         /// <summary>
         /// Open a package file and keep it open until the file system is disposed. 
@@ -58,15 +58,15 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
         /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
-        IFileSystem OpenFile(string filepath, IPackageLoadInfo packageInfo = null);
+        IFileSystem OpenFile(string filepath, IPackageInfo packageInfo = null);
     }
-    // </IFileSystemPackageLoaderOpenFile>
+    // </IPackageLoaderOpenFile>
 
-    // <IFileSystemPackageLoaderLoadFile>
+    // <IPackageLoaderLoadFile>
     /// <summary>
     /// Package loader that cab load a package file completely.
     /// </summary>
-    public interface IFileSystemPackageLoaderLoadFile : IFileSystemPackageLoader
+    public interface IPackageLoaderLoadFile : IPackageLoader
     {
         /// <summary>
         /// Load a package file completely. The implementation must close the file before the call returns.
@@ -81,15 +81,15 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
         /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
-        IFileSystem LoadFile(string filepath, IPackageLoadInfo packageInfo = null);
+        IFileSystem LoadFile(string filepath, IPackageInfo packageInfo = null);
     }
-    // </IFileSystemPackageLoaderLoadFile>
+    // </IPackageLoaderLoadFile>
 
-    // <IFileSystemPackageLoaderUseStream>
+    // <IPackageLoaderUseStream>
     /// <summary>
     /// Package loader that can open <see cref="Stream"/> to access contents of a package file.
     /// </summary>
-    public interface IFileSystemPackageLoaderUseStream : IFileSystemPackageLoader
+    public interface IPackageLoaderUseStream : IPackageLoader
     {
         /// <summary>
         /// Use an open <paramref name="stream"/> to read contents from a package file.
@@ -110,15 +110,15 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
         /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
-        IFileSystem UseStream(Stream stream, IPackageLoadInfo packageInfo = null);
+        IFileSystem UseStream(Stream stream, IPackageInfo packageInfo = null);
     }
-    // </IFileSystemPackageLoaderUseStream>
+    // </IPackageLoaderUseStream>
 
-    // <IFileSystemPackageLoaderLoadFromStream>
+    // <IPackageLoaderLoadFromStream>
     /// <summary>
     /// Package loader that can load a package completely from an open <see cref="Stream"/>.
     /// </summary>
-    public interface IFileSystemPackageLoaderLoadFromStream : IFileSystemPackageLoader
+    public interface IPackageLoaderLoadFromStream : IPackageLoader
     {
         /// <summary>
         /// Read package completely from <paramref name="stream"/> and return representation of contents as <see cref="IFileSystem"/>.
@@ -133,15 +133,15 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
         /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
-        IFileSystem LoadFromStream(Stream stream, IPackageLoadInfo packageInfo = null);
+        IFileSystem LoadFromStream(Stream stream, IPackageInfo packageInfo = null);
     }
-    // </IFileSystemPackageLoaderLoadFromStream>
+    // </IPackageLoaderLoadFromStream>
 
-    // <IFileSystemPackageLoaderUseBytes>
+    // <IPackageLoaderUseBytes>
     /// <summary>
     /// Package loader that can load a package completely from an bytes.
     /// </summary>
-    public interface IFileSystemPackageLoaderUseBytes : IFileSystemPackageLoader
+    public interface IPackageLoaderUseBytes : IPackageLoader
     {
         /// <summary>
         /// Load file system from bytes.
@@ -155,15 +155,15 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
         /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
-        IFileSystem UseBytes(byte[] data, IPackageLoadInfo packageInfo = null);
+        IFileSystem UseBytes(byte[] data, IPackageInfo packageInfo = null);
     }
-    // </IFileSystemPackageLoaderUseBytes>
+    // </IPackageLoaderUseBytes>
 
-    // <IPackageLoadInfo>
+    // <IPackageInfo>
     /// <summary>
     /// Optional hints about the package that is being loaded.
     /// </summary>
-    public interface IPackageLoadInfo
+    public interface IPackageInfo
     {
         /// <summary>
         /// (optional) Path within parent file system.
@@ -180,5 +180,5 @@ namespace Lexical.FileSystem
         /// </summary>
         long Length { get; }
     }
-    // </IPackageLoadInfo>
+    // </IPackageInfo>
 }

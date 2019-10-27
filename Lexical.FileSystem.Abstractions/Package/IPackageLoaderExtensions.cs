@@ -3,16 +3,16 @@
 // Date:           8.12.2018
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Package;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// <see cref="IFileSystemPackageLoader"/> extension methods.
+    /// <see cref="IPackageLoader"/> extension methods.
     /// </summary>
     public static class PackageLoaderExtensions
     {
@@ -21,7 +21,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="packageLoader"></param>
         /// <returns>for example "dll"</returns>
-        public static IEnumerable<string> GetExtensions(this IFileSystemPackageLoader packageLoader)
+        public static IEnumerable<string> GetExtensions(this IPackageLoader packageLoader)
             => packageLoader.FileExtensionPattern.Split('|').Select(ext => ext.Replace(@"\", ""));
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="packageLoaders"></param>
         /// <returns>for example "dll", "zip", ... </returns>
-        public static string[] GetExtensions(this IEnumerable<IFileSystemPackageLoader> packageLoaders)
+        public static string[] GetExtensions(this IEnumerable<IPackageLoader> packageLoaders)
             => packageLoaders.SelectMany(pl => pl.FileExtensionPattern.Split('|')).Select(ext => ext.Replace(@"\", "")).ToArray();
 
         /// <summary>
@@ -37,12 +37,12 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="packageLoaders"></param>
         /// <returns>map, e.g. { "dll", Dll.Singleton }</returns>
-        public static IReadOnlyDictionary<string, IFileSystemPackageLoader> SortByExtension(this IEnumerable<IFileSystemPackageLoader> packageLoaders)
+        public static IReadOnlyDictionary<string, IPackageLoader> SortByExtension(this IEnumerable<IPackageLoader> packageLoaders)
         {
-            Dictionary<string, IFileSystemPackageLoader> result = new Dictionary<string, IFileSystemPackageLoader>();
+            Dictionary<string, IPackageLoader> result = new Dictionary<string, IPackageLoader>();
 
             // Sort by extension
-            foreach (IFileSystemPackageLoader pl in packageLoaders)
+            foreach (IPackageLoader pl in packageLoaders)
                 foreach (string extension in pl.GetExtensions())
                     result[extension] = pl;
 
@@ -73,7 +73,7 @@ namespace Lexical.FileSystem
             if (p1.AutoMounters == null) return p2;
             if (p2.AutoMounters == null) return p1;
 
-            IFileSystemPackageLoader[] list = p1.AutoMounters.Where(pl => p2.AutoMounters.Contains(pl)).ToArray();
+            IPackageLoader[] list = p1.AutoMounters.Where(pl => p2.AutoMounters.Contains(pl)).ToArray();
             return new FileSystemOptionPackageLoader(list);
         }
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
@@ -84,7 +84,7 @@ namespace Lexical.FileSystem
             if (p2.AutoMounters == null) return p1;
             if (p1.AutoMounters.Length == 0) return p2;
             if (p2.AutoMounters.Length == 0) return p1;
-            Dictionary<string, IFileSystemPackageLoader> byExtension = new Dictionary<string, IFileSystemPackageLoader>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, IPackageLoader> byExtension = new Dictionary<string, IPackageLoader>(StringComparer.OrdinalIgnoreCase);
             foreach (var pl in p1.AutoMounters.Concat(p2.AutoMounters))
             {
                 foreach (string extension in pl.GetExtensions())
@@ -93,7 +93,7 @@ namespace Lexical.FileSystem
                     byExtension[extension] = pl;
                 }
             }
-            IFileSystemPackageLoader[] array = byExtension.Values.Distinct().ToArray();
+            IPackageLoader[] array = byExtension.Values.Distinct().ToArray();
             return new FileSystemOptionPackageLoader(array);
         }
     }
@@ -102,9 +102,9 @@ namespace Lexical.FileSystem
     public class FileSystemOptionPackageLoader : IFileSystemOptionAutoMount
     {
         /// <summary>Package loaders that can mount package files, such as .zip.</summary>
-        public IFileSystemPackageLoader[] AutoMounters { get; protected set; }
+        public IPackageLoader[] AutoMounters { get; protected set; }
         /// <summary>Create option for auto-mounted packages.</summary>
-        public FileSystemOptionPackageLoader(IFileSystemPackageLoader[] packageLoaders) { AutoMounters = packageLoaders; }
+        public FileSystemOptionPackageLoader(IPackageLoader[] packageLoaders) { AutoMounters = packageLoaders; }
     }
 
 }

@@ -4,7 +4,7 @@ Lexical.FileSystem is a virtual filesystem class libraries for .NET.
 NuGet Packages:
 * Lexical.FileSystem ([Website](http://lexical.fi/FileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/))
 * Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
-* License [Apache-2.0 license](http://www.apache.org/licenses/LICENSE-2.0)
+* License ([Apache-2.0 license](http://www.apache.org/licenses/LICENSE-2.0))
 
 
 
@@ -256,7 +256,7 @@ OnCompleted
 **.SetEventDispatcher(<i>IFileSystemEventDispatcher</i>)** sets events dispatcher. *FileSystemEventDispatcher.Instance* uses the API caller's thread to dispatch events.
 
 ```csharp
-IFileSystem fs = new FileSystem(path).SetEventDispatcher(EventDispatcher.Instance);
+IFileSystem fs = new FileSystem(path).SetEventDispatcher(FileSystemEventDispatcher.Instance);
 ```
 
 *FileSystemEventDispatcherTask.Instance* dispatches events in concurrent threads with Task class.

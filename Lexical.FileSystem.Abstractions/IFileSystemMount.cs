@@ -3,6 +3,7 @@
 // Date:           12.9.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Package;
 using System;
 
 namespace Lexical.FileSystem
@@ -97,7 +98,7 @@ namespace Lexical.FileSystem
     public interface IFileSystemOptionAutoMount : IFileSystemOption
     {
         /// <summary>Package loaders that can mount package files, such as .zip.</summary>
-        IFileSystemPackageLoader[] AutoMounters { get; }
+        IPackageLoader[] AutoMounters { get; }
     }
     // </IFileSystemOptionAutoMount>
 
