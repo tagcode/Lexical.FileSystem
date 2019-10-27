@@ -1100,7 +1100,15 @@ ms2.CreateFile("file2", new byte[2048]);
 Deleted file is returned back to pool once all open streams are closed.
 
 ```csharp
+IBlockPool pool = new BlockPool(blockSize: 1024, maxBlockCount: 3, maxRecycleQueue: 3);
+IFileSystem ms = new MemoryFileSystem(pool);
+Stream s = ms.Open("file", FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+s.Write(new byte[3072], 0, 3072);
+ms.Delete("file");
 
+Console.WriteLine(pool.BytesAvailable); // Prints 0
+s.Dispose();
+Console.WriteLine(pool.BytesAvailable); // Prints 3072
 ```
 
 # FileScanner
