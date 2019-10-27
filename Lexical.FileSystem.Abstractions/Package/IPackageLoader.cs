@@ -18,7 +18,7 @@ namespace Lexical.FileSystem.Package
     ///    <item><see cref="IPackageLoaderLoadFile"/></item>
     ///    <item><see cref="IPackageLoaderUseStream"/></item>
     ///    <item><see cref="IPackageLoaderLoadFromStream"/></item>
-    ///    <item><see cref="IPackageLoaderUseBytes"/></item>
+    ///    <item><see cref="IPackageLoaderCreate"/></item>
     /// </list>
     /// </summary>
     public interface IPackageLoader
@@ -46,6 +46,11 @@ namespace Lexical.FileSystem.Package
     public interface IPackageLoaderOpenFile : IPackageLoader
     {
         /// <summary>
+        /// Can open file.
+        /// </summary>
+        bool CanOpenFile { get; }
+
+        /// <summary>
         /// Open a package file and keep it open until the file system is disposed. 
         /// Return <see cref="IFileSystem"/> that represents the contents of the open file.
         /// 
@@ -57,7 +62,7 @@ namespace Lexical.FileSystem.Package
         /// <exception cref="Exception">If there was unexpected error, such as IOException</exception>
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
-        /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
+        /// <exception cref="PackageException.LoadError">The when file format is erronous, package will not be opened as directory.</exception>
         IFileSystem OpenFile(string filepath, IPackageInfo packageInfo = null);
     }
     // </IPackageLoaderOpenFile>
@@ -68,6 +73,11 @@ namespace Lexical.FileSystem.Package
     /// </summary>
     public interface IPackageLoaderLoadFile : IPackageLoader
     {
+        /// <summary>
+        /// Can use stream.
+        /// </summary>
+        bool CanLoadFile { get; }
+
         /// <summary>
         /// Load a package file completely. The implementation must close the file before the call returns.
         /// Return <see cref="IFileSystem"/> that represents the contents of the open file.
@@ -80,7 +90,7 @@ namespace Lexical.FileSystem.Package
         /// <exception cref="Exception">If there was unexpected error, such as IOException</exception>
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
-        /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
+        /// <exception cref="PackageException.LoadError">The when file format is erronous, package will not be opened as directory.</exception>
         IFileSystem LoadFile(string filepath, IPackageInfo packageInfo = null);
     }
     // </IPackageLoaderLoadFile>
@@ -91,6 +101,11 @@ namespace Lexical.FileSystem.Package
     /// </summary>
     public interface IPackageLoaderUseStream : IPackageLoader
     {
+        /// <summary>
+        /// Can use package from stream.
+        /// </summary>
+        bool CanUseStream { get; }
+
         /// <summary>
         /// Use an open <paramref name="stream"/> to read contents from a package file.
         /// Return a <see cref="IFileSystem"/> that represent the contents.
@@ -109,7 +124,7 @@ namespace Lexical.FileSystem.Package
         /// <exception cref="Exception">If there was unexpected error, such as IOException</exception>
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
-        /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
+        /// <exception cref="PackageException.LoadError">The when file format is erronous, package will not be opened as directory.</exception>
         IFileSystem UseStream(Stream stream, IPackageInfo packageInfo = null);
     }
     // </IPackageLoaderUseStream>
@@ -120,6 +135,11 @@ namespace Lexical.FileSystem.Package
     /// </summary>
     public interface IPackageLoaderLoadFromStream : IPackageLoader
     {
+        /// <summary>
+        /// Can load from stream.
+        /// </summary>
+        bool CanLoadFromStream { get; }
+
         /// <summary>
         /// Read package completely from <paramref name="stream"/> and return representation of contents as <see cref="IFileSystem"/>.
         /// The implementation and the returned <see cref="IFileSystem"/> does not take ownership of the stream. 
@@ -132,32 +152,39 @@ namespace Lexical.FileSystem.Package
         /// <exception cref="Exception">If there was unexpected error, such as IOException</exception>
         /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
-        /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
+        /// <exception cref="PackageException.LoadError">The when file format is erronous, package will not be opened as directory.</exception>
         IFileSystem LoadFromStream(Stream stream, IPackageInfo packageInfo = null);
     }
     // </IPackageLoaderLoadFromStream>
 
-    // <IPackageLoaderUseBytes>
+
+    // <IPackageLoaderCreate>
     /// <summary>
-    /// Package loader that can load a package completely from an bytes.
+    /// Package loader that can create new package.
     /// </summary>
-    public interface IPackageLoaderUseBytes : IPackageLoader
+    public interface IPackageLoaderCreate : IPackageLoader
     {
         /// <summary>
-        /// Load file system from bytes.
-        /// 
-        /// The caller is responsible for disposing the returned file system if it implements <see cref="IDisposable"/>.
+        /// Can create package.
         /// </summary>
-        /// <param name="data">data to read from</param>
-        /// <param name="packageInfo">(optional) Information about packge that is being opened</param>
-        /// <returns>file system</returns>
+        bool CanCreate { get; }
+
+        /// <summary>
+        /// Create new package into <paramref name="parent"/> filesystem as file <paramref name="path"/>.
+        /// 
+        /// If optional <paramref name="initialContent"/> is provided, adds all files in it to the package.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="path"></param>
+        /// <param name="initialContent">(optional) initial files to add</param>
+        /// <returns>the create package file system open</returns>
         /// <exception cref="Exception">If there was unexpected error, such as IOException</exception>
-        /// <exception cref="InvalidOperationException">If this load method is not supported.</exception>
+        /// <exception cref="NotSupportedException">method is not supported.</exception>
         /// <exception cref="IOException">Problem with io stream</exception>
-        /// <exception cref="FileSystemExceptionPackaageLoadError">The when file format is erronous, package will not be opened as directory.</exception>
-        IFileSystem UseBytes(byte[] data, IPackageInfo packageInfo = null);
+        /// <exception cref="PackageException.CreateError">When create fails</exception>
+        IFileSystem Create(IFileSystem parent, string path, IFileSystem initialContent);
     }
-    // </IPackageLoaderUseBytes>
+    // </IPackageLoaderCreate>
 
     // <IPackageInfo>
     /// <summary>

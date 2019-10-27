@@ -17,6 +17,41 @@ namespace Lexical.FileSystem
     public static class PackageLoaderExtensions
     {
         /// <summary>
+        /// Can open file.
+        /// </summary>
+        /// <param name="packageLoader"></param>
+        public static bool CanOpenFile(this IPackageLoader packageLoader)
+            => packageLoader is IPackageLoaderOpenFile pl ? pl.CanOpenFile : false;
+
+        /// <summary>
+        /// Can load file.
+        /// </summary>
+        /// <param name="packageLoader"></param>
+        public static bool CanLoadFile(this IPackageLoader packageLoader)
+            => packageLoader is IPackageLoaderLoadFile pl ? pl.CanLoadFile : false;
+
+        /// <summary>
+        /// Can use package from stream.
+        /// </summary>
+        /// <param name="packageLoader"></param>
+        public static bool IPackageLoaderUseStream(this IPackageLoader packageLoader)
+            => packageLoader is IPackageLoaderUseStream pl ? pl.CanUseStream : false;
+
+        /// <summary>
+        /// Can load from stream.
+        /// </summary>
+        /// <param name="packageLoader"></param>
+        public static bool CanLoadFromStream(this IPackageLoader packageLoader)
+            => packageLoader is IPackageLoaderLoadFromStream pl ? pl.CanLoadFromStream : false;
+
+        /// <summary>
+        /// Can create package.
+        /// </summary>
+        /// <param name="packageLoader"></param>
+        public static bool CanCreate(this IPackageLoader packageLoader)
+            => packageLoader is IPackageLoaderCreate pl ? pl.CanCreate : false;
+
+        /// <summary>
         /// Try to read supported file formats from the regular expression pattern.
         /// </summary>
         /// <param name="packageLoader"></param>
@@ -48,15 +83,6 @@ namespace Lexical.FileSystem
 
             return result;
         }
-    }
-
-    /// <summary>Package loading failed.</summary>
-    public class FileSystemExceptionPackaageLoadError : FileSystemException
-    {
-        /// <summary>Create Package loading failed exception.</summary>
-        public FileSystemExceptionPackaageLoadError(IFileSystem filesystem = null, string path = null) : base(filesystem, path, "Package loading failed") { }
-        /// <summary>Create Package loading failed exception.</summary>
-        protected FileSystemExceptionPackaageLoadError(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
     /// <summary><see cref="IFileSystemOptionOpen"/> operations.</summary>

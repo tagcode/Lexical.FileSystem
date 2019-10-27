@@ -108,7 +108,7 @@ namespace Lexical.FileSystem.Package
         public class LoadError : FileError
         {
             /// <summary>
-            /// Create load capability error.
+            /// Create load error.
             /// </summary>
             /// <param name="filesystem">(optional) associated filesystem</param>
             /// <param name="path">(optional) associated path</param>
@@ -123,6 +123,30 @@ namespace Lexical.FileSystem.Package
             /// <param name="info"></param>
             /// <param name="context"></param>
             protected LoadError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        }
+
+
+        /// <summary>
+        /// Package create failed.
+        /// </summary>
+        public class CreateError : FileError
+        {
+            /// <summary>
+            /// Create create failed error.
+            /// </summary>
+            /// <param name="filesystem">(optional) associated filesystem</param>
+            /// <param name="path">(optional) associated path</param>
+            /// <param name="message">(optional) message</param>
+            /// <param name="innerException">(optional) inner exception</param>
+            /// <param name="packageLoader">(optional) associated package loader</param>
+            public CreateError(IFileSystem filesystem = null, string path = null, string message = "", Exception innerException = null, IPackageLoader packageLoader = null) : base(filesystem, path, message, innerException) { this.packageLoader = packageLoader; }
+
+            /// <summary>
+            /// Derialize exception from <paramref name="context"/>.
+            /// </summary>
+            /// <param name="info"></param>
+            /// <param name="context"></param>
+            protected CreateError(SerializationInfo info, StreamingContext context) : base(info, context) { }
         }
     }
 }
