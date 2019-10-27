@@ -1257,7 +1257,7 @@ namespace Lexical.FileSystem.Decoration
                     try
                     {
                         // Try Observe
-                        IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component), eventDispatcher: FileSystemEventDispatcher.Instance);
+                        IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component), eventDispatcher);
                         // Attach disposable
                         ((IDisposeList)adapter).AddDisposable(disposable);
                     }

@@ -32,9 +32,6 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>Event dispatcher</summary>
         public IFileSystemEventDispatcher Dispatcher { get; protected set; }
 
-        /// <summary>Time when observe started.</summary>
-        DateTimeOffset startTime = DateTimeOffset.UtcNow;
-
         /// <summary>
         /// Number of feeding observers. 
         /// This count is incremented when <see cref="IFileSystemEventStart"/> event is sent, and decremented when <see cref="IFileSystemEvent.Observer"/> is sent.
@@ -54,7 +51,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="filter"></param>
         /// <param name="observer">The IObserver from caller were the decorated events are forwarded to</param>
         /// <param name="state"></param>
-        /// <param name="eventDispatcher">(optional) event dispatcher</param>
+        /// <param name="eventDispatcher">event dispatcher to show on the interface, doesn't use it</param>
         /// <param name="disposeWhenLastCompletes">if true, when last attached observer sends <see cref="IObserver{T}.OnCompleted"/> event, 
         /// then diposes this object and sends <see cref="IObserver{T}.OnCompleted"/> to <see cref="Observer"/>.</param>
         public ObserverDecorator(IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, bool disposeWhenLastCompletes)
@@ -106,19 +103,8 @@ namespace Lexical.FileSystem.Decoration
             }
             // Try to decorate event
             @event = FileSystemEventDecoration.DecorateObserverAndPath(@event, this, newOldPath, newNewPath, false);
-            // Send event forward
-            if (FileSystem is IFileSystemEventDispatcher dispatchable) dispatchable.DispatchEvent(@event);
-            else
-            {
-                try
-                {
-                    Observer.OnNext(@event);
-                }
-                catch (Exception error1)
-                {
-                    try { Observer.OnError(error1); } catch (Exception) {}
-                }
-            }
+            // Forward event in this thread, which should be dispatcher's thread
+            Observer.OnNext(@event);
         }
 
         /// <summary>

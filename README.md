@@ -253,27 +253,6 @@ Delete(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
 OnCompleted
 ```
 
-Observe() parameter *eventDispatcher* determines how events are dispatched for the observer.
-
-```csharp
-IObserver<IFileSystemEvent> observer = new Observer();
-FileSystem.Temp.Observe("C:/**", observer, eventDispatcher: FileSystemEventDispatcher.Instance);
-```
-
-*FileSystemEventDispatcherTask.Instance* dispatches events in concurrently in tasks.
-
-```csharp
-IObserver<IFileSystemEvent> observer = new Observer();
-FileSystem.Temp.Observe("C:/**", observer, eventDispatcher: FileSystemEventDispatcherTask.Instance);
-```
-
-*IFileSystemEventDispatcher* singleton instances:
-
-| Name                                  | Description                                                                                      |
-|:--------------------------------------|:-------------------------------------------------------------------------------------------------|
-| FileSystemEventDispatcher.Instance    | Dispatches events in the API caller's thread.                                                    |
-| FileSystemEventDispatcherTask.Instance| Dispatches events concurrently in a TaskFactory.                                                 |
-
 
 # Disposing
 

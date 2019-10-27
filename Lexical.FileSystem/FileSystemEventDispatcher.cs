@@ -106,12 +106,12 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Dispatches events in concurrent tasks.
     /// </summary>
-    public class FileSystemEventDispatcherTask : IFileSystemEventDispatcherExtended
+    public class FileSystemEventTaskDispatcher : IFileSystemEventDispatcherExtended
     {
-        static FileSystemEventDispatcherTask instance => new FileSystemEventDispatcherTask(Task.Factory, null);
+        static FileSystemEventTaskDispatcher instance => new FileSystemEventTaskDispatcher(Task.Factory, null);
 
         /// <summary>Singleton instance </summary>
-        public static FileSystemEventDispatcherTask Instance => instance;
+        public static FileSystemEventTaskDispatcher Instance => instance;
 
         /// <summary>
         /// Task-factory that is used for sending events.
@@ -132,7 +132,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="taskFactory">(optional) task factory</param>
         /// <param name="errorHandler">(optional) error handler</param>
-        public FileSystemEventDispatcherTask(TaskFactory taskFactory = default, Action<IFileSystemEventDispatcher, IFileSystemEvent, Exception> errorHandler = null)
+        public FileSystemEventTaskDispatcher(TaskFactory taskFactory = default, Action<IFileSystemEventDispatcher, IFileSystemEvent, Exception> errorHandler = null)
         {
             this.taskFactory = taskFactory ?? Task.Factory;
             this.processEventsAction = processEvents;
