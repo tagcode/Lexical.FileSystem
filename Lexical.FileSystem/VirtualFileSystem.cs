@@ -45,7 +45,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanDelete => true;
         /// <inheritdoc/>
-        public override bool CanObserve => true;
+        public virtual bool CanObserve => true;
         /// <inheritdoc/>
         public virtual bool CanMove => true;
         /// <inheritdoc/>
@@ -647,8 +647,9 @@ namespace Lexical.FileSystem
         /// <param name="filter"></param>
         /// <param name="observer"></param>
         /// <param name="state"></param>
+        /// <param name="eventDispatcher">(optional) </param>
         /// <returns></returns>
-        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default)
         {
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
@@ -661,7 +662,7 @@ namespace Lexical.FileSystem
             // Parse filter
             GlobPatternInfo info = new GlobPatternInfo(filter);
             // Create handle
-            ObserverHandle adapter = new ObserverHandle(this, null /*set below*/, this, filter, observer, state);
+            ObserverHandle adapter = new ObserverHandle(this, null /*set below*/, this, filter, observer, state, eventDispatcher);
             // Add to observer tree
             GetOrCreateObserverNode(info.Stem, adapter);
             // Send IFileSystemEventStart, must be sent before subscribing forwardees
@@ -778,7 +779,8 @@ namespace Lexical.FileSystem
             /// <param name="filter"></param>
             /// <param name="observer">The observer were decorated events are forwarded to</param>
             /// <param name="state"></param>
-            public ObserverHandle(VirtualFileSystem vfs, ObserverNode observerNode, IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(sourceFileSystem, filter, observer, state, false)
+            /// <param name="eventDispatcher">(optional) </param>
+            public ObserverHandle(VirtualFileSystem vfs, ObserverNode observerNode, IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher) : base(sourceFileSystem, filter, observer, state, eventDispatcher, false)
             {
                 this.vfs = vfs;
                 this.observerNode = observerNode;
@@ -1025,7 +1027,7 @@ namespace Lexical.FileSystem
                     }
 
                 // Create container for components.
-                if (cursor.mount == null) cursor.mount = new FileSystemDecoration(this, cursor.Path).SetEventDispatcher(eventDispatcher);
+                if (cursor.mount == null) cursor.mount = new FileSystemDecoration(this, cursor.Path);
                 // Set components
                 cursor.mount.SetComponents(ref componentsAdded, ref componentsRemoved, ref componentsReused, cursor.Path, mounts);
                 // Root entry changed
@@ -1875,40 +1877,6 @@ namespace Lexical.FileSystem
         {
             ((IDisposeList)this).RemoveDisposables(disposables);
             return this;
-        }
-
-        /// <summary>
-        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
-        /// 
-        /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
-        /// </summary>
-        /// <param name="eventHandler">(optional) factory that handles observer events</param>
-        /// <returns>memory filesystem</returns>
-        public VirtualFileSystem SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
-        {
-            setEventDispatcher(eventHandler);
-            return this;
-        }
-
-        /// <summary>Override this to change behaviour.</summary>
-        /// <param name="eventDispatcher"></param>
-        protected override void setEventDispatcher(IFileSystemEventDispatcher eventDispatcher)
-        {
-            this.eventDispatcher = eventDispatcher;
-
-            // Set event dispatcher to all existing mounts
-            vfsLock.AcquireReaderLock(int.MaxValue);
-            try
-            {
-                foreach(var node in vfsRoot.Visit(false, true, true))
-                {
-                    var _mount = node.mount;
-                    if (_mount != null) _mount.SetEventDispatcher(eventDispatcher);
-                }
-            } finally
-            {
-                vfsLock.ReleaseReaderLock();
-            }
         }
 
         /// <summary>

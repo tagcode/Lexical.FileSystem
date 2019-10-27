@@ -6,8 +6,6 @@
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
@@ -19,45 +17,14 @@ namespace Lexical.FileSystem
     /// 
     /// Can send events to observers.
     /// </summary>
-    public abstract class FileSystemBase : DisposeList, IFileSystemDisposable, IFileSystemObserve
+    public abstract class FileSystemBase : DisposeList, IFileSystemDisposable
     {
-        /// <summary>
-        /// Has SetEventDispatcher() capability.
-        /// </summary>
-        public virtual bool CanSetEventDispatcher { get; protected set; } = true;
-
-        /// <summary>
-        /// Can observe
-        /// </summary>
-        public abstract bool CanObserve { get; }
-
-        /// <summary>
-        /// Evetnt dispatcher.
-        /// </summary>
-        protected internal IFileSystemEventDispatcher eventDispatcher = FileSystemEventDispatcher.Instance;
-
         /// <summary>
         /// Create new filesystem.
         /// </summary>
         public FileSystemBase() : base()
         {
         }
-
-        /// <summary>
-        /// Set a <see cref="IFileSystemEventDispatcher"/> that dispatches the events. If set to null, then filesystem doesn't dispatch events.
-        /// </summary>
-        /// <param name="eventDispatcher">(optional) that dispatches events to observers. If null, doesn't dispatch events..</param>
-        /// <returns>this</returns>
-        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
-        IFileSystem IFileSystemObserve.SetEventDispatcher(IFileSystemEventDispatcher eventDispatcher)
-        {
-            setEventDispatcher(eventDispatcher);
-            return this;
-        }
-
-        /// <summary>Override this to change behaviour.</summary>
-        /// <param name="eventDispatcher"></param>
-        protected virtual void setEventDispatcher(IFileSystemEventDispatcher eventDispatcher) => this.eventDispatcher = eventDispatcher;
 
         /// <summary>
         /// Send <paramref name="events"/> to observers.
@@ -69,19 +36,33 @@ namespace Lexical.FileSystem
             if (IsDisposing) return;
             // Nothing to do
             if (events.Count == 0) return;
-            // Get reference
-            var _dispatcher = eventDispatcher;
-            // No dispatcher
-            if (_dispatcher == null) return;
+            // Get first dispatcher
+            var _dispatcher = events[0].Observer.Dispatcher ?? FileSystemEventDispatcher.Instance;
             // Dispatch one event
             if (events.Count == 1) { _dispatcher.DispatchEvent(events[0]); return; }
-            // Send with struct list
-            if (_dispatcher is IFileSystemEventDispatcherExtended ext) { ext.DispatchEvents(ref events); return; }
-            // Convert to array
-            _dispatcher.DispatchEvents(events.ToArray());
-        }
+            // All same dispatcher?
+            bool allSameDispatcher = true;
+            for (int i = 1; i < events.Count; i++)
+            {
+                var __dispatcher = events[i].Observer.Dispatcher ?? FileSystemEventDispatcher.Instance;
+                if (__dispatcher != _dispatcher) { allSameDispatcher = false; break; }
+            }
 
-        /// <inheritdoc/>
-        public abstract IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
+            // All events use same dispatcher
+            if (allSameDispatcher)
+            {
+                // Send with struct list
+                if (_dispatcher is IFileSystemEventDispatcherExtended ext) { ext.DispatchEvents(ref events); return; }
+                // Convert to array
+                _dispatcher.DispatchEvents(events.ToArray());
+            }
+            else
+            // Events use different dispatchers
+            {
+                // Dispatch each separately with different dispatchers
+                for (int i = 0; i < events.Count; i++)
+                    (events[i].Observer.Dispatcher ?? FileSystemEventDispatcher.Instance).DispatchEvent(events[i]);
+            }
+        }
     }
 }

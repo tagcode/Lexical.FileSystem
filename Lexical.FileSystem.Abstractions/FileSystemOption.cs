@@ -45,8 +45,6 @@ namespace Lexical.FileSystem
 
         /// <summary>Observe is allowed.</summary>
         public static IFileSystemOption Observe => observe;
-        /// <summary>Observe is allowed, but cannt set event dispatch.</summary>
-        public static IFileSystemOption ObserveCannotSetEventDispatch => observeCannotSetEventDispatch;
         /// <summary>Observe is not allowed</summary>
         public static IFileSystemOption NoObserve => noObserve;
 

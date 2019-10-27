@@ -57,7 +57,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool CanGetEntry => Option.CanGetEntry;
         /// <inheritdoc/>
-        public override bool CanObserve => Option.CanObserve;
+        public virtual bool CanObserve => Option.CanObserve;
         /// <inheritdoc/>
         public virtual bool CanOpen => Option.CanOpen;
         /// <inheritdoc/>
@@ -207,20 +207,6 @@ namespace Lexical.FileSystem.Decoration
                 this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
             }
 
-        }
-
-        /// <summary>
-        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
-        /// 
-        /// If <paramref name="eventHandler"/> is null, then events are processed in the threads
-        /// that make modifications to filesystem.
-        /// </summary>
-        /// <param name="eventHandler">(optional) factory that handles observer events</param>
-        /// <returns>memory filesystem</returns>
-        public FileSystemDecoration SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
-        {
-            ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
-            return this;
         }
 
         /// <summary>
@@ -1229,6 +1215,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="filter">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
+        /// <param name="eventDispatcher">(optional) event dispatcher</param>
         /// <returns>dispose handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -1239,7 +1226,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default)
         {
             // Assert argument
             if (filter == null) throw new ArgumentNullException(nameof(filter));
@@ -1253,7 +1240,7 @@ namespace Lexical.FileSystem.Decoration
             if (components.Length == 0) throw new NotSupportedException(nameof(Observe));
 
             // Create adapter
-            ObserverDecorator adapter = new ObserverDecorator(this, filter, observer, state, true);
+            ObserverDecorator adapter = new ObserverDecorator(this, filter, observer, state, eventDispatcher, true);
             try
             {
                 // Send IFileSystemEventStart, must be sent before subscribing forwardees
@@ -1438,8 +1425,6 @@ namespace Lexical.FileSystem.Decoration
             /// <inheritdoc/>
             public bool CanObserve { get; set; }
             /// <inheritdoc/>
-            public bool CanSetEventDispatcher { get; set; }
-            /// <inheritdoc/>
             public bool CanOpen { get; set; }
             /// <inheritdoc/>
             public bool CanRead { get; set; }
@@ -1479,7 +1464,6 @@ namespace Lexical.FileSystem.Decoration
                 result.CanBrowse = option.CanBrowse();
                 result.CanGetEntry = option.CanGetEntry();
                 result.CanObserve = option.CanObserve();
-                result.CanSetEventDispatcher = option.CanSetEventDispatcher();
                 result.CanOpen = option.CanOpen();
                 result.CanRead = option.CanRead();
                 result.CanWrite = option.CanWrite();
@@ -1510,7 +1494,6 @@ namespace Lexical.FileSystem.Decoration
                 result.CanBrowse = this.CanBrowse | option.CanBrowse();
                 result.CanGetEntry = this.CanGetEntry | option.CanGetEntry();
                 result.CanObserve = this.CanObserve | option.CanObserve();
-                result.CanSetEventDispatcher = this.CanSetEventDispatcher | option.CanSetEventDispatcher();
                 result.CanOpen = this.CanOpen | option.CanOpen();
                 result.CanRead = this.CanRead | option.CanRead();
                 result.CanWrite = this.CanWrite | option.CanWrite();

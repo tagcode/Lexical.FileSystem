@@ -103,7 +103,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanGetEntry => true;
         /// <inheritdoc/>
-        public override bool CanObserve => true;
+        public virtual bool CanObserve => true;
         /// <inheritdoc/>
         public virtual bool CanOpen => true;
         /// <inheritdoc/>
@@ -157,19 +157,6 @@ namespace Lexical.FileSystem
             /// <summary>Create non-disposable filesystem.</summary>
             /// <param name="path">Path to root directory, or "" for OS root which returns drive letters.</param>
             public NonDisposable(string path) : base(path) { SetToNonDisposable(); }
-        }
-
-        /// <summary>
-        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
-        /// 
-        /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
-        /// </summary>
-        /// <param name="eventHandler">(optional) factory that handles observer events</param>
-        /// <returns>memory filesystem</returns>
-        public FileSystem SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
-        {
-            ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
-            return this;
         }
 
         /// <summary>
@@ -546,6 +533,7 @@ namespace Lexical.FileSystem
         /// <param name="filter">glob pattern to filter events. "**" means any directory. For example "mydir/**/somefile.txt", or "**" for <paramref name="filter"/> and sub-directories</param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
+        /// <param name="eventDispatcher">(optional) </param>
         /// <returns>disposable handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -556,7 +544,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default)
         {
             // Parse filter
             GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
@@ -574,7 +562,7 @@ namespace Lexical.FileSystem
                 string path = ConcatenateAndAssertPath(filter, out concatenatedPath, out absolutePath, true);
 
                 // Create observer object
-                FileObserver handle = new FileObserver(this, path, observer, state, AbsolutePath, absolutePath);
+                FileObserver handle = new FileObserver(this, path, observer, state, eventDispatcher, AbsolutePath, absolutePath);
                 // Send IFileSystemEventStart
                 observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow) );
                 // Return handle
@@ -589,7 +577,7 @@ namespace Lexical.FileSystem
                 string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(patternInfo.Stem, out concatenatedPath, out absolutePathToPrefixPart, true);
 
                 // Create observer object
-                PatternObserver handle = new PatternObserver(this, observer, state, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Suffix);
+                PatternObserver handle = new PatternObserver(this, observer, state, eventDispatcher, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Suffix);
                 // Send IFileSystemEventStart
                 observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle
@@ -601,7 +589,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Single file observer.
         /// </summary>
-        protected internal class FileObserver : FileSystemObserverHandleBase
+        protected internal class FileObserver : FileSystemObserverBase
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -633,10 +621,11 @@ namespace Lexical.FileSystem
             /// <param name="relativePath">path to file as <see cref="IFileSystem"/> path</param>
             /// <param name="observer">observer for callbacks</param>
             /// <param name="state"></param>
+            /// <param name="eventDispatcher"></param>
             /// <param name="filesystemRootAbsolutePath">Absolute path to filesystem root.</param>
             /// <param name="absolutePath">Absolute path to the file</param>
             /// <exception cref="DirectoryNotFoundException">If directory in <paramref name="filesystemRootAbsolutePath"/> is not found.</exception>
-            public FileObserver(IFileSystem filesystem, string relativePath, IObserver<IFileSystemEvent> observer, object state, string filesystemRootAbsolutePath, string absolutePath) : base(filesystem, relativePath, observer, state)
+            public FileObserver(IFileSystem filesystem, string relativePath, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, string filesystemRootAbsolutePath, string absolutePath) : base(filesystem, relativePath, observer, state, eventDispatcher)
             {
                 this.FileSystemRootAbsolutePath = filesystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(filesystemRootAbsolutePath));
                 this.AbsolutePath = absolutePath ?? throw new ArgumentNullException(nameof(absolutePath));
@@ -665,9 +654,7 @@ namespace Lexical.FileSystem
                 // No observer
                 if (_observer == null) return;
                 // Get dispatcher
-                var _dispatcher = ((FileSystemBase)this.FileSystem).eventDispatcher;
-                // No dispatcher
-                if (_dispatcher == null) return;
+                var _dispatcher = Dispatcher ?? FileSystemEventDispatcher.Instance;
 
                 // Disposed
                 IFileSystem _filesystem = FileSystem;
@@ -771,7 +758,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Watches a group of files using a pattern.
         /// </summary>
-        protected internal class PatternObserver : FileSystemObserverHandleBase
+        protected internal class PatternObserver : FileSystemObserverBase
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -823,6 +810,7 @@ namespace Lexical.FileSystem
             /// <param name="filesystem">associated file system</param>
             /// <param name="observer">observer for callbacks</param>
             /// <param name="state"></param>
+            /// <param name="eventDispatcher"></param>
             /// <param name="filterString">original filter string</param>
             /// <param name="filesystemRootAbsolutePath">Absolute path to <see cref="FileSystem"/> root.</param>
             /// <param name="relativePathToPrefixPartWithoutTrailingSeparator">prefix part of <paramref name="filterString"/>, for example "dir" if filter string is "dir/**"</param>
@@ -832,12 +820,13 @@ namespace Lexical.FileSystem
                 IFileSystem filesystem,
                 IObserver<IFileSystemEvent> observer,
                 object state,
+                IFileSystemEventDispatcher eventDispatcher,
                 string filterString,
                 string filesystemRootAbsolutePath,
                 string relativePathToPrefixPartWithoutTrailingSeparator,
                 string absolutePathToPrefixPart,
                 string suffixPart)
-            : base(filesystem, filterString, observer, state)
+            : base(filesystem, filterString, observer, state, eventDispatcher)
             {
                 this.FileSystemRootAbsolutePath = filesystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(filesystemRootAbsolutePath));
                 this.AbsolutePathToPrefixPart = absolutePathToPrefixPart ?? throw new ArgumentNullException(nameof(absolutePathToPrefixPart));
@@ -876,9 +865,7 @@ namespace Lexical.FileSystem
                 // No observer
                 if (_observer == null) return;
                 // Get dispatcher
-                var _dispatcher = ((FileSystemBase)this.FileSystem).eventDispatcher;
-                // No dispatcher
-                if (_dispatcher == null) return;
+                var _dispatcher = Dispatcher ?? FileSystemEventDispatcher.Instance;
 
                 // Disposed
                 IFileSystem _filesystem = FileSystem;

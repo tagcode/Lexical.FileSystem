@@ -12,7 +12,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Base implementation filesystem observer
     /// </summary>
-    public abstract class FileSystemObserverHandleBase : DisposeList, IFileSystemObserver
+    public abstract class FileSystemObserverBase : DisposeList, IFileSystemObserver
     {
         /// <summary>
         /// The file system where the observer was attached.
@@ -35,18 +35,25 @@ namespace Lexical.FileSystem
         public object State { get; protected set; }
 
         /// <summary>
+        /// Event dispatcher.
+        /// </summary>
+        public IFileSystemEventDispatcher Dispatcher { get; protected set; }
+
+        /// <summary>
         /// Create observer.
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="filter"></param>
         /// <param name="observer"></param>
         /// <param name="state"></param>
-        protected FileSystemObserverHandleBase(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state)
+        /// <param name="eventDispatcher"></param>
+        protected FileSystemObserverBase(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher)
         {
             this.FileSystem = filesystem;
-            Filter = filter;
-            Observer = observer;
-            State = state;
+            this.Filter = filter;
+            this.Observer = observer;
+            this.State = state;
+            this.Dispatcher = eventDispatcher;
 
             // Catch dispose of parent filesystem
             if (filesystem is IDisposeList disposeList) disposeList.AddDisposable(this);
@@ -83,7 +90,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Base class for observer handle decoration.
     /// </summary>
-    public class FileSystemObserverHandleDecoration : IFileSystemObserver
+    public class FileSystemObserverDecoration : IFileSystemObserver
     {
         /// <summary>
         /// Decorate FileSystem value.
@@ -102,6 +109,9 @@ namespace Lexical.FileSystem
         public virtual IObserver<IFileSystemEvent> Observer => original.Observer;
         /// <inheritdoc/>
         public virtual object State => original.State;
+        /// <inheritdoc/>
+        public IFileSystemEventDispatcher Dispatcher => original.Dispatcher;
+
         /// <summary>
         /// Original observer handle
         /// </summary>
@@ -111,7 +121,7 @@ namespace Lexical.FileSystem
         /// Create filesystem observer handle decoration.
         /// </summary>
         /// <param name="original"></param>
-        public FileSystemObserverHandleDecoration(IFileSystemObserver original)
+        public FileSystemObserverDecoration(IFileSystemObserver original)
         {
             this.original = original ?? throw new ArgumentNullException(nameof(original));
         }
@@ -122,7 +132,7 @@ namespace Lexical.FileSystem
         protected virtual void Dispose(bool disposing) => original.Dispose();
 
         /// <summary>Class with overridden filesystem.</summary>
-        protected class NewFileSystem : FileSystemObserverHandleDecoration
+        protected class NewFileSystem : FileSystemObserverDecoration
         {
             /// <summary>Overriding filesystem.</summary>
             protected IFileSystem newFilesystem;

@@ -25,14 +25,6 @@ namespace Lexical.FileSystem
             => filesystemOption.AsOption<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanObserve : false;
 
         /// <summary>
-        /// Test if <paramref name="filesystemOption"/> has Observe capability.
-        /// <param name="filesystemOption"></param>
-        /// </summary>
-        /// <returns>true, if has Observe capability</returns>
-        public static bool CanSetEventDispatcher(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanSetEventDispatcher : false;
-
-        /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 
         /// 
         /// The <paramref name="filter"/> determines the file pattern to observe.
@@ -59,6 +51,7 @@ namespace Lexical.FileSystem
         /// <param name="filter">glob pattern to filter events. "**" means any directory. For example "mydir/**/somefile.txt", or "**" for <paramref name="filter"/> and sub-directories</param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
+        /// <param name="eventDispatcher">(optional) event dispatcher</param>
         /// <returns>handle to the observer, dispose to cancel the observe</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -69,25 +62,11 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemObserver Observe(this IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public static IFileSystemObserver Observe(this IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default)
         {
-            if (filesystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state);
+            if (filesystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state, eventDispatcher);
             else throw new NotSupportedException(nameof(Observe));
         }
-
-        /// <summary>
-        /// Set a <see cref="IFileSystemEventDispatcher"/> that dispatches the events. If set to null, then filesystem doesn't dispatch events.
-        /// </summary>
-        /// <param name="filesystem"></param>
-        /// <param name="eventDispatcher">(optional) that dispatches events to observers. If null, doesn't dispatch events..</param>
-        /// <returns>this</returns>
-        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
-        public static IFileSystem SetEventDispatcher(this IFileSystem filesystem, IFileSystemEventDispatcher eventDispatcher)
-        {
-            if (filesystem is IFileSystemObserve _observer) return _observer.SetEventDispatcher(eventDispatcher);
-            else throw new NotSupportedException(nameof(SetEventDispatcher));
-        }
-
     }
 
     /// <summary><see cref="IFileSystemOptionObserve"/> operations.</summary>
@@ -96,11 +75,11 @@ namespace Lexical.FileSystem
         /// <summary>The option type that this class has operations for.</summary>
         public Type OptionType => typeof(IFileSystemOptionObserve);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionObserve c ? o is FileSystemOptionObserve ? /*already flattened*/o : /*new instance*/new FileSystemOptionObserve(c.CanObserve, c.CanSetEventDispatcher) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionObserve c ? o is FileSystemOptionObserve ? /*already flattened*/o : /*new instance*/new FileSystemOptionObserve(c.CanObserve) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve && c2.CanObserve, c1.CanSetEventDispatcher && c2.CanSetEventDispatcher) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve && c2.CanObserve) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve || c2.CanObserve, c1.CanSetEventDispatcher || c2.CanSetEventDispatcher) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve || c2.CanObserve) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
     }
 
     /// <summary>File system option for observe.</summary>
@@ -108,18 +87,15 @@ namespace Lexical.FileSystem
     {
         /// <summary>Has Observe capability.</summary>
         public bool CanObserve { get; protected set; }
-        /// <summary>Has SetEventDispatcher capability.</summary>
-        public bool CanSetEventDispatcher { get; protected set; }
 
         /// <summary>Create file system option for observe.</summary>
-        public FileSystemOptionObserve(bool canObserve, bool canSetEventDispatcher)
+        public FileSystemOptionObserve(bool canObserve)
         {
             CanObserve = canObserve;
-            CanSetEventDispatcher = canSetEventDispatcher;
         }
 
         /// <inheritdoc/>
-        public override string ToString() => (CanObserve ? "CanObserve" : "NoObserve") + "," + (CanSetEventDispatcher ? "CanSetEventDispatcher" : "NoSetEventDispatcher");
+        public override string ToString() => (CanObserve ? "CanObserve" : "NoObserve");
     }
 
 }

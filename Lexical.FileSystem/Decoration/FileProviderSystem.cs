@@ -43,13 +43,12 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         public IDisposable FileProviderDisposable => fileProvider as IDisposable;
 
-        bool canObserve;
         /// <inheritdoc/>
         public virtual bool CanBrowse { get; protected set; }
         /// <inheritdoc/>
         public virtual bool CanGetEntry { get; protected set; }
         /// <inheritdoc/>
-        public override bool CanObserve => canObserve;
+        public virtual bool CanObserve { get; protected set; }
         /// <inheritdoc/>
         public virtual bool CanOpen { get; protected set; }
         /// <inheritdoc/>
@@ -80,7 +79,7 @@ namespace Lexical.FileSystem.Decoration
         {
             this.fileProvider = sourceFileProvider ?? throw new ArgumentNullException(nameof(sourceFileProvider));
             this.CanBrowse = this.CanGetEntry = canBrowse;
-            this.canObserve = canObserve;
+            this.CanObserve = canObserve;
             this.CanOpen = this.CanRead = canOpen;
             this.isPhysicalFileProvider = sourceFileProvider.GetType().FullName == "Microsoft.Extensions.FileProviders.PhysicalFileProvider";
             if (this.isPhysicalFileProvider)
@@ -93,19 +92,6 @@ namespace Lexical.FileSystem.Decoration
                 }
                 catch (Exception) { } // Reflection error
             }
-        }
-
-        /// <summary>
-        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
-        /// 
-        /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
-        /// </summary>
-        /// <param name="eventHandler">(optional) factory that handles observer events</param>
-        /// <returns>memory filesystem</returns>
-        public FileProviderSystem SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
-        {
-            ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
-            return this;
         }
 
         /// <summary>
@@ -276,6 +262,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="filter">path to file or directory. The directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
+        /// <param name="eventDispatcher">(optional) event dispatcher</param>
         /// <returns>dispose handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -286,20 +273,20 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default)
         {
             // Assert observe is enabled.
             if (!CanObserve) throw new NotSupportedException("Observe not supported.");
             // Assert not diposed
             IFileProvider fp = fileProvider;
-            if (fp == null) return new DummyObserver(this, filter, observer, state);
+            if (fp == null) return new DummyObserver(this, filter, observer, state, eventDispatcher);
             // Parse filter
             GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
             // Monitor single file (or dir, we don't know "dir")
             if (patternInfo.SuffixDepth==0)
             {
                 // Create observer that watches one file
-                FileObserver handle = new FileObserver(this, filter, observer, state);
+                FileObserver handle = new FileObserver(this, filter, observer, state, eventDispatcher);
                 // Send handle
                 observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle
@@ -309,7 +296,7 @@ namespace Lexical.FileSystem.Decoration
             // Has wildcards, e.g. "**/file.txt"
             {
                 // Create handle
-                PatternObserver handle = new PatternObserver(this, patternInfo, observer, state);
+                PatternObserver handle = new PatternObserver(this, patternInfo, observer, state, eventDispatcher);
                 // Send handle
                 observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle
@@ -320,7 +307,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Single file observer.
         /// </summary>
-        public class FileObserver : FileSystemObserverHandleBase
+        public class FileObserver : FileSystemObserverBase
         {
             /// <summary>
             /// Filesystem
@@ -359,8 +346,9 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="path"></param>
             /// <param name="observer"></param>
             /// <param name="state"></param>
-            public FileObserver(IFileSystem filesystem, string path, IObserver<IFileSystemEvent> observer, object state)
-                : base(filesystem, path, observer, state)
+            /// <param name="eventDispatcher"></param>
+            public FileObserver(IFileSystem filesystem, string path, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default)
+                : base(filesystem, path, observer, state, eventDispatcher)
             {
                 this.changeToken = FileProvider.Watch(path);
                 this.previousEntry = ReadFileEntry();
@@ -385,9 +373,7 @@ namespace Lexical.FileSystem.Decoration
                 // No observer
                 if (_observer == null) return;
                 // Get dispatcher
-                var _dispatcher = ((FileSystemBase)this.FileSystem).eventDispatcher;
-                // No dispatcher
-                if (_dispatcher == null) return;
+                var _dispatcher = Dispatcher ?? FileSystemEventDispatcher.Instance;
 
                 // Disposed
                 IFileProvider _fileProvider = FileProvider;
@@ -449,7 +435,7 @@ namespace Lexical.FileSystem.Decoration
         /// this observer implementation reads a whole snapshot of the whole file provider, in 
         /// order to determine the changes.
         /// </summary>
-        public class PatternObserver : FileSystemObserverHandleBase
+        public class PatternObserver : FileSystemObserverBase
         {
             /// <summary>
             /// Filesystem
@@ -486,8 +472,9 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="patternInfo"></param>
             /// <param name="observer"></param>
             /// <param name="state"></param>
-            public PatternObserver(IFileSystem filesystem, GlobPatternInfo patternInfo, IObserver<IFileSystemEvent> observer, object state)
-                : base(filesystem, patternInfo.Pattern, observer, state)
+            /// <param name="eventDispatcher"></param>
+            public PatternObserver(IFileSystem filesystem, GlobPatternInfo patternInfo, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default)
+                : base(filesystem, patternInfo.Pattern, observer, state, eventDispatcher)
             {
                 this.changeToken = FileProvider.Watch(patternInfo.Pattern);
                 this.previousSnapshot = ReadSnapshot();

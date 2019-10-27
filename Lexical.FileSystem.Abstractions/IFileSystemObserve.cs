@@ -17,8 +17,6 @@ namespace Lexical.FileSystem
     {
         /// <summary>Has Observe capability.</summary>
         bool CanObserve { get; }
-        /// <summary>Has SetEventDispatcher capability.</summary>
-        bool CanSetEventDispatcher { get; }
     }
     // </IFileSystemOptionObserve>
 
@@ -54,6 +52,7 @@ namespace Lexical.FileSystem
         /// <param name="filter">file filter as glob pattern. </param>
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
+        /// <param name="eventDispatcher">(optional) event dispatcher to use to dispatch events to this obawecwe</param>
         /// <returns>handle to the observer, dispose to cancel the observe</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -64,15 +63,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null);
-
-        /// <summary>
-        /// Set a <see cref="IFileSystemEventDispatcher"/> that dispatches the events. If set to null, then filesystem doesn't dispatch events.
-        /// </summary>
-        /// <param name="eventDispatcher">(optional) that dispatches events to observers. If null, doesn't dispatch events..</param>
-        /// <returns>this</returns>
-        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support setting event handler.</exception>
-        IFileSystem SetEventDispatcher(IFileSystemEventDispatcher eventDispatcher);
+        IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = null);
     }
 
     /// <summary>
@@ -99,6 +90,11 @@ namespace Lexical.FileSystem
         /// State object that was attached at construction.
         /// </summary>
         Object State { get; }
+
+        /// <summary>
+        /// (optional) Event dispatcher.
+        /// </summary>
+        IFileSystemEventDispatcher Dispatcher { get; }
     }
     // </doc>
 }

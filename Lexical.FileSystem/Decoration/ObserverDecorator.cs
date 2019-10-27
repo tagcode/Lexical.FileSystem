@@ -29,6 +29,9 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>The state object the Observe() caller provided.</summary>
         public object State { get; protected set; }
 
+        /// <summary>Event dispatcher</summary>
+        public IFileSystemEventDispatcher Dispatcher { get; protected set; }
+
         /// <summary>Time when observe started.</summary>
         DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
@@ -51,14 +54,16 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="filter"></param>
         /// <param name="observer">The IObserver from caller were the decorated events are forwarded to</param>
         /// <param name="state"></param>
+        /// <param name="eventDispatcher">(optional) event dispatcher</param>
         /// <param name="disposeWhenLastCompletes">if true, when last attached observer sends <see cref="IObserver{T}.OnCompleted"/> event, 
         /// then diposes this object and sends <see cref="IObserver{T}.OnCompleted"/> to <see cref="Observer"/>.</param>
-        public ObserverDecorator(IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state, bool disposeWhenLastCompletes)
+        public ObserverDecorator(IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, bool disposeWhenLastCompletes)
         {
             this.FileSystem = sourceFileSystem;
             this.Filter = filter;
             this.Observer = observer;
             this.State = state;
+            this.Dispatcher = eventDispatcher;
             this.disposeWhenLastCompletes = disposeWhenLastCompletes;
         }
 

@@ -38,8 +38,6 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public bool CanObserve => true;
         /// <inheritdoc/>
-        public bool CanSetEventDispatcher => false;
-        /// <inheritdoc/>
         public override string ToString() => "ReadOnly";
     }
 
@@ -75,9 +73,8 @@ namespace Lexical.FileSystem
         internal static IFileSystemOptionOpen openReadWrite = new FileSystemOptionOpen(true, true, true, false);
         internal static IFileSystemOptionOpen openRead = new FileSystemOptionOpen(true, true, false, false);
         internal static IFileSystemOptionOpen noOpen = new FileSystemOptionOpen(false, false, false, false);
-        internal static IFileSystemOptionObserve observe = new FileSystemOptionObserve(true, true);
-        internal static IFileSystemOptionObserve observeCannotSetEventDispatch = new FileSystemOptionObserve(true, false);
-        internal static IFileSystemOptionObserve noObserve = new FileSystemOptionObserve(false, false);
+        internal static IFileSystemOptionObserve observe = new FileSystemOptionObserve(true);
+        internal static IFileSystemOptionObserve noObserve = new FileSystemOptionObserve(false);
         internal static IFileSystemOptionSubPath noSubPath = new FileSystemOptionSubPath(null);
         internal static IFileSystemOption _readonly = new FileSystemOptionReadOnly();
     }

@@ -12,7 +12,7 @@ namespace Lexical.FileSystem.Utility
     /// <summary>
     /// Dummy observer that returns no events.
     /// </summary>
-    public class DummyObserver : FileSystemObserverHandleBase
+    public class DummyObserver : FileSystemObserverBase
     {
         /// <summary>
         /// 
@@ -21,7 +21,7 @@ namespace Lexical.FileSystem.Utility
         /// <param name="filter"></param>
         /// <param name="observer"></param>
         /// <param name="state"></param>
-        public DummyObserver(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(filesystem, filter, observer, state)
+        public DummyObserver(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher) : base(filesystem, filter, observer, state, eventDispatcher)
         {
         }
     }

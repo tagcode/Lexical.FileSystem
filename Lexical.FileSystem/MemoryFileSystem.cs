@@ -60,7 +60,7 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual bool CanDelete => true;
         /// <inheritdoc/>
-        public override bool CanObserve => true;
+        public virtual bool CanObserve => true;
         /// <inheritdoc/>
         public virtual bool CanMove => true;
         /// <inheritdoc/>
@@ -159,20 +159,6 @@ namespace Lexical.FileSystem
                     m_lock.ReleaseWriterLock();
                 }
             }
-        }
-
-
-        /// <summary>
-        /// Set <paramref name="eventHandler"/> to be used for handling observer events.
-        /// 
-        /// If <paramref name="eventHandler"/> is null, then events are processed in the running thread.
-        /// </summary>
-        /// <param name="eventHandler">(optional) factory that handles observer events</param>
-        /// <returns>memory filesystem</returns>
-        public MemoryFileSystem SetEventDispatcher(IFileSystemEventDispatcher eventHandler)
-        {
-            ((IFileSystemObserve)this).SetEventDispatcher(eventHandler);
-            return this;
         }
 
         /// <summary>
@@ -1022,11 +1008,11 @@ namespace Lexical.FileSystem
             => GetType().Name;
 
         /// <inheritdoc/>
-        public override IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default)
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
-            ObserverHandle handle = new ObserverHandle(this, filter, observer, state);
+            ObserverHandle handle = new ObserverHandle(this, filter, observer, state, eventDispatcher);
             observers.Add(handle);
             // Send IFileSystemEventStart
             observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
@@ -1036,7 +1022,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Observer
         /// </summary>
-        class ObserverHandle : FileSystemObserverHandleBase
+        class ObserverHandle : FileSystemObserverBase
         {
             /// <summary>Filter pattern that is used for filtering events by path.</summary>
             Regex filterPattern;
@@ -1054,7 +1040,8 @@ namespace Lexical.FileSystem
             /// <param name="filter">path filter as glob pattenrn. "*" any sequence of charaters within a directory, "**" any sequence of characters, "?" one character. E.g. "**/*.txt"</param>
             /// <param name="observer"></param>
             /// <param name="state"></param>
-            public ObserverHandle(MemoryFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state) : base(filesystem, filter, observer, state)
+            /// <param name="eventDispatcher"></param>
+            public ObserverHandle(MemoryFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default) : base(filesystem, filter, observer, state, eventDispatcher)
             {
                 if (filter == "**") acceptAll = true;
                 else this.filterPattern = GlobPatternRegexFactory.Slash.CreateRegex(filter);
