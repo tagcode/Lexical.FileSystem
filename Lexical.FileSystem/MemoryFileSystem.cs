@@ -188,8 +188,6 @@ namespace Lexical.FileSystem
                 Node node = path == "" ? root : GetNode(path);
                 // Directory
                 if (node is Directory dir_) return dir_.ChildEntries;
-                // File
-                if (node is File) return new IFileSystemEntry[] { node.Entry };
                 // Entry was not found, was not dir or file
                 throw new DirectoryNotFoundException(path);
             }

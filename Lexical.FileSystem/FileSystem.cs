@@ -302,7 +302,7 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Browse a directory for file and subdirectory entries.
+        /// Browse a directory for child entries.
         /// </summary>
         /// <param name="path">path to directory, "" is root, separator is "/"</param>
         /// <returns>a snapshot of file and directory entries</returns>
@@ -346,13 +346,6 @@ namespace Lexical.FileSystem
                     }
                 }
                 return list.ToArray();
-            }
-
-            FileInfo fi = new FileInfo(absolutePath);
-            if (fi.Exists)
-            {
-                IFileSystemEntry e = new FileSystemEntryFile.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes, fi.FullName);
-                return new IFileSystemEntry[] { e };
             }
 
             throw new DirectoryNotFoundException(path);

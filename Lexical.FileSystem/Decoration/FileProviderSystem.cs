@@ -182,13 +182,6 @@ namespace Lexical.FileSystem.Decoration
                 return list.ToArray();
             }
 
-            IFileInfo fi = fp.GetFileInfo(path);
-            if (fi.Exists)
-            {
-                IFileSystemEntry e = new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length, fi.PhysicalPath);
-                return new IFileSystemEntry[] { e };
-            }
-
             throw new DirectoryNotFoundException(path);
         }
 

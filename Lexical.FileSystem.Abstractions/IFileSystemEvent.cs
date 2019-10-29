@@ -110,7 +110,10 @@ namespace Lexical.FileSystem
 
     // <IFileSystemEventStart>
     /// <summary>
-    /// The very first event when <see cref="IFileSystemObserve.Observe(string, IObserver{IFileSystemEvent}, object)"/> is called.
+    /// The very first event when <see cref="IFileSystemObserve.Observe"/> is called.
+    /// 
+    /// <see cref="IFileSystemEventStart"/> must be handled in the thread that calls .Observe() 
+    /// in the implementation of Observe() and before Observe() returns. It ignores .EventDispatcher property.
     /// </summary>
     public interface IFileSystemEventStart : IFileSystemEvent
     {

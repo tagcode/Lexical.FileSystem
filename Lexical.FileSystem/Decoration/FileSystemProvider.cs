@@ -51,10 +51,14 @@ namespace Lexical.FileSystem.Decoration
         {
             try
             {
-                // Read entry.
-                IFileSystemEntry entry = FileSystem.GetEntry(subpath);
-                // Directory doesn't exist
-                if (entry == null || !entry.IsDirectory()) return NotFoundDirectoryContents.Singleton;
+                try
+                {
+                    // Read entry.
+                    IFileSystemEntry entry = FileSystem.GetEntry(subpath);
+                    // Directory doesn't exist
+                    if (entry == null || !entry.IsDirectory()) return NotFoundDirectoryContents.Singleton;
+                }
+                catch (NotSupportedException) { /*GetEntry is not supported, try Browse() next*/ }
                 // Browse
                 IFileSystemEntry[] entries = FileSystem.Browse(subpath);
                 // Create infos

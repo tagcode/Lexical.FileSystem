@@ -1517,11 +1517,11 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>Override this to change entry class. Must implement <see cref="IFileSystemEntryMount"/></summary>
         protected virtual IFileSystemEntry CreateEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, Options optionModifier)
             => original.Path == "" ?
-                new RootEntry(original, newFileSystem, newPath, optionModifier, this.assignments) :
+                new MountEntry(original, newFileSystem, newPath, optionModifier, this.assignments) :
                 new Entry(original, newFileSystem, newPath, optionModifier);
 
         /// <summary>
-        /// New overriding filesystem, Path and Option modifier
+        /// Decoration that offers modified Option. Creates option at runtime, if requested.
         /// </summary>
         protected internal class Entry : FileSystemEntryDecoration
         {
@@ -1555,9 +1555,9 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>
-        /// New overriding root entry
+        /// Decoration that offers modified option (inherited from <see cref="Entry"/>), and modified mounts.
         /// </summary>
-        protected internal class RootEntry : Entry
+        protected internal class MountEntry : Entry
         {
             /// <summary>Mount infos.</summary>
             protected FileSystemAssignment[] mounts;
@@ -1574,7 +1574,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="newPath"></param>
             /// <param name="mounts"></param>
             /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
-            public RootEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, Options optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
+            public MountEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, Options optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
             {
                 this.mounts = mounts;
             }

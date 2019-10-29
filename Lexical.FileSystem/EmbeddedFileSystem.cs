@@ -116,8 +116,6 @@ namespace Lexical.FileSystem
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
             if (path == "") return entries ?? (entries = CreateEntries());
-            IFileSystemEntry e;
-            if (EntryMap.TryGetValue(path, out e)) return new IFileSystemEntry[] { e };
             return NoEntries;
         }
 

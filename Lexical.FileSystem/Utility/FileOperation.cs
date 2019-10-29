@@ -90,8 +90,8 @@ namespace Lexical.FileSystem.Utility
             // Other flags
             /// <summary>If one operation fails, signals cancel on <see cref="Session.CancelSrc"/> cancel token source.</summary>
             CancelOnError = 0x0001UL << 32,
-            /// <summary>Policy whether to omit directories that are automatically mounted. These are typically package files, such as .zip, exposed as part of the filesystem.</summary>
-            OmitAutoMounts = 0x0002UL << 32,
+            /// <summary>Policy whether to omit directories that are mounted packages, such as .zip.</summary>
+            OmitMountedPackages = 0x0002UL << 32,
             /// <summary>Batch operation continues on child op error. Throws <see cref="AggregateException"/> on errors, but only after all child ops have been ran.</summary>
             BatchContinueOnError = 0x0004UL << 32,
             /// <summary>Suppress exception in Estimate() and Run().</summary>
@@ -104,7 +104,7 @@ namespace Lexical.FileSystem.Utility
             FlagsMask = 0xffffUL << 32,
 
             /// <summary>Default policy</summary>
-            Default = SrcSkip | DstThrow | OmitAutoMounts | LogEvents | DispatchEvents
+            Default = SrcSkip | DstThrow | OmitMountedPackages | LogEvents | DispatchEvents
         }
 
         /// <summary>The session where the op is ran in.</summary>
@@ -1265,8 +1265,8 @@ namespace Lexical.FileSystem.Utility
                         IFileSystemEntry entry = queue[lastIx];
                         queue.RemoveAt(lastIx);
 
-                        // Omit automounted entries 
-                        if (session.Policy.HasFlag(Policy.OmitAutoMounts) && entry.IsAutoMounted()) continue;
+                        // Omit package mounts
+                        if (session.Policy.HasFlag(Policy.OmitMountedPackages) && entry.IsPackageMount()) continue;
 
                         // Process directory
                         if (entry.IsDirectory())
@@ -1344,8 +1344,8 @@ namespace Lexical.FileSystem.Utility
                             IFileSystemEntry entry = queue[lastIx];
                             queue.RemoveAt(lastIx);
 
-                            // Omit automounted entries 
-                            if (session.Policy.HasFlag(Policy.OmitAutoMounts) && entry.IsAutoMounted()) continue;
+                            // Omit package mounts
+                            if (session.Policy.HasFlag(Policy.OmitMountedPackages) && entry.IsPackageMount()) continue;
 
                             // Process directory
                             if (entry.IsDirectory())
@@ -1448,8 +1448,8 @@ namespace Lexical.FileSystem.Utility
                         IFileSystemEntry entry = queue[lastIx];
                         queue.RemoveAt(lastIx);
 
-                        // Omit automounted entries 
-                        if (session.Policy.HasFlag(Policy.OmitAutoMounts) && entry.IsAutoMounted()) continue;
+                        // Omit package mounts
+                        if (session.Policy.HasFlag(Policy.OmitMountedPackages) && entry.IsPackageMount()) continue;
 
                         // Process directory
                         if (entry.IsDirectory())

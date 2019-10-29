@@ -69,6 +69,20 @@ namespace Lexical.FileSystem
         IFileSystemEntryMount[] ListMountPoints();
     }
 
+    /// <summary>Mount assignemnt related info <see cref="FileSystemAssignment"/>.</summary>
+    [Flags]
+    public enum FileSystemAssignmentFlags
+    {
+        /// <summary>No flags</summary>
+        None = 0,
+        /// <summary>Filesystem was automatically mounted based on <see cref="IFileSystemOptionAutoMount"/> options.</summary>
+        AutoMounted = 1,
+        /// <summary>Filesystem is allowed to be automatically unmounted when it hasn't been used in a configured time.</summary>
+        AutoUnmount = 2,
+        /// <summary>Mount represents a package file, such as .zip.</summary>
+        Package = 4,
+    }
+
     /// <summary>The filesystem and option assignment.</summary>
     public partial struct FileSystemAssignment
     {
@@ -77,16 +91,17 @@ namespace Lexical.FileSystem
         /// <summary>(optional) Overriding option assignment.</summary>
         public readonly IFileSystemOption Option;
         /// <summary>Is flagged as automatically mounted.</summary>
-        public readonly bool AutoMount;
+        public readonly FileSystemAssignmentFlags Flags;
 
         /// <summary>Create filesystem and option assignment.</summary>
-        /// <param name="fileSystem">file system</param>
+        /// <param name="fileSystem">(optional) file system</param>
         /// <param name="option">(optional) overriding option assignment</param>
-        public FileSystemAssignment(IFileSystem fileSystem, IFileSystemOption option)
+        /// <param name="flags">(optional) assignment related flags</param>
+        public FileSystemAssignment(IFileSystem fileSystem, IFileSystemOption option = null, FileSystemAssignmentFlags flags = FileSystemAssignmentFlags.None)
         {
-            FileSystem = fileSystem;;
+            FileSystem = fileSystem;
             Option = option;
-            AutoMount = false;
+            Flags = flags;
         }
     }
     // </doc>

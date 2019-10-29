@@ -123,7 +123,24 @@ namespace Lexical.FileSystem
             {
                 foreach(var mount in mountEntry.Mounts)
                 {
-                    if (mount.AutoMount) return true;
+                    if (mount.Flags.HasFlag(FileSystemAssignmentFlags.AutoMounted)) return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Tests if <paramref name="entry"/> represents the root of a mounted package, such as .zip.
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns>true if automatically mounted</returns>
+        public static bool IsPackageMount(this IFileSystemEntry entry)
+        {
+            if (entry is IFileSystemEntryMount mountEntry && mountEntry.IsMountPoint())
+            {
+                foreach (var mount in mountEntry.Mounts)
+                {
+                    if (mount.Flags.HasFlag(FileSystemAssignmentFlags.Package)) return true;
                 }
             }
             return false;

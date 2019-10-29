@@ -31,12 +31,12 @@ namespace Lexical.FileSystem
             => filesystemOption.AsOption<IFileSystemOptionBrowse>() is IFileSystemOptionBrowse browser ? browser.CanGetEntry : false;
 
         /// <summary>
-        /// Browse a directory for file and subdirectory entries.
+        /// Browse a directory for child entries.
         /// 
         /// <paramref name="path"/> should end with directory separator character '/', for example "mydir/".
         /// </summary>
         /// <param name="filesystem"></param>
-        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <param name="path">path to a directory, "" is root, separator is "/"</param>
         /// <returns>
         ///     Returns a snapshot of file and directory entries.
         ///     Note, that the returned array be internally cached by the implementation, and therefore the caller must not modify the array.

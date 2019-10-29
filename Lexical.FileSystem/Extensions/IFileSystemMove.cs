@@ -42,7 +42,7 @@ namespace Lexical.FileSystem
             using (var s = new FileOperation.Session())
             {
                 FileOperation op = new FileOperation.TransferTree(s, filesystem, srcPath, dstFileSystem, dstPath, 
-                    policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitAutoMounts | FileOperation.Policy.CancelOnError
+                    policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitMountedPackages | FileOperation.Policy.CancelOnError
                 );
                 op.Estimate();
                 op.Run(rollbackOnError: true);
@@ -75,7 +75,7 @@ namespace Lexical.FileSystem
             using (var s = new FileOperation.Session())
             {
                 FileOperation op = new FileOperation.CopyTree(s, filesystem, srcPath, filesystem, dstPath,
-                    policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitAutoMounts | FileOperation.Policy.CancelOnError
+                    policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitMountedPackages | FileOperation.Policy.CancelOnError
                 );
                 op.Estimate();
                 op.Run(rollbackOnError: true);
@@ -109,7 +109,7 @@ namespace Lexical.FileSystem
             using (var s = new FileOperation.Session())
             {
                 FileOperation op = new FileOperation.CopyTree(s, filesystem, srcPath, dstFileSystem, dstPath,
-                    policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitAutoMounts | FileOperation.Policy.CancelOnError
+                    policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitMountedPackages | FileOperation.Policy.CancelOnError
                 );
                 op.Estimate();
                 op.Run(rollbackOnError: true);
