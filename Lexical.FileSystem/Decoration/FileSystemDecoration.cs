@@ -40,7 +40,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>FileSystem specific components.</summary>
         protected internal ArrayList<Component> components = new ArrayList<Component>();
         /// <summary>Union of options.</summary>
-        protected internal Options Option;
+        protected internal FileSystemOptionsAll Option;
         /// <summary>Count</summary>
         public int Count => components.Count;
         /// <summary>The decorated filesystems.</summary>
@@ -115,7 +115,7 @@ namespace Lexical.FileSystem.Decoration
             DateTimeOffset now = DateTimeOffset.UtcNow;
             this.assignments = assignments;
             this.components.AddRange( assignments.Select(a=> new Component(parentPath, a)) );
-            this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
+            this.Option = FileSystemOptionsAll.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
 
             this.sourceFileSystem = parentFileSystem ?? this;
             this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
@@ -129,7 +129,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>FileSystem component</summary>
             public IFileSystem FileSystem => Assignment.FileSystem;
             /// <summary>Intersection of option in <see cref="FileSystem"/> and option that was provided in constructor.</summary>
-            public Options Option;
+            public FileSystemOptionsAll Option;
             /// <summary>Tool that converts paths.</summary>
             public IPathConverter Path;
 
@@ -139,7 +139,7 @@ namespace Lexical.FileSystem.Decoration
             public Component(string parentPath, FileSystemAssignment assignment)
             {
                 this.Assignment = assignment;
-                this.Option = Options.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
+                this.Option = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
                 this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
             }
 
@@ -147,7 +147,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="parentPath">The subpath the filesystem starts at</param>
             /// <param name="assignment">filesystem and option</param>
             /// <param name="option">consolidated options</param>
-            public Component(string parentPath, FileSystemAssignment assignment, Options option)
+            public Component(string parentPath, FileSystemAssignment assignment, FileSystemOptionsAll option)
             {
                 this.Assignment = assignment;
                 this.Option = option;
@@ -156,7 +156,7 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>Comparer that <see cref="SetComponents"/> uses.</summary>
-        protected static IEqualityComparer<Triple<string, IFileSystem, Options>> componentTupleComparer = new Triple<string, IFileSystem, Options>.EqualityComparer(StringComparer.InvariantCulture, EqualityComparer<IFileSystem>.Default, EqualityComparer<Options>.Default/*<-change this to better*/);
+        protected static IEqualityComparer<Triple<string, IFileSystem, FileSystemOptionsAll>> componentTupleComparer = new Triple<string, IFileSystem, FileSystemOptionsAll>.EqualityComparer(StringComparer.InvariantCulture, EqualityComparer<IFileSystem>.Default, EqualityComparer<FileSystemOptionsAll>.Default/*<-change this to better*/);
 
         /// <summary>
         /// Set new list components. Recycles previous components if path, filesystem and option matches.
@@ -171,16 +171,16 @@ namespace Lexical.FileSystem.Decoration
             lock (this.components.SyncRoot)
             {
                 var oldComponents = components.Array;
-                var oldComponentLineMap = components.ToDictionary(c => new Triple<string, IFileSystem, Options>(c.Path.ParentPath, c.FileSystem, c.Option), componentTupleComparer);
+                var oldComponentLineMap = components.ToDictionary(c => new Triple<string, IFileSystem, FileSystemOptionsAll>(c.Path.ParentPath, c.FileSystem, c.Option), componentTupleComparer);
                 components.Clear();
                 foreach(FileSystemAssignment assignment in assignments)
                 {
                     // Take intersection and consolidate options
-                    Options consolidatedOptions = Options.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
+                    FileSystemOptionsAll consolidatedOptions = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
 
                     // Reuse previous component
                     Component reusedComponent;
-                    if (oldComponentLineMap.TryGetValue(new Triple<string, IFileSystem, Options>(parentPath, assignment.FileSystem, consolidatedOptions), out reusedComponent))
+                    if (oldComponentLineMap.TryGetValue(new Triple<string, IFileSystem, FileSystemOptionsAll>(parentPath, assignment.FileSystem, consolidatedOptions), out reusedComponent))
                     {
                         this.components.Add(reusedComponent);
                         componentsAdded.Add(reusedComponent);
@@ -203,7 +203,7 @@ namespace Lexical.FileSystem.Decoration
                 DateTimeOffset now = DateTimeOffset.UtcNow;
                 // Update options
                 this.assignments = assignments;
-                this.Option = Options.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
+                this.Option = FileSystemOptionsAll.Read(FileSystemOption.Union(this.components.Select(s => s.Option)));
                 this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
             }
 
@@ -1412,110 +1412,10 @@ namespace Lexical.FileSystem.Decoration
         public override string ToString()
             => GetType().Name + "(" + String.Join<IFileSystem>(", ", Decorees) + ")";
 
-        /// <summary>Flattened options for (slight) performance gain.</summary>
-        public class Options : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionFileAttribute, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionSubPath
-        {
-            // TODO Implement Hash-Equals //
-            // TODO Implement Union & Intersection //
-
-            /// <inheritdoc/>
-            public bool CanBrowse { get; set; }
-            /// <inheritdoc/>
-            public bool CanGetEntry { get; set; }
-            /// <inheritdoc/>
-            public bool CanObserve { get; set; }
-            /// <inheritdoc/>
-            public bool CanOpen { get; set; }
-            /// <inheritdoc/>
-            public bool CanRead { get; set; }
-            /// <inheritdoc/>
-            public bool CanWrite { get; set; }
-            /// <inheritdoc/>
-            public bool CanCreateFile { get; set; }
-            /// <inheritdoc/>
-            public bool CanDelete { get; set; }
-            /// <inheritdoc/>
-            public bool CanMove { get; set; }
-            /// <inheritdoc/>
-            public bool CanCreateDirectory { get; set; }
-            /// <inheritdoc/>
-            public bool CanMount { get; set; }
-            /// <inheritdoc/>
-            public bool CanUnmount { get; set; }
-            /// <inheritdoc/>
-            public bool CanListMountPoints { get; set; }
-            /// <inheritdoc/>
-            public FileSystemCaseSensitivity CaseSensitivity { get; set; }
-            /// <inheritdoc/>
-            public bool EmptyDirectoryName { get; set; }
-            /// <inheritdoc/>
-            public string SubPath { get; set; }
-            /// <inheritdoc/>
-            public bool CanSetFileAttribute { get; set; }
-
-            /// <summary>
-            /// Read options from <paramref name="option"/> and return flattened object.
-            /// </summary>
-            /// <param name="option"></param>
-            /// <returns></returns>
-            public static Options Read(IFileSystemOption option)
-            {
-                Options result = new Options();
-                result.CanBrowse = option.CanBrowse();
-                result.CanGetEntry = option.CanGetEntry();
-                result.CanObserve = option.CanObserve();
-                result.CanOpen = option.CanOpen();
-                result.CanRead = option.CanRead();
-                result.CanWrite = option.CanWrite();
-                result.CanCreateFile = option.CanCreateFile();
-                result.CanDelete = option.CanDelete();
-                result.CanSetFileAttribute = option.CanSetFileAttribute();
-                result.CanMount = option.CanMount();
-                result.CanCreateFile = option.CanCreateFile();
-                result.CanDelete = option.CanDelete();
-                result.CanMove = option.CanMove();
-                result.CanCreateDirectory = option.CanCreateDirectory();
-                result.CanMount = option.CanMount();
-                result.CanUnmount = option.CanUnmount();
-                result.CanListMountPoints = option.CanListMountPoints();
-                result.SubPath = option.SubPath();
-                return result;
-            }
-
-            /// <summary>
-            /// Create intersection with another option
-            /// </summary>
-            /// <param name="option"></param>
-            /// <returns>this if <paramref name="option"/> is null or new instance with intersection</returns>
-            public Options Intersection(IFileSystemOption option)
-            {
-                if (option == null) return this;
-                Options result = new Options();
-                result.CanBrowse = this.CanBrowse | option.CanBrowse();
-                result.CanGetEntry = this.CanGetEntry | option.CanGetEntry();
-                result.CanObserve = this.CanObserve | option.CanObserve();
-                result.CanOpen = this.CanOpen | option.CanOpen();
-                result.CanRead = this.CanRead | option.CanRead();
-                result.CanWrite = this.CanWrite | option.CanWrite();
-                result.CanCreateFile = this.CanCreateFile | option.CanCreateFile();
-                result.CanDelete = this.CanDelete | option.CanDelete();
-                result.CanSetFileAttribute = this.CanSetFileAttribute | option.CanSetFileAttribute();
-                result.CanMount = this.CanMount | option.CanMount();
-                result.CanCreateFile = this.CanCreateFile | option.CanCreateFile();
-                result.CanDelete = this.CanDelete | option.CanDelete();
-                result.CanMove = this.CanMove | option.CanMove();
-                result.CanCreateDirectory = this.CanCreateDirectory | option.CanCreateDirectory();
-                result.CanMount = this.CanMount | option.CanMount();
-                result.CanUnmount = this.CanUnmount | option.CanUnmount();
-                result.CanListMountPoints = this.CanListMountPoints | option.CanListMountPoints();
-                result.SubPath = this.SubPath ?? option.SubPath();
-                return result;
-            }
-        }
 
 
         /// <summary>Override this to change entry class. Must implement <see cref="IFileSystemEntryMount"/></summary>
-        protected virtual IFileSystemEntry CreateEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, Options optionModifier)
+        protected virtual IFileSystemEntry CreateEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier)
             => original.Path == "" ?
                 new MountEntry(original, newFileSystem, newPath, optionModifier, this.assignments) :
                 new Entry(original, newFileSystem, newPath, optionModifier);
@@ -1534,7 +1434,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>New path.</summary>
             public override string Path => newPath;
             /// <summary>(optional) Option that will be intersected lazily with original options.</summary>
-            protected Options optionModifier;
+            protected FileSystemOptionsAll optionModifier;
             /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and Original.Option()</summary>
             protected IFileSystemOption optionIntersection;
             /// <summary>Intersection of Original.Option() and <see cref="optionModifier"/></summary>
@@ -1546,7 +1446,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="newFileSystem"></param>
             /// <param name="newPath"></param>
             /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
-            public Entry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, Options optionModifier) : base(original)
+            public Entry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier) : base(original)
             {
                 this.newFileSystem = newFileSystem;
                 this.newPath = newPath;
@@ -1574,7 +1474,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="newPath"></param>
             /// <param name="mounts"></param>
             /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
-            public MountEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, Options optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
+            public MountEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
             {
                 this.mounts = mounts;
             }

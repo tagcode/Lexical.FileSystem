@@ -27,7 +27,7 @@ namespace Lexical.FileSystem.Internal
         /// Reverse elements of a list
         /// </summary>
         /// <param name="list"></param>
-        public void Reverse(ref List list)
+        public static void Reverse(ref List list)
         {
             int mid = list.Count / 2;
             for (int i = 0, j = list.Count - 1; i < mid; i++, j--)
