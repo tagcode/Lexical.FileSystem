@@ -45,9 +45,10 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <param name="mounts">(optional) filesystem and option infos</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystem Mount(string path, params FileSystemAssignment[] mounts);
+        IFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemToken token = null);
 
         /// <summary>
         /// Unmount a filesystem at <paramref name="path"/>.
@@ -57,16 +58,18 @@ namespace Lexical.FileSystem
         /// If there are observers monitoring <paramref name="path"/> in the parent filesystem, then the unmounted files are notified as being deleted.
         /// </summary>
         /// <param name="path"></param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystem Unmount(string path);
+        IFileSystem Unmount(string path, IFileSystemToken token = null);
 
         /// <summary>
         /// List all mounts.
         /// </summary>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystemEntryMount[] ListMountPoints();
+        IFileSystemEntryMount[] ListMountPoints(IFileSystemToken token = null);
     }
 
     /// <summary>Mount assignemnt related info <see cref="FileSystemAssignment"/>.</summary>

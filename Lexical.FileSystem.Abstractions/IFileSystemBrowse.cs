@@ -33,6 +33,7 @@ namespace Lexical.FileSystem
         /// <paramref name="path"/> should end with directory separator character '/', for example "mydir/".
         /// </summary>
         /// <param name="path">path to a directory, "" is root, separator is "/"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>
         ///     Returns a snapshot of file and directory entries.
         ///     Note, that the returned array be internally cached by the implementation, and therefore the caller must not modify the array.
@@ -47,12 +48,13 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemEntry[] Browse(string path);
+        IFileSystemEntry[] Browse(string path, IFileSystemToken token = null);
 
         /// <summary>
         /// Get entry of a single file or directory.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -63,7 +65,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemEntry GetEntry(string path);
+        IFileSystemEntry GetEntry(string path, IFileSystemToken token = null);
     }
     // </doc>
 }

@@ -26,6 +26,8 @@ namespace Lexical.FileSystem
         /// <param name="srcPath">old path of a file or directory</param>
         /// <param name="dstFileSystem">filesystem to copy to</param>
         /// <param name="dstPath">new path of a file or directory</param>
+        /// <param name="srcToken">(optional)</param>
+        /// <param name="dstToken">(optional)</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="srcPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -37,11 +39,12 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void Transfer(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath)
+        public static void Transfer(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath, IFileSystemToken srcToken = null, IFileSystemToken dstToken = null)
         {
             using (var s = new FileOperation.Session())
             {
                 FileOperation op = new FileOperation.TransferTree(s, filesystem, srcPath, dstFileSystem, dstPath, 
+                    srcToken, dstToken,
                     policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitMountedPackages | FileOperation.Policy.CancelOnError
                 );
                 op.Estimate();
@@ -59,6 +62,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="srcPath">source path of a file or directory</param>
         /// <param name="dstPath">target path of a file or directory</param>
+        /// <param name="token">(optional) token to authorize or facilitate operation</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="srcPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -70,11 +74,11 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void Copy(this IFileSystem filesystem, string srcPath, string dstPath)
+        public static void Copy(this IFileSystem filesystem, string srcPath, string dstPath, IFileSystemToken token = null)
         {
             using (var s = new FileOperation.Session())
             {
-                FileOperation op = new FileOperation.CopyTree(s, filesystem, srcPath, filesystem, dstPath,
+                FileOperation op = new FileOperation.CopyTree(s, filesystem, srcPath, filesystem, dstPath, token, token,
                     policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitMountedPackages | FileOperation.Policy.CancelOnError
                 );
                 op.Estimate();
@@ -93,6 +97,8 @@ namespace Lexical.FileSystem
         /// <param name="srcPath">source path of a file or directory</param>
         /// <param name="dstFileSystem">filesystem to copy to</param>
         /// <param name="dstPath">target path of a file or directory</param>
+        /// <param name="srcToken">(optional)</param>
+        /// <param name="dstToken">(optional)</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="srcPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -104,11 +110,11 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void Copy(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath)
+        public static void Copy(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath, IFileSystemToken srcToken = null, IFileSystemToken dstToken = null)
         {
             using (var s = new FileOperation.Session())
             {
-                FileOperation op = new FileOperation.CopyTree(s, filesystem, srcPath, dstFileSystem, dstPath,
+                FileOperation op = new FileOperation.CopyTree(s, filesystem, srcPath, dstFileSystem, dstPath, srcToken, dstToken,
                     policy: FileOperation.Policy.SrcThrow | FileOperation.Policy.DstThrow | FileOperation.Policy.OmitMountedPackages | FileOperation.Policy.CancelOnError
                 );
                 op.Estimate();

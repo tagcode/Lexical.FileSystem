@@ -30,6 +30,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <param name="fileAttribute"></param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException"><paramref name="path"/> is not found</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="path"/> is invalid. For example, it's on an unmapped drive. Only thrown when setting the property value.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -41,7 +42,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        void SetFileAttribute(string path, FileAttributes fileAttribute);
+        void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemToken token = null);
     }
     // </doc>
 }

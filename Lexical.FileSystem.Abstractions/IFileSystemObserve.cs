@@ -53,6 +53,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
         /// <param name="eventDispatcher">(optional) event dispatcher to use to dispatch events to this obawecwe</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>handle to the observer, dispose to cancel the observe</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -63,7 +64,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = null);
+        IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = null, IFileSystemToken token = null);
     }
 
     /// <summary>

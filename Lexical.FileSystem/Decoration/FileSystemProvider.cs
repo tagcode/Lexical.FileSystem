@@ -34,12 +34,25 @@ namespace Lexical.FileSystem.Decoration
         public IDisposable FileSystemDisposable => FileSystem as IDisposable;
 
         /// <summary>
+        /// (optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.
+        /// </summary>
+        protected IFileSystemToken token;
+
+        /// <summary>
+        /// Options all
+        /// </summary>
+        protected FileSystemOptionsAll options;
+
+        /// <summary>
         /// Create adapter that adapts <paramref name="sourceFilesystem"/> into <see cref="IFileProvider"/>.
         /// </summary>
         /// <param name="sourceFilesystem"></param>
-        public FileSystemProvider(IFileSystem sourceFilesystem) : base()
+        /// <param name="option">(optional) decorating options, such as <see cref="IFileSystemToken"/></param>
+        public FileSystemProvider(IFileSystem sourceFilesystem, IFileSystemOption option = null) : base()
         {
             FileSystem = sourceFilesystem ?? throw new ArgumentNullException(nameof(sourceFilesystem));
+            this.options = FileSystemOptionsAll.Read(FileSystemOption.Union(sourceFilesystem, option));
+            this.token = option.AsOption<IFileSystemToken>();
         }
 
         /// <summary>
@@ -49,21 +62,23 @@ namespace Lexical.FileSystem.Decoration
         /// <returns>Directory contents</returns>
         public IDirectoryContents GetDirectoryContents(string subpath)
         {
+            // Assert enabled feature
+            if (!options.CanBrowse) throw new NotSupportedException(nameof(GetDirectoryContents));
             try
             {
                 try
                 {
                     // Read entry.
-                    IFileSystemEntry entry = FileSystem.GetEntry(subpath);
+                    IFileSystemEntry entry = FileSystem.GetEntry(subpath, token);
                     // Directory doesn't exist
                     if (entry == null || !entry.IsDirectory()) return NotFoundDirectoryContents.Singleton;
                 }
                 catch (NotSupportedException) { /*GetEntry is not supported, try Browse() next*/ }
                 // Browse
-                IFileSystemEntry[] entries = FileSystem.Browse(subpath);
+                IFileSystemEntry[] entries = FileSystem.Browse(subpath, token);
                 // Create infos
                 IFileInfo[] infos = new IFileInfo[entries.Length];
-                for (int i = 0; i < entries.Length; i++) infos[i] = new FileInfo(FileSystem, entries[i]);
+                for (int i = 0; i < entries.Length; i++) infos[i] = new FileInfo(FileSystem, entries[i], options, token);
                 // Wrap
                 return new DirectoryContents(infos);
             }
@@ -120,12 +135,14 @@ namespace Lexical.FileSystem.Decoration
         /// <returns>The file information. Caller must check Exists property.</returns>
         public IFileInfo GetFileInfo(string subpath)
         {
+            // Assert enabled feature
+            if (!options.CanGetEntry) throw new NotSupportedException(nameof(GetFileInfo));
             // Get entry info
-            IFileSystemEntry entry = FileSystem.GetEntry(subpath);
+            IFileSystemEntry entry = FileSystem.GetEntry(subpath, token);
             // Not found
             if (entry == null || !entry.IsFile()) return new NotFoundFileInfo(subpath);
             // Adapt
-            return new FileInfo(FileSystem, entry);
+            return new FileInfo(FileSystem, entry, options, token);
         }
 
         /// <summary>
@@ -151,19 +168,38 @@ namespace Lexical.FileSystem.Decoration
             public bool IsDirectory => Entry.IsDirectory();
 
             /// <summary>
+            /// Enabled features
+            /// </summary>
+            protected IFileSystemOption options;
+
+            /// <summary>
+            /// Token.
+            /// </summary>
+            protected IFileSystemToken token;
+
+            /// <summary>
             /// Create <see cref="IFileInfo"/> from <paramref name="entry"/>.
             /// </summary>
             /// <param name="filesystem"></param>
             /// <param name="entry"></param>
-            public FileInfo(IFileSystem filesystem, IFileSystemEntry entry)
+            /// <param name="options">(optional) options</param>
+            /// <param name="token">(optional)</param>
+            public FileInfo(IFileSystem filesystem, IFileSystemEntry entry, IFileSystemOption options, IFileSystemToken token)
             {
                 this.FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.Entry = entry ?? throw new ArgumentNullException(nameof(entry));
+                this.options = options;
+                this.token = token;
             }
 
             /// <inheritdoc/>
             public Stream CreateReadStream()
-                => FileSystem.Open(Entry.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            {
+                // Assert enabled
+                if (!options.CanOpen() || !options.CanRead()) throw new NotSupportedException(nameof(CreateReadStream));
+                // Open
+                return FileSystem.Open(Entry.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, token);
+            }
         }
 
         /// <summary>
@@ -173,10 +209,12 @@ namespace Lexical.FileSystem.Decoration
         /// <returns>Returns the contents of the directory.</returns>
         public IChangeToken Watch(string filter)
         {
-            WatchToken token = new WatchToken();
-            IFileSystemObserver disposable = FileSystem.Observe(filter, token);
-            Interlocked.CompareExchange(ref token.observerHandle, disposable, null);
-            return token;
+            // Assert enabled feature
+            if (!options.CanObserve) throw new NotSupportedException(nameof(Watch));
+            WatchToken watchToken = new WatchToken();
+            IFileSystemObserver disposable = FileSystem.Observe(filter, watchToken, null, null, token);
+            Interlocked.CompareExchange(ref watchToken.observerHandle, disposable, null);
+            return watchToken;
         }
 
         class WatchToken : IChangeToken, IObserver<IFileSystemEvent>

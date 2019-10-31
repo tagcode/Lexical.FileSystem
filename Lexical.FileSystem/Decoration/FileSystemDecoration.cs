@@ -132,6 +132,8 @@ namespace Lexical.FileSystem.Decoration
             public FileSystemOptionsAll Option;
             /// <summary>Tool that converts paths.</summary>
             public IPathConverter Path;
+            /// <summary>Token option that was assigned to this component.</summary>
+            public IFileSystemToken Token;
 
             /// <summary>Create component info.</summary>
             /// <param name="parentPath">The subpath the filesystem starts at</param>
@@ -141,6 +143,7 @@ namespace Lexical.FileSystem.Decoration
                 this.Assignment = assignment;
                 this.Option = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
                 this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
+                this.Token = assignment.Option.AsOption<IFileSystemToken>();
             }
 
             /// <summary>Create component info.</summary>
@@ -152,6 +155,7 @@ namespace Lexical.FileSystem.Decoration
                 this.Assignment = assignment;
                 this.Option = option;
                 this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
+                this.Token = assignment.Option.AsOption<IFileSystemToken>();
             }
         }
 
@@ -213,6 +217,7 @@ namespace Lexical.FileSystem.Decoration
         /// Browse a directory for file and subdirectory entries.
         /// </summary>
         /// <param name="path">path to directory, "" is root, separator is "/"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>a snapshot of file and directory entries</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -224,7 +229,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry[] Browse(string path)
+        public IFileSystemEntry[] Browse(string path, IFileSystemToken token = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -255,7 +260,7 @@ namespace Lexical.FileSystem.Decoration
                     String/*Segment*/ childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) return noEntries;
                     // Browse
-                    IFileSystemEntry[] childEntries = component.FileSystem.Browse(childPath);
+                    IFileSystemEntry[] childEntries = component.FileSystem.Browse(childPath, token.Concat(component.Token));
                     // Result array to be filled
                     IFileSystemEntry[] result = new IFileSystemEntry[childEntries.Length];
                     // Is result array filled with null enties
@@ -304,7 +309,7 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             // Browse
-                            IFileSystemEntry[] component_entries = component.FileSystem.Browse(childPath);
+                            IFileSystemEntry[] component_entries = component.FileSystem.Browse(childPath, token.Concat(component.Token));
                             entryArrays.Add((component, component_entries));
                             entryCount += component_entries.Length;
                             exists = true; supported = true;
@@ -353,6 +358,7 @@ namespace Lexical.FileSystem.Decoration
         /// Get entry of a single file or directory.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -363,7 +369,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path)
+        public IFileSystemEntry GetEntry(string path, IFileSystemToken token = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -402,7 +408,7 @@ namespace Lexical.FileSystem.Decoration
                         return null;
                     }
                     // GetEntry
-                    IFileSystemEntry childEntry = component.FileSystem.GetEntry(childPath);
+                    IFileSystemEntry childEntry = component.FileSystem.GetEntry(childPath, token.Concat(component.Token));
                     // Got no result
                     if (childEntry == null) return null;
                     // Convert again
@@ -440,7 +446,7 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             // Try to get etnry
-                            IFileSystemEntry e = component.FileSystem.GetEntry(childPath);
+                            IFileSystemEntry e = component.FileSystem.GetEntry(childPath, token.Concat(component.Token));
                             // Didn't throw exception
                             supported = true;
                             // Continue
@@ -476,6 +482,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -489,7 +496,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken token = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -525,7 +532,7 @@ namespace Lexical.FileSystem.Decoration
                     String childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
                     // Open
-                    return component.FileSystem.Open(childPath, fileMode, fileAccess, fileShare);
+                    return component.FileSystem.Open(childPath, fileMode, fileAccess, fileShare, token.Concat(component.Token));
                 }
 
                 // Many components
@@ -542,7 +549,7 @@ namespace Lexical.FileSystem.Decoration
                         if (!component.Path.ParentToChild(path, out childPath)) continue;
                         try
                         {
-                            return component.FileSystem.Open(childPath, fileMode, fileAccess, fileShare);
+                            return component.FileSystem.Open(childPath, fileMode, fileAccess, fileShare, token.Concat(component.Token));
                         }
                         catch (FileNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
@@ -567,6 +574,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="path">path to a file or directory</param>
         /// <param name="recurse">if path refers to directory, recurse into sub directories</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recurse"/> is false</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -577,7 +585,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Delete(string path, bool recurse = false)
+        public void Delete(string path, bool recurse = false, IFileSystemToken token = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -607,7 +615,7 @@ namespace Lexical.FileSystem.Decoration
                     String childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
                     // Delete
-                    component.FileSystem.Delete(childPath, recurse);
+                    component.FileSystem.Delete(childPath, recurse, token.Concat(component.Token));
                 }
 
                 // Many components
@@ -623,7 +631,7 @@ namespace Lexical.FileSystem.Decoration
                         if (!component.Path.ParentToChild(path, out childPath)) continue;
                         try
                         {
-                            component.FileSystem.Delete(childPath, recurse);
+                            component.FileSystem.Delete(childPath, recurse, token.Concat(component.Token));
                             return;
                         }
                         catch (FileNotFoundException) { supported = true; }
@@ -646,6 +654,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="path"></param>
         /// <param name="fileAttribute"></param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException"><paramref name="path"/> is not found</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="path"/> is invalid. For example, it's on an unmapped drive. Only thrown when setting the property value.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -657,7 +666,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        public void SetFileAttribute(string path, FileAttributes fileAttribute)
+        public void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemToken token = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -687,7 +696,7 @@ namespace Lexical.FileSystem.Decoration
                     String childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
                     // Delete
-                    component.FileSystem.SetFileAttribute(childPath, fileAttribute);
+                    component.FileSystem.SetFileAttribute(childPath, fileAttribute, token.Concat(component.Token));
                 }
 
                 // Many components
@@ -703,7 +712,7 @@ namespace Lexical.FileSystem.Decoration
                         if (!component.Path.ParentToChild(path, out childPath)) continue;
                         try
                         {
-                            component.FileSystem.SetFileAttribute(childPath, fileAttribute);
+                            component.FileSystem.SetFileAttribute(childPath, fileAttribute, token.Concat(component.Token));
                             return;
                         }
                         catch (FileNotFoundException) { supported = true; }
@@ -727,6 +736,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="srcPath">old path of a file or directory</param>
         /// <param name="dstPath">new path of a file or directory</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="srcPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -738,7 +748,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string srcPath, string dstPath)
+        public void Move(string srcPath, string dstPath, IFileSystemToken token = null)
         {
             // Assert argument
             if (srcPath == null) throw new ArgumentNullException(nameof(srcPath));
@@ -772,7 +782,7 @@ namespace Lexical.FileSystem.Decoration
                     if (!component.Path.ParentToChild(srcPath, out componentSrcPath)) throw new FileNotFoundException(srcPath);
                     if (!component.Path.ParentToChild(dstPath, out componentDstPath)) throw new FileNotFoundException(dstPath);
                     // Move
-                    component.FileSystem.Move(componentSrcPath, componentDstPath);
+                    component.FileSystem.Move(componentSrcPath, componentDstPath, token.Concat(component.Token));
                     // Done
                     return;
                 }
@@ -791,7 +801,7 @@ namespace Lexical.FileSystem.Decoration
                         {
                             try
                             {
-                                if (component.FileSystem.Exists(srcComponentPath)) srcComponent = component;
+                                if (component.FileSystem.Exists(srcComponentPath, token.Concat(component.Token))) srcComponent = component;
                             }
                             catch (NotSupportedException)
                             {
@@ -806,7 +816,7 @@ namespace Lexical.FileSystem.Decoration
                         {
                             try
                             {
-                                IFileSystemEntry e = component.FileSystem.GetEntry(dstParent);
+                                IFileSystemEntry e = component.FileSystem.GetEntry(dstParent, token.Concat(component.Token));
                                 if (e != null && e.IsDirectory()) dstComponent = component;
                             }
                             catch (NotSupportedException)
@@ -820,9 +830,9 @@ namespace Lexical.FileSystem.Decoration
                     if (srcComponent != null && dstComponent != null)
                     {
                         // Move locally
-                        if (srcComponent.FileSystem.Equals(dstComponent.FileSystem)||dstComponent.FileSystem.Equals(srcComponent.FileSystem)) srcComponent.FileSystem.Move(srcComponentPath, dstComponentPath);
+                        if (srcComponent.FileSystem.Equals(dstComponent.FileSystem)||dstComponent.FileSystem.Equals(srcComponent.FileSystem)) srcComponent.FileSystem.Move(srcComponentPath, dstComponentPath, token.Concat(srcComponent.Token));
                         // Copy+Delete
-                        else srcComponent.FileSystem.Transfer(srcComponentPath, dstComponent.FileSystem, dstComponentPath);
+                        else srcComponent.FileSystem.Transfer(srcComponentPath, dstComponent.FileSystem, dstComponentPath, token.Concat(srcComponent.Token), token.Concat(dstComponent.Token));
                         return;
                     }
 
@@ -837,9 +847,9 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             // Move locally
-                            if (sc.FileSystem.Equals(dc.FileSystem) || dc.FileSystem.Equals(sc.FileSystem)) sc.FileSystem.Move(srcComponentPath, dstComponentPath);
+                            if (sc.FileSystem.Equals(dc.FileSystem) || dc.FileSystem.Equals(sc.FileSystem)) sc.FileSystem.Move(srcComponentPath, dstComponentPath, token.Concat(sc.Token));
                             // Copy+Delete
-                            else sc.FileSystem.Transfer(srcComponentPath, dc.FileSystem, dstComponentPath);
+                            else sc.FileSystem.Transfer(srcComponentPath, dc.FileSystem, dstComponentPath, token.Concat(sc.Token), token.Concat(dc.Token));
                             return;
                         }
                         catch (FileNotFoundException) { supported = true; }
@@ -863,6 +873,7 @@ namespace Lexical.FileSystem.Decoration
         /// If directory at <paramref name="path"/> already exists, then returns without exception.
         /// </summary>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>true if directory exists after the method, false if directory doesn't exist</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -874,7 +885,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void CreateDirectory(string path)
+        public void CreateDirectory(string path, IFileSystemToken token = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -905,7 +916,7 @@ namespace Lexical.FileSystem.Decoration
                     String childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
                     // Delete
-                    component.FileSystem.CreateDirectory(childPath);
+                    component.FileSystem.CreateDirectory(childPath, token.Concat(component.Token));
                 }
 
                 // Many components
@@ -921,7 +932,7 @@ namespace Lexical.FileSystem.Decoration
                         if (!component.Path.ParentToChild(path, out childPath)) continue;
                         try
                         {
-                            component.FileSystem.CreateDirectory(childPath);
+                            component.FileSystem.CreateDirectory(childPath, token.Concat(component.Token));
                             return;
                         }
                         catch (FileNotFoundException) { supported = true; }
@@ -940,7 +951,7 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <inheritdoc/>
-        public IFileSystem Mount(string path, params FileSystemAssignment[] mounts)
+        public IFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemToken token = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -971,7 +982,7 @@ namespace Lexical.FileSystem.Decoration
                     String childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
                     // Mount
-                    component.FileSystem.Mount(childPath, mounts);
+                    component.FileSystem.Mount(childPath, mounts, token.Concat(component.Token) );
                 }
 
                 // Many components
@@ -987,7 +998,7 @@ namespace Lexical.FileSystem.Decoration
                         if (!component.Path.ParentToChild(path, out childPath)) continue;
                         try
                         {
-                            component.FileSystem.Mount(childPath, mounts);
+                            component.FileSystem.Mount(childPath, mounts, token.Concat(component.Token));
                             // Return self
                             return this;
                         }
@@ -1013,9 +1024,10 @@ namespace Lexical.FileSystem.Decoration
         /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
         /// </summary>
         /// <param name="path"></param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public IFileSystem Unmount(string path)
+        public IFileSystem Unmount(string path, IFileSystemToken token = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1046,7 +1058,7 @@ namespace Lexical.FileSystem.Decoration
                     String childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) throw new FileNotFoundException(path);
                     // Unmount
-                    component.FileSystem.Unmount(childPath);
+                    component.FileSystem.Unmount(childPath, token.Concat(component.Token));
                 }
 
                 // Many components
@@ -1062,7 +1074,7 @@ namespace Lexical.FileSystem.Decoration
                         if (!component.Path.ParentToChild(path, out childPath)) continue;
                         try
                         {
-                            component.FileSystem.Unmount(childPath);
+                            component.FileSystem.Unmount(childPath, token.Concat(component.Token));
                             // Return self
                             return this;
                         }
@@ -1088,8 +1100,9 @@ namespace Lexical.FileSystem.Decoration
         /// List all mounts.
         /// </summary>
         /// <returns></returns>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public IFileSystemEntryMount[] ListMountPoints()
+        public IFileSystemEntryMount[] ListMountPoints(IFileSystemToken token = null)
         {
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
@@ -1115,7 +1128,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can create
                     if (!component.Option.CanListMountPoints) throw new NotSupportedException(nameof(ListMountPoints));
                     // List
-                    IFileSystemEntryMount[] childEntries = component.FileSystem.ListMountPoints();
+                    IFileSystemEntryMount[] childEntries = component.FileSystem.ListMountPoints(token.Concat(component.Token));
                     // Result array to be filled
                     IFileSystemEntryMount[] result = new IFileSystemEntryMount[childEntries.Length];
                     // Is result array filled with null enties
@@ -1163,7 +1176,7 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             // Browse
-                            IFileSystemEntryMount[] component_entries = component.FileSystem.ListMountPoints();
+                            IFileSystemEntryMount[] component_entries = component.FileSystem.ListMountPoints(token.Concat(component.Token));
                             entryArrays.Add((component, component_entries));
                             entryCount += component_entries.Length;
                             supported = true;
@@ -1216,6 +1229,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
         /// <param name="eventDispatcher">(optional) event dispatcher</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>dispose handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -1226,7 +1240,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken token = null)
         {
             // Assert argument
             if (filter == null) throw new ArgumentNullException(nameof(filter));
@@ -1257,7 +1271,7 @@ namespace Lexical.FileSystem.Decoration
                     try
                     {
                         // Try Observe
-                        IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component), eventDispatcher);
+                        IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component), eventDispatcher, token.Concat(component.Token));
                         // Attach disposable
                         ((IDisposeList)adapter).AddDisposable(disposable);
                     }

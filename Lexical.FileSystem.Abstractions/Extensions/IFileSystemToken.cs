@@ -106,6 +106,31 @@ namespace Lexical.FileSystem
             }
         }
 
+        /// <summary>
+        /// Concatenates two tokens non-recursively.
+        /// Tokens may be null valued.
+        /// </summary>
+        /// <param name="t1">(optional) Token</param>
+        /// <param name="t2">(optional) Token</param>
+        /// <returns>null, t1, t2, or concatenated token</returns>
+        public static IFileSystemToken Concat(this IFileSystemToken t1, IFileSystemToken t2)
+        {
+            StructList4<IFileSystemToken> tokens = new StructList4<IFileSystemToken>();
+            if (t1 != null)
+            {
+                if (t1 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                else tokens.AddIfNew(t1);
+            }
+            if (t2 != null)
+            {
+                if (t2 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                else tokens.AddIfNew(t1);
+            }
+            if (tokens.Count == 0) return null;
+            if (tokens.Count == 1) return tokens[0];
+            return new FileSystemTokenList(tokens.ToArray());
+        }
+
     }
 
     /// <summary><see cref="IFileSystemToken"/> operations.</summary>

@@ -32,6 +32,7 @@ namespace Lexical.FileSystem
         /// <paramref name="path"/> should end with directory separator character '/'.
         /// </summary>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>true if directory exists after the method, false if directory doesn't exist</returns>
         /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -43,7 +44,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        void CreateDirectory(string path);
+        void CreateDirectory(string path, IFileSystemToken token = null);
     }
     // </doc>
 }

@@ -88,10 +88,11 @@ namespace Lexical.FileSystem
         /// <param name="path">path to mount point</param>
         /// <param name="filesystem">filesystem</param>
         /// <param name="mountOption">(optional) options</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IFileSystemOption mountOption = null)
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IFileSystemOption mountOption = null, IFileSystemToken token = null)
         {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, new FileSystemAssignment(filesystem, mountOption));
+            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, token);
             throw new NotSupportedException(nameof(Mount));
         }
 
@@ -116,7 +117,7 @@ namespace Lexical.FileSystem
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params IFileSystem[] filesystems)
         {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystems.Select(fs=> new FileSystemAssignment(fs, null)).ToArray());
+            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystems.Select(fs=> new FileSystemAssignment(fs, null)).ToArray(), token: null);
             throw new NotSupportedException(nameof(Mount));
         }
 
@@ -133,7 +134,7 @@ namespace Lexical.FileSystem
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params (IFileSystem filesystem, IFileSystemOption mountOption)[] filesystems)
         {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystems.Select(fs => new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray());
+            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystems.Select(fs => new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), token: null);
             throw new NotSupportedException(nameof(Mount));
         }
 
@@ -155,10 +156,11 @@ namespace Lexical.FileSystem
         /// <param name="parentFileSystem"></param>
         /// <param name="path">path to mount point</param>
         /// <param name="mounts">(optional) filesystem and option infos</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params FileSystemAssignment[] mounts)
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, FileSystemAssignment[] mounts, IFileSystemToken token = null)
         {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, mounts);
+            if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, mounts, token);
             throw new NotSupportedException(nameof(Mount));
         }
 
@@ -169,11 +171,12 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="parentFileSystem"></param>
         /// <param name="path">path to mount point</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Unmount(this IFileSystem parentFileSystem, string path)
+        public static IFileSystem Unmount(this IFileSystem parentFileSystem, string path, IFileSystemToken token = null)
         {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.Unmount(path);
+            if (parentFileSystem is IFileSystemMount mountable) return mountable.Unmount(path, token);
             throw new NotSupportedException(nameof(Unmount));
         }
 
@@ -181,11 +184,12 @@ namespace Lexical.FileSystem
         /// List all mounts.
         /// </summary>
         /// <param name="parentFileSystem"></param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystemEntryMount[] ListMountPoints(this IFileSystem parentFileSystem)
+        public static IFileSystemEntryMount[] ListMountPoints(this IFileSystem parentFileSystem, IFileSystemToken token = null)
         {
-            if (parentFileSystem is IFileSystemMount mountable) return mountable.ListMountPoints();
+            if (parentFileSystem is IFileSystemMount mountable) return mountable.ListMountPoints(token);
             throw new NotSupportedException(nameof(ListMountPoints));
         }
 

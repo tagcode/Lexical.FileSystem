@@ -38,6 +38,7 @@ namespace Lexical.FileSystem
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -53,7 +54,7 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
-        Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare);
+        Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken token = null);
     }
     // </doc>
 }

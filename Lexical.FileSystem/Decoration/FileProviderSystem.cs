@@ -44,15 +44,15 @@ namespace Lexical.FileSystem.Decoration
         public IDisposable FileProviderDisposable => fileProvider as IDisposable;
 
         /// <inheritdoc/>
-        public virtual bool CanBrowse { get; protected set; }
+        public virtual bool CanBrowse => options.CanBrowse;
         /// <inheritdoc/>
-        public virtual bool CanGetEntry { get; protected set; }
+        public virtual bool CanGetEntry => options.CanGetEntry;
         /// <inheritdoc/>
-        public virtual bool CanObserve { get; protected set; }
+        public virtual bool CanObserve => options.CanObserve;
         /// <inheritdoc/>
-        public virtual bool CanOpen { get; protected set; }
+        public virtual bool CanOpen => options.CanOpen;
         /// <inheritdoc/>
-        public virtual bool CanRead { get; protected set; }
+        public virtual bool CanRead => options.CanRead;
         /// <inheritdoc/>
         public virtual bool CanWrite => false;
         /// <inheritdoc/>
@@ -69,18 +69,25 @@ namespace Lexical.FileSystem.Decoration
         protected IFileSystemEntry rootEntry;
 
         /// <summary>
+        /// (optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.
+        /// </summary>
+        protected IFileSystemToken token;
+
+        /// <summary>
+        /// Options all
+        /// </summary>
+        protected Options options;
+
+        /// <summary>
         /// Create file provider based file system.
         /// </summary>
         /// <param name="sourceFileProvider"></param>
-        /// <param name="canBrowse">if true allows to forward Browse</param>
-        /// <param name="canObserve">if true allows to forward Observe</param>
-        /// <param name="canOpen">if true allows to forward Open</param>
-        public FileProviderSystem(IFileProvider sourceFileProvider, bool canBrowse = true, bool canObserve = true, bool canOpen = true) : base()
+        /// <param name="option"></param>
+        public FileProviderSystem(IFileProvider sourceFileProvider, IFileSystemOption option = null) : base()
         {
             this.fileProvider = sourceFileProvider ?? throw new ArgumentNullException(nameof(sourceFileProvider));
-            this.CanBrowse = this.CanGetEntry = canBrowse;
-            this.CanObserve = canObserve;
-            this.CanOpen = this.CanRead = canOpen;
+            this.options = option == null ? Options.AllEnabled : Options.Read(option);
+            this.token = option.AsOption<IFileSystemToken>();
             this.isPhysicalFileProvider = sourceFileProvider.GetType().FullName == "Microsoft.Extensions.FileProviders.PhysicalFileProvider";
             if (this.isPhysicalFileProvider)
             {
@@ -94,6 +101,66 @@ namespace Lexical.FileSystem.Decoration
             }
         }
 
+        /// <summary>FileProvider options</summary>
+        public class Options : IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionBrowse
+        {
+            static Options allEnabled = new Options(true, true, true, true, true, true, true);
+            /// <summary></summary>
+            public static Options AllEnabled => allEnabled;
+
+            /// <summary></summary>
+            public bool CanBrowse { get; protected set; }
+            /// <summary></summary>
+            public bool CanGetEntry { get; protected set; }
+            /// <summary></summary>
+            public bool CanOpen { get; protected set; }
+            /// <summary></summary>
+            public bool CanRead { get; protected set; }
+            /// <summary></summary>
+            public bool CanWrite { get; protected set; }
+            /// <summary></summary>
+            public bool CanCreateFile { get; protected set; }
+            /// <summary></summary>
+            public bool CanObserve { get; protected set; }
+
+            /// <summary>Create options</summary>
+            public Options()
+            {
+            }
+
+            /// <summary>Create options</summary>
+            public Options(bool canBrowse, bool canGetEntry, bool canOpen, bool canRead, bool canWrite, bool canCreateFile, bool canObserve)
+            {
+                CanBrowse = canBrowse;
+                CanGetEntry = canGetEntry;
+                CanOpen = canOpen;
+                CanRead = canRead;
+                CanWrite = canWrite;
+                CanCreateFile = canCreateFile;
+                CanObserve = canObserve;
+            }
+
+            /// <summary>
+            /// Read options from <paramref name="option"/> and return flattened object.
+            /// </summary>
+            /// <param name="option"></param>
+            /// <returns></returns>
+            public static Options Read(IFileSystemOption option)
+            {
+                Options result = new Options();
+                result.CanBrowse = option.CanBrowse();
+                result.CanGetEntry = option.CanGetEntry();
+                result.CanObserve = option.CanObserve();
+                result.CanOpen = option.CanOpen();
+                result.CanRead = option.CanRead();
+                result.CanWrite = option.CanWrite();
+                result.CanCreateFile = option.CanCreateFile();
+                result.CanCreateFile = option.CanCreateFile();
+                return result;
+            }
+        }
+
+
         /// <summary>
         /// Open a file for reading. 
         /// </summary>
@@ -101,6 +168,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -113,7 +181,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken token = null)
         {
             // Assert open is enabled
             if (!CanOpen) throw new NotSupportedException("Open is not supported");
@@ -140,6 +208,7 @@ namespace Lexical.FileSystem.Decoration
         /// Browse a directory for file and subdirectory entries.
         /// </summary>
         /// <param name="path">path to directory, "" is root, separator is "/"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>a snapshot of file and directory entries</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -151,7 +220,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry[] Browse(string path)
+        public IFileSystemEntry[] Browse(string path, IFileSystemToken token = null)
         {
             // Assert browse is enabled
             if (!CanBrowse) throw new NotSupportedException("Browse is not supported");
@@ -189,6 +258,7 @@ namespace Lexical.FileSystem.Decoration
         /// Get entry of a single file or directory.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -199,7 +269,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path)
+        public IFileSystemEntry GetEntry(string path, IFileSystemToken token = null)
         {
             if (path == "" && rootEntry != null) return rootEntry;
             // Make path
@@ -256,6 +326,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
         /// <param name="eventDispatcher">(optional) event dispatcher</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>dispose handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -266,7 +337,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken token = null)
         {
             // Assert observe is enabled.
             if (!CanObserve) throw new NotSupportedException("Observe not supported.");
@@ -279,7 +350,7 @@ namespace Lexical.FileSystem.Decoration
             if (patternInfo.SuffixDepth==0)
             {
                 // Create observer that watches one file
-                FileObserver handle = new FileObserver(this, filter, observer, state, eventDispatcher);
+                FileObserver handle = new FileObserver(this, filter, observer, state, eventDispatcher, token.Concat(this.token));
                 // Send handle
                 observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle
@@ -325,6 +396,9 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>Time when observing started.</summary>
             protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
+            /// <summary></summary>
+            protected IFileSystemToken token;
+
             /// <summary>
             /// Print info
             /// </summary>
@@ -339,18 +413,20 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="path"></param>
             /// <param name="observer"></param>
             /// <param name="state"></param>
-            /// <param name="eventDispatcher"></param>
-            public FileObserver(IFileSystem filesystem, string path, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default)
+            /// <param name="eventDispatcher">(optional)</param>
+            /// <param name="token">(optional)</param>
+            public FileObserver(IFileSystem filesystem, string path, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, IFileSystemToken token)
                 : base(filesystem, path, observer, state, eventDispatcher)
             {
                 this.changeToken = FileProvider.Watch(path);
                 this.previousEntry = ReadFileEntry();
                 this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
+                this.token = token;
             }
 
             IFileSystemEntry ReadFileEntry()
             {
-                IFileSystemEntry[] entries = FileSystem.Browse(Filter);
+                IFileSystemEntry[] entries = FileSystem.Browse(Filter, token);
                 if (entries.Length == 1) return entries[0];
                 return null;
             }

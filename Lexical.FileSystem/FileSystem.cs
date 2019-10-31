@@ -166,6 +166,7 @@ namespace Lexical.FileSystem
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -178,7 +179,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken token = null)
         {
             string concatenatedPath = System.IO.Path.Combine(AbsolutePath, path);
             string absolutePath = System.IO.Path.GetFullPath(concatenatedPath);
@@ -192,6 +193,7 @@ namespace Lexical.FileSystem
         /// If directory at <paramref name="path"/> already exists, then returns without exception.
         /// </summary>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>true if directory exists after the method, false if directory doesn't exist</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -202,7 +204,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public void CreateDirectory(string path)
+        public void CreateDirectory(string path, IFileSystemToken token = null)
         {
             string concatenatedPath = System.IO.Path.Combine(AbsolutePath, path);
             string absolutePath = System.IO.Path.GetFullPath(concatenatedPath);
@@ -305,6 +307,7 @@ namespace Lexical.FileSystem
         /// Browse a directory for child entries.
         /// </summary>
         /// <param name="path">path to directory, "" is root, separator is "/"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>a snapshot of file and directory entries</returns>
         /// <exception cref="DirectoryNotFoundException"></exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -315,7 +318,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public IFileSystemEntry[] Browse(string path)
+        public IFileSystemEntry[] Browse(string path, IFileSystemToken token = null)
         {
             // Return OS-root, return drive letters.
             if (path == "" && Path == "") return BrowseRoot();
@@ -355,6 +358,7 @@ namespace Lexical.FileSystem
         /// Get entry of a single file or directory.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -365,7 +369,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path)
+        public IFileSystemEntry GetEntry(string path, IFileSystemToken token = null)
         {
             // Return OS-root, return drive letters.
             if (path == "") return rootEntry;
@@ -434,6 +438,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path">path to a file or directory</param>
         /// <param name="recursive">if path refers to directory, recurse into sub directories</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -443,7 +448,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false, or <paramref name="path"/> refers to non-file device</exception>
-        public void Delete(string path, bool recursive = false)
+        public void Delete(string path, bool recursive = false, IFileSystemToken token = null)
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
@@ -463,6 +468,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <param name="fileAttribute"></param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException"><paramref name="path"/> is not found</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="path"/> is invalid. For example, it's on an unmapped drive. Only thrown when setting the property value.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -474,7 +480,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        public void SetFileAttribute(string path, FileAttributes fileAttribute)
+        public void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemToken token = null)
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
@@ -494,6 +500,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="oldPath">old path of a file or directory</param>
         /// <param name="newPath">new path of a file or directory</param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -504,7 +511,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
-        public void Move(string oldPath, string newPath)
+        public void Move(string oldPath, string newPath, IFileSystemToken token = null)
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string oldConcatenatedPath, oldAbsolutePath, newConcatenatedPath, newAbsolutePath;
@@ -527,6 +534,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
         /// <param name="eventDispatcher">(optional) </param>
+        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>disposable handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -537,7 +545,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken token = null)
         {
             // Parse filter
             GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
