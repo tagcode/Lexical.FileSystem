@@ -61,16 +61,13 @@ namespace Lexical.FileSystem.Decoration
             result.CanWrite = option.CanWrite();
             result.CanCreateFile = option.CanCreateFile();
             result.CanDelete = option.CanDelete();
-            result.CanSetFileAttribute = option.CanSetFileAttribute();
-            result.CanMount = option.CanMount();
-            result.CanCreateFile = option.CanCreateFile();
-            result.CanDelete = option.CanDelete();
             result.CanMove = option.CanMove();
             result.CanCreateDirectory = option.CanCreateDirectory();
             result.CanMount = option.CanMount();
             result.CanUnmount = option.CanUnmount();
             result.CanListMountPoints = option.CanListMountPoints();
             result.SubPath = option.SubPath();
+            result.CanSetFileAttribute = option.CanSetFileAttribute();
             return result;
         }
 

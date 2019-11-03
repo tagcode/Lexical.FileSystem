@@ -1280,7 +1280,7 @@ namespace Lexical.FileSystem.Utility
                     if (EffectivePolicy.HasFlag(Policy.SrcThrow)) throw new FileNotFoundException(SrcPath);
                     // Skip
                     if (EffectivePolicy.HasFlag(Policy.SrcSkip)) { SetState(State.Skipped); return; }
-                    // Fail anywa
+                    // Fail anyway
                     throw new FileNotFoundException(SrcPath);
                 }
 

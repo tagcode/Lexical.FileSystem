@@ -109,19 +109,19 @@ namespace Lexical.FileSystem.Decoration
             public static Options AllEnabled => allEnabled;
 
             /// <summary></summary>
-            public bool CanBrowse { get; protected set; }
+            public bool CanBrowse { get; protected set; } = true;
             /// <summary></summary>
-            public bool CanGetEntry { get; protected set; }
+            public bool CanGetEntry { get; protected set; } = true;
             /// <summary></summary>
-            public bool CanOpen { get; protected set; }
+            public bool CanOpen { get; protected set; } = true;
             /// <summary></summary>
-            public bool CanRead { get; protected set; }
+            public bool CanRead { get; protected set; } = true;
             /// <summary></summary>
-            public bool CanWrite { get; protected set; }
+            public bool CanWrite { get; protected set; } = true;
             /// <summary></summary>
-            public bool CanCreateFile { get; protected set; }
+            public bool CanCreateFile { get; protected set; } = true;
             /// <summary></summary>
-            public bool CanObserve { get; protected set; }
+            public bool CanObserve { get; protected set; } = true;
 
             /// <summary>Create options</summary>
             public Options()
@@ -148,14 +148,25 @@ namespace Lexical.FileSystem.Decoration
             public static Options Read(IFileSystemOption option)
             {
                 Options result = new Options();
-                result.CanBrowse = option.CanBrowse();
-                result.CanGetEntry = option.CanGetEntry();
-                result.CanObserve = option.CanObserve();
-                result.CanOpen = option.CanOpen();
-                result.CanRead = option.CanRead();
-                result.CanWrite = option.CanWrite();
-                result.CanCreateFile = option.CanCreateFile();
-                result.CanCreateFile = option.CanCreateFile();
+
+                IFileSystemOptionOpen open = option.AsOption<IFileSystemOptionOpen>();
+                if (open != null)
+                {
+                    result.CanCreateFile = open.CanCreateFile;
+                    result.CanOpen = open.CanOpen;
+                    result.CanRead = open.CanRead;
+                    result.CanWrite = open.CanWrite;
+                }
+                IFileSystemOptionBrowse browse = option.AsOption<IFileSystemOptionBrowse>();
+                if (browse != null)
+                {
+                    result.CanBrowse = browse.CanBrowse;
+                }
+                IFileSystemOptionObserve observe = option.AsOption<IFileSystemOptionObserve>();
+                if (observe != null)
+                {
+                    result.CanObserve = observe.CanObserve;
+                }
                 return result;
             }
         }

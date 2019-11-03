@@ -167,6 +167,30 @@ namespace Lexical.FileSystem.Utility
         }
 
         /// <summary>
+        /// Dispose all attached diposables and call <see cref="InnerDispose(ref StructList4{Exception})"/>.
+        /// </summary>
+        /// <exception cref="AggregateException">thrown if disposing threw errors</exception>
+        public override void Close()
+        {
+            // Dispose() called
+            Interlocked.CompareExchange(ref disposing, 1L, 0L);
+
+            // Should dispose be started
+            bool processDispose = false;
+
+            lock (m_disposelist_lock)
+            {
+                // Post-pone if there are belate handles
+                if (belateHandleCount > 0) return;
+                // Set state to dispose called
+                processDispose = Interlocked.Read(ref disposing) <= 1L;
+            }
+
+            // Start dispose
+            if (processDispose) { if (nonDisposable) ProcessNonDispose(); else ProcessDispose(); }
+        }
+
+        /// <summary>
         /// Process the actual dispose. This may be called from <see cref="Dispose"/> or from the dispose of the last
         /// belate handle (After <see cref="Dispose"/> has been called aswell).
         /// 
@@ -182,7 +206,6 @@ namespace Lexical.FileSystem.Utility
             bool thisThreadChangedStateToIsDispose = (Interlocked.CompareExchange(ref disposing, 2L, 0L) == 0L) || (Interlocked.CompareExchange(ref disposing, 2L, 1L) == 1L);
             // Not for this thread.
             if (!thisThreadChangedStateToIsDispose) return;
-
             // Extract snapshot, clear array
             StructList2<IDisposable> toDispose = default;
             lock (m_disposelist_lock) { toDispose = disposeList; disposeList = default; }
@@ -208,6 +231,7 @@ namespace Lexical.FileSystem.Utility
             Interlocked.CompareExchange(ref disposing, 3L, 2L);
 
             // Throw captured errors
+            if (disposeErrors.Count == 1 && disposeErrors[0] is FileSystemException fse) throw fse;
             if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
         }
 
@@ -260,6 +284,7 @@ namespace Lexical.FileSystem.Utility
         /// <exception cref="Exception">any exception is captured and aggregated with other errors</exception>
         protected virtual void InnerDispose(ref StructList4<Exception> disposeErrors)
         {
+            Source?.Dispose();
         }
 
         /// <summary>

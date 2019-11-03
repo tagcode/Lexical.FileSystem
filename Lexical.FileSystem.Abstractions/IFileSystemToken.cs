@@ -8,6 +8,7 @@ using System.Collections.Generic;
 
 namespace Lexical.FileSystem
 {
+    // <IFileSystemToken>
     /// <summary>
     /// Abstract token that can be passed to filesystem implementations.
     /// Token is typically a session, a security token such as credential
@@ -25,7 +26,9 @@ namespace Lexical.FileSystem
     public interface IFileSystemToken : IFileSystemOption
     {
     }
+    // </IFileSystemToken>
 
+    // <IFileSystemTokenObject>
     /// <summary>
     /// A single token object.
     /// </summary>
@@ -37,9 +40,9 @@ namespace Lexical.FileSystem
         object Token { get; }
 
         /// <summary>
-        /// (optional) Interface or higher level class, the token is introduced as.
+        /// (optional) Key type to identify token as. This is typically <see cref="Type.FullName"/>.
         /// </summary>
-        Type TokenType { get; }
+        string Key { get; }
 
         /// <summary>
         /// (optional) Glob pattern filters for paths this token is offered to.
@@ -48,31 +51,35 @@ namespace Lexical.FileSystem
         /// </summary>
         string[] Patterns { get; }
     }
+    // </IFileSystemTokenObject>
 
+    // <IFileSystemTokenProvider>
     /// <summary>
     /// Queryable token.
     /// </summary>
     public interface IFileSystemTokenProvider : IFileSystemToken
     {
         /// <summary>
-        /// Query for first token object at path <paramref name="path"/> as type <paramref name="asType"/>.
+        /// Query for first token object at path <paramref name="path"/> as type <paramref name="key"/>.
         /// </summary>
         /// <param name="path">(optional) path to query token at</param>
-        /// <param name="asType">(optional) type to query token as</param>
+        /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        bool TryGet(string path, Type asType, out object token);
+        bool TryGet(string path, string key, out object token);
 
         /// <summary>
-        /// Query for all token objects at path <paramref name="path"/> as type <paramref name="asType"/>.
+        /// Query for all token objects at path <paramref name="path"/> as type <paramref name="key"/>.
         /// </summary>
         /// <param name="path">(optional) path to query token at</param>
-        /// <param name="asType">(optional) type to query token as</param>
+        /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        bool TryGetAll(string path, Type asType, out object[] tokens);
+        bool TryGetAll(string path, string key, out object[] tokens);
     }
+    // </IFileSystemTokenProvider>
 
+    // <IFileSystemTokenEnumerable>
     /// <summary>
     /// Object that contains multiple tokens. 
     /// 
@@ -82,4 +89,5 @@ namespace Lexical.FileSystem
     public interface IFileSystemTokenEnumerable : IFileSystemToken, IEnumerable<IFileSystemToken>
     {
     }
+    // </IFileSystemTokenEnumerable>
 }

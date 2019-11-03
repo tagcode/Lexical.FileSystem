@@ -15,7 +15,7 @@ namespace Lexical.FileSystem
     /// 
     /// Addresses more specific errors situations that generic <see cref="IOException"/> doesn't cover.
     /// </summary>
-    public abstract class FileSystemException : IOException
+    public class FileSystemException : IOException
     {
         /// <summary>
         /// (optional) Error related filesystem.
@@ -38,12 +38,13 @@ namespace Lexical.FileSystem
         public virtual string Path => path;
 
         /// <summary>Error message</summary>
+        
         public override string Message
         {
             get
             {
                 StringBuilder sb = new StringBuilder();
-                sb.Append(String.IsNullOrEmpty(base.Message) ? base.Message : GetType().Name);
+                sb.Append(base.Message);
                 if (Path != null)
                 {
                     sb.Append(": ");
@@ -94,6 +95,9 @@ namespace Lexical.FileSystem
             info.AddValue(nameof(Path), path);
             base.GetObjectData(info, context);
         }
+
+        // <summary>Print info</summary>
+        //public override string ToString() => $"{GetType()}(FileSystem={FileSystem}, Path={Path}, Message={base.Message}, InnerException={InnerException})";
 
     }
 
@@ -232,7 +236,7 @@ namespace Lexical.FileSystem
         public Type OptionType { get; protected set; }
 
         /// <summary>
-        /// Create file system option
+        /// Create file system option not supported error.
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path">(optional) a path where the option was applied</param>

@@ -77,7 +77,7 @@ namespace Lexical.FileSystem
         public static IFileSystemEntry GetEntry(this IFileSystem filesystem, string path, IFileSystemToken token = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.GetEntry(path, token);
-            else throw new NotSupportedException(nameof(Browse));
+            else throw new NotSupportedException(nameof(GetEntry));
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace Lexical.FileSystem
         public static bool Exists(this IFileSystem filesystem, string path, IFileSystemToken token = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.GetEntry(path, token) != null;
-            else throw new NotSupportedException(nameof(Browse));
+            else throw new NotSupportedException(nameof(GetEntry));
         }
     }
 

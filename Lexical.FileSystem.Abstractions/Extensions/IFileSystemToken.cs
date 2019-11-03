@@ -30,8 +30,8 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="tokenContainer"></param>
         /// <returns>type or null</returns>
-        public static Type TokenType(this IFileSystemToken tokenContainer)
-            => tokenContainer is IFileSystemTokenObject tokenObj ? tokenObj.TokenType : null;
+        public static string Key(this IFileSystemToken tokenContainer)
+            => tokenContainer is IFileSystemTokenObject tokenObj ? tokenObj.Key : null;
 
 
         /// <summary>
@@ -43,31 +43,116 @@ namespace Lexical.FileSystem
             => tokenContainer is IFileSystemTokenObject tokenObj ? tokenObj.Patterns : null;
 
         /// <summary>
-        /// Query for a token object at path <paramref name="path"/> as type <paramref name="asType"/>.
+        /// Query for a token object at path <paramref name="path"/> as type <paramref name="key"/>.
         /// </summary>
         /// <param name="tokenContainer"></param>
         /// <param name="path">(optional) path to query token at</param>
-        /// <param name="asType">(optional) type to query token as</param>
+        /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public static bool TryGet(this IFileSystemToken tokenContainer, string path, Type asType, out object token)
+        public static bool TryGet(this IFileSystemToken tokenContainer, string path, string key, out object token)
         {
-            if (tokenContainer is IFileSystemTokenProvider tokenProvider && tokenProvider.TryGet(path, asType, out token)) return true;
+            if (tokenContainer is IFileSystemTokenProvider tokenProvider && tokenProvider.TryGet(path, key, out token)) return true;
             token = null;
             return false;
         }
 
         /// <summary>
-        /// Query for a token object at path <paramref name="path"/> as type <paramref name="asType"/>.
+        /// Query for a token object at path <paramref name="path"/> as type <paramref name="key"/>.
         /// </summary>
         /// <param name="tokenContainer"></param>
         /// <param name="path">(optional) path to query token at</param>
-        /// <param name="asType">(optional) type to query token as</param>
+        /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public static bool TryGetAll(this IFileSystemToken tokenContainer, string path, Type asType, out object[] tokens)
+        public static bool TryGetAll(this IFileSystemToken tokenContainer, string path, string key, out object[] tokens)
         {
-            if (tokenContainer is IFileSystemTokenProvider tokenProvider && tokenProvider.TryGetAll(path, asType, out tokens)) return true;
+            if (tokenContainer is IFileSystemTokenProvider tokenProvider && tokenProvider.TryGetAll(path, key, out tokens)) return true;
+            tokens = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Query for a token object at path <paramref name="path"/> as type <typeparamref name="T"/>.
+        /// 
+        /// Uses <typeparamref name="T"/>.FullName as Key.
+        /// </summary>
+        /// <param name="tokenContainer"></param>
+        /// <param name="path">(optional) path to query token at</param>
+        /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
+        /// <returns>true if tokens were found for the parameters</returns>
+        public static bool TryGet<T>(this IFileSystemToken tokenContainer, string path, out T token)
+        {
+            object obj;
+            if (tokenContainer is IFileSystemTokenProvider tokenProvider && tokenProvider.TryGet(path, typeof(T).FullName, out obj) && obj is T casted) { token = casted; return true; }
+            token = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Query for a token object at path <paramref name="path"/> as type <typeparamref name="T"/>.
+        /// 
+        /// Uses <typeparamref name="T"/>.FullName as Key.
+        /// </summary>
+        /// <param name="tokenContainer"></param>
+        /// <param name="path">(optional) path to query token at</param>
+        /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
+        /// <returns>true if tokens were found for the parameters</returns>
+        public static bool TryGetAll<T>(this IFileSystemToken tokenContainer, string path, out T[] tokens)
+        {
+            object[] objs;
+            if (tokenContainer is IFileSystemTokenProvider tokenProvider && tokenProvider.TryGetAll(path, typeof(T).FullName, out objs))
+            {
+                List<T> list = new List<T>(objs.Length);
+                for (int i = 0; i < objs.Length; i++)
+                {
+                    if (objs[i] is T casted) list.Add(casted);
+                }
+                tokens = list.ToArray();
+                return list.Count > 0;
+            }
+            tokens = null;
+            return false;
+        }
+
+
+        /// <summary>
+        /// Query for a token object at path <paramref name="path"/> as type <typeparamref name="T"/>.
+        /// </summary>
+        /// <param name="tokenContainer"></param>
+        /// <param name="path">(optional) path to query token at</param>
+        /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
+        /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
+        /// <returns>true if tokens were found for the parameters</returns>
+        public static bool TryGet<T>(this IFileSystemToken tokenContainer, string path, string key, out T token)
+        {
+            object obj;
+            if (tokenContainer is IFileSystemTokenProvider tokenProvider && tokenProvider.TryGet(path, key, out obj) && obj is T casted) { token = casted; return true; }
+            token = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Query for a token object at path <paramref name="path"/> as type <typeparamref name="T"/>.
+        /// </summary>
+        /// <param name="tokenContainer"></param>
+        /// <param name="path">(optional) path to query token at</param>
+        /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
+        /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
+        /// <returns>true if tokens were found for the parameters</returns>
+        public static bool TryGetAll<T>(this IFileSystemToken tokenContainer, string path, string key, out T[] tokens)
+        {
+            object[] objs;
+            if (tokenContainer is IFileSystemTokenProvider tokenProvider && tokenProvider.TryGetAll(path, key, out objs))
+            {
+                List<T> list = new List<T>(objs.Length);
+                for (int i = 0; i < objs.Length; i++)
+                {
+                    if (objs[i] is T casted) list.Add(casted);
+                }
+                tokens = list.ToArray();
+                return list.Count>0;
+            }
             tokens = null;
             return false;
         }
@@ -124,13 +209,65 @@ namespace Lexical.FileSystem
             if (t2 != null)
             {
                 if (t2 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
-                else tokens.AddIfNew(t1);
+                else tokens.AddIfNew(t2);
             }
             if (tokens.Count == 0) return null;
             if (tokens.Count == 1) return tokens[0];
             return new FileSystemTokenList(tokens.ToArray());
         }
 
+        /// <summary>
+        /// Concatenates three tokens non-recursively.
+        /// Tokens may be null valued.
+        /// </summary>
+        /// <param name="t1">(optional) Token</param>
+        /// <param name="t2">(optional) Token</param>
+        /// <param name="t3">(optional) Token</param>
+        /// <returns>null, t1, t2, or concatenated token</returns>
+        public static IFileSystemToken Concat(this IFileSystemToken t1, IFileSystemToken t2, IFileSystemToken t3)
+        {
+            StructList4<IFileSystemToken> tokens = new StructList4<IFileSystemToken>();
+            if (t1 != null)
+            {
+                if (t1 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                else tokens.AddIfNew(t1);
+            }
+            if (t2 != null)
+            {
+                if (t2 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                else tokens.AddIfNew(t2);
+            }
+            if (t3 != null)
+            {
+                if (t3 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                else tokens.AddIfNew(t3);
+            }
+            if (tokens.Count == 0) return null;
+            if (tokens.Count == 1) return tokens[0];
+            return new FileSystemTokenList(tokens.ToArray());
+        }
+
+        /// <summary>
+        /// Concatenates tokens non-recursively.
+        /// Tokens may be null valued.
+        /// </summary>
+        /// <param name="t1"></param>
+        /// <param name="moreTokens">(optional) more tokens</param>
+        /// <returns>null, t1, t2, or concatenated token</returns>
+        public static IFileSystemToken Concat(this IFileSystemToken t1, params IFileSystemToken[] moreTokens)
+        {
+            if (moreTokens == null) return t1;
+            if (t1 == null)
+            {
+                if (moreTokens.Length == 0) return null;
+                if (moreTokens.Length == 1) return moreTokens[0];
+                new FileSystemTokenList(moreTokens);
+            }
+            IFileSystemToken[] arr = new IFileSystemToken[moreTokens.Length + 1];
+            arr[0] = t1;
+            Array.Copy(moreTokens, 0, arr, 1, moreTokens.Length);
+            return new FileSystemTokenList(arr);
+        }
     }
 
     /// <summary><see cref="IFileSystemToken"/> operations.</summary>
@@ -178,7 +315,7 @@ namespace Lexical.FileSystem
         /// <summary>(optional) Token object</summary>
         public object Token { get; protected set; }
         /// <summary>(optional) Token type as which object is offered.</summary>
-        public Type TokenType { get; protected set; }
+        public String Key { get; protected set; }
         /// <summary>(optional) Path patterns.</summary>
         public string[] Patterns { get; protected set; }
         /// <summary>(optional) Token object</summary>
@@ -198,11 +335,11 @@ namespace Lexical.FileSystem
         /// Create token container.
         /// </summary>
         /// <param name="token"></param>
-        /// <param name="tokenType">(optional) The type the <paramref name="token"/> is offered as. If null, then doesn't use type criteria in TryGet</param>
-        public FileSystemToken(object token, Type tokenType = null)
+        /// <param name="key">(optional) The key <paramref name="token"/> is offered as. If null, then matches to every key criteria in TryGet</param>
+        public FileSystemToken(object token, String key = null)
         {
             this.Token = token;
-            this.TokenType = tokenType;
+            this.Key = key;
             this.Patterns = null;
             this.TokenAsArray = token == null ? emptyArray : new object[] { token };
             acceptAllPaths = true;
@@ -212,9 +349,9 @@ namespace Lexical.FileSystem
         /// Create token container.
         /// </summary>
         /// <param name="token"></param>
-        /// <param name="tokenType">(optional) The type the <paramref name="token"/> is offered as. If null, then doesn't use type criteria in TryGet</param>
+        /// <param name="key">(optional) The key <paramref name="token"/> is offered as. If null, then matches to every key criteria in TryGet</param>
         /// <param name="patterns">(optional) path globa patterns to accept. If null, then accepts every path, which is equal to "**" pattern.</param>
-        public FileSystemToken(object token, Type tokenType = null, params string[] patterns) : this(token, tokenType)
+        public FileSystemToken(object token, String key = null, params string[] patterns) : this(token, key)
         {
             this.Patterns = patterns;
             if (patterns == null)
@@ -232,13 +369,13 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Query for first token object at path <paramref name="path"/> as type <paramref name="asType"/>.
+        /// Query for first token object at path <paramref name="path"/> as type <paramref name="key"/>.
         /// </summary>
         /// <param name="path">(optional) path to query token at</param>
-        /// <param name="asType">(optional) type to query token as</param>
+        /// <param name="key">(optional) key to query</param>
         /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public bool TryGet(string path, Type asType, out object token)
+        public bool TryGet(string path, String key, out object token)
         {
             // There is no token
             if (this.Token == null) { token = null; return false; }
@@ -253,10 +390,10 @@ namespace Lexical.FileSystem
             }
 
             // Qualify type
-            if (this.TokenType != null)
+            if (this.Key != null)
             {
                 // Type mismatch
-                if (!asType.Equals(this.TokenType)) { token = null; return false; }
+                if (!key.Equals(this.Key)) { token = null; return false; }
             }
 
             token = this.Token;
@@ -264,13 +401,13 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Query for all token objects at path <paramref name="path"/> as type <paramref name="asType"/>.
+        /// Query for all token objects at path <paramref name="path"/> as type <paramref name="key"/>.
         /// </summary>
         /// <param name="path">(optional) path to query token at</param>
-        /// <param name="asType">(optional) type to query token as</param>
+        /// <param name="key">(optional) key to query</param>
         /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public bool TryGetAll(string path, Type asType, out object[] tokens)
+        public bool TryGetAll(string path, string key, out object[] tokens)
         {
             // There is no token
             if (this.Token == null) { tokens = null; return false; }
@@ -285,10 +422,10 @@ namespace Lexical.FileSystem
             }
 
             // Qualify type
-            if (this.TokenType != null)
+            if (this.Key != null)
             {
                 // Type mismatch
-                if (!asType.Equals(this.TokenType)) { tokens = null; return false; }
+                if (!key.Equals(this.Key)) { tokens = null; return false; }
             }
 
             tokens = TokenAsArray;
@@ -301,17 +438,18 @@ namespace Lexical.FileSystem
         {
             StringBuilder sb = new StringBuilder();
             if (Token != null) sb.Append(Token.ToString());
-            if (TokenType != null || Patterns != null)
+            if (Key != null || Patterns != null)
             {
-                sb.Append('(');
-                if (TokenType != null) { sb.Append("TokenType="); sb.Append(TokenType.FullName); }
+                sb.Append("FileSystemToken(");
+                sb.Append(Token?.ToString());
+                if (Key != null) { sb.Append(", Key="); sb.Append(Key); }
                 if (Patterns != null)
                 {
-                    if (TokenType != null) sb.Append(", ");
+                    if (Key != null) sb.Append(", ");
                     if (Patterns.Length == 1) { sb.Append("Patters="); sb.Append(Patterns[0]); }
                     else
                     {
-                        sb.Append("Patters=[");
+                        sb.Append("Patterns=[");
                         for (int i = 0; i < Patterns.Length - 1; i++)
                         {
                             if (i > 0) sb.Append(", ");
@@ -399,35 +537,35 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
-        /// Query for first token object at path <paramref name="path"/> as type <paramref name="asType"/>.
+        /// Query for first token object at path <paramref name="path"/> as type <paramref name="key"/>.
         /// </summary>
         /// <param name="path">(optional) path to query token at</param>
-        /// <param name="asType">(optional) type to query token as</param>
+        /// <param name="key">(optional) key to query with</param>
         /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found</returns>
-        public bool TryGet(string path, Type asType, out object token)
+        public bool TryGet(string path, String key, out object token)
         {
             foreach (var t in this.tokens)
-                if (t.TryGet(path, asType, out token)) return true;
+                if (t.TryGet(path, key, out token)) return true;
             token = null;
             return false;
         }
 
         /// <summary>
-        /// Query for all token objects at path <paramref name="path"/> as type <paramref name="asType"/>.
+        /// Query for all token objects at path <paramref name="path"/> as type <paramref name="key"/>.
         /// </summary>
         /// <param name="path">(optional) path to query token at</param>
-        /// <param name="asType">(optional) type to query token as</param>
+        /// <param name="key">(optional) key to query with</param>
         /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found</returns>
-        public bool TryGetAll(string path, Type asType, out object[] tokens)
+        public bool TryGetAll(string path, String key, out object[] tokens)
         {
             StructList4<object[]> tokenArrays = new StructList4<object[]>();
             int c = 0;
             foreach (var t in this.tokens)
             {
                 object[] array;
-                if (t.TryGetAll(path, asType, out array))
+                if (t.TryGetAll(path, key, out array))
                 {
                     c += array.Length;
                     tokenArrays.Add(array);

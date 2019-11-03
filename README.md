@@ -6,7 +6,7 @@ NuGet Packages:
 * Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
 * License ([Apache-2.0 license](http://www.apache.org/licenses/LICENSE-2.0))
 
-
+Please leave a comment or feedback on [github](https://github.com/tagcode/Lexical.FileSystem/issues), or kindle a star if you like the library. Appreciate it.  
 
 Contents:
 * [FileSystem](#FileSystem)
