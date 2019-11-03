@@ -231,7 +231,6 @@ namespace Lexical.FileSystem.Utility
             Interlocked.CompareExchange(ref disposing, 3L, 2L);
 
             // Throw captured errors
-            if (disposeErrors.Count == 1 && disposeErrors[0] is FileSystemException fse) throw fse;
             if (disposeErrors.Count > 0) throw new AggregateException(disposeErrors);
         }
 

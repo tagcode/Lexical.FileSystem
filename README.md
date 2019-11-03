@@ -1160,7 +1160,7 @@ using (var s = fs.Open("index.html", FileMode.Open, FileAccess.Read, FileShare.N
 }
 ```
 
-User authentication can be wrapped **AuthenticationHeaderValue** in a **FileSystemToken** and passed to *Open()* method.
+User authentication header **AuthenticationHeaderValue** can be wrapped in **FileSystemToken** and passed to *Open()* method.
 
 ```csharp
 AuthenticationHeaderValue authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));

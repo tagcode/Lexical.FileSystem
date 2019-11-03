@@ -22,6 +22,20 @@ namespace Lexical.FileSystem
     /// </summary>
     public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath, IFileSystemMount, IFileSystemBrowse, IFileSystemOpen, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove
     {
+        /// <summary>URL mounts</summary>
+        static Lazy<VirtualFileSystem> url = new Lazy<VirtualFileSystem>(
+            () => new VirtualFileSystem.NonDisposable()
+                    .Mount("file://", FileSystem.OS)
+                    .Mount("tmp://", new MemoryFileSystem())
+                    .Mount("home://", FileSystem.Personal)
+                    .Mount("docs://", FileSystem.MyDocuments)
+                    .Mount("application://", FileSystem.Application)
+                    .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
+                    .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
+            );
+        /// <summary>URL mounts.</summary>
+        public static VirtualFileSystem Url => url.Value;
+
         /// <summary>
         /// Reader writer lock for modifying vfs directory structure. 
         /// </summary>
