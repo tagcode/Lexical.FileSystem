@@ -6,7 +6,7 @@ NuGet Packages:
 * Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
 * License ([Apache-2.0 license](http://www.apache.org/licenses/LICENSE-2.0))
 
-Please leave a comment or feedback on [github](https://github.com/tagcode/Lexical.FileSystem/issues), or kindle a star if you like the library. Appreciate it.  
+Please leave a comment or feedback on [github](https://github.com/tagcode/Lexical.FileSystem/issues), or kindle a star if you like the library. 
 
 Contents:
 * [FileSystem](#FileSystem)
@@ -326,6 +326,13 @@ IFileSystem urls = new VirtualFileSystem()
     .Mount("application://", FileSystem.Application)
     .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
     .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"));
+```
+
+**VirtualFileSystem.Url** is a singleton instance that has Urls above mounted.
+
+```csharp
+VirtualFileSystem.Url.Open("http://lexical.fi/", FileMode.Open, FileAccess.Read, FileShare.None);
+VirtualFileSystem.Url.Browse("home://");
 ```
 
 File system can be assigned as a child of an earlier assignment. Child assignment has higher evaluation priority than parent. In the following example, "/tmp/" is evaluated from **MemoryFileSystem** first, and then concatenated with potential directory "/tmp/" from the **FileSystem.OS**.
@@ -1163,9 +1170,9 @@ using (var s = fs.Open("index.html", FileMode.Open, FileAccess.Read, FileShare.N
 User authentication header **AuthenticationHeaderValue** can be wrapped in **FileSystemToken** and passed to *Open()* method.
 
 ```csharp
-AuthenticationHeaderValue authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
-IFileSystemToken token = new FileSystemToken(authorization, typeof(AuthenticationHeaderValue).FullName);
-using (var s = HttpFileSystem.Instance.Open("http://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None, token))
+AuthenticationHeaderValue authentication = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
+IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName);
+using (var s = HttpFileSystem.Instance.Open("https://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None, token))
 {
     byte[] data = new byte[4096];
     int c = s.Read(data, 0, 1024);
@@ -1174,25 +1181,26 @@ using (var s = HttpFileSystem.Instance.Open("http://lexical.fi/FileSystem/privat
 }
 ```
 
-Another way is to pass user authentication token at construction of *HttpFileSystem*. The token must be given patterns in which URIs the token applies, for example "http://lexical.fi/FileSystem/private/**".
+Another way is to pass user authentication token at construction of *HttpFileSystem*. 
+The token must be given glob patterns where the token applies, for example "http://lexical.fi/FileSystem/private/**".
 
 ```csharp
 // Authentication header
-AuthenticationHeaderValue authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
+AuthenticationHeaderValue authentication = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
 
 // Token
 IFileSystemToken token = new FileSystemToken(
-    authorization, 
+    authentication, 
     typeof(AuthenticationHeaderValue).FullName, 
-    "http://lexical.fi/FileSystem/private/**", "https://lexical.fi/FileSystem/private/**",
-    "http://www.lexical.fi/FileSystem/private/**", "www.https://lexical.fi/FileSystem/private/**"
+    "https://lexical.fi/FileSystem/private/**",
+    "www.https://lexical.fi/FileSystem/private/**"
 );
 
 // Create FileSystem
 IFileSystem fs = new HttpFileSystem(default, token);
 
 // Open
-using (var s = fs.Open("http://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None))
+using (var s = fs.Open("https://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None))
 {
     byte[] data = new byte[4096];
     int c = s.Read(data, 0, 1024);
@@ -1205,13 +1213,16 @@ Third way is to pass authentication token into a decoration.
 
 ```csharp
 // Authentication header
-AuthenticationHeaderValue authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
+AuthenticationHeaderValue authentication = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
+
+// Create token
+IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
 // Pass token into decorator
-IFileSystem decoration = HttpFileSystem.Instance.Decorate(new FileSystemToken(authorization));
+IFileSystem decoration = HttpFileSystem.Instance.Decorate(token);
 
 // Open
-using (var s = decoration.Open("http://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None))
+using (var s = decoration.Open("https://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None))
 {
     byte[] data = new byte[4096];
     int c = s.Read(data, 0, 1024);
