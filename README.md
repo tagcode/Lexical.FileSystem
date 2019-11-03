@@ -14,6 +14,7 @@ Contents:
 * [Decoration](#Decoration)
 * [IFileProvider](#IFileProvider)
 * [MemoryFileSystem](#MemoryFileSystem)
+* [HttpFileSystem](#HttpFileSystem)
 * [FileScanner](#FileScanner)
 * [VisitTree](#VisitTree)
 
@@ -317,12 +318,14 @@ IFileSystem vfs = new VirtualFileSystem()
 File systems can be assigned to multiple points.
 
 ```csharp
-IFileSystem vfs = new VirtualFileSystem()
+IFileSystem urls = new VirtualFileSystem()
     .Mount("file://", FileSystem.OS)
     .Mount("tmp://", new MemoryFileSystem())
     .Mount("home://", FileSystem.Personal)
     .Mount("docs://", FileSystem.MyDocuments)
-    .Mount("application://", FileSystem.Application);
+    .Mount("application://", FileSystem.Application)
+    .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
+    .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"));
 ```
 
 File system can be assigned as a child of an earlier assignment. Child assignment has higher evaluation priority than parent. In the following example, "/tmp/" is evaluated from **MemoryFileSystem** first, and then concatenated with potential directory "/tmp/" from the **FileSystem.OS**.
@@ -1089,6 +1092,148 @@ Console.WriteLine(pool.BytesAvailable); // Prints 0
 s.Dispose();
 Console.WriteLine(pool.BytesAvailable); // Prints 3072
 ```
+
+# HttpFileSystem
+**new HttpFileSystem(<i>HttpClient, IFileSystemOption</i>)** creates a new http based filesystem.
+
+```csharp
+IFileSystem fs = new HttpFileSystem(httpClient: default, option: default);
+```
+
+**HttpFileSystem.Instance** is the default singleton instance.
+
+```csharp
+IFileSystem fs = HttpFileSystem.Instance;
+```
+
+Opening a resource with **FileMode.Open** and **FileAccess.Read** parameters makes a GET request.
+
+```csharp
+using (var s = HttpFileSystem.Instance.Open("http://lexical.fi/", FileMode.Open, FileAccess.Read, FileShare.None))
+{
+    byte[] data = StreamUtils.ReadFully(s);
+    String str = UTF8Encoding.UTF8.GetString(data);
+    Console.WriteLine(str);
+}
+```
+
+Web resources can be used with generic extension methods such as **.CopyFile()**.
+
+```csharp
+MemoryFileSystem ram = new MemoryFileSystem();
+HttpFileSystem.Instance.CopyFile("http://lexical.fi", ram, "document.txt");
+ram.PrintTo(Console.Out);
+```
+
+<pre>
+""
+└── "document.txt"
+</pre>
+
+Opening a resource with **FileMode.Create** and **FileAccess.Write** makes a PUT request.
+
+```csharp
+byte[] data = new byte[1024];
+using (var s = HttpFileSystem.Instance.Open("http://lexical.fi/", FileMode.Create, FileAccess.Write, FileShare.None))
+    s.Write(data);
+```
+
+HttpFileSystem can be constructed with various options, such as SubPath and custom http header.
+
+```csharp
+// Create options
+List<KeyValuePair<string, IEnumerable<string>>> headers = new List<KeyValuePair<string, IEnumerable<string>>>();
+headers.Add(new KeyValuePair<string, IEnumerable<string>>("User-Agent", new String[] { "MyUserAgent" }));
+IFileSystemOption option1 = new FileSystemToken(headers, typeof(System.Net.Http.Headers.HttpHeaders).FullName);
+IFileSystemOption option2 = FileSystemOption.SubPath("http://lexical.fi/");
+IFileSystemOption options = FileSystemOption.Union(option1, option2);
+
+// Create FileSystem
+IFileSystem fs = new HttpFileSystem(option: options);
+
+// Read resource
+using (var s = fs.Open("index.html", FileMode.Open, FileAccess.Read, FileShare.None))
+{
+    byte[] data = StreamUtils.ReadFully(s);
+    String str = UTF8Encoding.UTF8.GetString(data);
+    Console.WriteLine(str);
+}
+```
+
+User authentication can be wrapped **AuthenticationHeaderValue** in a **FileSystemToken** and passed to *Open()* method.
+
+```csharp
+AuthenticationHeaderValue authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
+IFileSystemToken token = new FileSystemToken(authorization, typeof(AuthenticationHeaderValue).FullName);
+using (var s = HttpFileSystem.Instance.Open("http://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None, token))
+{
+    byte[] data = new byte[4096];
+    int c = s.Read(data, 0, 1024);
+    String str = UTF8Encoding.UTF8.GetString(data, 0, c);
+    Console.WriteLine(str);
+}
+```
+
+Another way is to pass user authentication token at construction of *HttpFileSystem*. The token must be given patterns in which URIs the token applies, for example "http://lexical.fi/FileSystem/private/**".
+
+```csharp
+// Authentication header
+AuthenticationHeaderValue authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
+
+// Token
+IFileSystemToken token = new FileSystemToken(
+    authorization, 
+    typeof(AuthenticationHeaderValue).FullName, 
+    "http://lexical.fi/FileSystem/private/**", "https://lexical.fi/FileSystem/private/**",
+    "http://www.lexical.fi/FileSystem/private/**", "www.https://lexical.fi/FileSystem/private/**"
+);
+
+// Create FileSystem
+IFileSystem fs = new HttpFileSystem(default, token);
+
+// Open
+using (var s = fs.Open("http://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None))
+{
+    byte[] data = new byte[4096];
+    int c = s.Read(data, 0, 1024);
+    String str = UTF8Encoding.UTF8.GetString(data, 0, c);
+    Console.WriteLine(str);
+}
+```
+
+Third way is to pass authentication token into a decoration. 
+
+```csharp
+// Authentication header
+AuthenticationHeaderValue authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
+
+// Pass token into decorator
+IFileSystem decoration = HttpFileSystem.Instance.Decorate(new FileSystemToken(authorization));
+
+// Open
+using (var s = decoration.Open("http://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None))
+{
+    byte[] data = new byte[4096];
+    int c = s.Read(data, 0, 1024);
+    String str = UTF8Encoding.UTF8.GetString(data, 0, c);
+    Console.WriteLine(str);
+}
+```
+
+*CancellationToken* can be passed as a token.
+
+```csharp
+// Cancel token
+CancellationTokenSource cancelSrc = new CancellationTokenSource();
+IFileSystemToken token = new FileSystemToken(cancelSrc.Token, typeof(CancellationToken).FullName);
+
+// Set canceled
+cancelSrc.Cancel();
+
+// Read
+HttpFileSystem.Instance.Open("http://lexical.fi/", FileMode.Open, FileAccess.Read, FileShare.None, token);
+```
+
 
 # FileScanner
 **FileScanner** scans the tree structure of a filesystem for files that match its configured criteria. It uses concurrent threads.
