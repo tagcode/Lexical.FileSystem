@@ -419,16 +419,9 @@ namespace Lexical.FileSystem.Decoration
                 : base(filesystem, path, observer, state, eventDispatcher)
             {
                 this.changeToken = FileProvider.Watch(path);
-                this.previousEntry = ReadFileEntry();
+                this.previousEntry = FileSystem.GetEntry(Filter, token); 
                 this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
                 this.token = token;
-            }
-
-            IFileSystemEntry ReadFileEntry()
-            {
-                IFileSystemEntry[] entries = FileSystem.Browse(Filter, token);
-                if (entries.Length == 1) return entries[0];
-                return null;
             }
 
             /// <summary>
@@ -455,7 +448,7 @@ namespace Lexical.FileSystem.Decoration
                 if (!IsDisposing) this.changeToken = FileProvider.Watch(Filter);
 
                 // Figure out change type
-                IFileSystemEntry currentEntry = ReadFileEntry();
+                IFileSystemEntry currentEntry = FileSystem.GetEntry(Filter, token);
                 bool exists = currentEntry != null;
                 bool existed = previousEntry != null;
                 DateTimeOffset time = DateTimeOffset.UtcNow;
