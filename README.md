@@ -1242,7 +1242,7 @@ HttpFileSystem.Instance.Delete("https://lexical.fi/FileSystem/private/document.t
 ```csharp
 var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
 var authentication = new AuthenticationHeaderValue("Basic", authBlob);
-IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+var token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
 IFileSystemEntry[] entries = HttpFileSystem.Instance.Browse("https://lexical.fi/FileSystem/private/", token);
 ```
@@ -1252,7 +1252,7 @@ IFileSystemEntry[] entries = HttpFileSystem.Instance.Browse("https://lexical.fi/
 ```csharp
 var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
 var authentication = new AuthenticationHeaderValue("Basic", authBlob);
-IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+var token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
 IFileSystemEntry entry = HttpFileSystem.Instance.GetEntry("https://lexical.fi/FileSystem/private/document.txt", token);
 ```
@@ -1262,7 +1262,7 @@ File system can be scanned with *.VisitTree()* and *.PrintTo()* extension method
 ```csharp
 var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
 var authentication = new AuthenticationHeaderValue("Basic", authBlob);
-IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+var token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
 HttpFileSystem.Instance.PrintTo(Console.Out, "https://lexical.fi/FileSystem/private/", token: token);
 ```
@@ -1276,7 +1276,7 @@ HttpFileSystem.Instance.PrintTo(Console.Out, "https://lexical.fi/FileSystem/priv
 └── "document.txt"
 </pre>
 
-On github too. Notice that, only directories are returned from "/tree/", as files are on different url path "/blob/".
+On github too. Notice that, only directories are returned from "/tree/", as files are on different url branch "/blob/".
 
 ```csharp
 HttpFileSystem.Instance.PrintTo(Console.Out, "https://github.com/tagcode/Lexical.FileSystem/tree/master/");
