@@ -212,9 +212,10 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
         /// <param name="format">print format</param>
-        public static void PrintTo(this IFileSystem filesystem, TextWriter output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
+        /// <param name="token">(null) session or security token</param>
+        public static void PrintTo(this IFileSystem filesystem, TextWriter output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default, IFileSystemToken token = null)
         {
-            foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
+            foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth, token))
                 line.WriteTo(output, format | Format.LineFeed);
         }
 
@@ -243,7 +244,8 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
         /// <param name="format">print format</param>
-        public static void PrintTo(this IFileSystem filesystem, StringBuilder output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
+        /// <param name="token">(null) session or security token</param>
+        public static void PrintTo(this IFileSystem filesystem, StringBuilder output, string path = "", int depth = Int32.MaxValue, Format format = Format.Default, IFileSystemToken token = null)
         {
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))
                 line.AppendTo(output, format | Format.LineFeed);
@@ -273,8 +275,9 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
         /// <param name="format">print format</param>
+        /// <param name="token">(null) session or security token</param>
         /// <returns>Tree as string</returns>
-        public static String Print(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format format = Format.Default)
+        public static String Print(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, Format format = Format.Default, IFileSystemToken token = null)
         {
             StringBuilder sb = new StringBuilder();
             foreach (TreeVisit.Line line in filesystem.VisitTree(path, depth))

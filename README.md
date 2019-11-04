@@ -1132,7 +1132,7 @@ HttpFileSystem.Instance.CopyFile("http://lexical.fi", ram, "document.txt");
 ram.PrintTo(Console.Out);
 ```
 
-<pre>
+<pre style="line-height:1.2;">
 ""
 └── "document.txt"
 </pre>
@@ -1193,7 +1193,7 @@ IFileSystemToken token = new FileSystemToken(
     authentication, 
     typeof(AuthenticationHeaderValue).FullName, 
     "https://lexical.fi/FileSystem/private/**",
-    "www.https://lexical.fi/FileSystem/private/**"
+    "https://www.lexical.fi/FileSystem/private/**"
 );
 
 // Create FileSystem
@@ -1230,6 +1230,74 @@ using (var s = decoration.Open("https://lexical.fi/FileSystem/private/document.t
     Console.WriteLine(str);
 }
 ```
+
+**.Delete(<i>uri</i>)** sends DELETE http request.
+
+```csharp
+HttpFileSystem.Instance.Delete("https://lexical.fi/FileSystem/private/document.txt");
+```
+
+**.Browse(<i>uri</i>)** reads html document and parses links that refer to immediate child files and directories.
+
+```csharp
+var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
+var authentication = new AuthenticationHeaderValue("Basic", authBlob);
+IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+
+IFileSystemEntry[] entries = HttpFileSystem.Instance.Browse("https://lexical.fi/FileSystem/private/", token);
+```
+
+**.GetEntry(<i>uri</i>)** reads resource headers and returns entry.
+
+```csharp
+var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
+var authentication = new AuthenticationHeaderValue("Basic", authBlob);
+IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+
+IFileSystemEntry entry = HttpFileSystem.Instance.GetEntry("https://lexical.fi/FileSystem/private/document.txt", token);
+```
+
+File system can be scanned with *.VisitTree()* and *.PrintTo()* extension methods.
+
+```csharp
+var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
+var authentication = new AuthenticationHeaderValue("Basic", authBlob);
+IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+
+HttpFileSystem.Instance.PrintTo(Console.Out, "https://lexical.fi/FileSystem/private/", token: token);
+```
+
+<pre style="line-height:1.2;">
+"private"
+├── "Directory"
+│  └── "file.txt"
+├── "Folder"
+│  └── "file.txt"
+└── "document.txt"
+</pre>
+
+On github too. Notice that, only directories are returned from "/tree/", as files are on different url path "/blob/".
+
+```csharp
+HttpFileSystem.Instance.PrintTo(Console.Out, "https://github.com/tagcode/Lexical.FileSystem/tree/master/");
+```
+
+<pre style="line-height:1.2;">
+"master"
+├── "Lexical.FileSystem"
+│  ├── "Decoration"
+│  ├── "Extensions"
+│  ├── "Internal"
+│  ├── "Package"
+│  └── "Utility"
+└── "Lexical.FileSystem.Abstractions"
+   ├── "Extensions"
+   ├── "FileProvider"
+   ├── "Internal"
+   ├── "Option"
+   ├── "Package"
+   └── "Utility"
+</pre>
 
 *CancellationToken* can be passed as a token.
 

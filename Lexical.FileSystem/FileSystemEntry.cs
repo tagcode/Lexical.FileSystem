@@ -152,8 +152,77 @@ namespace Lexical.FileSystem
                 }
             }
         }
-
     }
+
+    /// <summary>
+    /// File entry.
+    /// </summary>
+    public class FileSystemEntryDirectoryAndFile : FileSystemEntryFile, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryPhysicalPath
+    {
+        /// <summary>
+        /// Test if is a directory
+        /// </summary>
+        public bool IsDirectory => true;
+
+        /// <summary>
+        /// Create entry without file attributes.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path"></param>
+        /// <param name="name"></param>
+        /// <param name="lastModified"></param>
+        /// <param name="lastAccess"></param>
+        /// <param name="length"></param>
+        /// <param name="physicalPath"></param>
+        public FileSystemEntryDirectoryAndFile(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, length, physicalPath)
+        {
+        }
+
+        /// <summary>Entry with custom option.</summary>
+        public new class AndOption : FileSystemEntryDirectoryAndFile, IFileSystemEntryOptions
+        {
+            /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
+            public IFileSystemOption Options { get; protected set; }
+            /// <summary>Create entry with custom option</summary>
+            public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, IFileSystemOption options, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, length, physicalPath)
+            {
+                this.Options = options;
+            }
+        }
+
+        /// <summary>Entry with file attributes.</summary>
+        public new class WithAttributes : FileSystemEntryDirectoryAndFile, IFileSystemEntryFileAttributes
+        {
+            /// <summary>
+            /// Has file attributes
+            /// </summary>
+            public bool HasFileAttributes => true;
+
+            /// <summary>
+            /// File attributes
+            /// </summary>
+            public FileAttributes FileAttributes { get; protected set; }
+
+            /// <summary>Create entry with custom option</summary>
+            public WithAttributes(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, FileAttributes fileAttributes, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, length, physicalPath)
+            {
+                this.FileAttributes = fileAttributes;
+            }
+
+            /// <summary>Entry with custom option.</summary>
+            public new class AndOption : WithAttributes, IFileSystemEntryOptions
+            {
+                /// <summary>Options that describe features and capabilities in that apply to this entry.</summary>
+                public IFileSystemOption Options { get; protected set; }
+                /// <summary>Create entry with custom option</summary>
+                public AndOption(IFileSystem filesystem, string path, string name, DateTimeOffset lastModified, DateTimeOffset lastAccess, long length, FileAttributes fileAttributes, IFileSystemOption options, string physicalPath) : base(filesystem, path, name, lastModified, lastAccess, length, fileAttributes, physicalPath)
+                {
+                    this.Options = options;
+                }
+            }
+        }
+    }
+
 
     /// <summary>
     /// Directory entry.

@@ -3,6 +3,7 @@
 // Date:           3.11.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
+using Lexical.FileSystem.Decoration;
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
@@ -13,15 +14,20 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.Schema;
 
 namespace Lexical.FileSystem
 {
     /// <summary>
     /// Simple "http://" based filesystem that can download documents.
     /// </summary>
-    public class HttpFileSystem : FileSystemBase, IFileSystemOpen, IFileSystemDelete
+    public class HttpFileSystem : FileSystemBase, IFileSystemOpen, IFileSystemDelete, IFileSystemBrowse
     {
         /// <summary>
         /// Token key for http headers. 
@@ -44,15 +50,19 @@ namespace Lexical.FileSystem
         public static HttpFileSystem Instance => instance.Value;
 
         /// <summary></summary>
-        public bool CanOpen => options.CanOpen;
+        public virtual bool CanOpen => options.CanOpen;
         /// <summary></summary>
-        public bool CanRead => options.CanRead;
+        public virtual bool CanRead => options.CanRead;
         /// <summary></summary>
-        public bool CanWrite => options.CanWrite;
+        public virtual bool CanWrite => options.CanWrite;
         /// <summary></summary>
-        public bool CanCreateFile => options.CanCreateFile;
+        public virtual bool CanCreateFile => options.CanCreateFile;
         /// <summary></summary>
-        public bool CanDelete => options.CanDelete;
+        public virtual bool CanDelete => options.CanDelete;
+        /// <summary></summary>
+        public virtual bool CanBrowse => options.CanBrowse;
+        /// <summary></summary>
+        public virtual bool CanGetEntry => options.CanGetEntry;
 
         /// <summary>Options</summary>
         protected Options options;
@@ -60,49 +70,58 @@ namespace Lexical.FileSystem
         protected IFileSystemToken token;
 
         /// <summary>options</summary>
-        public class Options : IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionSubPath
+        public class Options : IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionBrowse, IFileSystemOptionSubPath
         {
             private static Options instance = new Options();
             /// <summary>Instance with all true</summary>
             public static Options Instance => instance;
             /// <inheritdoc/>
-            public bool CanOpen { get; set; } = true;
+            public virtual bool CanOpen { get; set; } = true;
             /// <inheritdoc/>
-            public bool CanRead { get; set; } = true;
+            public virtual bool CanRead { get; set; } = true;
             /// <inheritdoc/>
-            public bool CanWrite { get; set; } = true;
+            public virtual bool CanWrite { get; set; } = true;
             /// <inheritdoc/>
-            public bool CanDelete { get; set; } = true;
+            public virtual bool CanCreateFile { get; set; } = true;
             /// <inheritdoc/>
-            public string SubPath { get; set; }
+            public virtual bool CanDelete { get; set; } = true;
             /// <inheritdoc/>
-            public bool CanCreateFile { get; set; } = true;
+            public virtual bool CanBrowse { get; set; } = true;
+            /// <inheritdoc/>
+            public virtual bool CanGetEntry { get; set; } = true;
+            /// <inheritdoc/>
+            public virtual string SubPath { get; set; }
 
             /// <summary>Read from <paramref name="option"/></summary>
             /// <param name="option"></param>
             /// <returns>this</returns>
-            public static Options Read(IFileSystemOption option)
+            public virtual Options Read(IFileSystemOption option)
             {
-                Options result = new Options();
                 IFileSystemOptionOpen open = option.AsOption<IFileSystemOptionOpen>();
                 if (open != null)
                 {
-                    result.CanCreateFile = open.CanCreateFile;
-                    result.CanOpen = open.CanOpen;
-                    result.CanRead = open.CanRead;
-                    result.CanWrite = open.CanWrite;
+                    CanCreateFile = open.CanCreateFile;
+                    CanOpen = open.CanOpen;
+                    CanRead = open.CanRead;
+                    CanWrite = open.CanWrite;
                 }
                 IFileSystemOptionDelete delete = option.AsOption<IFileSystemOptionDelete>();
                 if (delete != null)
                 {
-                    result.CanDelete = delete.CanDelete;
+                    CanDelete = delete.CanDelete;
+                }
+                IFileSystemOptionBrowse browse = option.AsOption<IFileSystemOptionBrowse>();
+                if (browse != null)
+                {
+                    CanBrowse = browse.CanBrowse;
+                    CanGetEntry = browse.CanGetEntry;
                 }
                 IFileSystemOptionSubPath subpath = option.AsOption<IFileSystemOptionSubPath>();
                 if (subpath != null)
                 {
-                    result.SubPath = subpath.SubPath;
+                    SubPath = subpath.SubPath;
                 }
-                return result;
+                return this;
             }
 
         }
@@ -124,11 +143,14 @@ namespace Lexical.FileSystem
             this.httpClient = httpClient ?? new HttpClient();
             if (option != null)
             {
-                this.options = Options.Read(option);
+                this.options = CreateOptions().Read(option);
                 this.token = option.AsOption<IFileSystemToken>();
             }
             else this.options = Options.Instance;
         }
+
+        /// <summary>Override this</summary>
+        protected virtual Options CreateOptions() => new Options();
 
         /// <summary>
         /// Non-disposable <see cref="HttpFileSystem"/> disposes and cleans all attached <see cref="IDisposable"/> on dispose, but doesn't go into disposed state.
@@ -451,21 +473,23 @@ namespace Lexical.FileSystem
             try
             {
                 // Request object
-                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, uri);
-                // Read token
-                ReadTokenToHeaders(uri, token, request.Headers);
-                // Read authentication token
-                AuthenticationHeaderValue authenticationHeader;
-                if (this.token.TryGet(uri, out authenticationHeader) || token.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
+                using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, uri))
+                {
+                    // Read token
+                    ReadTokenToHeaders(uri, token, request.Headers);
+                    // Read authentication token
+                    AuthenticationHeaderValue authenticationHeader;
+                    if (this.token.TryGet(uri, out authenticationHeader) || token.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
-                // Start DELETE
-                Task<HttpResponseMessage> t = _httpClient.SendAsync(request);
-                // Wait for headers to complete
-                t.Wait(cancel);
-                // Get result object
-                HttpResponseMessage response = t.Result;
-                // Assert ok
-                if (!response.IsSuccessStatusCode) throw new FileSystemException(this, uri, response.ReasonPhrase);
+                    // Start DELETE
+                    Task<HttpResponseMessage> t = _httpClient.SendAsync(request);
+                    // Wait for headers to complete
+                    t.Wait(cancel);
+                    // Get result object
+                    HttpResponseMessage response = t.Result;
+                    // Assert ok
+                    if (!response.IsSuccessStatusCode) throw new FileSystemException(this, uri, response.ReasonPhrase);
+                }
             }
             catch (AggregateException e)
             {
@@ -477,7 +501,261 @@ namespace Lexical.FileSystem
             {
                 throw new FileSystemException(this, uri, e.Message, e);
             }
+        }
 
+        /// <summary>
+        /// Read <paramref name="uri"/> and parse anchors for file references.
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="token"></param>
+        /// <returns>child links</returns>
+        public IFileSystemEntry[] Browse(string uri, IFileSystemToken token = null)
+        {
+            // Take reference
+            var _httpClient = httpClient;
+            // Assert not disposed
+            if (_httpClient == null || IsDisposing) throw new ObjectDisposedException(nameof(HttpFileSystem));
+            // Assert allowed
+            if (!options.CanBrowse) throw new FileSystemExceptionOptionNotSupported(this, uri, options, typeof(IFileSystemOptionOpen));
+            // Path converter
+            IPathConverter pathConverter;
+            // Append subpath
+            string _subpath = token.SubPath() ?? this.options.SubPath;
+            if (_subpath != null)
+            {
+                uri = _subpath + uri;
+                pathConverter = new PathConverter("", _subpath);
+            } else
+            {
+                pathConverter = new PathConverter("", "");
+            }
+
+            // Cancel token
+            CancellationToken cancel = default;
+            token.TryGet(uri, out cancel);
+
+            try
+            {
+                // Request object
+                using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri))
+                {
+                    // Read token
+                    ReadTokenToHeaders(uri, token, request.Headers);
+                    // Read authentication token
+                    AuthenticationHeaderValue authenticationHeader;
+                    if (this.token.TryGet(uri, out authenticationHeader) || token.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
+
+                    // Start GET
+                    Task<HttpResponseMessage> t = _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                    // Wait for headers to complete
+                    t.Wait(cancel);
+                    // Get result object
+                    HttpResponseMessage response = t.Result;
+                    // Assert ok
+                    if (!response.IsSuccessStatusCode) throw new FileSystemException(this, uri, response.StatusCode.ToString());
+
+                    // Stream Task
+                    Task<Stream> tt = response.Content.ReadAsStreamAsync();
+                    using (var s = tt.Result)
+                    {
+                        // Wait for stream
+                        tt.Wait(cancel);
+                        // Parse files
+                        IFileSystemEntry[] entries = ReadEntries(uri, s, pathConverter).ToArray();
+                        // Return entries
+                        return entries;
+                    }
+                }
+            }
+            catch (AggregateException e)
+            {
+                Exception _e = e;
+                if (e.InnerExceptions.Count == 1) _e = e.InnerExceptions.First();
+                throw new FileSystemException(this, uri, e.Message, e);
+            }
+            catch (Exception e) when (e is FileSystemException == false)
+            {
+                throw new FileSystemException(this, uri, e.Message, e);
+            }
+        }
+
+        /// <summary>
+        /// Tests if document exists without attempting to download it completely.
+        /// 
+        /// Estimates that <paramref name="uri"/> refers to a directory if path ends with '/'.
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public IFileSystemEntry GetEntry(string uri, IFileSystemToken token = null)
+        {
+            // Take reference
+            var _httpClient = httpClient;
+            // Assert not disposed
+            if (_httpClient == null || IsDisposing) throw new ObjectDisposedException(nameof(HttpFileSystem));
+            // Assert allowed
+            if (!options.CanBrowse) throw new FileSystemExceptionOptionNotSupported(this, uri, options, typeof(IFileSystemOptionOpen));
+            // Get subpath
+            string _subpath = token.SubPath() ?? this.options.SubPath;
+            // Append subpath, if needed
+            string uri_ = _subpath != null ? _subpath + uri : uri;
+
+            // Cancel token
+            CancellationToken cancel = default;
+            token.TryGet(uri_, out cancel);
+
+            try
+            {
+                // Request object
+                using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri_))
+                {
+                    // Read token
+                    ReadTokenToHeaders(uri_, token, request.Headers);
+                    // Read authentication token
+                    AuthenticationHeaderValue authenticationHeader;
+                    if (this.token.TryGet(uri_, out authenticationHeader) || token.TryGet(uri_, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
+
+                    // Start GET
+                    Task<HttpResponseMessage> t = _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                    // Wait for headers to complete
+                    t.Wait(cancel);
+                    // Get result object
+                    HttpResponseMessage response = t.Result;
+                    // Assert ok
+                    if (!response.IsSuccessStatusCode) return null;
+                    // Length
+                    long? length = response.Content.Headers.ContentLength;
+                    // Last modified
+                    DateTimeOffset? lastModified = response.Content.Headers.LastModified;
+                    // Parse uri into parts
+                    Uri _uri = new Uri(uri_);
+                    // Entry name
+                    string name = GetEntryName(_uri.AbsoluteUri);
+                    // Is directory
+                    if (_uri.AbsolutePath.EndsWith("/")) return new FileSystemEntryDirectory(this, uri, name, lastModified ?? DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
+                    // Is file
+                    else return new FileSystemEntryFile(this, uri, name, lastModified ?? DateTimeOffset.MinValue, DateTimeOffset.MinValue, length ?? -1L, null);
+                }
+            }
+            catch (AggregateException e)
+            {
+                Exception _e = e;
+                if (e.InnerExceptions.Count == 1) _e = e.InnerExceptions.First();
+                throw new FileSystemException(this, uri, e.Message, e);
+            }
+            catch (Exception e) when (e is FileSystemException == false)
+            {
+                throw new FileSystemException(this, uri, e.Message, e);
+            }
+        }
+
+        /// <summary>
+        /// Extracts file or directory name from <paramref name="uri"/>.
+        /// 
+        /// Examples:
+        /// <list type="bullet">
+        ///     <item>http://lexical.fi/Dir/                      -> "Dir"</item>
+        ///     <item>http://lexical.fi/Dir/file.txt              -> "file.txt"</item>
+        ///     <item>http://lexical.fi/Dir/?query=value          -> "Dir"</item>
+        ///     <item>http://lexical.fi/Dir/file.txt?query=value  -> "file.txt"</item>
+        /// </list>
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns>extracted name or null</returns>
+        public static string GetEntryName(string uri)
+        {
+            int endIx = uri.Length-1;
+            int queryIx = uri.IndexOf('?');
+            if (queryIx > 0) { endIx = queryIx - 1; if (endIx < 0 || endIx>=uri.Length) return null; }
+            if (endIx < 0 || endIx >= uri.Length) return null;
+            if (uri[endIx] == '/') endIx--;
+            if (endIx < 0 || endIx >= uri.Length) return null;
+            int slashIx = uri.LastIndexOf('/', endIx);
+            if (slashIx >= uri.Length) return null;
+            string name = slashIx < 0 ? uri : uri.Substring(slashIx+1, endIx-slashIx);
+            return name;
+        }
+
+        /// <summary>
+        /// Pattern that searches for html anchors
+        /// </summary>
+        static Regex anchorPattern = new Regex("\\<a\\s*.*href=\"([^\"]*)\".*\\>", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Reads through html <paramref name="document"/> and scans for anchor elements with "href" attributes.
+        /// Validates local or global links that refer to a subfile or subdirectory.
+        /// </summary>
+        /// <param name="baseUri">The uri where the document was loaded. Used for creating absolute uris from relative uris.</param>
+        /// <param name="document">document data as stream</param>
+        /// <param name="pathConverter">convert child urls (the real URIs) back to parent (API caller's) path format</param>
+        /// <returns>array of files</returns>
+        /// <exception cref="Exception"></exception>
+        public virtual IEnumerable<IFileSystemEntry> ReadEntries(string baseUri, Stream document, IPathConverter pathConverter)
+        {
+            // Result set
+            HashSet<string> yielded = new HashSet<string>();
+            // Parse base uri
+            Uri _baseUri = new Uri(baseUri);
+            // Get absolute uri
+            string baseUriAbsolute = _baseUri.GetComponents(UriComponents.Scheme | UriComponents.UserInfo | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped);
+            // Create reader
+            using (TextReader reader = new StreamReader(document, detectEncodingFromByteOrderMarks: true))
+            {
+                // Read document as text
+                string html = reader.ReadToEnd();
+                // Search achors
+                foreach(Match m in anchorPattern.Matches(html))
+                {
+                    // Get href
+                    string href = m.Groups[1].Value;
+                    // Test not empty
+                    if (String.IsNullOrEmpty(href)) continue;
+                    // Parse attribute
+                    href = HttpUtility.HtmlDecode(href);
+                    // Entry
+                    IFileSystemEntry entry = null;
+                    try
+                    {
+                        // Parse uri
+                        Uri uri = new Uri(_baseUri, href);
+                        // Get absolute uri
+                        string absoluteUri = uri.GetComponents(UriComponents.Scheme | UriComponents.UserInfo | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped);
+                        // Test that is child of baseUri
+                        if (absoluteUri.Length <= baseUriAbsolute.Length || !absoluteUri.StartsWith(baseUriAbsolute)) continue;
+                        // Test only one slash after baseUriAbsolute
+                        int slashCount = 0;
+                        int startIx = baseUriAbsolute.EndsWith("/") ? baseUriAbsolute.Length : baseUriAbsolute.Length + 1;
+                        for (int i=startIx; i<absoluteUri.Length-1; i++)
+                        {
+                            // Not slash
+                            if (absoluteUri[i] != '/') continue;
+                            // Add slash
+                            slashCount++;
+                            break;
+                        }
+                        // Too many slashes "<baseuri>/Dir/Dir/file", thereof not immediate child
+                        if (slashCount >= 1) continue;
+                        // Already yielded?
+                        if (!yielded.Add(absoluteUri)) continue;
+                        // Extract name
+                        String name = GetEntryName(absoluteUri);
+                        // Convert path
+                        string parentUri;
+                        if (!pathConverter.ChildToParent(absoluteUri, out parentUri)) continue;
+                        // Is directory
+                        if (absoluteUri.EndsWith("/")) entry = new FileSystemEntryDirectory(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
+                        // Is unknown if is file or directory, so report as both
+                        else entry = new FileSystemEntryDirectoryAndFile(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, -1L, null);
+                    }
+                    catch (Exception)
+                    {
+                        // bad uri
+                        continue;
+                    }
+                    // Yield entry
+                    if (entry != null) yield return entry;
+                }
+            }
         }
 
         /// <summary>Handle dispose</summary>
