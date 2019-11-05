@@ -189,12 +189,9 @@ FileSystem.Temp.PrintTo(Console.Out, depth: 1);
 | FileSystem.MyDocuments           | The My Documents folder.                                                                         | "C:\\Users\\<i>&lt;user&gt;</i>\\Documents"           | "/home/<i>&lt;user&gt;</i>"              |
 | FileSystem.Personal              | A common repository for documents.                                                               | "C:\\Users\\<i>&lt;user&gt;</i>\\Documents"           | "/home/<i>&lt;user&gt;</i>"              |
 | FileSystem.Temp                  | Running user's temp directory.                                                                   | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local\\Temp"| "/tmp                                    |
-| FileSystem.ApplicationData       | A common repository for application-specific data for the current roaming user.                  | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
-| FileSysten.LocalApplicationData  | A common repository for application-specific data that is used by the current, non-roaming user. | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
-| FileSysten.CommonApplicationData | A common repository for application-specific data that is used by all users.                     | "C:\\ProgramData"                                     | "/usr/share"                             |
-| FileSystem.CloudProgramData      | User's cloud-sync program data.                                                                  | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
-| FileSysten.LocalProgramData      | User's local program data.                                                                       | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
-| FileSysten.SystemProgramData     | Every users' shared program data.                                                                | "C:\\ProgramData"                                     | "/usr/share"                             |
+| FileSystem.Config                | User's cloud-sync program configuration (roaming data).                                          | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
+| FileSysten.Data                  | User's local program data.                                                                       | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
+| FileSysten.ProgramData           | Program data that is shared with every user.                                                     | "C:\\ProgramData"                                     | "/usr/share"                             |
 
 **IFileEntry.PhysicalPath()** returns physical path of file entry.
 
@@ -322,27 +319,8 @@ File systems can be assigned to multiple points.
 
 ```csharp
 IFileSystem urls = new VirtualFileSystem()
-    .Mount("file://", FileSystem.OS)                                   // All files
-    .Mount("tmp://", FileSystem.Temp)                                  // Temp files
-    .Mount("ram://", MemoryFileSystem.Instance)                        // Shared 1GB ram drive
-    .Mount("home://", FileSystem.Personal)                             // User's home directory
-    .Mount("docs://", FileSystem.MyDocuments)                          // User's documents
-    .Mount("cloud-program-data://", FileSystem.CloudProgramData)       // User's cloud-sync program data
-    .Mount("local-program-data://", FileSystem.LocalProgramData)       // User's local program data
-    .Mount("system-program-data://", FileSystem.SystemProgramData)     // Every users' shared program data
-    .Mount("application://", FileSystem.Application)                   // Application install directory
-    .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
-    .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"));
-```
-
-**VirtualFileSystem.Url** is a singleton instance that has the urls above.
-
-```csharp
-VirtualFileSystem.Url.PrintTo(Console.Out, "cloud-program-data://", 1, PrintTree.Format.DefaultPath);
-VirtualFileSystem.Url.PrintTo(Console.Out, "local-program-data://", 1, PrintTree.Format.DefaultPath);
-VirtualFileSystem.Url.PrintTo(Console.Out, "system-program-data://", 1, PrintTree.Format.DefaultPath);
-VirtualFileSystem.Url.PrintTo(Console.Out, "home://", 1, PrintTree.Format.DefaultPath);
-VirtualFileSystem.Url.PrintTo(Console.Out, "https://github.com/tagcode/Lexical.FileSystem/tree/master/", 1, PrintTree.Format.DefaultPath);
+    .Mount("tmp/", FileSystem.Temp)
+    .Mount("ram/", MemoryFileSystem.Instance);
 ```
 
 File system can be assigned as a child of an earlier assignment. Child assignment has higher evaluation priority than parent. In the following example, "/tmp/" is evaluated from **MemoryFileSystem** first, and then concatenated with potential directory "/tmp/" from the **FileSystem.OS**.
@@ -506,6 +484,73 @@ vfs.Dispose();
 
 ```none
 OnCompleted
+```
+
+# Urls
+
+**VirtualFileSystem.Url** is a singleton instance that has the following urls.
+
+```csharp
+new VirtualFileSystem.NonDisposable()
+    .Mount("file://", FileSystem.OS)                  // All files
+    .Mount("tmp://", FileSystem.Temp)                 // Temp files
+    .Mount("ram://", MemoryFileSystem.Instance)       // Shared 1GB ram drive
+    .Mount("home://", FileSystem.Personal)            // User's home directory
+    .Mount("docs://", FileSystem.MyDocuments)         // User's documents
+    .Mount("config://", FileSystem.Config)            // User's cloud-sync program configuration (roaming data).
+    .Mount("data://", FileSystem.Data)                // User's local program data.
+    .Mount("program-data://", FileSystem.ProgramData) // Program data that is shared with every user.
+    .Mount("application://", FileSystem.Application)  // Application's install directory
+    .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
+    .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
+```
+
+*VirtualFileSystem.Url* can be used with the differnt url types.
+
+```csharp
+VirtualFileSystem.Url.PrintTo(Console.Out, "config://", 2, PrintTree.Format.DefaultPath);
+VirtualFileSystem.Url.PrintTo(Console.Out, "data://", 1, PrintTree.Format.DefaultPath);
+VirtualFileSystem.Url.PrintTo(Console.Out, "program-data://", 1, PrintTree.Format.DefaultPath);
+VirtualFileSystem.Url.PrintTo(Console.Out, "home://", 1, PrintTree.Format.DefaultPath);
+VirtualFileSystem.Url.PrintTo(Console.Out, "https://github.com/tagcode/Lexical.FileSystem/tree/master/");
+```
+
+Application configuration can be placed in url "config://ApplicationName/config.ini".
+
+```csharp
+string config = "[Config]\nUser=ExampleUser\n";
+VirtualFileSystem.Url.CreateDirectory("config://ApplicationName/");
+VirtualFileSystem.Url.CreateFile("config://ApplicationName/config.ini", UTF8Encoding.UTF8.GetBytes(config));
+```
+
+Application local data can be placed in url "data://ApplicationName/data.db".
+
+```csharp
+byte[] cacheData = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+VirtualFileSystem.Url.CreateDirectory("data://ApplicationName/");
+VirtualFileSystem.Url.CreateFile("data://ApplicationName/temp.db", cacheData);
+```
+
+Application user documents can be placed in url "docs://ApplicationName/document".
+
+```csharp
+string saveGame = "[Save]\nLocation=12.32N 43.43W\n";
+VirtualFileSystem.Url.CreateDirectory("docs://ApplicationName/");
+VirtualFileSystem.Url.CreateFile("docs://ApplicationName/save1.txt", UTF8Encoding.UTF8.GetBytes(saveGame));
+```
+
+Application's shared program runtime data can be placed in uri "program-data://ApplicationName/datafile"
+
+```csharp
+byte[] programData = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+VirtualFileSystem.Url.CreateDirectory("program-data://ApplicationName/");
+VirtualFileSystem.Url.CreateFile("program-data://ApplicationName/logo.png", programData);
+```
+
+Application's installed files and binaries are located at "application://"
+
+```csharp
+VirtualFileSystem.Url.PrintTo(Console.Out, "application://", format: PrintTree.Format.DefaultPath);
 ```
 
 # Disposing

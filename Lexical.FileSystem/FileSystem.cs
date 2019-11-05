@@ -51,7 +51,7 @@ namespace Lexical.FileSystem
         static Lazy<FileSystem> myDocuments = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)));
         /// <summary>A common repository for documents. "C:\Users\user\Documents"</summary>
         static Lazy<FileSystem> personal = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.Personal)));
-        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="ApplicationData"/>. "C:\Users\user"</summary>
+        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="applicationData"/>. "C:\Users\user"</summary>
         static Lazy<FileSystem> userProfile = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
         /// <summary>A common repository for application-specific data for the current roaming user. "C:\Users\user\AppData\Roaming"</summary>
         static Lazy<FileSystem> applicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)));
@@ -70,21 +70,15 @@ namespace Lexical.FileSystem
         public static FileSystem MyDocuments = myDocuments.Value;
         /// <summary>A common repository for documents. "C:\Users\user\Documents"</summary>
         public static FileSystem Personal = personal.Value;
-        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="ApplicationData"/>. "C:\Users\user"</summary>
+        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="applicationData"/>. "C:\Users\user"</summary>
         public static FileSystem UserProfile = userProfile.Value;
-        /// <summary>A common repository for application-specific data for the current roaming user. "C:\Users\user\AppData\Roaming"</summary>
-        public static FileSystem ApplicationData = applicationData.Value;
-        /// <summary>A common repository for application-specific data that is used by the current, non-roaming user. "C:\Users\user\AppData\Local"</summary>
-        public static FileSystem LocalApplicationData = localApplicationData.Value;
-        /// <summary>A common repository for application-specific data that is used by all users. "C:\ProgramData"</summary>
-        public static FileSystem CommonApplicationData = commonApplicationData.Value;
 
-        /// <summary>User's cloud-sync program data. "C:\Users\user\AppData\Roaming\" "/home/user/.config/"</summary>
-        public static FileSystem CloudProgramData = applicationData.Value;
+        /// <summary>User's cloud-sync program configuration (roaming data). "C:\Users\user\AppData\Roaming\" "/home/user/.config/"</summary>
+        public static FileSystem Config = applicationData.Value;
         /// <summary>User's local program data. "C:\Users\user\AppData\Local\" "/home/user/.local/share/"</summary>
-        public static FileSystem LocalProgramData = localApplicationData.Value;
-        /// <summary>Every users' shared program data. "C:\ProgramData\" "/usr/share/"</summary>
-        public static FileSystem SystemProgramData = commonApplicationData.Value;
+        public static FileSystem Data = localApplicationData.Value;
+        /// <summary>Program data that is shared with every user. "C:\ProgramData\" "/usr/share/"</summary>
+        public static FileSystem ProgramData = commonApplicationData.Value;
 
         /// <summary>
         /// The root path as provided with constructor.
