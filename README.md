@@ -76,7 +76,8 @@ And file attributes changed.
 fs.SetFileAttribute("myfile", FileAttributes.ReadOnly);
 ```
 
-# File structure
+# Singleton
+
 The singleton instance **FileSystem.OS** refers to a filesystem at the OS root.
 
 ```csharp
@@ -190,8 +191,13 @@ FileSystem.Temp.PrintTo(Console.Out, depth: 1);
 | FileSystem.Personal              | A common repository for documents.                                                               | "C:\\Users\\<i>&lt;user&gt;</i>\\Documents"           | "/home/<i>&lt;user&gt;</i>"              |
 | FileSystem.Temp                  | Running user's temp directory.                                                                   | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local\\Temp"| "/tmp                                    |
 | FileSystem.Config                | User's cloud-sync program configuration (roaming data).                                          | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
-| FileSysten.Data                  | User's local program data.                                                                       | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
-| FileSysten.ProgramData           | Program data that is shared with every user.                                                     | "C:\\ProgramData"                                     | "/usr/share"                             |
+| FileSystem.Data                  | User's local program data.                                                                       | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
+| FileSystem.ProgramData           | Program data that is shared with every user.                                                     | "C:\\ProgramData"                                     | "/usr/share"                             |
+| FileSystem.Desktop               | User's desktop.                                                                                  | "C:\\Users\\<i>&lt;user&gt;</i>\\Desktop"             | "/home/user/Desktop"                     |
+| FileSystem.MyPictures            | User's pictures.                                                                                 | "C:\\Users\\<i>&lt;user&gt;</i>\\Pictures"            | "/home/user/Pictures"                    |
+| FileSystem.MyVideos              | User's videos.                                                                                   | "C:\\Users\\<i>&lt;user&gt;</i>\\Videos"              | "/home/user/Videos"                      |
+| FileSystem.MyMusic               | User's music.                                                                                    | "C:\\Users\\<i>&lt;user&gt;</i>\\Music"               | "/home/user/Music"                       |
+| FileSystem.Templates             | Templates.                                                                                       | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming\\Microsoft\\Windows\\Templates" | "/home/user/Templates"         |
 
 **IFileEntry.PhysicalPath()** returns physical path of file entry.
 
@@ -209,10 +215,10 @@ FileSystem.Temp.PrintTo(
     format: PrintTree.Format.Default | PrintTree.Format.PhysicalPath);
 ```
 <pre style="line-height:1.2;">
-"" [C:\Users\user\AppData\Local\Temp\]
-├── "dmk55ohj.jjp" [C:\Users\user\AppData\Local\Temp\dmk55ohj.jjp]
-├── "wrz4cms5.r2f" [C:\Users\user\AppData\Local\Temp\wrz4cms5.r2f]
-└── "18e1904137f065db88dfbd23609eb877" [C:\Users\user\AppData\Local\Temp\18e1904137f065db88dfbd23609eb877]
+"" [C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\]
+├── "dmk55ohj.jjp" [C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\dmk55ohj.jjp]
+├── "wrz4cms5.r2f" [C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\wrz4cms5.r2f]
+└── "18e1904137f065db88dfbd23609eb877" [C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\18e1904137f065db88dfbd23609eb877]
 </pre>
 
 # Observing
@@ -247,10 +253,10 @@ class PrintObserver : IObserver<IFileSystemEvent>
 ```
 
 ```none
-Start(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00)
-Create(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
-Change(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
-Delete(C:\Users\user\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+Start(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00)
+Create(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+Change(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+Delete(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
 OnCompleted
 ```
 
@@ -486,17 +492,21 @@ vfs.Dispose();
 OnCompleted
 ```
 
-# Urls
+# Singleton
 
-**VirtualFileSystem.Url** is a singleton instance that has the following urls.
+**VirtualFileSystem.Url** is a singleton instance that has the following filesystems mounted as urls.
 
 ```csharp
 new VirtualFileSystem.NonDisposable()
     .Mount("file://", FileSystem.OS)                  // All files
     .Mount("tmp://", FileSystem.Temp)                 // Temp files
-    .Mount("ram://", MemoryFileSystem.Instance)       // Shared 1GB ram drive
+    .Mount("ram://", MemoryFileSystem.Instance)       // Application's internal ram drive
     .Mount("home://", FileSystem.Personal)            // User's home directory
-    .Mount("docs://", FileSystem.MyDocuments)         // User's documents
+    .Mount("document://", FileSystem.MyDocuments)     // User's documents
+    .Mount("desktop://", FileSystem.Desktop)          // User's desktop
+    .Mount("picture://", FileSystem.MyPictures)       // User's pictures
+    .Mount("video://", FileSystem.MyVideos)           // User's videos
+    .Mount("music://", FileSystem.MyMusic)            // User's music
     .Mount("config://", FileSystem.Config)            // User's cloud-sync program configuration (roaming data).
     .Mount("data://", FileSystem.Data)                // User's local program data.
     .Mount("program-data://", FileSystem.ProgramData) // Program data that is shared with every user.
@@ -505,7 +515,7 @@ new VirtualFileSystem.NonDisposable()
     .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
 ```
 
-*VirtualFileSystem.Url* can be used with the differnt url types.
+*VirtualFileSystem.Url* can be read, browsed and written to with its different url schemes.
 
 ```csharp
 VirtualFileSystem.Url.PrintTo(Console.Out, "config://", 2, PrintTree.Format.DefaultPath);
@@ -515,7 +525,7 @@ VirtualFileSystem.Url.PrintTo(Console.Out, "home://", 1, PrintTree.Format.Defaul
 VirtualFileSystem.Url.PrintTo(Console.Out, "https://github.com/tagcode/Lexical.FileSystem/tree/master/");
 ```
 
-Application configuration can be placed in url "config://ApplicationName/config.ini".
+Application configuration can be placed in "config://ApplicationName/config.ini".
 
 ```csharp
 string config = "[Config]\nUser=ExampleUser\n";
@@ -523,31 +533,31 @@ VirtualFileSystem.Url.CreateDirectory("config://ApplicationName/");
 VirtualFileSystem.Url.CreateFile("config://ApplicationName/config.ini", UTF8Encoding.UTF8.GetBytes(config));
 ```
 
-Application local data can be placed in url "data://ApplicationName/data.db".
+Application's user specific local data can be placed in "data://ApplicationName/data.db".
 
 ```csharp
 byte[] cacheData = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 VirtualFileSystem.Url.CreateDirectory("data://ApplicationName/");
-VirtualFileSystem.Url.CreateFile("data://ApplicationName/temp.db", cacheData);
+VirtualFileSystem.Url.CreateFile("data://ApplicationName/cache.db", cacheData);
 ```
 
-Application user documents can be placed in url "docs://ApplicationName/document".
+Application's user documents can be placed in "document://ApplicationName/document".
 
 ```csharp
 string saveGame = "[Save]\nLocation=12.32N 43.43W\n";
-VirtualFileSystem.Url.CreateDirectory("docs://ApplicationName/");
-VirtualFileSystem.Url.CreateFile("docs://ApplicationName/save1.txt", UTF8Encoding.UTF8.GetBytes(saveGame));
+VirtualFileSystem.Url.CreateDirectory("document://ApplicationName/");
+VirtualFileSystem.Url.CreateFile("document://ApplicationName/save1.txt", UTF8Encoding.UTF8.GetBytes(saveGame));
 ```
 
-Application's shared program runtime data can be placed in uri "program-data://ApplicationName/datafile"
+Application's shared program data can be placed in "program-data://ApplicationName/datafile". These are typically modifiable files.
 
 ```csharp
 byte[] programData = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 VirtualFileSystem.Url.CreateDirectory("program-data://ApplicationName/");
-VirtualFileSystem.Url.CreateFile("program-data://ApplicationName/logo.png", programData);
+VirtualFileSystem.Url.CreateFile("program-data://ApplicationName/index.db", programData);
 ```
 
-Application's installed files and binaries are located at "application://"
+Application's installed files and binaries are located at "application://". These are typically read-only files.
 
 ```csharp
 VirtualFileSystem.Url.PrintTo(Console.Out, "application://", format: PrintTree.Format.DefaultPath);

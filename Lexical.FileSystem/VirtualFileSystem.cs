@@ -24,21 +24,25 @@ namespace Lexical.FileSystem
     {
         /// <summary>URL mounts</summary>
         static Lazy<VirtualFileSystem> url = new Lazy<VirtualFileSystem>(
-            () => 
-            // <Url>
+            () =>
+                // <doc>
                 new VirtualFileSystem.NonDisposable()
                     .Mount("file://", FileSystem.OS)                  // All files
                     .Mount("tmp://", FileSystem.Temp)                 // Temp files
-                    .Mount("ram://", MemoryFileSystem.Instance)       // Shared 1GB ram drive
+                    .Mount("ram://", MemoryFileSystem.Instance)       // Application's internal ram drive
                     .Mount("home://", FileSystem.Personal)            // User's home directory
-                    .Mount("docs://", FileSystem.MyDocuments)         // User's documents
+                    .Mount("document://", FileSystem.MyDocuments)     // User's documents
+                    .Mount("desktop://", FileSystem.Desktop)          // User's desktop
+                    .Mount("picture://", FileSystem.MyPictures)       // User's pictures
+                    .Mount("video://", FileSystem.MyVideos)           // User's videos
+                    .Mount("music://", FileSystem.MyMusic)            // User's music
                     .Mount("config://", FileSystem.Config)            // User's cloud-sync program configuration (roaming data).
                     .Mount("data://", FileSystem.Data)                // User's local program data.
                     .Mount("program-data://", FileSystem.ProgramData) // Program data that is shared with every user.
                     .Mount("application://", FileSystem.Application)  // Application's install directory
                     .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
                     .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
-            // </Url>
+            // </doc>
             );
 
         /// <summary>URL mounts.</summary>

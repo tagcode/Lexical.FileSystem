@@ -49,6 +49,8 @@ namespace Lexical.FileSystem
         static Lazy<FileSystem> temp = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(System.IO.Path.GetTempPath()));
         /// <summary>The My Documents folder. "C:\Users\user\Documents"</summary>
         static Lazy<FileSystem> myDocuments = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)));
+        /// <summary>Documents that are common to all users. "C:\Users\Public\Documents", linux = null</summary>
+        static Lazy<FileSystem> commonDocuments = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments)));
         /// <summary>A common repository for documents. "C:\Users\user\Documents"</summary>
         static Lazy<FileSystem> personal = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.Personal)));
         /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="applicationData"/>. "C:\Users\user"</summary>
@@ -59,6 +61,16 @@ namespace Lexical.FileSystem
         static Lazy<FileSystem> localApplicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
         /// <summary>A common repository for application-specific data that is used by all users. "C:\ProgramData"</summary>
         static Lazy<FileSystem> commonApplicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)));
+        /// <summary>Desktop. "C:\Users\user\Desktop" "/home/user/Desktop"</summary>
+        static Lazy<FileSystem> desktop = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.Desktop)));
+        /// <summary>MyPictures. "C:\Users\user\Pictures" "/home/user/Pictures"</summary>
+        static Lazy<FileSystem> myPictures = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)));
+        /// <summary>MyVideos. "C:\Users\user\Videos" "/home/user/Videos"</summary>
+        static Lazy<FileSystem> myVideos = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos)));
+        /// <summary>MyMusic. "C:\Users\user\Music" "/home/user/Music"</summary>
+        static Lazy<FileSystem> myMusic = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)));
+        /// <summary>Templates. "C:\Users\user\AppData\Roaming\Microsoft\Windows\Templates" "/home/user/Templates"</summary>
+        static Lazy<FileSystem> templates = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.Templates)));
 
         /// <summary>Operating system root.</summary>
         public static FileSystem OS => os;
@@ -68,10 +80,23 @@ namespace Lexical.FileSystem
         public static FileSystem Temp = temp.Value;
         /// <summary>The My Documents folder. "C:\Users\user\Documents"</summary>
         public static FileSystem MyDocuments = myDocuments.Value;
+        /// <summary>Documents that are common to all users. "C:\Users\Public\Documents", linux = null</summary>
+        public static FileSystem CommonDocuments = commonDocuments.Value;
         /// <summary>A common repository for documents. "C:\Users\user\Documents"</summary>
         public static FileSystem Personal = personal.Value;
         /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="applicationData"/>. "C:\Users\user"</summary>
         public static FileSystem UserProfile = userProfile.Value;
+
+        /// <summary>Desktop. "C:\Users\user\Desktop" "/home/user/Desktop"</summary>
+        public static FileSystem Desktop => desktop.Value;
+        /// <summary>MyPictures. "C:\Users\user\Pictures" "/home/user/Pictures"</summary>
+        public static FileSystem MyPictures => myPictures.Value;
+        /// <summary>MyVideos. "C:\Users\user\Videos" "/home/user/Videos"</summary>
+        public static FileSystem MyVideos => myVideos.Value;
+        /// <summary>MyMusic. "C:\Users\user\Music" "/home/user/Music"</summary>
+        public static FileSystem MyMusic => myMusic.Value;
+        /// <summary>Templates. "C:\Users\user\AppData\Roaming\Microsoft\Windows\Templates" "/home/user/Templates"</summary>
+        public static FileSystem Templates => templates.Value;
 
         /// <summary>User's cloud-sync program configuration (roaming data). "C:\Users\user\AppData\Roaming\" "/home/user/.config/"</summary>
         public static FileSystem Config = applicationData.Value;
