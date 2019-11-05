@@ -44,17 +44,17 @@ namespace Lexical.FileSystem
         static FileSystem os = new FileSystem.NonDisposable("");
         /// <summary>Running application's base directory.</summary>
         static Lazy<FileSystem> application = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(AppDomain.CurrentDomain.BaseDirectory));
-        /// <summary>Running user's temp directory. "C:\Users\lex\AppData\Local\Temp"</summary>
+        /// <summary>Running user's temp directory. "C:\Users\user\AppData\Local\Temp"</summary>
         static Lazy<FileSystem> temp = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(System.IO.Path.GetTempPath()));
-        /// <summary>The My Documents folder. "C:\Users\lex\Documents"</summary>
+        /// <summary>The My Documents folder. "C:\Users\user\Documents"</summary>
         static Lazy<FileSystem> myDocuments = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)));
-        /// <summary>A common repository for documents. "C:\Users\lex\Documents"</summary>
+        /// <summary>A common repository for documents. "C:\Users\user\Documents"</summary>
         static Lazy<FileSystem> personal = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.Personal)));
-        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="ApplicationData"/>. "C:\Users\lex"</summary>
+        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="ApplicationData"/>. "C:\Users\user"</summary>
         static Lazy<FileSystem> userProfile = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
-        /// <summary>A common repository for application-specific data for the current roaming user. "C:\Users\lex\AppData\Roaming"</summary>
+        /// <summary>A common repository for application-specific data for the current roaming user. "C:\Users\user\AppData\Roaming"</summary>
         static Lazy<FileSystem> applicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)));
-        /// <summary>A common repository for application-specific data that is used by the current, non-roaming user. "C:\Users\lex\AppData\Local"</summary>
+        /// <summary>A common repository for application-specific data that is used by the current, non-roaming user. "C:\Users\user\AppData\Local"</summary>
         static Lazy<FileSystem> localApplicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
         /// <summary>A common repository for application-specific data that is used by all users. "C:\ProgramData"</summary>
         static Lazy<FileSystem> commonApplicationData = new Lazy<FileSystem>(() => new FileSystem.NonDisposable(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)));
@@ -63,17 +63,17 @@ namespace Lexical.FileSystem
         public static FileSystem OS => os;
         /// <summary>Running application's base directory.</summary>
         public static FileSystem Application => application.Value;
-        /// <summary>Running user's temp directory. "C:\Users\lex\AppData\Local\Temp"</summary>
+        /// <summary>Running user's temp directory. "C:\Users\user\AppData\Local\Temp"</summary>
         public static FileSystem Temp = temp.Value;
-        /// <summary>The My Documents folder. "C:\Users\lex\Documents"</summary>
+        /// <summary>The My Documents folder. "C:\Users\user\Documents"</summary>
         public static FileSystem MyDocuments = myDocuments.Value;
-        /// <summary>A common repository for documents. "C:\Users\lex\Documents"</summary>
+        /// <summary>A common repository for documents. "C:\Users\user\Documents"</summary>
         public static FileSystem Personal = personal.Value;
-        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="ApplicationData"/>. "C:\Users\lex"</summary>
+        /// <summary>The user's profile folder. Applications should not create files or folders at this level; they should put their data under the locations referred to by <see cref="ApplicationData"/>. "C:\Users\user"</summary>
         public static FileSystem UserProfile = userProfile.Value;
-        /// <summary>A common repository for application-specific data for the current roaming user. "C:\Users\lex\AppData\Roaming"</summary>
+        /// <summary>A common repository for application-specific data for the current roaming user. "C:\Users\user\AppData\Roaming"</summary>
         public static FileSystem ApplicationData = applicationData.Value;
-        /// <summary>A common repository for application-specific data that is used by the current, non-roaming user. "C:\Users\lex\AppData\Local"</summary>
+        /// <summary>A common repository for application-specific data that is used by the current, non-roaming user. "C:\Users\user\AppData\Local"</summary>
         public static FileSystem LocalApplicationData = localApplicationData.Value;
         /// <summary>A common repository for application-specific data that is used by all users. "C:\ProgramData"</summary>
         public static FileSystem CommonApplicationData = commonApplicationData.Value;

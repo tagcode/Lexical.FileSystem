@@ -26,13 +26,18 @@ namespace Lexical.FileSystem
         static Lazy<VirtualFileSystem> url = new Lazy<VirtualFileSystem>(
             () => new VirtualFileSystem.NonDisposable()
                     .Mount("file://", FileSystem.OS)
-                    .Mount("tmp://", new MemoryFileSystem())
+                    .Mount("tmp://", FileSystem.Temp)
+                    .Mount("ram://", new MemoryFileSystem())
                     .Mount("home://", FileSystem.Personal)
                     .Mount("docs://", FileSystem.MyDocuments)
                     .Mount("application://", FileSystem.Application)
+                    .Mount("cloud-program-data://", FileSystem.ApplicationData) // "C:\Users\user\AppData\Roaming" and "/home/user/.config"
+                    .Mount("local-program-data://", FileSystem.LocalApplicationData) // "C:\Users\user\AppData\Local" "/home/user/.local/share"
+                    .Mount("system-program-data://", FileSystem.CommonApplicationData) // "C:\ProgramData" "/usr/share"
                     .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
                     .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
             );
+
         /// <summary>URL mounts.</summary>
         public static VirtualFileSystem Url => url.Value;
 

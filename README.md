@@ -320,10 +320,14 @@ File systems can be assigned to multiple points.
 ```csharp
 IFileSystem urls = new VirtualFileSystem()
     .Mount("file://", FileSystem.OS)
-    .Mount("tmp://", new MemoryFileSystem())
+    .Mount("tmp://", FileSystem.Temp)
+    .Mount("ram://", new MemoryFileSystem())
     .Mount("home://", FileSystem.Personal)
-    .Mount("docs://", FileSystem.MyDocuments)
-    .Mount("application://", FileSystem.Application)
+    .Mount("docs://", FileSystem.MyDocuments) 
+    .Mount("application://", FileSystem.Application)                   // Application install directory
+    .Mount("cloud-program-data://", FileSystem.ApplicationData)        // "C:\Users\user\AppData\Roaming" and "/home/user/.config"
+    .Mount("local-program-data://", FileSystem.LocalApplicationData)   // "C:\Users\user\AppData\Local" "/home/user/.local/share"
+    .Mount("system-program-data://", FileSystem.CommonApplicationData) // "C:\ProgramData" "/usr/share"
     .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
     .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"));
 ```

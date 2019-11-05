@@ -284,7 +284,7 @@ namespace Lexical.FileSystem
                     return tt.Result;
                 }
                 // PUT 
-                else if ((fileMode == FileMode.Create || fileMode == FileMode.CreateNew || fileMode == FileMode.Truncate) && fileAccess == FileAccess.Write)
+                else if ((fileMode == FileMode.Create || fileMode == FileMode.CreateNew || fileMode == FileMode.OpenOrCreate || fileMode == FileMode.Truncate) && fileAccess == FileAccess.Write)
                 {
                     // Assert allowed
                     if ((!options.CanOpen && !options.CanCreateFile) || !options.CanWrite) throw new FileSystemExceptionOptionNotSupported(this, uri, options, typeof(IFileSystemOptionOpen));

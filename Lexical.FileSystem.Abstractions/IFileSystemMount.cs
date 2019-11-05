@@ -78,12 +78,16 @@ namespace Lexical.FileSystem
     {
         /// <summary>No flags</summary>
         None = 0,
-        /// <summary>Filesystem was automatically mounted based on <see cref="IFileSystemOptionAutoMount"/> options.</summary>
-        AutoMounted = 1,
-        /// <summary>Filesystem is allowed to be automatically unmounted when it hasn't been used in a configured time.</summary>
-        AutoUnmount = 2,
+        /// <summary>Signals that filesystem was manually mounted with <see cref="IFileSystemMount.Mount"/>.</summary>
+        Mounted = 1,
+        /// <summary>Signals that filesystem was automatically mounted based on <see cref="IFileSystemOptionAutoMount"/> options.</summary>
+        AutoMounted = 2,
+        /// <summary>Filesystem is to be automatically unmounted by timer when it hasn't been used in a configured time.</summary>
+        AutoUnmount = 4,
         /// <summary>Mount represents a package file, such as .zip.</summary>
-        Package = 4,
+        Package = 8,
+        /// <summary>Signaled as decoration assignment</summary>
+        Decoration = 16,
     }
 
     /// <summary>The filesystem and option assignment.</summary>
