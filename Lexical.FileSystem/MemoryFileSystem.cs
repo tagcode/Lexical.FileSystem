@@ -27,6 +27,16 @@ namespace Lexical.FileSystem
     /// </summary>
     public class MemoryFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IFileSystemOptionPath
     {
+        /// <summary>Shared blocks, up to 1GB of ram.</summary>
+        private static Lazy<IBlockPool> sharedBlock = new Lazy<IBlockPool>(() => new BlockPool(4096, 262144, 16, true));
+        /// <summary>Shared ram drive, up to 1GB limit.</summary>
+        private static Lazy<MemoryFileSystem> instance = new Lazy<MemoryFileSystem>(() => new MemoryFileSystem.NonDisposable(sharedBlock.Value));
+
+        /// <summary>Shared pool, up to 1GB limit.</summary>
+        public static IBlockPool SharedPool => sharedBlock.Value;
+        /// <summary>Shared ram drive, up to 1GB limit.</summary>
+        public static MemoryFileSystem Instance => instance.Value;
+
         /// <summary>
         /// Root directory
         /// </summary>

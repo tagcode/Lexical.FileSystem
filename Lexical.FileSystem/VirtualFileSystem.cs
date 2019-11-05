@@ -25,15 +25,15 @@ namespace Lexical.FileSystem
         /// <summary>URL mounts</summary>
         static Lazy<VirtualFileSystem> url = new Lazy<VirtualFileSystem>(
             () => new VirtualFileSystem.NonDisposable()
-                    .Mount("file://", FileSystem.OS)
-                    .Mount("tmp://", FileSystem.Temp)
-                    .Mount("ram://", new MemoryFileSystem())
-                    .Mount("home://", FileSystem.Personal)
-                    .Mount("docs://", FileSystem.MyDocuments)
-                    .Mount("application://", FileSystem.Application)
-                    .Mount("cloud-program-data://", FileSystem.ApplicationData) // "C:\Users\user\AppData\Roaming" and "/home/user/.config"
-                    .Mount("local-program-data://", FileSystem.LocalApplicationData) // "C:\Users\user\AppData\Local" "/home/user/.local/share"
-                    .Mount("system-program-data://", FileSystem.CommonApplicationData) // "C:\ProgramData" "/usr/share"
+                    .Mount("file://", FileSystem.OS)                                   // All files
+                    .Mount("tmp://", FileSystem.Temp)                                  // Temp files
+                    .Mount("ram://", MemoryFileSystem.Instance)                        // Shared 1GB ram drive
+                    .Mount("home://", FileSystem.Personal)                             // User's home directory
+                    .Mount("docs://", FileSystem.MyDocuments)                          // User's documents
+                    .Mount("application://", FileSystem.Application)                   // Application install directory
+                    .Mount("cloud-program-data://", FileSystem.CloudProgramData)       // Cloud sync program data
+                    .Mount("local-program-data://", FileSystem.LocalProgramData)       // Local user's program data
+                    .Mount("system-program-data://", FileSystem.SystemProgramData)     // Every user shared program data
                     .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
                     .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
             );

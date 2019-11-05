@@ -192,6 +192,9 @@ FileSystem.Temp.PrintTo(Console.Out, depth: 1);
 | FileSystem.ApplicationData       | A common repository for application-specific data for the current roaming user.                  | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
 | FileSysten.LocalApplicationData  | A common repository for application-specific data that is used by the current, non-roaming user. | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
 | FileSysten.CommonApplicationData | A common repository for application-specific data that is used by all users.                     | "C:\\ProgramData"                                     | "/usr/share"                             |
+| FileSystem.CloudProgramData      | Cloud sync user's program data.                                                                  | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Roaming"    | "/home/<i>&lt;user&gt;</i>/.config"      |
+| FileSysten.LocalProgramData      | Local user's program data.                                                                       | "C:\\Users\\<i>&lt;user&gt;</i>\\AppData\\Local"      | "/home/<i>&lt;user&gt;</i>/.local/share" |
+| FileSysten.SystemProgramData     | Every user shared program data.                                                                  | "C:\\ProgramData"                                     | "/usr/share"                             |
 
 **IFileEntry.PhysicalPath()** returns physical path of file entry.
 
@@ -319,24 +322,27 @@ File systems can be assigned to multiple points.
 
 ```csharp
 IFileSystem urls = new VirtualFileSystem()
-    .Mount("file://", FileSystem.OS)
-    .Mount("tmp://", FileSystem.Temp)
-    .Mount("ram://", new MemoryFileSystem())
-    .Mount("home://", FileSystem.Personal)
-    .Mount("docs://", FileSystem.MyDocuments) 
+    .Mount("file://", FileSystem.OS)                                   // All files
+    .Mount("tmp://", FileSystem.Temp)                                  // Temp files
+    .Mount("ram://", MemoryFileSystem.Instance)                        // Shared 1GB ram drive
+    .Mount("home://", FileSystem.Personal)                             // User's home directory
+    .Mount("docs://", FileSystem.MyDocuments)                          // User's documents
     .Mount("application://", FileSystem.Application)                   // Application install directory
-    .Mount("cloud-program-data://", FileSystem.ApplicationData)        // "C:\Users\user\AppData\Roaming" and "/home/user/.config"
-    .Mount("local-program-data://", FileSystem.LocalApplicationData)   // "C:\Users\user\AppData\Local" "/home/user/.local/share"
-    .Mount("system-program-data://", FileSystem.CommonApplicationData) // "C:\ProgramData" "/usr/share"
+    .Mount("cloud-program-data://", FileSystem.CloudProgramData)       // Cloud sync program data
+    .Mount("local-program-data://", FileSystem.LocalProgramData)       // Local user's program data
+    .Mount("system-program-data://", FileSystem.SystemProgramData)     // Every user shared program data
     .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
     .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"));
 ```
 
-**VirtualFileSystem.Url** is a singleton instance that has Urls above mounted.
+**VirtualFileSystem.Url** is a singleton instance that has the urls above.
 
 ```csharp
-VirtualFileSystem.Url.Open("http://lexical.fi/", FileMode.Open, FileAccess.Read, FileShare.None);
-VirtualFileSystem.Url.Browse("home://");
+VirtualFileSystem.Url.PrintTo(Console.Out, "cloud-program-data://", 1, PrintTree.Format.DefaultPath);
+VirtualFileSystem.Url.PrintTo(Console.Out, "local-program-data://", 1, PrintTree.Format.DefaultPath);
+VirtualFileSystem.Url.PrintTo(Console.Out, "system-program-data://", 1, PrintTree.Format.DefaultPath);
+VirtualFileSystem.Url.PrintTo(Console.Out, "home://", 1, PrintTree.Format.DefaultPath);
+VirtualFileSystem.Url.PrintTo(Console.Out, "https://github.com/tagcode/Lexical.FileSystem/tree/master/", 1, PrintTree.Format.DefaultPath);
 ```
 
 File system can be assigned as a child of an earlier assignment. Child assignment has higher evaluation priority than parent. In the following example, "/tmp/" is evaluated from **MemoryFileSystem** first, and then concatenated with potential directory "/tmp/" from the **FileSystem.OS**.

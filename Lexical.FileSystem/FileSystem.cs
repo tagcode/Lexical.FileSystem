@@ -7,6 +7,7 @@ using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -77,6 +78,13 @@ namespace Lexical.FileSystem
         public static FileSystem LocalApplicationData = localApplicationData.Value;
         /// <summary>A common repository for application-specific data that is used by all users. "C:\ProgramData"</summary>
         public static FileSystem CommonApplicationData = commonApplicationData.Value;
+
+        /// <summary>Cloud sync user's program data. "C:\Users\user\AppData\Roaming\" "/home/user/.config/"</summary>
+        public static FileSystem CloudProgramData = applicationData.Value;
+        /// <summary>Local user's program data. "C:\Users\user\AppData\Local\" "/home/user/.local/share/"</summary>
+        public static FileSystem LocalProgramData = localApplicationData.Value;
+        /// <summary>Every user shared program data. "C:\ProgramData\" "/usr/share/"</summary>
+        public static FileSystem SystemProgramData = commonApplicationData.Value;
 
         /// <summary>
         /// The root path as provided with constructor.
