@@ -79,11 +79,11 @@ namespace Lexical.FileSystem
         /// <summary>A common repository for application-specific data that is used by all users. "C:\ProgramData"</summary>
         public static FileSystem CommonApplicationData = commonApplicationData.Value;
 
-        /// <summary>Cloud sync user's program data. "C:\Users\user\AppData\Roaming\" "/home/user/.config/"</summary>
+        /// <summary>User's cloud-sync program data. "C:\Users\user\AppData\Roaming\" "/home/user/.config/"</summary>
         public static FileSystem CloudProgramData = applicationData.Value;
-        /// <summary>Local user's program data. "C:\Users\user\AppData\Local\" "/home/user/.local/share/"</summary>
+        /// <summary>User's local program data. "C:\Users\user\AppData\Local\" "/home/user/.local/share/"</summary>
         public static FileSystem LocalProgramData = localApplicationData.Value;
-        /// <summary>Every user shared program data. "C:\ProgramData\" "/usr/share/"</summary>
+        /// <summary>Every users' shared program data. "C:\ProgramData\" "/usr/share/"</summary>
         public static FileSystem SystemProgramData = commonApplicationData.Value;
 
         /// <summary>

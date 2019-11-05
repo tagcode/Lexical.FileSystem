@@ -30,10 +30,10 @@ namespace Lexical.FileSystem
                     .Mount("ram://", MemoryFileSystem.Instance)                        // Shared 1GB ram drive
                     .Mount("home://", FileSystem.Personal)                             // User's home directory
                     .Mount("docs://", FileSystem.MyDocuments)                          // User's documents
+                    .Mount("cloud-program-data://", FileSystem.CloudProgramData)       // User's cloud-sync program data
+                    .Mount("local-program-data://", FileSystem.LocalProgramData)       // User's local program data
+                    .Mount("system-program-data://", FileSystem.SystemProgramData)     // Every users' shared program data
                     .Mount("application://", FileSystem.Application)                   // Application install directory
-                    .Mount("cloud-program-data://", FileSystem.CloudProgramData)       // Cloud sync program data
-                    .Mount("local-program-data://", FileSystem.LocalProgramData)       // Local user's program data
-                    .Mount("system-program-data://", FileSystem.SystemProgramData)     // Every user shared program data
                     .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
                     .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
             );
