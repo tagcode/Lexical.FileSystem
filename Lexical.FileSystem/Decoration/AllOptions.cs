@@ -7,7 +7,7 @@ using System.Text;
 namespace Lexical.FileSystem.Decoration
 {
     /// <summary>Class that implements all options except <see cref="IToken"/>.</summary>
-    public class FileSystemOptionsAll : IBrowseOption, IObserveOption, IOpenOption, IDeleteOption, IFileAttributeOption, IMoveOption, ICreateDirectoryOption, IMountOption, IPathInfo, ISubPathOption
+    public class AllOptions : IBrowseOption, IObserveOption, IOpenOption, IDeleteOption, IFileAttributeOption, IMoveOption, ICreateDirectoryOption, IMountOption, IPathInfo, ISubPathOption
     {
         /// <summary>Contained interface types.</summary>
         public static Type[] Types = new Type[]
@@ -67,9 +67,9 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static FileSystemOptionsAll Read(IOption option)
+        public static AllOptions Read(IOption option)
         {
-            FileSystemOptionsAll result = new FileSystemOptionsAll();
+            AllOptions result = new AllOptions();
             result.ReadFrom(option);
             return result;
         }
@@ -103,10 +103,10 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="option"></param>
         /// <returns>this if <paramref name="option"/> is null or new instance with intersection</returns>
-        public virtual FileSystemOptionsAll Intersection(IOption option)
+        public virtual AllOptions Intersection(IOption option)
         {
             if (option == null) return this;
-            FileSystemOptionsAll result = new FileSystemOptionsAll();
+            AllOptions result = new AllOptions();
             result.CanBrowse = this.CanBrowse | option.CanBrowse();
             result.CanGetEntry = this.CanGetEntry | option.CanGetEntry();
             result.CanObserve = this.CanObserve | option.CanObserve();
@@ -132,7 +132,7 @@ namespace Lexical.FileSystem.Decoration
     /// <summary>
     /// Options with tokens
     /// </summary>
-    public class FileSystemOptionsAllWithTokens : FileSystemOptionsAll, ITokenEnumerable
+    public class AllOptionsAndTokens : AllOptions, ITokenEnumerable
     {
         static IToken[] no_tokens = new IToken[0];
 
@@ -144,9 +144,9 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static new FileSystemOptionsAllWithTokens Read(IOption option)
+        public static new AllOptionsAndTokens Read(IOption option)
         {
-            FileSystemOptionsAllWithTokens result = new FileSystemOptionsAllWithTokens();
+            AllOptionsAndTokens result = new AllOptionsAndTokens();
             result.ReadFrom(option);
             return result;
         }

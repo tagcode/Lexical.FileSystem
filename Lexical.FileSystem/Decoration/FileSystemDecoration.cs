@@ -40,7 +40,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>FileSystem specific components.</summary>
         protected internal ArrayList<Component> components = new ArrayList<Component>();
         /// <summary>Union of options.</summary>
-        protected internal FileSystemOptionsAll Option;
+        protected internal AllOptions Option;
         /// <summary>Count</summary>
         public int Count => components.Count;
         /// <summary>The decorated filesystems.</summary>
@@ -115,7 +115,7 @@ namespace Lexical.FileSystem.Decoration
             DateTimeOffset now = DateTimeOffset.UtcNow;
             this.assignments = assignments;
             this.components.AddRange( assignments.Select(a=> new Component(parentPath, a)) );
-            this.Option = FileSystemOptionsAll.Read(Lexical.FileSystem.Option.Union(this.components.Select(s => s.Options)));
+            this.Option = AllOptions.Read(Lexical.FileSystem.Option.Union(this.components.Select(s => s.Options)));
 
             this.sourceFileSystem = parentFileSystem ?? this;
             this.rootEntry = new Lexical.FileSystem.MountEntry.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
@@ -129,7 +129,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>FileSystem component</summary>
             public IFileSystem FileSystem => Assignment.FileSystem;
             /// <summary>Intersection of option in <see cref="FileSystem"/> and option that was provided in constructor.</summary>
-            public FileSystemOptionsAll Options;
+            public AllOptions Options;
             /// <summary>Intersection of option in <see cref="FileSystem"/> and option that was provided in constructor.</summary>
             public OptionComposition UnknownOptions;
             /// <summary>Tool that converts paths.</summary>
@@ -141,8 +141,8 @@ namespace Lexical.FileSystem.Decoration
             public Component(string parentPath, FileSystemAssignment assignment)
             {
                 this.Assignment = assignment;
-                this.Options = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : Lexical.FileSystem.Option.Intersection(assignment.FileSystem, assignment.Option));                
-                this.UnknownOptions = new OptionComposition(OptionComposition.Op.Union, new IOption[] { assignment.Option }, FileSystemOptionsAll.Types);
+                this.Options = AllOptions.Read(assignment.Option == null ? assignment.FileSystem : Lexical.FileSystem.Option.Intersection(assignment.FileSystem, assignment.Option));                
+                this.UnknownOptions = new OptionComposition(OptionComposition.Op.Union, new IOption[] { assignment.Option }, AllOptions.Types);
                 if (this.UnknownOptions.Count() == 0) this.UnknownOptions = null;
                 this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
             }
@@ -151,18 +151,18 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="parentPath">The subpath the filesystem starts at</param>
             /// <param name="assignment">filesystem and option</param>
             /// <param name="option">consolidated options</param>
-            public Component(string parentPath, FileSystemAssignment assignment, FileSystemOptionsAll option)
+            public Component(string parentPath, FileSystemAssignment assignment, AllOptions option)
             {
                 this.Assignment = assignment;
                 this.Options = option;
                 this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
-                this.UnknownOptions = new OptionComposition(OptionComposition.Op.Union, new IOption[] { assignment.Option }, FileSystemOptionsAll.Types);
+                this.UnknownOptions = new OptionComposition(OptionComposition.Op.Union, new IOption[] { assignment.Option }, AllOptions.Types);
                 if (this.UnknownOptions.Count() == 0) this.UnknownOptions = null;
             }
         }
 
         /// <summary>Comparer that <see cref="SetComponents"/> uses.</summary>
-        protected static IEqualityComparer<Triple<string, IFileSystem, FileSystemOptionsAll>> componentTupleComparer = new Triple<string, IFileSystem, FileSystemOptionsAll>.EqualityComparer(StringComparer.InvariantCulture, EqualityComparer<IFileSystem>.Default, EqualityComparer<FileSystemOptionsAll>.Default/*<-change this to better*/);
+        protected static IEqualityComparer<Triple<string, IFileSystem, AllOptions>> componentTupleComparer = new Triple<string, IFileSystem, AllOptions>.EqualityComparer(StringComparer.InvariantCulture, EqualityComparer<IFileSystem>.Default, EqualityComparer<AllOptions>.Default/*<-change this to better*/);
 
         /// <summary>
         /// Set new list components. Recycles previous components if path, filesystem and option matches.
@@ -177,16 +177,16 @@ namespace Lexical.FileSystem.Decoration
             lock (this.components.SyncRoot)
             {
                 var oldComponents = components.Array;
-                var oldComponentLineMap = components.ToDictionary(c => new Triple<string, IFileSystem, FileSystemOptionsAll>(c.Path.ParentPath, c.FileSystem, c.Options), componentTupleComparer);
+                var oldComponentLineMap = components.ToDictionary(c => new Triple<string, IFileSystem, AllOptions>(c.Path.ParentPath, c.FileSystem, c.Options), componentTupleComparer);
                 components.Clear();
                 foreach(FileSystemAssignment assignment in assignments)
                 {
                     // Take intersection and consolidate options
-                    FileSystemOptionsAll consolidatedOptions = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : Lexical.FileSystem.Option.Intersection(assignment.FileSystem, assignment.Option));
+                    AllOptions consolidatedOptions = AllOptions.Read(assignment.Option == null ? assignment.FileSystem : Lexical.FileSystem.Option.Intersection(assignment.FileSystem, assignment.Option));
 
                     // Reuse previous component
                     Component reusedComponent;
-                    if (oldComponentLineMap.TryGetValue(new Triple<string, IFileSystem, FileSystemOptionsAll>(parentPath, assignment.FileSystem, consolidatedOptions), out reusedComponent))
+                    if (oldComponentLineMap.TryGetValue(new Triple<string, IFileSystem, AllOptions>(parentPath, assignment.FileSystem, consolidatedOptions), out reusedComponent))
                     {
                         this.components.Add(reusedComponent);
                         componentsAdded.Add(reusedComponent);
@@ -209,7 +209,7 @@ namespace Lexical.FileSystem.Decoration
                 DateTimeOffset now = DateTimeOffset.UtcNow;
                 // Update options
                 this.assignments = assignments;
-                this.Option = FileSystemOptionsAll.Read(Lexical.FileSystem.Option.Union(this.components.Select(s => s.Options)));
+                this.Option = AllOptions.Read(Lexical.FileSystem.Option.Union(this.components.Select(s => s.Options)));
                 this.rootEntry = new Lexical.FileSystem.MountEntry.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
             }
 
@@ -1270,7 +1270,7 @@ namespace Lexical.FileSystem.Decoration
             if (components.Length == 0) throw new NotSupportedException(nameof(Observe));
 
             // Create adapter
-            ObserverDecorator adapter = new ObserverDecorator(this, filter, observer, state, eventDispatcher, true);
+            ObserverDecoration adapter = new ObserverDecoration(this, filter, observer, state, eventDispatcher, true);
             try
             {
                 // Send IStartEvent, must be sent before subscribing forwardees
@@ -1287,7 +1287,7 @@ namespace Lexical.FileSystem.Decoration
                     try
                     {
                         // Try Observe
-                        IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component), eventDispatcher, option.OptionIntersection(component.UnknownOptions));
+                        IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecoration.StateInfo(component.Path, component), eventDispatcher, option.OptionIntersection(component.UnknownOptions));
                         // Attach disposable
                         ((IDisposeList)adapter).AddDisposable(disposable);
                     }
@@ -1305,7 +1305,7 @@ namespace Lexical.FileSystem.Decoration
                 throw new NotSupportedException(nameof(Observe));
             }
             catch (Exception) when (DisposeObserver(adapter)) { /*Never goes here*/ throw new Exception(); }
-            bool DisposeObserver(ObserverDecorator handle) { handle?.Dispose(); return false; }
+            bool DisposeObserver(ObserverDecoration handle) { handle?.Dispose(); return false; }
         }
 
         /// <summary>
@@ -1445,7 +1445,7 @@ namespace Lexical.FileSystem.Decoration
 
 
         /// <summary>Override this to change entry class. Must implement <see cref="IMountEntry"/></summary>
-        protected virtual IEntry CreateEntry(IEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier)
+        protected virtual IEntry CreateEntry(IEntry original, IFileSystem newFileSystem, string newPath, AllOptions optionModifier)
             => original.Path == "" ?
                 new MountEntry(original, newFileSystem, newPath, optionModifier, this.assignments) :
                 new Entry(original, newFileSystem, newPath, optionModifier);
@@ -1464,7 +1464,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>New path.</summary>
             public override string Path => newPath;
             /// <summary>(optional) Option that will be intersected lazily with original options.</summary>
-            protected FileSystemOptionsAll optionModifier;
+            protected AllOptions optionModifier;
             /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and Original.Option()</summary>
             protected IOption optionIntersection;
             /// <summary>Intersection of Original.Option() and <see cref="optionModifier"/></summary>
@@ -1476,7 +1476,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="newFileSystem"></param>
             /// <param name="newPath"></param>
             /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
-            public Entry(IEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier) : base(original)
+            public Entry(IEntry original, IFileSystem newFileSystem, string newPath, AllOptions optionModifier) : base(original)
             {
                 this.newFileSystem = newFileSystem;
                 this.newPath = newPath;
@@ -1504,7 +1504,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="newPath"></param>
             /// <param name="mounts"></param>
             /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
-            public MountEntry(IEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
+            public MountEntry(IEntry original, IFileSystem newFileSystem, string newPath, AllOptions optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
             {
                 this.mounts = mounts;
             }

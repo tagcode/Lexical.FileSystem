@@ -14,7 +14,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Extension methods for <see cref="IFileSystem"/>.
     /// </summary>
-    public static partial class IFileSystemExtensions_
+    public static partial class FileOperationExtensions
     {
         /// <summary>
         /// Transfer a file or directory by copy and delete.

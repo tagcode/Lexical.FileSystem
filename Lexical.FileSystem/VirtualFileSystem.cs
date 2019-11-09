@@ -193,7 +193,7 @@ namespace Lexical.FileSystem
                     //
                     IEntry prevEntry;
                     // Unify entries
-                    if (entries.TryGetValue(key, out prevEntry)) entries[key] = new PairEntry(prevEntry, e);
+                    if (entries.TryGetValue(key, out prevEntry)) entries[key] = new DoubleDecoratioEntry(prevEntry, e);
                     // Add entry
                     else entries[key] = e;
                 }
@@ -242,7 +242,7 @@ namespace Lexical.FileSystem
                 try
                 {
                     IEntry e = fs.GetEntry(path, option);
-                    if (e != null) entry = entry != null ? new PairEntry(entry, e) : e;
+                    if (e != null) entry = entry != null ? new DoubleDecoratioEntry(entry, e) : e;
                 }
                 catch (NotSupportedException) { }
             }
@@ -765,7 +765,7 @@ namespace Lexical.FileSystem
                             try
                             {
                                 // Try Observe
-                                IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component), eventDispatcher, option.OptionIntersection(component.UnknownOptions));
+                                IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecoration.StateInfo(component.Path, component), eventDispatcher, option.OptionIntersection(component.UnknownOptions));
                                 // Attach disposable
                                 ((IDisposeList)adapter).AddDisposable(disposable);
                             }
@@ -797,7 +797,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Observer
         /// </summary>
-        protected internal class ObserverHandle : ObserverDecorator
+        protected internal class ObserverHandle : ObserverDecoration
         {
             /// <summary>Filter pattern that is used for filtering events by path.</summary>
             protected internal Regex filterPattern;

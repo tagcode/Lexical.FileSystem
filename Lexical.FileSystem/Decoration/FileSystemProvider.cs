@@ -41,7 +41,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Options all
         /// </summary>
-        protected FileSystemOptionsAll options;
+        protected AllOptions options;
 
         /// <summary>
         /// Create adapter that adapts <paramref name="sourceFilesystem"/> into <see cref="IFileProvider"/>.
@@ -51,7 +51,7 @@ namespace Lexical.FileSystem.Decoration
         public FileSystemProvider(IFileSystem sourceFilesystem, IOption option = null) : base()
         {
             FileSystem = sourceFilesystem ?? throw new ArgumentNullException(nameof(sourceFilesystem));
-            this.options = FileSystemOptionsAll.Read(Option.Union(sourceFilesystem, option));
+            this.options = AllOptions.Read(Option.Union(sourceFilesystem, option));
             this.token = option.AsOption<IToken>();
         }
 

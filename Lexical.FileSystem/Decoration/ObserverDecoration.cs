@@ -15,7 +15,7 @@ namespace Lexical.FileSystem.Decoration
     /// 
     /// When this object is disposed, it forwards <see cref="IObserver{T}.OnCompleted"/> event.
     /// </summary>
-    public class ObserverDecorator : DisposeList, IFileSystemObserver, IObserver<IEvent>
+    public class ObserverDecoration : DisposeList, IFileSystemObserver, IObserver<IEvent>
     {
         /// <summary>Parent filesystem to use in decorated events.</summary>
         public IFileSystem FileSystem { get; protected set; }
@@ -54,7 +54,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="eventDispatcher">event dispatcher to show on the interface, doesn't use it</param>
         /// <param name="disposeWhenLastCompletes">if true, when last attached observer sends <see cref="IObserver{T}.OnCompleted"/> event, 
         /// then diposes this object and sends <see cref="IObserver{T}.OnCompleted"/> to <see cref="Observer"/>.</param>
-        public ObserverDecorator(IFileSystem sourceFileSystem, string filter, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher, bool disposeWhenLastCompletes)
+        public ObserverDecoration(IFileSystem sourceFileSystem, string filter, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher, bool disposeWhenLastCompletes)
         {
             this.FileSystem = sourceFileSystem;
             this.Filter = filter;

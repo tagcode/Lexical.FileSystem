@@ -189,7 +189,7 @@ namespace Lexical.FileSystem.Decoration
     /// 
     /// Returns values from a if available, and if not then uses a fallback value from b.
     /// </summary>
-    public class PairEntry : IEntryDecoration, IFileEntry, IDirectoryEntry, IDriveEntry, IMountEntry, IOption, IEntryFileAttributes, IEntryPhysicalPath
+    public class DoubleDecoratioEntry : IEntryDecoration, IFileEntry, IDirectoryEntry, IDriveEntry, IMountEntry, IOption, IEntryFileAttributes, IEntryPhysicalPath
     {
         /// <summary>Entry to decorate.</summary>
         public readonly IEntry A;
@@ -244,7 +244,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="a">entry to decoate</param>
         /// <param name="b">fallback values</param>
-        public PairEntry(IEntry a, IEntry b)
+        public DoubleDecoratioEntry(IEntry a, IEntry b)
         {
             A = a ?? throw new ArgumentNullException(nameof(a));
             B = b ?? throw new ArgumentNullException(nameof(b));
@@ -255,4 +255,4 @@ namespace Lexical.FileSystem.Decoration
         public override string ToString() => A.ToString()??B.ToString()??Path;
     }
 
-    }
+}
