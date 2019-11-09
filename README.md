@@ -492,7 +492,7 @@ vfs.Dispose();
 OnCompleted
 ```
 
-# Singleton
+# VirtualFileSystem.Url
 
 **VirtualFileSystem.Url** is a singleton instance that has the following filesystems mounted as urls.
 
@@ -549,7 +549,7 @@ VirtualFileSystem.Url.CreateDirectory("document://ApplicationName/");
 VirtualFileSystem.Url.CreateFile("document://ApplicationName/save1.txt", UTF8Encoding.UTF8.GetBytes(saveGame));
 ```
 
-Application's shared program data can be placed in "program-data://ApplicationName/datafile". These are typically modifiable files.
+Program data that is shared with every user can be placed in "program-data://ApplicationName/datafile". These are typically modifiable files.
 
 ```csharp
 byte[] programData = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -1329,7 +1329,7 @@ var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpa
 var authentication = new AuthenticationHeaderValue("Basic", authBlob);
 var token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
-HttpFileSystem.Instance.PrintTo(Console.Out, "https://lexical.fi/FileSystem/private/", token: token);
+HttpFileSystem.Instance.PrintTo(Console.Out, "https://lexical.fi/FileSystem/private/", option: token);
 ```
 
 <pre style="line-height:1.2;">
