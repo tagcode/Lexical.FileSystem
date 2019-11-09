@@ -18,11 +18,12 @@ namespace Lexical.FileSystem
     {
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Observe capability.
-        /// <param name="filesystemOption"></param>
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Observe capability</returns>
-        public static bool CanObserve(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanObserve : false;
+        public static bool CanObserve(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanObserve : defaultValue;
 
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 
@@ -52,7 +53,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
         /// <param name="eventDispatcher">(optional) event dispatcher</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>handle to the observer, dispose to cancel the observe</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -63,7 +64,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemObserver Observe(this IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken option = null)
+        public static IFileSystemObserver Observe(this IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
         {
             if (filesystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state, eventDispatcher, option);
             else throw new NotSupportedException(nameof(Observe));

@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Lexical.FileSystem
 {
@@ -81,7 +82,8 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="op">Join operation of same option intefaces</param>
         /// <param name="options">options to compose</param>
-        public FileSystemOptionComposition(Op op, IEnumerable<IFileSystemOption> options)
+        /// <param name="interfaceTypesToExclude">(optional)</param>
+        public FileSystemOptionComposition(Op op, IEnumerable<IFileSystemOption> options, Type[] interfaceTypesToExclude = null)
         {
             foreach (IFileSystemOption option in options)
             {
@@ -89,12 +91,18 @@ namespace Lexical.FileSystem
                 if (option == null) continue;
                 // IFileSystemOption
                 foreach (Type type in option.GetType().GetInterfaces())
+                {
+                    if (interfaceTypesToExclude != null && interfaceTypesToExclude.Contains(type)) continue;
                     if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
                         Add(op, type, option);
+                }
                 // IFileSystemOptionAdaptable
                 if (option is IFileSystemOptionAdaptable adaptable)
                     foreach (KeyValuePair<Type, IFileSystemOption> line in adaptable)
+                    {
+                        if (interfaceTypesToExclude != null && interfaceTypesToExclude.Contains(line.Key)) continue;
                         Add(op, line.Key, line.Value);
+                    }
             }
             Flatten();
         }
@@ -104,7 +112,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="op">Join operation of same option intefaces</param>
         /// <param name="options">options to compose</param>
-        public FileSystemOptionComposition(Op op, params IFileSystemOption[] options) : this(op, (IEnumerable<FileSystemOption>)options) { }
+        public FileSystemOptionComposition(Op op, params IFileSystemOption[] options) : this(op, (IEnumerable<IFileSystemOption>)options) { }
 
         /// <summary>
         /// Add option to the composition.

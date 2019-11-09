@@ -34,7 +34,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="srcPath">old path of a file or directory</param>
         /// <param name="dstPath">new path of a file or directory</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="srcPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -45,7 +45,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        void Move(string srcPath, string dstPath, IFileSystemToken option = null);
+        void Move(string srcPath, string dstPath, IFileSystemOption option = null);
     }
     // </doc>
 }

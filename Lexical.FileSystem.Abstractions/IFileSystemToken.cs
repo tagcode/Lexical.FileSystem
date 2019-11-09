@@ -32,12 +32,13 @@ namespace Lexical.FileSystem
     /// <summary>
     /// A single token object.
     /// </summary>
+    [Operations(typeof(FileSystemOperationToken))]
     public interface IFileSystemTokenObject : IFileSystemToken
     {
         /// <summary>
         /// (optional) Token object
         /// </summary>
-        object Token { get; }
+        object TokenObject { get; }
 
         /// <summary>
         /// (optional) Key type to identify token as. This is typically <see cref="Type.FullName"/>.
@@ -57,6 +58,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Queryable token.
     /// </summary>
+    [Operations(typeof(FileSystemOperationToken))]
     public interface IFileSystemTokenProvider : IFileSystemToken
     {
         /// <summary>
@@ -66,7 +68,7 @@ namespace Lexical.FileSystem
         /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        bool TryGet(string path, string key, out object token);
+        bool TryGetToken(string path, string key, out object token);
 
         /// <summary>
         /// Query for all token objects at path <paramref name="path"/> as type <paramref name="key"/>.
@@ -75,7 +77,7 @@ namespace Lexical.FileSystem
         /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        bool TryGetAll(string path, string key, out object[] tokens);
+        bool TryGetAllTokens(string path, string key, out object[] tokens);
     }
     // </IFileSystemTokenProvider>
 
@@ -86,6 +88,7 @@ namespace Lexical.FileSystem
     /// If class that implements <see cref="IFileSystemTokenEnumerable"/>, also implements <see cref="IFileSystemTokenProvider"/>
     /// then it must provide only for the tokens that it can enumerate (either recursively or not).
     /// </summary>
+    [Operations(typeof(FileSystemOperationToken))]
     public interface IFileSystemTokenEnumerable : IFileSystemToken, IEnumerable<IFileSystemToken>
     {
     }

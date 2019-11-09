@@ -17,35 +17,39 @@ namespace Lexical.FileSystem
     {
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Open capability.
-        /// <param name="filesystemOption"></param>
         /// </summary>
-        /// <returns>true, if has Open capability</returns>
-        public static bool CanOpen(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanOpen : false;
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
+        /// <returns>true, if has Open capability. If unspecified, the default value is false.</returns>
+        public static bool CanOpen(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanOpen : defaultValue;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Read capability.
-        /// <param name="filesystemOption"></param>
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Read capability</returns>
-        public static bool CanRead(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanRead : false;
+        public static bool CanRead(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanRead : defaultValue;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Write capability.
-        /// <param name="filesystemOption"></param>
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Write capability</returns>
-        public static bool CanWrite(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanWrite : false;
+        public static bool CanWrite(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanWrite : defaultValue;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has CreateFile capability.
-        /// <param name="filesystemOption"></param>
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has CreateFile capability</returns>
-        public static bool CanCreateFile(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanCreateFile : false;
+        public static bool CanCreateFile(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanCreateFile : defaultValue;
 
         /// <summary>
         /// Create a new file. If file exists, does nothing.
@@ -53,7 +57,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/file"</param>
         /// <param name="initialData">(optional) initial data to write</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
@@ -66,7 +70,7 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
-        public static void CreateFile(this IFileSystem filesystem, string path, byte[] initialData = null, IFileSystemToken option = null)
+        public static void CreateFile(this IFileSystem filesystem, string path, byte[] initialData = null, IFileSystemOption option = null)
         {
             if (filesystem is IFileSystemOpen opener)
             {
@@ -86,7 +90,7 @@ namespace Lexical.FileSystem
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -102,7 +106,7 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
-        public static Stream Open(this IFileSystem filesystem, string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken option = null)
+        public static Stream Open(this IFileSystem filesystem, string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
         {
             if (filesystem is IFileSystemOpen opener) return opener.Open(path, fileMode, fileAccess, fileShare, option);
             throw new NotSupportedException(nameof(Open));

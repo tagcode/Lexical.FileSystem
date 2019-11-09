@@ -12,7 +12,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Facade for <see cref="IFileSystemOption"/> static values.
     /// </summary>
-    public partial class FileSystemOption
+    public static partial class FileSystemOption
     {
         // Operations //
         /// <summary>Join <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
@@ -21,18 +21,24 @@ namespace Lexical.FileSystem
         public static IFileSystemOption Join(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.First, options);
         /// <summary>Join <paramref name="options"/>, takes first instance of each option.</summary>
         public static IFileSystemOption Join(IEnumerable<IFileSystemOption> options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.First, options);
+        /// <summary>Join <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
+        public static IFileSystemOption OptionJoin(this IFileSystemOption option1, IFileSystemOption option2) => option1 == null ? option2 : option2 == null ? option1 : new FileSystemOptionComposition(FileSystemOptionComposition.Op.First, option1, option2);
         /// <summary>Union of <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
         public static IFileSystemOption Union(IFileSystemOption option1, IFileSystemOption option2) => option1 == null ? option2 : option2 == null ? option1 : new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, option1, option2);
         /// <summary>Union of <paramref name="options"/>.</summary>
         public static IFileSystemOption Union(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, options);
         /// <summary>Union of <paramref name="options"/>.</summary>
         public static IFileSystemOption Union(IEnumerable<IFileSystemOption> options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, options);
+        /// <summary>Union of <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
+        public static IFileSystemOption OptionUnion(this IFileSystemOption option1, IFileSystemOption option2) => option1 == null ? option2 : option2 == null ? option1 : new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, option1, option2);
         /// <summary>Intersection of <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
         public static IFileSystemOption Intersection(IFileSystemOption option1, IFileSystemOption option2) => option1 == null ? option2 : option2 == null ? option1 : new FileSystemOptionComposition(FileSystemOptionComposition.Op.Intersection, option1, option2);
         /// <summary>Intersection of <paramref name="options"/>.</summary>
         public static IFileSystemOption Intersection(params IFileSystemOption[] options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Intersection, options);
         /// <summary>Intersection of <paramref name="options"/>.</summary>
         public static IFileSystemOption Intersection(IEnumerable<IFileSystemOption> options) => new FileSystemOptionComposition(FileSystemOptionComposition.Op.Intersection, options);
+        /// <summary>Intersection of <paramref name="option1"/> and <paramref name="option2"/>. Takes first instance of each option.</summary>
+        public static IFileSystemOption OptionIntersection(this IFileSystemOption option1, IFileSystemOption option2) => option1 == null ? option2 : option2 == null ? option1 : new FileSystemOptionComposition(FileSystemOptionComposition.Op.Intersection, option1, option2);
 
         // Path-level options //
         /// <summary>Read-only operations allowed, deny modification and write operations</summary>

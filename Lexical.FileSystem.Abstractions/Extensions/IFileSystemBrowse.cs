@@ -16,19 +16,21 @@ namespace Lexical.FileSystem
     {
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Browse capability.
-        /// <param name="filesystemOption"></param>
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true if has Browse capability</returns>
-        public static bool CanBrowse(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionBrowse>() is IFileSystemOptionBrowse browser ? browser.CanBrowse : false;
+        public static bool CanBrowse(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionBrowse>() is IFileSystemOptionBrowse browser ? browser.CanBrowse : defaultValue;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Exists capability.
-        /// <param name="filesystemOption"></param>
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true if has Exists capability</returns>
-        public static bool CanGetEntry(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionBrowse>() is IFileSystemOptionBrowse browser ? browser.CanGetEntry : false;
+        public static bool CanGetEntry(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionBrowse>() is IFileSystemOptionBrowse browser ? browser.CanGetEntry : defaultValue;
 
         /// <summary>
         /// Browse a directory for child entries.
@@ -37,7 +39,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path">path to a directory, "" is root, separator is "/"</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>
         ///     Returns a snapshot of file and directory entries.
         ///     Note, that the returned array be internally cached by the implementation, and therefore the caller must not modify the array.
@@ -52,7 +54,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemEntry[] Browse(this IFileSystem filesystem, string path, IFileSystemToken option = null)
+        public static IFileSystemEntry[] Browse(this IFileSystem filesystem, string path, IFileSystemOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.Browse(path, option);
             else throw new NotSupportedException(nameof(Browse));
@@ -63,7 +65,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -74,7 +76,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemEntry GetEntry(this IFileSystem filesystem, string path, IFileSystemToken option = null)
+        public static IFileSystemEntry GetEntry(this IFileSystem filesystem, string path, IFileSystemOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.GetEntry(path, option);
             else throw new NotSupportedException(nameof(GetEntry));
@@ -85,7 +87,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>true if exists</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -96,7 +98,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static bool Exists(this IFileSystem filesystem, string path, IFileSystemToken option = null)
+        public static bool Exists(this IFileSystem filesystem, string path, IFileSystemOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.GetEntry(path, option) != null;
             else throw new NotSupportedException(nameof(GetEntry));

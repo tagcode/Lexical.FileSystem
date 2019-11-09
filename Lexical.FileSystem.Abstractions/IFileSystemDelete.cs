@@ -35,7 +35,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path">path to a file or directory</param>
         /// <param name="recurse">if path refers to directory, recurse into sub directories</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recurse"/> is false, or trying to delete root when not allowed</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -46,7 +46,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        void Delete(string path, bool recurse = false, IFileSystemToken option = null);
+        void Delete(string path, bool recurse = false, IFileSystemOption option = null);
     }
     // </doc>
 }

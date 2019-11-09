@@ -45,10 +45,10 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <param name="mounts">(optional) filesystem and option infos</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemToken option = null);
+        IFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemOption option = null);
 
         /// <summary>
         /// Unmount a filesystem at <paramref name="path"/>.
@@ -58,18 +58,18 @@ namespace Lexical.FileSystem
         /// If there are observers monitoring <paramref name="path"/> in the parent filesystem, then the unmounted files are notified as being deleted.
         /// </summary>
         /// <param name="path"></param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystem Unmount(string path, IFileSystemToken option = null);
+        IFileSystem Unmount(string path, IFileSystemOption option = null);
 
         /// <summary>
         /// List all mounts.
         /// </summary>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystemEntryMount[] ListMountPoints(IFileSystemToken option = null);
+        IFileSystemEntryMount[] ListMountPoints(IFileSystemOption option = null);
     }
 
     /// <summary>Mount assignemnt related info <see cref="FileSystemAssignment"/>.</summary>

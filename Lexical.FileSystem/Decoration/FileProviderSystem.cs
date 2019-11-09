@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 
@@ -69,11 +70,6 @@ namespace Lexical.FileSystem.Decoration
         protected IFileSystemEntry rootEntry;
 
         /// <summary>
-        /// (optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.
-        /// </summary>
-        protected IFileSystemToken token;
-
-        /// <summary>
         /// Options all
         /// </summary>
         protected Options options;
@@ -87,7 +83,6 @@ namespace Lexical.FileSystem.Decoration
         {
             this.fileProvider = sourceFileProvider ?? throw new ArgumentNullException(nameof(sourceFileProvider));
             this.options = option == null ? Options.AllEnabled : Options.Read(option);
-            this.token = option.AsOption<IFileSystemToken>();
             this.isPhysicalFileProvider = sourceFileProvider.GetType().FullName == "Microsoft.Extensions.FileProviders.PhysicalFileProvider";
             if (this.isPhysicalFileProvider)
             {
@@ -102,8 +97,9 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>FileProvider options</summary>
-        public class Options : IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionBrowse
+        public class Options : IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionBrowse, IFileSystemTokenEnumerable
         {
+            static IFileSystemToken[] no_tokens = new IFileSystemToken[0];
             static Options allEnabled = new Options(true, true, true, true, true, true, true);
             /// <summary></summary>
             public static Options AllEnabled => allEnabled;
@@ -122,6 +118,10 @@ namespace Lexical.FileSystem.Decoration
             public bool CanCreateFile { get; protected set; } = true;
             /// <summary></summary>
             public bool CanObserve { get; protected set; } = true;
+
+            /// <summary>Tokens</summary>
+            protected IFileSystemToken[] tokens = no_tokens;
+
 
             /// <summary>Create options</summary>
             public Options()
@@ -167,8 +167,19 @@ namespace Lexical.FileSystem.Decoration
                 {
                     result.CanObserve = observe.CanObserve;
                 }
+                IFileSystemToken token = option.AsOption<IFileSystemToken>();
+                if (token != null)
+                {
+                    var enumr = option.ListTokens(false);
+                    result.tokens = enumr is IFileSystemToken[] arr ? arr : enumr.ToArray();
+                }
                 return result;
             }
+
+            /// <summary>Get enumerator</summary>
+            public IEnumerator<IFileSystemToken> GetEnumerator() => ((IEnumerable<IFileSystemToken>)tokens).GetEnumerator();
+            /// <summary>Get enumerator</summary>
+            IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<IFileSystemToken>)tokens).GetEnumerator();
         }
 
 
@@ -179,7 +190,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -192,10 +203,10 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken option = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
         {
             // Assert open is enabled
-            if (!CanOpen) throw new NotSupportedException("Open is not supported");
+            if (!CanOpen || !option.CanOpen(true)) throw new NotSupportedException(nameof(Open));
             // Check mode is for opening existing file
             if (fileMode != FileMode.Open) throw new NotSupportedException("FileMode = " + fileMode + " is not supported");
             // Check access is for reading
@@ -219,7 +230,7 @@ namespace Lexical.FileSystem.Decoration
         /// Browse a directory for file and subdirectory entries.
         /// </summary>
         /// <param name="path">path to directory, "" is root, separator is "/"</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>a snapshot of file and directory entries</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -231,10 +242,10 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry[] Browse(string path, IFileSystemToken option = null)
+        public IFileSystemEntry[] Browse(string path, IFileSystemOption option = null)
         {
-            // Assert browse is enabled
-            if (!CanBrowse) throw new NotSupportedException("Browse is not supported");
+            // Assert supported
+            if (!CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
             // Make path
             if (isPhysicalFileProvider && path.Contains(@"\")) path = path.Replace(@"\", "/");
             // Is disposed?
@@ -269,7 +280,7 @@ namespace Lexical.FileSystem.Decoration
         /// Get entry of a single file or directory.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -280,8 +291,11 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemToken option = null)
+        public IFileSystemEntry GetEntry(string path, IFileSystemOption option = null)
         {
+            // Assert allowed
+            if (!CanGetEntry || !option.CanGetEntry(true)) throw new NotSupportedException(nameof(GetEntry));
+            //
             if (path == "" && rootEntry != null) return rootEntry;
             // Make path
             if (isPhysicalFileProvider && path.Contains(@"\")) path = path.Replace(@"\", "/");
@@ -337,7 +351,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
         /// <param name="eventDispatcher">(optional) event dispatcher</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>dispose handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -348,10 +362,10 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken option = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
         {
             // Assert observe is enabled.
-            if (!CanObserve) throw new NotSupportedException("Observe not supported.");
+            if (!CanObserve || !option.CanObserve(true)) throw new NotSupportedException(nameof(Observe));
             // Assert not diposed
             IFileProvider fp = fileProvider;
             if (fp == null) return new DummyObserver(this, filter, observer, state, eventDispatcher);
@@ -361,7 +375,7 @@ namespace Lexical.FileSystem.Decoration
             if (patternInfo.SuffixDepth==0)
             {
                 // Create observer that watches one file
-                FileObserver handle = new FileObserver(this, filter, observer, state, eventDispatcher, option.Concat(this.token));
+                FileObserver handle = new FileObserver(this, filter, observer, state, eventDispatcher, option.OptionIntersection(this.options));
                 // Send handle
                 observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle
@@ -408,7 +422,7 @@ namespace Lexical.FileSystem.Decoration
             protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             /// <summary></summary>
-            protected IFileSystemToken token;
+            protected IFileSystemOption option;
 
             /// <summary>
             /// Print info
@@ -425,14 +439,14 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="observer"></param>
             /// <param name="state"></param>
             /// <param name="eventDispatcher">(optional)</param>
-            /// <param name="token">(optional)</param>
-            public FileObserver(IFileSystem filesystem, string path, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, IFileSystemToken token)
+            /// <param name="option">(optional)</param>
+            public FileObserver(IFileSystem filesystem, string path, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, IFileSystemOption option)
                 : base(filesystem, path, observer, state, eventDispatcher)
             {
                 this.changeToken = FileProvider.Watch(path);
-                this.previousEntry = FileSystem.GetEntry(Filter, token); 
+                this.previousEntry = FileSystem.GetEntry(Filter, option); 
                 this.watcher = changeToken.RegisterChangeCallback(OnEvent, this);
-                this.token = token;
+                this.option = option;
             }
 
             /// <summary>
@@ -459,7 +473,7 @@ namespace Lexical.FileSystem.Decoration
                 if (!IsDisposing) this.changeToken = FileProvider.Watch(Filter);
 
                 // Figure out change type
-                IFileSystemEntry currentEntry = FileSystem.GetEntry(Filter, token);
+                IFileSystemEntry currentEntry = FileSystem.GetEntry(Filter, option);
                 bool exists = currentEntry != null;
                 bool existed = previousEntry != null;
                 DateTimeOffset time = DateTimeOffset.UtcNow;

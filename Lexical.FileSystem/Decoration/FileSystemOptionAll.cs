@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Lexical.FileSystem.Decoration
@@ -7,6 +9,21 @@ namespace Lexical.FileSystem.Decoration
     /// <summary>Class that implements all options except <see cref="IFileSystemToken"/>.</summary>
     public class FileSystemOptionsAll : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionFileAttribute, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionSubPath
     {
+        /// <summary>Contained interface types.</summary>
+        public static Type[] Types = new Type[]
+        {
+            typeof(IFileSystemOptionBrowse),
+            typeof(IFileSystemOptionObserve),
+            typeof(IFileSystemOptionOpen),
+            typeof(IFileSystemOptionDelete),
+            typeof(IFileSystemOptionFileAttribute),
+            typeof(IFileSystemOptionMove),
+            typeof(IFileSystemOptionCreateDirectory),
+            typeof(IFileSystemOptionMount),
+            typeof(IFileSystemOptionPath),
+            typeof(IFileSystemOptionSubPath)
+        };
+
         // TODO Implement Hash-Equals //
         // TODO Implement Union & Intersection //
 
@@ -53,22 +70,32 @@ namespace Lexical.FileSystem.Decoration
         public static FileSystemOptionsAll Read(IFileSystemOption option)
         {
             FileSystemOptionsAll result = new FileSystemOptionsAll();
-            result.CanBrowse = option.CanBrowse();
-            result.CanGetEntry = option.CanGetEntry();
-            result.CanObserve = option.CanObserve();
-            result.CanOpen = option.CanOpen();
-            result.CanRead = option.CanRead();
-            result.CanWrite = option.CanWrite();
-            result.CanCreateFile = option.CanCreateFile();
-            result.CanDelete = option.CanDelete();
-            result.CanMove = option.CanMove();
-            result.CanCreateDirectory = option.CanCreateDirectory();
-            result.CanMount = option.CanMount();
-            result.CanUnmount = option.CanUnmount();
-            result.CanListMountPoints = option.CanListMountPoints();
-            result.SubPath = option.SubPath();
-            result.CanSetFileAttribute = option.CanSetFileAttribute();
+            result.ReadFrom(option);
             return result;
+        }
+
+        /// <summary>
+        /// Read options from <paramref name="option"/> and return flattened object.
+        /// </summary>
+        /// <param name="option"></param>
+        /// <returns></returns>
+        public virtual void ReadFrom(IFileSystemOption option)
+        {
+            this.CanBrowse = option.CanBrowse();
+            this.CanGetEntry = option.CanGetEntry();
+            this.CanObserve = option.CanObserve();
+            this.CanOpen = option.CanOpen();
+            this.CanRead = option.CanRead();
+            this.CanWrite = option.CanWrite();
+            this.CanCreateFile = option.CanCreateFile();
+            this.CanDelete = option.CanDelete();
+            this.CanMove = option.CanMove();
+            this.CanCreateDirectory = option.CanCreateDirectory();
+            this.CanMount = option.CanMount();
+            this.CanUnmount = option.CanUnmount();
+            this.CanListMountPoints = option.CanListMountPoints();
+            this.SubPath = option.SubPath();
+            this.CanSetFileAttribute = option.CanSetFileAttribute();
         }
 
         /// <summary>
@@ -76,7 +103,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="option"></param>
         /// <returns>this if <paramref name="option"/> is null or new instance with intersection</returns>
-        public FileSystemOptionsAll Intersection(IFileSystemOption option)
+        public virtual FileSystemOptionsAll Intersection(IFileSystemOption option)
         {
             if (option == null) return this;
             FileSystemOptionsAll result = new FileSystemOptionsAll();
@@ -101,4 +128,48 @@ namespace Lexical.FileSystem.Decoration
             return result;
         }
     }
+
+    /// <summary>
+    /// Options with tokens
+    /// </summary>
+    public class FileSystemOptionsAllWithTokens : FileSystemOptionsAll, IFileSystemTokenEnumerable
+    {
+        static IFileSystemToken[] no_tokens = new IFileSystemToken[0];
+
+        /// <summary>Tokens</summary>
+        protected IFileSystemToken[] tokens = no_tokens;
+
+        /// <summary>
+        /// Read options from <paramref name="option"/> and return flattened object.
+        /// </summary>
+        /// <param name="option"></param>
+        /// <returns></returns>
+        public static new FileSystemOptionsAllWithTokens Read(IFileSystemOption option)
+        {
+            FileSystemOptionsAllWithTokens result = new FileSystemOptionsAllWithTokens();
+            result.ReadFrom(option);
+            return result;
+        }
+
+        /// <summary>
+        /// Read options from <paramref name="option"/> and return flattened object.
+        /// </summary>
+        /// <param name="option"></param>
+        /// <returns></returns>
+        public override void ReadFrom(IFileSystemOption option)
+        {
+            base.ReadFrom(option);
+            var enumr = option.ListTokens(false);
+            this.tokens = enumr is IFileSystemToken[] arr ? arr : enumr.ToArray();
+        }
+
+        /// <summary>Get enumerator</summary>
+        public IEnumerator<IFileSystemToken> GetEnumerator()
+            => ((IEnumerable<IFileSystemToken>)tokens).GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator()
+            => ((IEnumerable)tokens).GetEnumerator();
+
+    }
+
 }

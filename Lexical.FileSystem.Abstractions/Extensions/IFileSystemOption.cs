@@ -29,6 +29,21 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>
+        /// Get option as <typeparamref name="T"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="option"></param>
+        /// <param name="casted"></param>
+        /// <returns>true if option casted as <typeparamref name="T"/></returns>
+        public static bool TryAsOption<T>(this IFileSystemOption option, out T casted) where T : IFileSystemOption
+        {
+            if (option is T _casted) { casted = _casted; return true; }
+            if (option is IFileSystemOptionAdaptable adaptable && adaptable.GetOption(typeof(T)) is T casted_) { casted = casted_; return true; }
+            casted = default;
+            return default;
+        }
+
+        /// <summary>
         /// Get sub-path option.
         /// <param name="filesystemOption"></param>
         /// </summary>
@@ -36,5 +51,4 @@ namespace Lexical.FileSystem
         public static String SubPath(this IFileSystemOption filesystemOption)
             => filesystemOption.AsOption<IFileSystemOptionSubPath>() is IFileSystemOptionSubPath mp ? mp.SubPath : null;
     }
-
 }

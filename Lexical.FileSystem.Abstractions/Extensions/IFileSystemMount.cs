@@ -43,23 +43,29 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Is filesystem capable of creating mountpoints.
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns></returns>
-        public static bool CanMount(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanMount : false;
+        public static bool CanMount(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanMount : defaultValue;
 
         /// <summary>
         /// Is filesystem allowed to list mountpoints.
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns></returns>
-        public static bool CanListMountPoints(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanListMountPoints : false;
+        public static bool CanListMountPoints(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanListMountPoints : defaultValue;
 
         /// <summary>
         /// Is filesystem allowed to unmount a mount.
         /// </summary>
+        /// <param name="filesystemOption"></param>
+        /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns></returns>
-        public static bool CanUnmount(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanUnmount : false;
+        public static bool CanUnmount(this IFileSystemOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanUnmount : defaultValue;
 
         /// <summary>
         /// Get automounters.
@@ -88,9 +94,9 @@ namespace Lexical.FileSystem
         /// <param name="path">path to mount point</param>
         /// <param name="filesystem">filesystem</param>
         /// <param name="mountOption">(optional) options</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IFileSystemOption mountOption = null, IFileSystemToken option = null)
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IFileSystemOption mountOption = null, IFileSystemOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, option);
             throw new NotSupportedException(nameof(Mount));
@@ -156,9 +162,9 @@ namespace Lexical.FileSystem
         /// <param name="parentFileSystem"></param>
         /// <param name="path">path to mount point</param>
         /// <param name="mounts">(optional) filesystem and option infos</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, FileSystemAssignment[] mounts, IFileSystemToken option = null)
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, FileSystemAssignment[] mounts, IFileSystemOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, mounts, option);
             throw new NotSupportedException(nameof(Mount));
@@ -171,10 +177,10 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="parentFileSystem"></param>
         /// <param name="path">path to mount point</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Unmount(this IFileSystem parentFileSystem, string path, IFileSystemToken option = null)
+        public static IFileSystem Unmount(this IFileSystem parentFileSystem, string path, IFileSystemOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Unmount(path, option);
             throw new NotSupportedException(nameof(Unmount));
@@ -184,10 +190,10 @@ namespace Lexical.FileSystem
         /// List all mounts.
         /// </summary>
         /// <param name="parentFileSystem"></param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystemEntryMount[] ListMountPoints(this IFileSystem parentFileSystem, IFileSystemToken option = null)
+        public static IFileSystemEntryMount[] ListMountPoints(this IFileSystem parentFileSystem, IFileSystemOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.ListMountPoints(option);
             throw new NotSupportedException(nameof(ListMountPoints));

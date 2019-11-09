@@ -175,7 +175,7 @@ namespace Lexical.FileSystem
         /// Browse a directory for file and subdirectory entries.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>a snapshot of file and directory entries</returns>
         /// <exception cref="DirectoryNotFoundException"></exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -185,10 +185,12 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry[] Browse(string path, IFileSystemToken option = null)
+        public IFileSystemEntry[] Browse(string path, IFileSystemOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert allowed
+            if (!option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Read lock
@@ -212,7 +214,7 @@ namespace Lexical.FileSystem
         /// Get entry of a single file or directory.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -221,8 +223,10 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemToken option = null)
+        public IFileSystemEntry GetEntry(string path, IFileSystemOption option = null)
         {
+            // Assert allowed
+            if (!option.CanGetEntry(true)) throw new NotSupportedException(nameof(GetEntry));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Read lock
@@ -248,7 +252,7 @@ namespace Lexical.FileSystem
         /// If directory at <paramref name="path"/> already exists, then returns without exception.
         /// </summary>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>true if directory exists after the method, false if directory doesn't exist</returns>
         /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as parent beyond root "../dir".</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -258,12 +262,14 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void CreateDirectory(string path, IFileSystemToken option = null)
+        public void CreateDirectory(string path, IFileSystemOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
             // Special case "" is root.
             if (path == "") throw new ArgumentException("Please create \"\" named directory with slash separator \"/\".");
+            // Assert allowed
+            if (!option.CanCreateDirectory(true)) throw new NotSupportedException(nameof(CreateDirectory));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
@@ -347,7 +353,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path">path to a file or directory</param>
         /// <param name="recursive">if path refers to directory, recurse into sub directories</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -356,10 +362,12 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoWriteAccess">When trying to delete root</exception>
-        public void Delete(string path, bool recursive = false, IFileSystemToken option = null)
+        public void Delete(string path, bool recursive = false, IFileSystemOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
+            // Assert allowed
+            if (!option.CanDelete(true)) throw new NotSupportedException(nameof(Delete));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // 
@@ -445,7 +453,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="oldPath">old path of a file or directory</param>
         /// <param name="newPath">new path of a file or directory</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="oldPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="ArgumentNullException">path is null</exception>
@@ -454,13 +462,15 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string oldPath, string newPath, IFileSystemToken option = null)
+        public void Move(string oldPath, string newPath, IFileSystemOption option = null)
         {
             // Assert arguments
             if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
             if (newPath == null) throw new ArgumentNullException(nameof(newPath));
             if (oldPath == "") throw new IOException("Cannot move root \"\".");
             if (newPath == "") throw new IOException("Cannot move over root \"\".");
+            // Assert allowed
+            if (!option.CanMove(true)) throw new NotSupportedException(nameof(Move));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
@@ -574,7 +584,7 @@ namespace Lexical.FileSystem
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -592,12 +602,16 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         /// <exception cref="FileSystemExceptionDirectoryExists">Directory already exists</exception>
         /// <exception cref="FileSystemExceptionFileExists">File already exists</exception>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken option = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
             // Assert argument
             if (path == "") throw new IOException("Cannot open root directory.");
+            // Assert allowed
+            if (!option.CanOpen(true)) throw new NotSupportedException(nameof(Open));
+            if (!option.CanRead(true) && fileAccess.HasFlag(FileAccess.Read)) throw new NotSupportedException(nameof(CanRead));
+            if (!option.CanWrite(true) && fileAccess.HasFlag(FileAccess.Write)) throw new NotSupportedException(nameof(CanWrite));
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             // Datetime
@@ -619,6 +633,8 @@ namespace Lexical.FileSystem
                 // Create new file, throw if found
                 if (fileMode == FileMode.CreateNew)
                 {
+                    // Assert allowed
+                    if (!option.CanCreateFile(true)) throw new NotSupportedException(fileMode.ToString());
                     // Cannot create, file already exists
                     if (node != null) throw new FileSystemExceptionFileExists(this, path);
 
@@ -663,6 +679,8 @@ namespace Lexical.FileSystem
                 }
                 else if (fileMode == FileMode.Create)
                 {
+                    // Assert allowed
+                    if (!option.CanCreateFile(true)) throw new NotSupportedException(fileMode.ToString());
                     // Create file
                     LockCookie cookie = m_lock.UpgradeToWriterLock(int.MaxValue);
                     try
@@ -737,10 +755,13 @@ namespace Lexical.FileSystem
                         GetParentAndName(path, out parentPath, out name, out parent);
                         throw new FileSystemExceptionDirectoryExists(this, parentPath);
                     }
-                    // Open file
+                    //// Open file
                     if (node is File existingFile) return existingFile.Open(fileAccess, fileShare);
 
-                    // Create file
+                    //// Create file
+                    // Assert allowed
+                    if (!option.CanCreateFile(true)) throw new NotSupportedException(fileMode.ToString());
+                    // Lock
                     LockCookie cookie = m_lock.UpgradeToWriterLock(int.MaxValue);
                     try
                     {
@@ -1022,7 +1043,7 @@ namespace Lexical.FileSystem
             => GetType().Name;
 
         /// <inheritdoc/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken option = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);

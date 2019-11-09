@@ -41,10 +41,10 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
-        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="Exception">any exception that GetEntry or Browse can throw</exception>
         /// <exception cref="IOException">If Browse returns an entry whose path is not under parent entry's path</exception>
-        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, IFileSystemToken option = null)
+        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, IFileSystemOption option = null)
         {
             List<Line> queue = new List<Line>();
             IFileSystemEntry entry = filesystem.GetEntry(path, option);

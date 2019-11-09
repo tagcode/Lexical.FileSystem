@@ -56,7 +56,7 @@ namespace Lexical.FileSystem
 
 namespace Lexical.FileSystem
 {
-    public partial class FileSystemOption : IFileSystemOption
+    public static partial class FileSystemOption
     {
         internal static IFileSystemOption noOptions = new FileSystemOptionNone();
         internal static IFileSystemOptionBrowse browse = new FileSystemOptionBrowse(true, true);
