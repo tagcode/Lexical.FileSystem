@@ -179,7 +179,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -192,7 +192,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken token = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken option = null)
         {
             // Assert open is enabled
             if (!CanOpen) throw new NotSupportedException("Open is not supported");
@@ -219,7 +219,7 @@ namespace Lexical.FileSystem.Decoration
         /// Browse a directory for file and subdirectory entries.
         /// </summary>
         /// <param name="path">path to directory, "" is root, separator is "/"</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>a snapshot of file and directory entries</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -231,7 +231,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry[] Browse(string path, IFileSystemToken token = null)
+        public IFileSystemEntry[] Browse(string path, IFileSystemToken option = null)
         {
             // Assert browse is enabled
             if (!CanBrowse) throw new NotSupportedException("Browse is not supported");
@@ -269,7 +269,7 @@ namespace Lexical.FileSystem.Decoration
         /// Get entry of a single file or directory.
         /// </summary>
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>entry, or null if entry is not found</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -280,7 +280,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemToken token = null)
+        public IFileSystemEntry GetEntry(string path, IFileSystemToken option = null)
         {
             if (path == "" && rootEntry != null) return rootEntry;
             // Make path
@@ -337,7 +337,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="observer"></param>
         /// <param name="state">(optional) </param>
         /// <param name="eventDispatcher">(optional) event dispatcher</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>dispose handle</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -348,7 +348,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken token = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken option = null)
         {
             // Assert observe is enabled.
             if (!CanObserve) throw new NotSupportedException("Observe not supported.");
@@ -361,7 +361,7 @@ namespace Lexical.FileSystem.Decoration
             if (patternInfo.SuffixDepth==0)
             {
                 // Create observer that watches one file
-                FileObserver handle = new FileObserver(this, filter, observer, state, eventDispatcher, token.Concat(this.token));
+                FileObserver handle = new FileObserver(this, filter, observer, state, eventDispatcher, option.Concat(this.token));
                 // Send handle
                 observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
                 // Return handle

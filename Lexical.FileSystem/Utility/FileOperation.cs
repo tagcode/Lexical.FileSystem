@@ -559,17 +559,17 @@ namespace Lexical.FileSystem.Utility
             /// <param name="filesystem"></param>
             /// <param name="path"></param>
             /// <param name="recurse"></param>
-            /// <param name="token">(optional) </param>
+            /// <param name="option">(optional) </param>
             /// <param name="policy">(optional) Responds to <see cref="Policy.DstThrow"/> and <see cref="Policy.DstSkip"/> policies.</param>
             /// <param name="rollback">(optional) Rollback operation</param>
-            public Delete(Session session, IFileSystem filesystem, string path, bool recurse, IFileSystemToken token = null, Policy policy = Policy.Unset, FileOperation rollback = null) : base(session, policy)
+            public Delete(Session session, IFileSystem filesystem, string path, bool recurse, IFileSystemToken option = null, Policy policy = Policy.Unset, FileOperation rollback = null) : base(session, policy)
             {
                 this.fileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.path = path ?? throw new ArgumentNullException(nameof(path));
                 this.Recurse = recurse;
                 this.rollback = rollback;
                 this.CanRollback = rollback != null;
-                this.Token = token;
+                this.Token = option;
             }
 
             /// <summary>Estimate viability of operation.</summary>
@@ -581,7 +581,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry e = FileSystem.GetEntry(Path, this.Token.Concat(session.Token));
+                        IFileSystemEntry e = FileSystem.GetEntry(Path, this.Token.Concat(session.Option));
                         // Not found
                         if (e == null)
                         {
@@ -602,7 +602,7 @@ namespace Lexical.FileSystem.Utility
                 try
                 {
                     // Delete directory
-                    FileSystem.Delete(Path, Recurse, this.Token.Concat(session.Token));
+                    FileSystem.Delete(Path, Recurse, this.Token.Concat(session.Option));
                 }
                 catch (FileNotFoundException) when (!EffectivePolicy.HasFlag(Policy.DstThrow)) { }
                 catch (DirectoryNotFoundException) when (!EffectivePolicy.HasFlag(Policy.DstThrow)) { }
@@ -639,15 +639,15 @@ namespace Lexical.FileSystem.Utility
             /// <param name="session"></param>
             /// <param name="filesystem"></param>
             /// <param name="path"></param>
-            /// <param name="token"></param>
+            /// <param name="option"></param>
             /// <param name="policy">(optional) Responds to <see cref="Policy.DstThrow"/>, <see cref="Policy.DstSkip"/> and <see cref="Policy.DstOverwrite"/> policies</param>
-            public CreateDirectory(Session session, IFileSystem filesystem, string path, IFileSystemToken token = null, Policy policy = Policy.Unset) : base(session, policy)
+            public CreateDirectory(Session session, IFileSystem filesystem, string path, IFileSystemToken option = null, Policy policy = Policy.Unset) : base(session, policy)
             {
                 this.fileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.path = path ?? throw new ArgumentNullException(nameof(path));
                 // Can rollback if can delete
                 this.CanRollback = filesystem.CanDelete();
-                this.Token = token;
+                this.Token = option;
             }
 
             /// <summary>Estimate viability of operation.</summary>
@@ -661,7 +661,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry e = FileSystem.GetEntry(Path, this.Token.Concat(session.Token));
+                        IFileSystemEntry e = FileSystem.GetEntry(Path, this.Token.Concat(session.Option));
                         // Directory already exists
                         if (e != null)
                         {
@@ -710,7 +710,7 @@ namespace Lexical.FileSystem.Utility
                     {
                         try
                         {
-                            IFileSystemEntry e = FileSystem.GetEntry(Path, this.Token.Concat(session.Token));
+                            IFileSystemEntry e = FileSystem.GetEntry(Path, this.Token.Concat(session.Option));
                             // Directory already exists
                             if (e != null)
                             {
@@ -729,7 +729,7 @@ namespace Lexical.FileSystem.Utility
                                 if (EffectivePolicy.HasFlag(Policy.DstOverwrite))
                                 {
                                     // Delete File
-                                    if (e.IsFile()) { CanRollback = false; FileSystem.Delete(Path, recurse: false, this.Token.Concat(session.Token)); }
+                                    if (e.IsFile()) { CanRollback = false; FileSystem.Delete(Path, recurse: false, this.Token.Concat(session.Option)); }
                                     // Skip
                                     else if (e.IsDirectory()) { CanRollback = true; SetState(State.Skipped); return; }
                                 }
@@ -743,12 +743,12 @@ namespace Lexical.FileSystem.Utility
                     while (etor.MoveNext())
                     {
                         string path = Path.Substring(0, etor.Current.Length+etor.Current.Start);
-                        IFileSystemEntry e = FileSystem.GetEntry(path, this.Token.Concat(session.Token));
+                        IFileSystemEntry e = FileSystem.GetEntry(path, this.Token.Concat(session.Option));
 
                         // Entry exists
                         if (e != null) continue;
 
-                        FileSystem.CreateDirectory(path, this.Token.Concat(session.Token));
+                        FileSystem.CreateDirectory(path, this.Token.Concat(session.Option));
                         DirectoriesCreated.Add(path);
                     }
                 }
@@ -763,7 +763,7 @@ namespace Lexical.FileSystem.Utility
                 try
                 {
                     // Create directory
-                    FileSystem.CreateDirectory(Path, this.Token.Concat(session.Token));
+                    FileSystem.CreateDirectory(Path, this.Token.Concat(session.Option));
                     //
                     DirectoriesCreated.Add(Path);
                 }
@@ -843,7 +843,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, this.srcToken.Concat(session.Token));
+                        IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, this.srcToken.Concat(session.Option));
                         // Src not found
                         if (e == null)
                         {
@@ -864,7 +864,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry dstEntry = dstFileSystem.GetEntry(Path, this.Token.Concat(session.Token));
+                        IFileSystemEntry dstEntry = dstFileSystem.GetEntry(Path, this.Token.Concat(session.Option));
                         if (dstEntry != null)
                         {
                             // Dst exists
@@ -911,7 +911,7 @@ namespace Lexical.FileSystem.Utility
                 // Test dst
                 try
                 {
-                    IFileSystemEntry dstEntry = dstFileSystem.GetEntry(dstPath, this.Token.Concat(session.Token));
+                    IFileSystemEntry dstEntry = dstFileSystem.GetEntry(dstPath, this.Token.Concat(session.Option));
                     
                     // Dst exists
                     if (dstEntry != null)
@@ -928,7 +928,7 @@ namespace Lexical.FileSystem.Utility
                         if (EffectivePolicy.HasFlag(Policy.DstSkip)) { CanRollback = true; moved = false; deletedPrev = false; return; }
 
                         // Delete prev
-                        if (EffectivePolicy.HasFlag(Policy.DstOverwrite)) { FileSystem.Delete(Path, recurse: false, this.Token.Concat(session.Token)); deletedPrev = true; CanRollback = false; }
+                        if (EffectivePolicy.HasFlag(Policy.DstOverwrite)) { FileSystem.Delete(Path, recurse: false, this.Token.Concat(session.Option)); deletedPrev = true; CanRollback = false; }
                     } else
                     {
                         CanRollback = true;
@@ -1017,7 +1017,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, srcToken.Concat(session.Token));
+                        IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, srcToken.Concat(session.Option));
                         // Src not found
                         if (e == null)
                         {
@@ -1040,7 +1040,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry dstEntry = dstFileSystem.GetEntry(Path, Token.Concat(session.Token));
+                        IFileSystemEntry dstEntry = dstFileSystem.GetEntry(Path, Token.Concat(session.Option));
                         prevExisted = dstEntry != null;
                         if (dstEntry != null)
                         {
@@ -1098,7 +1098,7 @@ namespace Lexical.FileSystem.Utility
                     FileMode createMode = session.Policy.HasFlag(Policy.DstOverwrite) ? FileMode.Create : FileMode.CreateNew;
 
                     // Write stream
-                    using (Stream s = dstFileSystem.Open(dstPath, createMode, FileAccess.Write, FileShare.ReadWrite, Token.Concat(session.Token)))
+                    using (Stream s = dstFileSystem.Open(dstPath, createMode, FileAccess.Write, FileShare.ReadWrite, Token.Concat(session.Option)))
                     {
                         // Created file
                         this.createdFile = !prevExisted;
@@ -1178,7 +1178,7 @@ namespace Lexical.FileSystem.Utility
                     if (token.IsCancellationRequested) return;
 
                     // Open file
-                    Stream s = SrcFileSystem.Open(SrcPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, srcToken.Concat(session.Token));
+                    Stream s = SrcFileSystem.Open(SrcPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, srcToken.Concat(session.Option));
                     try
                     {
                         int len = 0;
@@ -1272,7 +1272,7 @@ namespace Lexical.FileSystem.Utility
                 List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
 
                 // Src
-                IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, srcToken.Concat(session.Token));
+                IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, srcToken.Concat(session.Option));
                 // Src not found
                 if (e == null)
                 {
@@ -1301,7 +1301,7 @@ namespace Lexical.FileSystem.Utility
                         if (entry.IsDirectory())
                         {
                             // Browse children
-                            IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path, srcToken.Concat(session.Token));
+                            IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path, srcToken.Concat(session.Option));
                             // Assert children don't refer to the parent of the parent
                             foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
                             // Visit child
@@ -1310,7 +1310,7 @@ namespace Lexical.FileSystem.Utility
                             string _dstPath;
                             if (!pathConverter.ParentToChild(entry.Path, out _dstPath)) throw new Exception("Failed to convert path");
                             // Add op
-                            if (_dstPath != "") Ops.Add(new CreateDirectory(session, FileSystem, _dstPath, Token.Concat(session.Token), OpPolicy));
+                            if (_dstPath != "") Ops.Add(new CreateDirectory(session, FileSystem, _dstPath, Token.Concat(session.Option), OpPolicy));
                         }
 
                         // Process file
@@ -1320,7 +1320,7 @@ namespace Lexical.FileSystem.Utility
                             string _dstPath;
                             if (!pathConverter.ParentToChild(entry.Path, out _dstPath)) throw new Exception("Failed to convert path");
                             // Add op
-                            Ops.Add(new CopyFile(session, SrcFileSystem, entry.Path, FileSystem, _dstPath, srcToken.Concat(session.Token), Token.Concat(session.Token), OpPolicy));
+                            Ops.Add(new CopyFile(session, SrcFileSystem, entry.Path, FileSystem, _dstPath, srcToken.Concat(session.Option), Token.Concat(session.Option), OpPolicy));
                         }
                     }
                     catch (Exception error) when (SetError(error)) { }
@@ -1368,7 +1368,7 @@ namespace Lexical.FileSystem.Utility
                 try
                 {
                     List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
-                    IFileSystemEntry e = FileSystem.GetEntry(Path, Token.Concat(session.Token));
+                    IFileSystemEntry e = FileSystem.GetEntry(Path, Token.Concat(session.Option));
                     if (e == null) throw new FileNotFoundException(Path);
                     queue.Add(e);
                     while (queue.Count > 0)
@@ -1387,7 +1387,7 @@ namespace Lexical.FileSystem.Utility
                             if (entry.IsDirectory())
                             {
                                 // Browse children
-                                IFileSystemEntry[] children = FileSystem.Browse(entry.Path, Token.Concat(session.Token));
+                                IFileSystemEntry[] children = FileSystem.Browse(entry.Path, Token.Concat(session.Option));
                                 // Assert children don't refer to the parent of the parent
                                 foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
                                 // Visit children
@@ -1400,7 +1400,7 @@ namespace Lexical.FileSystem.Utility
                             else if (entry.IsFile())
                             {
                                 // Add op
-                                Ops.Add(new Delete(session, FileSystem, entry.Path, false, Token.Concat(session.Token), OpPolicy));
+                                Ops.Add(new Delete(session, FileSystem, entry.Path, false, Token.Concat(session.Option), OpPolicy));
                             }
                         }
                         catch (Exception error) when (SetError(error)) { }
@@ -1498,7 +1498,7 @@ namespace Lexical.FileSystem.Utility
                         if (entry.IsDirectory())
                         {
                             // Browse children
-                            IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path, srcToken.Concat(session.Token));
+                            IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path, srcToken.Concat(session.Option));
                             // Assert children don't refer to the parent of the parent
                             foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
                             // Visit child
@@ -1509,9 +1509,9 @@ namespace Lexical.FileSystem.Utility
                             // Add op
                             if (_dstPath != "")
                             {
-                                Ops.Add(new CreateDirectory(session, FileSystem, _dstPath, Token.Concat(session.Token), OpPolicy));
-                                deleteDirs.Add(new Delete(session, SrcFileSystem, entry.Path, false, srcToken.Concat(session.Token), OpPolicy|Policy.EstimateOnRun,
-                                    rollback: new CreateDirectory(session, SrcFileSystem, entry.Path, srcToken.Concat(session.Token), OpPolicy)));
+                                Ops.Add(new CreateDirectory(session, FileSystem, _dstPath, Token.Concat(session.Option), OpPolicy));
+                                deleteDirs.Add(new Delete(session, SrcFileSystem, entry.Path, false, srcToken.Concat(session.Option), OpPolicy|Policy.EstimateOnRun,
+                                    rollback: new CreateDirectory(session, SrcFileSystem, entry.Path, srcToken.Concat(session.Option), OpPolicy)));
                             }
                         }
 
@@ -1522,9 +1522,9 @@ namespace Lexical.FileSystem.Utility
                             string _dstPath;
                             if (!pathConverter.ParentToChild(entry.Path, out _dstPath)) throw new Exception("Failed to convert path");
                             // Add op
-                            Ops.Add(new CopyFile(session, SrcFileSystem, entry.Path, FileSystem, _dstPath, srcToken.Concat(session.Token), Token.Concat(session.Token), OpPolicy));
-                            Ops.Add(new Delete(session, SrcFileSystem, entry.Path, false, srcToken.Concat(session.Token), OpPolicy, 
-                                rollback: new CopyFile(session, FileSystem, _dstPath, SrcFileSystem, entry.Path, Token.Concat(session.Token), srcToken.Concat(session.Token), OpPolicy)));
+                            Ops.Add(new CopyFile(session, SrcFileSystem, entry.Path, FileSystem, _dstPath, srcToken.Concat(session.Option), Token.Concat(session.Option), OpPolicy));
+                            Ops.Add(new Delete(session, SrcFileSystem, entry.Path, false, srcToken.Concat(session.Option), OpPolicy, 
+                                rollback: new CopyFile(session, FileSystem, _dstPath, SrcFileSystem, entry.Path, Token.Concat(session.Option), srcToken.Concat(session.Option), OpPolicy)));
                         }
 
                     }
@@ -1564,15 +1564,15 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Interval of bytes interval to report progress on copying files.</summary>
             public long ProgressInterval { get; protected set; } = 524288L;
             /// <summary>(optional) Token</summary>
-            public IFileSystemToken Token { get; protected set; }
+            public IFileSystemToken Option { get; protected set; }
 
             /// <summary>Create session</summary>
-            public Session(Policy policy = Policy.Default, IBlockPool blockPool = default, CancellationTokenSource cancelSrc = default, IFileSystemToken token = default)
+            public Session(Policy policy = Policy.Default, IBlockPool blockPool = default, CancellationTokenSource cancelSrc = default, IFileSystemToken option = default)
             {
                 this.Policy = policy;
                 this.BlockPool = blockPool ?? new BlockPool();
                 this.CancelSrc = cancelSrc ?? new CancellationTokenSource();
-                this.Token = token;
+                this.Option = option;
             }
 
             /// <summary>Set new policy</summary>

@@ -210,17 +210,17 @@ namespace Lexical.FileSystem
         /// 
         /// <paramref name="fileShare"/> is ignored.
         /// 
-        /// Authentication header can be placed in <paramref name="token"/> as instance of <see cref="AuthenticationHeaderValue"/> wrapped in (for example) <see cref="FileSystemToken"/> or <see cref="FileSystemTokenList"/>.
+        /// Authentication header can be placed in <paramref name="option"/> as instance of <see cref="AuthenticationHeaderValue"/> wrapped in (for example) <see cref="FileSystemToken"/> or <see cref="FileSystemTokenList"/>.
         /// 
-        /// Other <see cref="HttpHeaders"/> can also placed in <paramref name="token"/>.
+        /// Other <see cref="HttpHeaders"/> can also placed in <paramref name="option"/>.
         /// 
-        /// <see cref="CancellationToken"/> can be placed in <paramref name="token"/>.
+        /// <see cref="CancellationToken"/> can be placed in <paramref name="option"/>.
         /// </summary>
         /// <param name="uri">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
-        /// <param name="token">(optional) Credentials</param>
+        /// <param name="option">(optional) Credentials</param>
         /// <returns>open file stream</returns>
         /// <exception cref="FileSystemException">On unexpected IO error</exception>
         /// <exception cref="ArgumentNullException"><paramref name="uri"/> is null</exception>
@@ -236,7 +236,7 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         /// <exception cref="OperationCanceledException">operation canceled</exception>
-        public Stream Open(string uri, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken token = null)
+        public Stream Open(string uri, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -244,12 +244,12 @@ namespace Lexical.FileSystem
             if (_httpClient == null || IsDisposing) throw new ObjectDisposedException(nameof(HttpFileSystem));
 
             // Append subpath
-            string _subpath = token.SubPath() ?? this.options.SubPath;
+            string _subpath = option.SubPath() ?? this.options.SubPath;
             if (_subpath != null) uri = _subpath + uri;
 
             // Cancel token
             CancellationToken cancel = default;
-            token.TryGet(uri, out cancel);
+            option.TryGet(uri, out cancel);
 
             try
             {
@@ -262,10 +262,10 @@ namespace Lexical.FileSystem
                     // Request object
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri);
                     // Read token
-                    ReadTokenToHeaders(uri, token, request.Headers);
+                    ReadTokenToHeaders(uri, option, request.Headers);
                     // Read authentication token
                     AuthenticationHeaderValue authenticationHeader;
-                    if (this.token.TryGet(uri, out authenticationHeader) || token.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
+                    if (this.token.TryGet(uri, out authenticationHeader) || option.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
                     // Start GET
                     Task<HttpResponseMessage> t = _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
@@ -291,7 +291,7 @@ namespace Lexical.FileSystem
                     // Request
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, uri);
                     // Read token
-                    ReadTokenToHeaders(uri, token, request.Headers);
+                    ReadTokenToHeaders(uri, option, request.Headers);
 
                     // Content
                     FileSystemHttpContent httpContent = new FileSystemHttpContent();
@@ -436,15 +436,15 @@ namespace Lexical.FileSystem
         /// 
         /// <paramref name="recurse"/> is ignored..
         /// 
-        /// Authentication header can be placed in <paramref name="token"/> as instance of <see cref="AuthenticationHeaderValue"/> wrapped in (for example) <see cref="FileSystemToken"/> or <see cref="FileSystemTokenList"/>.
+        /// Authentication header can be placed in <paramref name="option"/> as instance of <see cref="AuthenticationHeaderValue"/> wrapped in (for example) <see cref="FileSystemToken"/> or <see cref="FileSystemTokenList"/>.
         /// 
-        /// Other <see cref="HttpHeaders"/> can also placed in <paramref name="token"/>.
+        /// Other <see cref="HttpHeaders"/> can also placed in <paramref name="option"/>.
         /// 
-        /// <see cref="CancellationToken"/> can be placed in <paramref name="token"/>.
+        /// <see cref="CancellationToken"/> can be placed in <paramref name="option"/>.
         /// </summary>
         /// <param name="uri">path to a file or directory</param>
         /// <param name="recurse">value is ignored</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error, or if <paramref name="uri"/> refered to a directory that wasn't empty and <paramref name="recurse"/> is false, or trying to delete root when not allowed</exception>
         /// <exception cref="ArgumentNullException"><paramref name="uri"/> is null</exception>
@@ -454,7 +454,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="uri"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Delete(string uri, bool recurse = false, IFileSystemToken token = null)
+        public void Delete(string uri, bool recurse = false, IFileSystemToken option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -463,12 +463,12 @@ namespace Lexical.FileSystem
             // Assert allowed
             if (!options.CanDelete) throw new FileSystemExceptionOptionNotSupported(this, uri, options, typeof(IFileSystemOptionOpen));
             // Append subpath
-            string _subpath = token.SubPath() ?? this.options.SubPath;
+            string _subpath = option.SubPath() ?? this.options.SubPath;
             if (_subpath != null) uri = _subpath + uri;
 
             // Cancel token
             CancellationToken cancel = default;
-            token.TryGet(uri, out cancel);
+            option.TryGet(uri, out cancel);
 
             try
             {
@@ -476,10 +476,10 @@ namespace Lexical.FileSystem
                 using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, uri))
                 {
                     // Read token
-                    ReadTokenToHeaders(uri, token, request.Headers);
+                    ReadTokenToHeaders(uri, option, request.Headers);
                     // Read authentication token
                     AuthenticationHeaderValue authenticationHeader;
-                    if (this.token.TryGet(uri, out authenticationHeader) || token.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
+                    if (this.token.TryGet(uri, out authenticationHeader) || option.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
                     // Start DELETE
                     Task<HttpResponseMessage> t = _httpClient.SendAsync(request);
@@ -507,9 +507,9 @@ namespace Lexical.FileSystem
         /// Read <paramref name="uri"/> and parse anchors for file references.
         /// </summary>
         /// <param name="uri"></param>
-        /// <param name="token"></param>
+        /// <param name="option"></param>
         /// <returns>child links</returns>
-        public IFileSystemEntry[] Browse(string uri, IFileSystemToken token = null)
+        public IFileSystemEntry[] Browse(string uri, IFileSystemToken option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -520,7 +520,7 @@ namespace Lexical.FileSystem
             // Path converter
             IPathConverter pathConverter;
             // Append subpath
-            string _subpath = token.SubPath() ?? this.options.SubPath;
+            string _subpath = option.SubPath() ?? this.options.SubPath;
             if (_subpath != null)
             {
                 uri = _subpath + uri;
@@ -532,7 +532,7 @@ namespace Lexical.FileSystem
 
             // Cancel token
             CancellationToken cancel = default;
-            token.TryGet(uri, out cancel);
+            option.TryGet(uri, out cancel);
 
             try
             {
@@ -540,10 +540,10 @@ namespace Lexical.FileSystem
                 using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri))
                 {
                     // Read token
-                    ReadTokenToHeaders(uri, token, request.Headers);
+                    ReadTokenToHeaders(uri, option, request.Headers);
                     // Read authentication token
                     AuthenticationHeaderValue authenticationHeader;
-                    if (this.token.TryGet(uri, out authenticationHeader) || token.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
+                    if (this.token.TryGet(uri, out authenticationHeader) || option.TryGet(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
                     // Start GET
                     Task<HttpResponseMessage> t = _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
@@ -585,9 +585,9 @@ namespace Lexical.FileSystem
         /// Estimates that <paramref name="uri"/> refers to a directory if path ends with '/'.
         /// </summary>
         /// <param name="uri"></param>
-        /// <param name="token"></param>
+        /// <param name="option"></param>
         /// <returns></returns>
-        public IFileSystemEntry GetEntry(string uri, IFileSystemToken token = null)
+        public IFileSystemEntry GetEntry(string uri, IFileSystemToken option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -596,13 +596,13 @@ namespace Lexical.FileSystem
             // Assert allowed
             if (!options.CanBrowse) throw new FileSystemExceptionOptionNotSupported(this, uri, options, typeof(IFileSystemOptionOpen));
             // Get subpath
-            string _subpath = token.SubPath() ?? this.options.SubPath;
+            string _subpath = option.SubPath() ?? this.options.SubPath;
             // Append subpath, if needed
             string uri_ = _subpath != null ? _subpath + uri : uri;
 
             // Cancel token
             CancellationToken cancel = default;
-            token.TryGet(uri_, out cancel);
+            option.TryGet(uri_, out cancel);
 
             try
             {
@@ -610,10 +610,10 @@ namespace Lexical.FileSystem
                 using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri_))
                 {
                     // Read token
-                    ReadTokenToHeaders(uri_, token, request.Headers);
+                    ReadTokenToHeaders(uri_, option, request.Headers);
                     // Read authentication token
                     AuthenticationHeaderValue authenticationHeader;
-                    if (this.token.TryGet(uri_, out authenticationHeader) || token.TryGet(uri_, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
+                    if (this.token.TryGet(uri_, out authenticationHeader) || option.TryGet(uri_, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
                     // Start GET
                     Task<HttpResponseMessage> t = _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);

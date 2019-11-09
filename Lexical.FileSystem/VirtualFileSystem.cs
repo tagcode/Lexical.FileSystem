@@ -110,7 +110,7 @@ namespace Lexical.FileSystem
 
         /// <inheritdoc/>
         /// <exception cref="DirectoryNotFoundException">If <paramref name="path"/> goes beyond root with ".."</exception>
-        public IFileSystemEntry[] Browse(string path, IFileSystemToken token = null)
+        public IFileSystemEntry[] Browse(string path, IFileSystemToken option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -147,7 +147,7 @@ namespace Lexical.FileSystem
             // Return vfs contents
             if (mountpoints.Count == 0 && vfsEntries.Count > 0) return vfsEntries.ToArray();
             // Return already decorated contents
-            if (mountpoints.Count == 1 && vfsEntries.Count == 0) return mountpoints[0].Browse(path, token);
+            if (mountpoints.Count == 1 && vfsEntries.Count == 0) return mountpoints[0].Browse(path, option);
 
             // Create union of mountpoints and final directory. Unify overlapping content if same name. Priority: vfs, mountpoints
             // Estimation of entry count
@@ -160,7 +160,7 @@ namespace Lexical.FileSystem
                 if (!fs.CanBrowse()) continue;
                 try
                 {
-                    IFileSystemEntry[] _entries = fs.Browse(path, token);
+                    IFileSystemEntry[] _entries = fs.Browse(path, option);
                     if (_entries.Length == 0) continue;
                     entryArrays.Add(_entries);
                     entryCount += _entries.Length;
@@ -201,7 +201,7 @@ namespace Lexical.FileSystem
         }
 
         /// <inheritdoc/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemToken token = null)
+        public IFileSystemEntry GetEntry(string path, IFileSystemToken option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -237,7 +237,7 @@ namespace Lexical.FileSystem
                 if (!fs.CanGetEntry()) continue;
                 try
                 {
-                    IFileSystemEntry e = fs.GetEntry(path, token);
+                    IFileSystemEntry e = fs.GetEntry(path, option);
                     if (e != null) entry = entry != null ? new FileSystemEntryPairDecoration(entry, e) : e;
                 }
                 catch (NotSupportedException) { }
@@ -683,9 +683,9 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="state"></param>
         /// <param name="eventDispatcher">(optional) </param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns></returns>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken token = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemToken option = null)
         {
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
@@ -761,7 +761,7 @@ namespace Lexical.FileSystem
                             try
                             {
                                 // Try Observe
-                                IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component), eventDispatcher, token.Concat(component.Token));
+                                IDisposable disposable = component.FileSystem.Observe(childPath, adapter, new ObserverDecorator.StateInfo(component.Path, component), eventDispatcher, option.Concat(component.Token));
                                 // Attach disposable
                                 ((IDisposeList)adapter).AddDisposable(disposable);
                             }
@@ -966,11 +966,11 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="filesystem"></param>
         /// <param name="mountOption">(optional)</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public VirtualFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null, IFileSystemToken token = null)
-            => Mount(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, token);
+        public VirtualFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null, IFileSystemToken option = null)
+            => Mount(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, option);
 
         /// <summary>
         /// Mount <paramref name="filesystems"/> at <paramref name="path"/> in the parent filesystem.
@@ -983,7 +983,7 @@ namespace Lexical.FileSystem
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         public VirtualFileSystem Mount(string path, params (IFileSystem filesystem, IFileSystemOption mountOption)[] filesystems)
-            => Mount(path, filesystems.Select(fs=>new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), token: null);
+            => Mount(path, filesystems.Select(fs=>new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), option: null);
 
         /// <summary>
         /// Mount <paramref name="mounts"/> at <paramref name="path"/> in the parent filesystem.
@@ -993,11 +993,11 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path">path to the directory where to mount <paramref name="mounts"/></param>
         /// <param name="mounts">(optional)filesystems and options</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         /// <exception cref="DirectoryNotFoundException">If <paramref name="path"/> refers beyond root with ".."</exception>
-        public VirtualFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemToken token = null)
+        public VirtualFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemToken option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1091,10 +1091,10 @@ namespace Lexical.FileSystem
         /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
         /// </summary>
         /// <param name="path"></param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public VirtualFileSystem Unmount(string path, IFileSystemToken token = null)
+        public VirtualFileSystem Unmount(string path, IFileSystemToken option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1297,15 +1297,15 @@ namespace Lexical.FileSystem
             if (events.Count > 0) DispatchEvents(ref events);
         }
 
-        IFileSystem IFileSystemMount.Mount(string path, FileSystemAssignment[] mounts, IFileSystemToken token) => Mount(path, mounts, token);
-        IFileSystem IFileSystemMount.Unmount(string path, IFileSystemToken token) => Unmount(path, token);
+        IFileSystem IFileSystemMount.Mount(string path, FileSystemAssignment[] mounts, IFileSystemToken option) => Mount(path, mounts, option);
+        IFileSystem IFileSystemMount.Unmount(string path, IFileSystemToken option) => Unmount(path, option);
 
         /// <summary>
         /// List all mounts
         /// </summary>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns></returns>
-        public IFileSystemEntryMount[] ListMountPoints(IFileSystemToken token)
+        public IFileSystemEntryMount[] ListMountPoints(IFileSystemToken option)
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
@@ -1328,7 +1328,7 @@ namespace Lexical.FileSystem
         /// <param name="fileMode">determines whether to open or to create the file</param>
         /// <param name="fileAccess">how to access the file, read, write or read and write</param>
         /// <param name="fileShare">how the file will be shared by processes</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>open file stream</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -1342,7 +1342,7 @@ namespace Lexical.FileSystem
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken token = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemToken option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1371,21 +1371,21 @@ namespace Lexical.FileSystem
             {
                 var fs = mountpoints[i];
                 // Get fs option
-                var option = fs.AsOption<IFileSystemOptionOpen>();
+                var fs_option_open = fs.AsOption<IFileSystemOptionOpen>();
                 // No feature
-                if (option == null) continue;
+                if (fs_option_open == null) continue;
                 // fs cannot open
-                if (!option.CanOpen) continue;
+                if (!fs_option_open.CanOpen) continue;
                 // fs cannot read
-                if (!option.CanRead && (fileAccess & FileAccess.Read) != 0) continue;
+                if (!fs_option_open.CanRead && (fileAccess & FileAccess.Read) != 0) continue;
                 // fs cannot write
-                if (!option.CanWrite && (fileAccess & FileAccess.Write) != 0) continue;
+                if (!fs_option_open.CanWrite && (fileAccess & FileAccess.Write) != 0) continue;
                 // fs cannot create
-                if (!option.CanCreateFile && (fileMode & (FileMode.Append | FileMode.Create | FileMode.CreateNew | FileMode.OpenOrCreate)) != 0) continue;
+                if (!fs_option_open.CanCreateFile && (fileMode & (FileMode.Append | FileMode.Create | FileMode.CreateNew | FileMode.OpenOrCreate)) != 0) continue;
 
                 try
                 {
-                    return fs.Open(path, fileMode, fileAccess, fileShare, token.Concat(token));
+                    return fs.Open(path, fileMode, fileAccess, fileShare, option.Concat(fs_option_open));
                 }
                 catch (NotSupportedException) { }
                 catch (FileNotFoundException) { supported = true; }
@@ -1401,7 +1401,7 @@ namespace Lexical.FileSystem
         /// <paramref name="path"/> should end with directory separator character '/'.
         /// </summary>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>true if directory exists after the method, false if directory doesn't exist</returns>
         /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -1413,7 +1413,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void CreateDirectory(string path, IFileSystemToken token = null)
+        public void CreateDirectory(string path, IFileSystemToken option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1444,7 +1444,7 @@ namespace Lexical.FileSystem
                 if (!fs.CanCreateDirectory()) continue;
                 try
                 {
-                    fs.CreateDirectory(path, token);
+                    fs.CreateDirectory(path, option);
                     return;
                 }
                 catch (NotSupportedException) { }
@@ -1464,7 +1464,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path">path to a file or directory</param>
         /// <param name="recurse">if path refers to directory, recurse into sub directories</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException">The specified path is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error, or if <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recurse"/> is false, or trying to delete root when not allowed</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -1475,7 +1475,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Delete(string path, bool recurse = false, IFileSystemToken token = null)
+        public void Delete(string path, bool recurse = false, IFileSystemToken option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1509,7 +1509,7 @@ namespace Lexical.FileSystem
 
                 try
                 {
-                    fs.Delete(path, recurse, token);
+                    fs.Delete(path, recurse, option);
                     // We got something
                     return; 
                 }
@@ -1526,7 +1526,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="path"></param>
         /// <param name="fileAttribute"></param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException"><paramref name="path"/> is not found</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="path"/> is invalid. For example, it's on an unmapped drive. Only thrown when setting the property value.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
@@ -1538,7 +1538,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        public void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemToken token = null)
+        public void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemToken option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1571,7 +1571,7 @@ namespace Lexical.FileSystem
 
                 try
                 {
-                    fs.SetFileAttribute(path, fileAttribute, token);
+                    fs.SetFileAttribute(path, fileAttribute, option);
                     // We got something
                     return;
                 }
@@ -1592,7 +1592,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="srcPath">old path of a file or directory</param>
         /// <param name="dstPath">new path of a file or directory</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="FileNotFoundException">The specified <paramref name="srcPath"/> is invalid.</exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -1603,7 +1603,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string srcPath, string dstPath, IFileSystemToken token = null)
+        public void Move(string srcPath, string dstPath, IFileSystemToken option = null)
         {
             // Assert arguments
             if (srcPath == null) throw new ArgumentNullException(nameof(srcPath));
@@ -1653,7 +1653,7 @@ namespace Lexical.FileSystem
                 if (!component.Path.ParentToChild(srcPath, out componentSrcPath)) throw new FileNotFoundException(srcPath);
                 if (!component.Path.ParentToChild(dstPath, out componentDstPath)) throw new FileNotFoundException(dstPath);
                 // Move
-                component.FileSystem.Move(componentSrcPath, componentDstPath, token.Concat(component.Token));
+                component.FileSystem.Move(componentSrcPath, componentDstPath, option.Concat(component.Token));
                 // Done
                 return;
             }
@@ -1670,7 +1670,7 @@ namespace Lexical.FileSystem
                 {
                     try
                     {
-                        if (component.FileSystem.Exists(srcComponentPath, token.Concat(component.Token))) srcComponent = component;
+                        if (component.FileSystem.Exists(srcComponentPath, option.Concat(component.Token))) srcComponent = component;
                     }
                     catch (NotSupportedException)
                     {
@@ -1685,7 +1685,7 @@ namespace Lexical.FileSystem
                 {
                     try
                     {
-                        IFileSystemEntry e = component.FileSystem.GetEntry(dstParent, token.Concat(component.Token));
+                        IFileSystemEntry e = component.FileSystem.GetEntry(dstParent, option.Concat(component.Token));
                         if (e != null && e.IsDirectory()) dstComponent = component;
                     }
                     catch (NotSupportedException)
@@ -1699,9 +1699,9 @@ namespace Lexical.FileSystem
             if (srcComponent != null && dstComponent != null)
             {
                 // Move locally
-                if (srcComponent.FileSystem.Equals(dstComponent.FileSystem) || dstComponent.FileSystem.Equals(srcComponent.FileSystem)) srcComponent.FileSystem.Move(srcComponentPath, dstComponentPath, token.Concat(srcComponent.Token));
+                if (srcComponent.FileSystem.Equals(dstComponent.FileSystem) || dstComponent.FileSystem.Equals(srcComponent.FileSystem)) srcComponent.FileSystem.Move(srcComponentPath, dstComponentPath, option.Concat(srcComponent.Token));
                 // Copy+Delete
-                else srcComponent.FileSystem.Transfer(srcComponentPath, dstComponent.FileSystem, dstComponentPath, token.Concat(srcComponent.Token), token.Concat(dstComponent.Token));
+                else srcComponent.FileSystem.Transfer(srcComponentPath, dstComponent.FileSystem, dstComponentPath, option.Concat(srcComponent.Token), option.Concat(dstComponent.Token));
                 return;
             }
 
@@ -1718,9 +1718,9 @@ namespace Lexical.FileSystem
                 try
                 {
                     // Move locally
-                    if (sc.FileSystem.Equals(dc.FileSystem) || dc.FileSystem.Equals(sc.FileSystem)) sc.FileSystem.Move(srcComponentPath, dstComponentPath, token.Concat(sc.Token));
+                    if (sc.FileSystem.Equals(dc.FileSystem) || dc.FileSystem.Equals(sc.FileSystem)) sc.FileSystem.Move(srcComponentPath, dstComponentPath, option.Concat(sc.Token));
                     // Copy+Delete
-                    else sc.FileSystem.Transfer(srcComponentPath, dc.FileSystem, dstComponentPath, token.Concat(sc.Token), token.Concat(dc.Token));
+                    else sc.FileSystem.Transfer(srcComponentPath, dc.FileSystem, dstComponentPath, option.Concat(sc.Token), option.Concat(dc.Token));
                     return;
                 }
                 catch (FileNotFoundException) { supported = true; }

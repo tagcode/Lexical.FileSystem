@@ -41,13 +41,13 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="path"></param>
         /// <param name="depth">maximum visit depth</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <exception cref="Exception">any exception that GetEntry or Browse can throw</exception>
         /// <exception cref="IOException">If Browse returns an entry whose path is not under parent entry's path</exception>
-        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, IFileSystemToken token = null)
+        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, IFileSystemToken option = null)
         {
             List<Line> queue = new List<Line>();
-            IFileSystemEntry entry = filesystem.GetEntry(path, token);
+            IFileSystemEntry entry = filesystem.GetEntry(path, option);
             if (entry == null) yield break;
             queue.Add( new Line(entry, 0, 0UL) );
             while (queue.Count > 0)
@@ -64,7 +64,7 @@ namespace Lexical.FileSystem
                     try
                     {
                         // Browse children
-                        IFileSystemEntry[] children = filesystem.Browse(line.Entry.Path, token);
+                        IFileSystemEntry[] children = filesystem.Browse(line.Entry.Path, option);
                         // Assert children don't refer to the parent of the parent
                         foreach (IFileSystemEntry child in children) if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
                         // Bitmask when this level continues

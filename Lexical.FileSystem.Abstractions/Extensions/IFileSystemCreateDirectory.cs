@@ -31,7 +31,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/dir2"</param>
-        /// <param name="token">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
+        /// <param name="option">(optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.</param>
         /// <returns>true if directory exists after the method, false if directory doesn't exist</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
@@ -43,9 +43,9 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void CreateDirectory(this IFileSystem filesystem, string path, IFileSystemToken token = null)
+        public static void CreateDirectory(this IFileSystem filesystem, string path, IFileSystemToken option = null)
         {
-            if (filesystem is IFileSystemCreateDirectory directoryConstructor) directoryConstructor.CreateDirectory(path, token);
+            if (filesystem is IFileSystemCreateDirectory directoryConstructor) directoryConstructor.CreateDirectory(path, option);
             else throw new NotSupportedException(nameof(CreateDirectory));
         }
     }
