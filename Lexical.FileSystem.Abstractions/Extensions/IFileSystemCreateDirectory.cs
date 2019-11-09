@@ -20,8 +20,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has CreateDirectory capability</returns>
-        public static bool CanCreateDirectory(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionCreateDirectory>() is IFileSystemOptionCreateDirectory directoryConstructor ? directoryConstructor.CanCreateDirectory : defaultValue;
+        public static bool CanCreateDirectory(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<ICreateDirectoryOption>() is ICreateDirectoryOption directoryConstructor ? directoryConstructor.CanCreateDirectory : defaultValue;
 
         /// <summary>
         /// Create a directory, or multiple cascading directories.
@@ -44,34 +44,34 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void CreateDirectory(this IFileSystem filesystem, string path, IFileSystemOption option = null)
+        public static void CreateDirectory(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemCreateDirectory directoryConstructor) directoryConstructor.CreateDirectory(path, option);
             else throw new NotSupportedException(nameof(CreateDirectory));
         }
     }
 
-    /// <summary><see cref="IFileSystemOptionCreateDirectory"/> operations.</summary>
-    public class FileSystemOptionOperationCreateDirectory : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="ICreateDirectoryOption"/> operations.</summary>
+    public class CreateDirectoryOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionCreateDirectory);
+        public Type OptionType => typeof(ICreateDirectoryOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionCreateDirectory c ? o is FileSystemOptionCreateDirectory ? /*already flattened*/o : /*new instance*/new FileSystemOptionCreateDirectory(c.CanCreateDirectory) : throw new InvalidCastException($"{typeof(IFileSystemOptionCreateDirectory)} expected.");
+        public IOption Flatten(IOption o) => o is ICreateDirectoryOption c ? o is CreateDirectoryOption ? /*already flattened*/o : /*new instance*/new CreateDirectoryOption(c.CanCreateDirectory) : throw new InvalidCastException($"{typeof(ICreateDirectoryOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionCreateDirectory c1 && o2 is IFileSystemOptionCreateDirectory c2 ? new FileSystemOptionCreateDirectory(c1.CanCreateDirectory && c2.CanCreateDirectory) : throw new InvalidCastException($"{typeof(IFileSystemOptionCreateDirectory)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is ICreateDirectoryOption c1 && o2 is ICreateDirectoryOption c2 ? new CreateDirectoryOption(c1.CanCreateDirectory && c2.CanCreateDirectory) : throw new InvalidCastException($"{typeof(ICreateDirectoryOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionCreateDirectory c1 && o2 is IFileSystemOptionCreateDirectory c2 ? new FileSystemOptionCreateDirectory(c1.CanCreateDirectory || c2.CanCreateDirectory) : throw new InvalidCastException($"{typeof(IFileSystemOptionCreateDirectory)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is ICreateDirectoryOption c1 && o2 is ICreateDirectoryOption c2 ? new CreateDirectoryOption(c1.CanCreateDirectory || c2.CanCreateDirectory) : throw new InvalidCastException($"{typeof(ICreateDirectoryOption)} expected.");
     }
 
     /// <summary>File system option for creating directories.</summary>
-    public class FileSystemOptionCreateDirectory : IFileSystemOptionCreateDirectory
+    public class CreateDirectoryOption : ICreateDirectoryOption
     {
         /// <summary>Has CreateDirectory capability.</summary>
         public bool CanCreateDirectory { get; protected set; }
 
         /// <summary>Create file system option for creating directories.</summary>
-        public FileSystemOptionCreateDirectory(bool canCreateDirectory)
+        public CreateDirectoryOption(bool canCreateDirectory)
         {
             CanCreateDirectory = canCreateDirectory;
         }

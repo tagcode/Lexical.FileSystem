@@ -24,7 +24,7 @@ namespace Lexical.FileSystem
     /// If file watchers have been created, and file system is disposed, then watchers will be disposed also. 
     /// <see cref="IObserver{T}.OnCompleted"/> event is forwarded to watchers.
     /// </summary>
-    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemOptionPath
+    public class FileSystem : FileSystemBase, IFileSystem, IFileSystemBrowse, IFileSystemOpen, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemObserve, IPathInfo
     {
         /// <summary>
         /// Regex pattern that extracts features and classifies paths.
@@ -149,7 +149,7 @@ namespace Lexical.FileSystem
         public bool CanSetFileAttribute => true;
 
         /// <summary>Root "" entry</summary>
-        protected IFileSystemEntry rootEntry;
+        protected IEntry rootEntry;
 
         /// <summary>
         /// Create an access to local filesystem.
@@ -173,7 +173,7 @@ namespace Lexical.FileSystem
             if (isWindows) this.CaseSensitivity = FileSystemCaseSensitivity.Inconsistent; /*Smb drives may have sensitive names*/
             if (isLinux || isOsx) this.CaseSensitivity = FileSystemCaseSensitivity.Inconsistent; /*Smb drives may have insensitive names*/
 
-            rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, AbsolutePath);
+            rootEntry = new DirectoryEntry(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, AbsolutePath);
         }
 
         /// <summary>
@@ -206,7 +206,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             string concatenatedPath = System.IO.Path.Combine(AbsolutePath, path);
             string absolutePath = System.IO.Path.GetFullPath(concatenatedPath);
@@ -231,7 +231,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public void CreateDirectory(string path, IFileSystemOption option = null)
+        public void CreateDirectory(string path, IOption option = null)
         {
             string concatenatedPath = System.IO.Path.Combine(AbsolutePath, path);
             string absolutePath = System.IO.Path.GetFullPath(concatenatedPath);
@@ -345,7 +345,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public IFileSystemEntry[] Browse(string path, IFileSystemOption option = null)
+        public IEntry[] Browse(string path, IOption option = null)
         {
             // Return OS-root, return drive letters.
             if (path == "" && Path == "") return BrowseRoot();
@@ -361,17 +361,17 @@ namespace Lexical.FileSystem
             {
                 string prefix = path.Length > 0 ? (path.EndsWith("/", StringComparison.InvariantCulture) ? path : path + "/") : null;
                 if (IsOsRoot && path == "" || path == "/") prefix = "/";
-                StructList24<IFileSystemEntry> list = new StructList24<IFileSystemEntry>();
+                StructList24<IEntry> list = new StructList24<IEntry>();
                 foreach (FileSystemInfo fsi in dir.EnumerateFileSystemInfos())
                 {
                     if (fsi is DirectoryInfo di)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory.WithAttributes(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), di.Attributes, di.FullName);
+                        IEntry e = new DirectoryEntry.WithAttributes(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), di.Attributes, di.FullName);
                         list.Add(e);
                     }
                     else if (fsi is FileInfo _fi)
                     {
-                        IFileSystemEntry e = new FileSystemEntryFile.WithAttributes(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length, _fi.Attributes, _fi.FullName);
+                        IEntry e = new FileEntry.WithAttributes(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length, _fi.Attributes, _fi.FullName);
                         list.Add(e);
                     }
                 }
@@ -396,7 +396,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemOption option = null)
+        public IEntry GetEntry(string path, IOption option = null)
         {
             // Return OS-root, return drive letters.
             if (path == "") return rootEntry;
@@ -407,10 +407,10 @@ namespace Lexical.FileSystem
             if (path == null) return null;
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists) return new FileSystemEntryDirectory.WithAttributes(this, path + "/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), dir.Attributes, dir.FullName);
+            if (dir.Exists) return new DirectoryEntry.WithAttributes(this, path + "/", dir.Name, dir.LastWriteTimeUtcUnchecked(), dir.LastAccessTimeUtcUnchecked(), dir.Attributes, dir.FullName);
 
             FileInfo fi = new FileInfo(absolutePath);
-            if (fi.Exists) return new FileSystemEntryFile.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes, fi.FullName);
+            if (fi.Exists) return new FileEntry.WithAttributes(this, path, fi.Name, fi.LastWriteTimeUtcUnchecked(), fi.LastAccessTimeUtcUnchecked(), fi.Length, fi.Attributes, fi.FullName);
 
             return null;
         }
@@ -419,7 +419,7 @@ namespace Lexical.FileSystem
         /// Browse root drive letters
         /// </summary>
         /// <returns></returns>
-        protected IFileSystemEntry[] BrowseRoot()
+        protected IEntry[] BrowseRoot()
         {
             DriveInfo[] driveInfos = DriveInfo.GetDrives();
 
@@ -433,11 +433,11 @@ namespace Lexical.FileSystem
                 DriveInfo rootInfo = null;
                 foreach (DriveInfo _di in driveInfos) if (_di.Name == "/") { rootInfo = _di; break; }
                 DirectoryInfo di = new DirectoryInfo("/");
-                IFileSystemEntry e = new FileSystemEntryDrive(this, "/", "", di.LastWriteTimeUtcUnchecked(), DateTimeOffset.MinValue, DriveType.Fixed, rootInfo.AvailableFreeSpace, rootInfo.TotalSize, rootInfo.VolumeLabel, rootInfo.DriveFormat, true, di.FullName);
-                return new IFileSystemEntry[] { e };
+                IEntry e = new DriveEntry(this, "/", "", di.LastWriteTimeUtcUnchecked(), DateTimeOffset.MinValue, DriveType.Fixed, rootInfo.AvailableFreeSpace, rootInfo.TotalSize, rootInfo.VolumeLabel, rootInfo.DriveFormat, true, di.FullName);
+                return new IEntry[] { e };
             }
 
-            List<IFileSystemEntry> list = new List<IFileSystemEntry>(matches.Length);
+            List<IEntry> list = new List<IEntry>(matches.Length);
 
             foreach ((DriveInfo driveInfo, Match m) in matches)
             {
@@ -450,7 +450,7 @@ namespace Lexical.FileSystem
                 DirectoryInfo di = driveInfo.RootDirectory;
                 path = path + "/";
 
-                IFileSystemEntry e = new FileSystemEntryDrive(this, path, name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), driveInfo.DriveType, driveInfo.AvailableFreeSpace, driveInfo.TotalSize, driveInfo.VolumeLabel, driveInfo.DriveFormat, driveInfo.IsReady, di.FullName);
+                IEntry e = new DriveEntry(this, path, name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), driveInfo.DriveType, driveInfo.AvailableFreeSpace, driveInfo.TotalSize, driveInfo.VolumeLabel, driveInfo.DriveFormat, driveInfo.IsReady, di.FullName);
                 list.Add(e);
             }
 
@@ -475,7 +475,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refered to a directory that wasn't empty and <paramref name="recursive"/> is false, or <paramref name="path"/> refers to non-file device</exception>
-        public void Delete(string path, bool recursive = false, IFileSystemOption option = null)
+        public void Delete(string path, bool recursive = false, IOption option = null)
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
@@ -507,7 +507,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        public void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemOption option = null)
+        public void SetFileAttribute(string path, FileAttributes fileAttribute, IOption option = null)
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
@@ -538,7 +538,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
-        public void Move(string oldPath, string newPath, IFileSystemOption option = null)
+        public void Move(string oldPath, string newPath, IOption option = null)
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string oldConcatenatedPath, oldAbsolutePath, newConcatenatedPath, newAbsolutePath;
@@ -572,7 +572,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher = default, IOption option = null)
         {
             // Parse filter
             GlobPatternInfo patternInfo = new GlobPatternInfo(filter);
@@ -591,8 +591,8 @@ namespace Lexical.FileSystem
 
                 // Create observer object
                 FileObserver handle = new FileObserver(this, path, observer, state, eventDispatcher, AbsolutePath, absolutePath);
-                // Send IFileSystemEventStart
-                observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow) );
+                // Send IStartEvent
+                observer.OnNext( new StartEvent(handle, DateTimeOffset.UtcNow) );
                 // Return handle
                 return handle;
             }
@@ -606,8 +606,8 @@ namespace Lexical.FileSystem
 
                 // Create observer object
                 PatternObserver handle = new PatternObserver(this, observer, state, eventDispatcher, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Suffix);
-                // Send IFileSystemEventStart
-                observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
+                // Send IStartEvent
+                observer.OnNext(new StartEvent(handle, DateTimeOffset.UtcNow));
                 // Return handle
                 return handle;
             }
@@ -653,7 +653,7 @@ namespace Lexical.FileSystem
             /// <param name="filesystemRootAbsolutePath">Absolute path to filesystem root.</param>
             /// <param name="absolutePath">Absolute path to the file</param>
             /// <exception cref="DirectoryNotFoundException">If directory in <paramref name="filesystemRootAbsolutePath"/> is not found.</exception>
-            public FileObserver(IFileSystem filesystem, string relativePath, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, string filesystemRootAbsolutePath, string absolutePath) : base(filesystem, relativePath, observer, state, eventDispatcher)
+            public FileObserver(IFileSystem filesystem, string relativePath, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher, string filesystemRootAbsolutePath, string absolutePath) : base(filesystem, relativePath, observer, state, eventDispatcher)
             {
                 this.FileSystemRootAbsolutePath = filesystemRootAbsolutePath ?? throw new ArgumentNullException(nameof(filesystemRootAbsolutePath));
                 this.AbsolutePath = absolutePath ?? throw new ArgumentNullException(nameof(absolutePath));
@@ -682,14 +682,14 @@ namespace Lexical.FileSystem
                 // No observer
                 if (_observer == null) return;
                 // Get dispatcher
-                var _dispatcher = Dispatcher ?? FileSystemEventDispatcher.Instance;
+                var _dispatcher = Dispatcher ?? EventDispatcher.Instance;
 
                 // Disposed
                 IFileSystem _filesystem = FileSystem;
                 if (_filesystem == null) return;
 
                 // Create event
-                IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath);
+                IEvent @event = new ErrorEvent(this, DateTimeOffset.UtcNow, e.GetException(), RelativePath);
                 // Forward error as event object.
                 _dispatcher.DispatchEvent(@event);
             }
@@ -714,11 +714,11 @@ namespace Lexical.FileSystem
 
                 // Event type
                 WatcherChangeTypes type = e.ChangeType;
-                StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+                StructList12<IEvent> events = new StructList12<IEvent>();
                 // HasFlag has been optimized since .Net core 2.1 and does not box any more
-                if (type.HasFlag(WatcherChangeTypes.Created) && path != null) events.Add(new FileSystemEventCreate(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null) events.Add(new FileSystemEventChange(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null) events.Add(new FileSystemEventDelete(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null) events.Add(new CreateEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null) events.Add(new ChangeEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null) events.Add(new DeleteEvent(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re)
                 {
                     string oldPath = ConvertPath(re.OldFullPath);
@@ -726,7 +726,7 @@ namespace Lexical.FileSystem
                     if (oldPath != null || path != null)
                     {
                         // Send event
-                        events.Add(new FileSystemEventRename(this, time, oldPath, path));
+                        events.Add(new RenameEvent(this, time, oldPath, path));
                     }
                 }
 
@@ -735,7 +735,7 @@ namespace Lexical.FileSystem
             }
 
             /// <summary>
-            /// Convert path from <see cref="FileSystemEventArgs"/> into relative path of <see cref="IFileSystem"/>.
+            /// Convert path from <see cref="EventArgs"/> into relative path of <see cref="IFileSystem"/>.
             /// </summary>
             /// <param name="absolutePath">absolute file path to file that is to be converted to relative path</param>
             /// <returns>relative path, or null if failed</returns>
@@ -846,9 +846,9 @@ namespace Lexical.FileSystem
             /// <param name="suffixPart">Suffix part of <paramref name="filterString"/>, for example "**" if filter string is "dir/**"</param>
             public PatternObserver(
                 IFileSystem filesystem,
-                IObserver<IFileSystemEvent> observer,
+                IObserver<IEvent> observer,
                 object state,
-                IFileSystemEventDispatcher eventDispatcher,
+                IEventDispatcher eventDispatcher,
                 string filterString,
                 string filesystemRootAbsolutePath,
                 string relativePathToPrefixPartWithoutTrailingSeparator,
@@ -893,14 +893,14 @@ namespace Lexical.FileSystem
                 // No observer
                 if (_observer == null) return;
                 // Get dispatcher
-                var _dispatcher = Dispatcher ?? FileSystemEventDispatcher.Instance;
+                var _dispatcher = Dispatcher ?? EventDispatcher.Instance;
 
                 // Disposed
                 IFileSystem _filesystem = FileSystem;
                 if (_filesystem == null) return;
 
                 // Forward error as event object.
-                IFileSystemEvent @event = new FileSystemEventError(this, DateTimeOffset.UtcNow, e.GetException(), null);
+                IEvent @event = new ErrorEvent(this, DateTimeOffset.UtcNow, e.GetException(), null);
                 // Forward error as event object.
                 _dispatcher.DispatchEvent(@event);
             }
@@ -930,10 +930,10 @@ namespace Lexical.FileSystem
                 // Event type
                 WatcherChangeTypes type = e.ChangeType;
                 // HasFlag has been optimized since .Net core 2.1
-                StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
-                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/"+path)*/)) events.Add(new FileSystemEventCreate(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/" + path)*/)) events.Add(new FileSystemEventChange(this, time, path));
-                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/" + path)*/)) events.Add(new FileSystemEventDelete(this, time, path));
+                StructList12<IEvent> events = new StructList12<IEvent>();
+                if (type.HasFlag(WatcherChangeTypes.Created) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/"+path)*/)) events.Add(new CreateEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Changed) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/" + path)*/)) events.Add(new ChangeEvent(this, time, path));
+                if (type.HasFlag(WatcherChangeTypes.Deleted) && path != null && (Pattern.IsMatch(path)/* || Pattern.IsMatch("/" + path)*/)) events.Add(new DeleteEvent(this, time, path));
                 if (type.HasFlag(WatcherChangeTypes.Renamed) && e is RenamedEventArgs re)
                 {
                     string oldPath = ConvertPath(re.OldFullPath);
@@ -942,7 +942,7 @@ namespace Lexical.FileSystem
                     if ((oldPath != null && (Pattern.IsMatch(oldPath)/*||Pattern.IsMatch("/"+oldPath)*/)) || (path != null && (Pattern.IsMatch(path)/*||Pattern.IsMatch("/"+path)*/)))
                     {
                         // Send event
-                        events.Add(new FileSystemEventRename(this, time, oldPath, path));
+                        events.Add(new RenameEvent(this, time, oldPath, path));
                     }
                 }
                 // Dispatch events.
@@ -950,7 +950,7 @@ namespace Lexical.FileSystem
             }
 
             /// <summary>
-            /// Convert path from <see cref="FileSystemEventArgs"/> into relative path of <see cref="IFileSystem"/>.
+            /// Convert path from <see cref="EventArgs"/> into relative path of <see cref="IFileSystem"/>.
             /// </summary>
             /// <param name="absolutePath">absolute file path to file that is to be converted to relative path</param>
             /// <returns>relative path, or null if failed</returns>

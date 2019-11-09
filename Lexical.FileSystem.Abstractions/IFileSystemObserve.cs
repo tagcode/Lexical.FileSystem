@@ -11,20 +11,20 @@ using System.Threading.Tasks;
 namespace Lexical.FileSystem
 {
     /// <summary>File system option for observe.</summary>
-    [Operations(typeof(FileSystemOptionOperationObserve))]
-    // <IFileSystemOptionObserve>
-    public interface IFileSystemOptionObserve : IFileSystemOption
+    [Operations(typeof(ObserverOptionOperations))]
+    // <IObserveOption>
+    public interface IObserveOption : IOption
     {
         /// <summary>Has Observe capability.</summary>
         bool CanObserve { get; }
     }
-    // </IFileSystemOptionObserve>
+    // </IObserveOption>
 
     // <doc>
     /// <summary>
     /// File system that observe file and directory changes.
     /// </summary>
-    public interface IFileSystemObserve : IFileSystem, IFileSystemOptionObserve
+    public interface IFileSystemObserve : IFileSystem, IObserveOption
     {
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 
@@ -47,7 +47,7 @@ namespace Lexical.FileSystem
         ///     <item>"dir/**", to monitor files in a dir and its subdirectories</item>
         ///   </list>
         /// 
-        /// The implementation sends the reference to the observer handle in a <see cref="IFileSystemEventStart"/> event before this method returns to caller.
+        /// The implementation sends the reference to the observer handle in a <see cref="IStartEvent"/> event before this method returns to caller.
         /// </summary>
         /// <param name="filter">file filter as glob pattern. </param>
         /// <param name="observer"></param>
@@ -64,7 +64,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = null, IFileSystemOption option = null);
+        IFileSystemObserver Observe(string filter, IObserver<IEvent> observer, object state = null, IEventDispatcher eventDispatcher = null, IOption option = null);
     }
 
     /// <summary>
@@ -85,7 +85,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Callback.
         /// </summary>
-        IObserver<IFileSystemEvent> Observer { get; }
+        IObserver<IEvent> Observer { get; }
 
         /// <summary>
         /// State object that was attached at construction.
@@ -95,7 +95,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// (optional) Event dispatcher.
         /// </summary>
-        IFileSystemEventDispatcher Dispatcher { get; }
+        IEventDispatcher Dispatcher { get; }
     }
     // </doc>
 }

@@ -28,7 +28,7 @@ namespace Lexical.FileSystem.Utility
     /// For instance, to scan a network drive with RootFileSystem, use '/' separator after volume 
     /// <code>new FileScanner(root).AddWildcard(@"\\192.168.8.1\shared/*")</code>.
     /// </summary>
-    public class FileScanner : IEnumerable<IFileSystemEntry>
+    public class FileScanner : IEnumerable<IEntry>
     {
         /// <summary>
         /// Patterns by start path. 
@@ -61,12 +61,12 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Function that tests whether to enter a directory. 
         /// </summary>
-        public Func<IFileSystemEntry, bool> DirectoryEvaluator = DefaultDirectoryEvaluator;
+        public Func<IEntry, bool> DirectoryEvaluator = DefaultDirectoryEvaluator;
 
         /// <summary>
         /// Default evaluator.
         /// </summary>
-        static Func<IFileSystemEntry, bool> DefaultDirectoryEvaluator = dirEntry => true;
+        static Func<IEntry, bool> DefaultDirectoryEvaluator = dirEntry => true;
 
         /// <summary>
         /// Should file scanner return directories.
@@ -182,7 +182,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="func"></param>
         /// <returns></returns>
-        public FileScanner SetDirectoryEvaluator(Func<IFileSystemEntry, bool> func)
+        public FileScanner SetDirectoryEvaluator(Func<IEntry, bool> func)
         {
             this.DirectoryEvaluator = func;
             return this;
@@ -212,7 +212,7 @@ namespace Lexical.FileSystem.Utility
         /// Start multi-threaded scan operation.
         /// </summary>
         /// <returns>FileScannerEnumerator</returns>
-        IEnumerator<IFileSystemEntry> IEnumerable<IFileSystemEntry>.GetEnumerator()
+        IEnumerator<IEntry> IEnumerable<IEntry>.GetEnumerator()
             => new PatternScanner(FileSystem, RootPrefix, patterns.Select(kv=>(kv.Key, kv.Value, kv.Value.scanDepth)), TaskFactory, errors, DirectoryEvaluator, ReturnDirectories, ReturnFiles);
 
         /// <summary>
@@ -226,7 +226,7 @@ namespace Lexical.FileSystem.Utility
     /// <summary>
     /// Resettable scan enumerator.
     /// </summary>
-    public sealed class PatternScanner : IEnumerator<IFileSystemEntry>
+    public sealed class PatternScanner : IEnumerator<IEntry>
     {
         /// <summary>
         /// Collection or errors are placed here.
@@ -236,7 +236,7 @@ namespace Lexical.FileSystem.Utility
         List<(string, PatternSet, int)> paths;
         ScanJob job;
         TaskFactory taskFactory;
-        Func<IFileSystemEntry, bool> directoryEvaluator;
+        Func<IEntry, bool> directoryEvaluator;
         string rootPrefix;
         bool returnDirectories;
         bool returnFiles;
@@ -252,7 +252,7 @@ namespace Lexical.FileSystem.Utility
         /// <param name="directoryEvaluator"></param>
         /// <param name="returnDirectories"></param>
         /// <param name="returnFiles"></param>
-        public PatternScanner(IFileSystem FileSystem, string rootPrefix, IEnumerable<(string, PatternSet, int)> patterns, TaskFactory taskFactory, IProducerConsumerCollection<Exception> errors, Func<IFileSystemEntry, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
+        public PatternScanner(IFileSystem FileSystem, string rootPrefix, IEnumerable<(string, PatternSet, int)> patterns, TaskFactory taskFactory, IProducerConsumerCollection<Exception> errors, Func<IEntry, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
         {
             this.FileSystem = FileSystem;
             this.rootPrefix = rootPrefix;
@@ -270,7 +270,7 @@ namespace Lexical.FileSystem.Utility
         /// <summary>
         /// Get current path.
         /// </summary>
-        public IFileSystemEntry Current => job?.Current;
+        public IEntry Current => job?.Current;
 
         object IEnumerator.Current => job?.Current;
 
@@ -313,23 +313,23 @@ namespace Lexical.FileSystem.Utility
     /// <summary>
     /// A single scan job. 
     /// </summary>
-    class ScanJob : IEnumerator<IFileSystemEntry>
+    class ScanJob : IEnumerator<IEntry>
     {
         IFileSystem FileSystem;
         string rootPrefix;
         IProducerConsumerCollection<Exception> errors;
         List<(string, PatternSet, int)> paths;
-        BlockingCollection<IFileSystemEntry> resultQueue = new BlockingCollection<IFileSystemEntry>();
+        BlockingCollection<IEntry> resultQueue = new BlockingCollection<IEntry>();
         CancellationTokenSource cancelSource = new CancellationTokenSource();
-        Func<IFileSystemEntry, bool> directoryEvaluator;
+        Func<IEntry, bool> directoryEvaluator;
         bool returnDirectories;
         bool returnFiles;
         TaskFactory taskFactory;
         object monitor = new object();
-        IFileSystemEntry current;
+        IEntry current;
         int activeThreads, threads;
 
-        public ScanJob(IFileSystem FileSystem, string rootPrefix, IEnumerable<(string, PatternSet, int)> patterns, IProducerConsumerCollection<Exception> errors, TaskFactory taskFactory, Func<IFileSystemEntry, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
+        public ScanJob(IFileSystem FileSystem, string rootPrefix, IEnumerable<(string, PatternSet, int)> patterns, IProducerConsumerCollection<Exception> errors, TaskFactory taskFactory, Func<IEntry, bool> directoryEvaluator, bool returnDirectories, bool returnFiles)
         {
             this.paths = new List<(string, PatternSet, int)>(patterns);
             this.rootPrefix = rootPrefix;
@@ -341,7 +341,7 @@ namespace Lexical.FileSystem.Utility
             this.returnFiles = returnFiles;
         }
 
-        public IFileSystemEntry Current => current;
+        public IEntry Current => current;
         object IEnumerator.Current => current;
 
         public void Dispose()
@@ -353,7 +353,7 @@ namespace Lexical.FileSystem.Utility
             cancelSource.Dispose();
         }
 
-        void ProcessPath((string path, PatternSet pattern, int depth) line, List<IFileSystemEntry> threadLocalList)
+        void ProcessPath((string path, PatternSet pattern, int depth) line, List<IEntry> threadLocalList)
         {
             // Directory entries
             threadLocalList.Clear();
@@ -435,7 +435,7 @@ namespace Lexical.FileSystem.Utility
             Monitor.Exit(monitor);
             try
             {
-                List<IFileSystemEntry> threadLocalList = new List<IFileSystemEntry>();
+                List<IEntry> threadLocalList = new List<IEntry>();
                 bool isActive = false;
 
                 while (!cancelSource.Token.IsCancellationRequested)

@@ -67,10 +67,10 @@ namespace Lexical.FileSystem
         /// <summary>Options</summary>
         protected Options options;
         /// <summary>(optional) token</summary>
-        protected IFileSystemToken token;
+        protected IToken token;
 
         /// <summary>options</summary>
-        public class Options : IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionBrowse, IFileSystemOptionSubPath
+        public class Options : IOpenOption, IDeleteOption, IBrowseOption, ISubPathOption
         {
             private static Options instance = new Options();
             /// <summary>Instance with all true</summary>
@@ -95,9 +95,9 @@ namespace Lexical.FileSystem
             /// <summary>Read from <paramref name="option"/></summary>
             /// <param name="option"></param>
             /// <returns>this</returns>
-            public virtual Options Read(IFileSystemOption option)
+            public virtual Options Read(IOption option)
             {
-                IFileSystemOptionOpen open = option.AsOption<IFileSystemOptionOpen>();
+                IOpenOption open = option.AsOption<IOpenOption>();
                 if (open != null)
                 {
                     CanCreateFile = open.CanCreateFile;
@@ -105,18 +105,18 @@ namespace Lexical.FileSystem
                     CanRead = open.CanRead;
                     CanWrite = open.CanWrite;
                 }
-                IFileSystemOptionDelete delete = option.AsOption<IFileSystemOptionDelete>();
+                IDeleteOption delete = option.AsOption<IDeleteOption>();
                 if (delete != null)
                 {
                     CanDelete = delete.CanDelete;
                 }
-                IFileSystemOptionBrowse browse = option.AsOption<IFileSystemOptionBrowse>();
+                IBrowseOption browse = option.AsOption<IBrowseOption>();
                 if (browse != null)
                 {
                     CanBrowse = browse.CanBrowse;
                     CanGetEntry = browse.CanGetEntry;
                 }
-                IFileSystemOptionSubPath subpath = option.AsOption<IFileSystemOptionSubPath>();
+                ISubPathOption subpath = option.AsOption<ISubPathOption>();
                 if (subpath != null)
                 {
                     SubPath = subpath.SubPath;
@@ -138,13 +138,13 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="httpClient">(optional) httpClient instance to use, or null to have new created</param>
         /// <param name="option">(optional) options</param>
-        public HttpFileSystem(HttpClient httpClient = default, IFileSystemOption option = null) : base()
+        public HttpFileSystem(HttpClient httpClient = default, IOption option = null) : base()
         {
             this.httpClient = httpClient ?? new HttpClient();
             if (option != null)
             {
                 this.options = CreateOptions().Read(option);
-                this.token = option.AsOption<IFileSystemToken>();
+                this.token = option.AsOption<IToken>();
             }
             else this.options = Options.Instance;
         }
@@ -175,7 +175,7 @@ namespace Lexical.FileSystem
         /// <param name="uri">Uri to use as token query criteria</param>
         /// <param name="t">(optional)</param>
         /// <param name="headers"></param>
-        protected virtual void ReadTokenToHeaders(string uri, IFileSystemOption t, HttpHeaders headers)
+        protected virtual void ReadTokenToHeaders(string uri, IOption t, HttpHeaders headers)
         {
             // Headers
             IEnumerable<KeyValuePair<string, IEnumerable<string>>>[] headers_array;
@@ -210,7 +210,7 @@ namespace Lexical.FileSystem
         /// 
         /// <paramref name="fileShare"/> is ignored.
         /// 
-        /// Authentication header can be placed in <paramref name="option"/> as instance of <see cref="AuthenticationHeaderValue"/> wrapped in (for example) <see cref="FileSystemToken"/> or <see cref="FileSystemTokenList"/>.
+        /// Authentication header can be placed in <paramref name="option"/> as instance of <see cref="AuthenticationHeaderValue"/> wrapped in (for example) <see cref="Token"/> or <see cref="TokenList"/>.
         /// 
         /// Other <see cref="HttpHeaders"/> can also placed in <paramref name="option"/>.
         /// 
@@ -236,7 +236,7 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         /// <exception cref="OperationCanceledException">operation canceled</exception>
-        public Stream Open(string uri, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
+        public Stream Open(string uri, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -438,7 +438,7 @@ namespace Lexical.FileSystem
         /// 
         /// <paramref name="recurse"/> is ignored..
         /// 
-        /// Authentication header can be placed in <paramref name="option"/> as instance of <see cref="AuthenticationHeaderValue"/> wrapped in (for example) <see cref="FileSystemToken"/> or <see cref="FileSystemTokenList"/>.
+        /// Authentication header can be placed in <paramref name="option"/> as instance of <see cref="AuthenticationHeaderValue"/> wrapped in (for example) <see cref="Token"/> or <see cref="TokenList"/>.
         /// 
         /// Other <see cref="HttpHeaders"/> can also placed in <paramref name="option"/>.
         /// 
@@ -456,7 +456,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="uri"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Delete(string uri, bool recurse = false, IFileSystemOption option = null)
+        public void Delete(string uri, bool recurse = false, IOption option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -511,7 +511,7 @@ namespace Lexical.FileSystem
         /// <param name="uri"></param>
         /// <param name="option"></param>
         /// <returns>child links</returns>
-        public IFileSystemEntry[] Browse(string uri, IFileSystemOption option = null)
+        public IEntry[] Browse(string uri, IOption option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -563,7 +563,7 @@ namespace Lexical.FileSystem
                         // Wait for stream
                         tt.Wait(cancel);
                         // Parse files
-                        IFileSystemEntry[] entries = ReadEntries(uri, s, pathConverter).ToArray();
+                        IEntry[] entries = ReadEntries(uri, s, pathConverter).ToArray();
                         // Return entries
                         return entries;
                     }
@@ -589,7 +589,7 @@ namespace Lexical.FileSystem
         /// <param name="uri"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public IFileSystemEntry GetEntry(string uri, IFileSystemOption option = null)
+        public IEntry GetEntry(string uri, IOption option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -634,9 +634,9 @@ namespace Lexical.FileSystem
                     // Entry name
                     string name = GetEntryName(_uri.AbsoluteUri);
                     // Is directory
-                    if (_uri.AbsolutePath.EndsWith("/")) return new FileSystemEntryDirectory(this, uri, name, lastModified ?? DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
+                    if (_uri.AbsolutePath.EndsWith("/")) return new DirectoryEntry(this, uri, name, lastModified ?? DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
                     // Is file
-                    else return new FileSystemEntryFile(this, uri, name, lastModified ?? DateTimeOffset.MinValue, DateTimeOffset.MinValue, length ?? -1L, null);
+                    else return new FileEntry(this, uri, name, lastModified ?? DateTimeOffset.MinValue, DateTimeOffset.MinValue, length ?? -1L, null);
                 }
             }
             catch (AggregateException e)
@@ -692,7 +692,7 @@ namespace Lexical.FileSystem
         /// <param name="pathConverter">convert child urls (the real URIs) back to parent (API caller's) path format</param>
         /// <returns>array of files</returns>
         /// <exception cref="Exception"></exception>
-        public virtual IEnumerable<IFileSystemEntry> ReadEntries(string baseUri, Stream document, IPathConverter pathConverter)
+        public virtual IEnumerable<IEntry> ReadEntries(string baseUri, Stream document, IPathConverter pathConverter)
         {
             // Result set
             HashSet<string> yielded = new HashSet<string>();
@@ -715,7 +715,7 @@ namespace Lexical.FileSystem
                     // Parse attribute
                     href = HttpUtility.HtmlDecode(href);
                     // Entry
-                    IFileSystemEntry entry = null;
+                    IEntry entry = null;
                     try
                     {
                         // Parse uri
@@ -745,9 +745,9 @@ namespace Lexical.FileSystem
                         string parentUri;
                         if (!pathConverter.ChildToParent(absoluteUri, out parentUri)) continue;
                         // Is directory
-                        if (absoluteUri.EndsWith("/")) entry = new FileSystemEntryDirectory(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
+                        if (absoluteUri.EndsWith("/")) entry = new DirectoryEntry(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
                         // Is unknown if is file or directory, so report as both
-                        else entry = new FileSystemEntryDirectoryAndFile(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, -1L, null);
+                        else entry = new DirectoryAndFileEntry(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, -1L, null);
                     }
                     catch (Exception)
                     {

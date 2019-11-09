@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Virtual filesystem.
     /// </summary>
-    public class VirtualFileSystem : FileSystemBase, IFileSystemOptionPath, IFileSystemMount, IFileSystemBrowse, IFileSystemOpen, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove
+    public class VirtualFileSystem : FileSystemBase, IPathInfo, IFileSystemMount, IFileSystemBrowse, IFileSystemOpen, IFileSystemCreateDirectory, IFileSystemObserve, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove
     {
         /// <summary>URL mounts</summary>
         static Lazy<VirtualFileSystem> url = new Lazy<VirtualFileSystem>(
@@ -40,8 +40,8 @@ namespace Lexical.FileSystem
                     .Mount("data://", FileSystem.Data)                // User's local program data.
                     .Mount("program-data://", FileSystem.ProgramData) // Program data that is shared with every user.
                     .Mount("application://", FileSystem.Application)  // Application's install directory
-                    .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
-                    .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
+                    .Mount("http://", HttpFileSystem.Instance, Option.SubPath("http://"))
+                    .Mount("https://", HttpFileSystem.Instance, Option.SubPath("https://"))
             // </doc>
             );
 
@@ -110,7 +110,7 @@ namespace Lexical.FileSystem
 
         /// <inheritdoc/>
         /// <exception cref="DirectoryNotFoundException">If <paramref name="path"/> goes beyond root with ".."</exception>
-        public IFileSystemEntry[] Browse(string path, IFileSystemOption option = null)
+        public IEntry[] Browse(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -122,7 +122,7 @@ namespace Lexical.FileSystem
             // Stack of nodes that start with path and have a mounted filesystem
             StructList4<FileSystemDecoration> mountpoints = new StructList4<FileSystemDecoration>();
             // Snapshot of vfs entries
-            StructList4<IFileSystemEntry> vfsEntries = new StructList4<IFileSystemEntry>();
+            StructList4<IEntry> vfsEntries = new StructList4<IEntry>();
             // Lock for the duration of tree traversal
             vfsLock.AcquireReaderLock(int.MaxValue);
             // Was vfs directory found at path argument
@@ -143,7 +143,7 @@ namespace Lexical.FileSystem
             // Found nothing.
             if (mountpoints.Count == 0 && vfsEntries.Count == 0)
             {
-                if (directoryAtPath) return new IFileSystemEntry[0];
+                if (directoryAtPath) return new IEntry[0];
                 throw new DirectoryNotFoundException(path);
             }
             // Return vfs contents
@@ -155,14 +155,14 @@ namespace Lexical.FileSystem
             // Estimation of entry count
             int entryCount = vfsEntries.Count;
             // Browse each mountpoint
-            StructList2<IFileSystemEntry[]> entryArrays = new StructList2<IFileSystemEntry[]>();
+            StructList2<IEntry[]> entryArrays = new StructList2<IEntry[]>();
             for (int i = mountpoints.Count-1; i >= 0; i--)
             {
                 var fs = mountpoints[i];
                 if (!fs.CanBrowse()) continue;
                 try
                 {
-                    IFileSystemEntry[] _entries = fs.Browse(path, option);
+                    IEntry[] _entries = fs.Browse(path, option);
                     if (_entries.Length == 0) continue;
                     entryArrays.Add(_entries);
                     entryCount += _entries.Length;
@@ -172,12 +172,12 @@ namespace Lexical.FileSystem
             }
 
             // Create hashset for removing overlapping entry names
-            Dictionary<StringSegment, IFileSystemEntry> entries = new Dictionary<StringSegment, IFileSystemEntry>(entryCount, StringSegment.Comparer.Instance);
+            Dictionary<StringSegment, IEntry> entries = new Dictionary<StringSegment, IEntry>(entryCount, StringSegment.Comparer.Instance);
             // Add vfs
             for (int i = 0; i < vfsEntries.Count; i++)
             {
                 // Get mount entry
-                IFileSystemEntry e = vfsEntries[i];
+                IEntry e = vfsEntries[i];
                 // key for dictionary to match with files of same path
                 StringSegment key = e.Path.Length>0 && e.Path[e.Path.Length-1] == '/' ? new StringSegment(e.Path, 0, e.Path.Length-1) : new StringSegment(e.Path);
                 // Remove already existing entry
@@ -186,14 +186,14 @@ namespace Lexical.FileSystem
             // Add entries from mounted filesystems
             for (int i = 0; i < entryArrays.Count; i++)
             {
-                foreach (IFileSystemEntry e in entryArrays[i])
+                foreach (IEntry e in entryArrays[i])
                 {
                     // key for dictionary to match with files of same path
                     StringSegment key = e.IsDirectory() && e.Path.Length > 0 && e.Path[e.Path.Length - 1] == '/' ? new StringSegment(e.Path, 0, e.Path.Length - 1) : new StringSegment(e.Path);
                     //
-                    IFileSystemEntry prevEntry;
+                    IEntry prevEntry;
                     // Unify entries
-                    if (entries.TryGetValue(key, out prevEntry)) entries[key] = new FileSystemEntryPairDecoration(prevEntry, e);
+                    if (entries.TryGetValue(key, out prevEntry)) entries[key] = new PairEntry(prevEntry, e);
                     // Add entry
                     else entries[key] = e;
                 }
@@ -203,7 +203,7 @@ namespace Lexical.FileSystem
         }
 
         /// <inheritdoc/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemOption option = null)
+        public IEntry GetEntry(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -219,7 +219,7 @@ namespace Lexical.FileSystem
             // Found vfs at path
             bool directoryAtPath;
             // Vfs mount entry
-            IFileSystemEntry entry = null;
+            IEntry entry = null;
             // Lock for the duration of tree traversal
             vfsLock.AcquireReaderLock(int.MaxValue);
             try
@@ -241,8 +241,8 @@ namespace Lexical.FileSystem
                 if (!fs.CanGetEntry()) continue;
                 try
                 {
-                    IFileSystemEntry e = fs.GetEntry(path, option);
-                    if (e != null) entry = entry != null ? new FileSystemEntryPairDecoration(entry, e) : e;
+                    IEntry e = fs.GetEntry(path, option);
+                    if (e != null) entry = entry != null ? new PairEntry(entry, e) : e;
                 }
                 catch (NotSupportedException) { }
             }
@@ -339,23 +339,23 @@ namespace Lexical.FileSystem
             /// <summary>Parent node.</summary>
             protected internal Directory parent;
             /// <summary>Cached entry</summary>
-            protected IFileSystemEntryMount entry;
+            protected IMountEntry entry;
             /// <summary>Get or create entry.</summary>
-            public IFileSystemEntryMount Entry => entry ?? (entry = CreateEntry());
+            public IMountEntry Entry => entry ?? (entry = CreateEntry());
             /// <summary>Files and directories. Lazy construction. Reads and modifications under parent's m_lock.</summary>
             protected internal Dictionary<StringSegment, Directory> children = new Dictionary<StringSegment, Directory>();
             /// <summary>Cached child entries</summary>
-            protected IFileSystemEntry[] childEntries;
+            protected IEntry[] childEntries;
             /// <summary>The mounted filesystem.</summary>
             protected internal FileSystemDecoration mount;
             /// <summary>Get or create child entries.</summary>
-            public IFileSystemEntry[] ChildEntries
+            public IEntry[] ChildEntries
             {
                 get
                 {
                     if (childEntries != null) return childEntries;
                     int c = children.Count;
-                    IFileSystemEntry[] array = new IFileSystemEntry[c];
+                    IEntry[] array = new IEntry[c];
                     int i = 0;
                     foreach (Directory e in children.Values) array[i++] = e.Entry;
                     return childEntries = array;
@@ -401,15 +401,15 @@ namespace Lexical.FileSystem
             /// Create entry snapshot.
             /// </summary>
             /// <returns></returns>
-            public IFileSystemEntryMount CreateEntry()
+            public IMountEntry CreateEntry()
             {
                 var _mount = mount;
                 if (_mount != null)
                 {
-                    IFileSystemEntryMount e = _mount.GetEntry(Path) as IFileSystemEntryMount;
+                    IMountEntry e = _mount.GetEntry(Path) as IMountEntry;
                     if (e != null) return e;
                 }
-                return new FileSystemEntryMount(vfs, Path, name, lastModified, lastAccess, null, null);
+                return new MountEntry(vfs, Path, name, lastModified, lastAccess, null, null);
             }
 
             /// <summary>
@@ -689,7 +689,7 @@ namespace Lexical.FileSystem
         /// <param name="eventDispatcher">(optional) </param>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IEvent> observer, object state = null, IEventDispatcher eventDispatcher = default, IOption option = null)
         {
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
@@ -705,8 +705,8 @@ namespace Lexical.FileSystem
             ObserverHandle adapter = new ObserverHandle(this, null /*set below*/, this, filter, observer, state, eventDispatcher);
             // Add to observer tree
             GetOrCreateObserverNode(info.Stem, adapter);
-            // Send IFileSystemEventStart, must be sent before subscribing forwardees
-            observer.OnNext(new FileSystemEventStart(adapter, DateTimeOffset.UtcNow));
+            // Send IStartEvent, must be sent before subscribing forwardees
+            observer.OnNext(new StartEvent(adapter, DateTimeOffset.UtcNow));
 
             try
             {
@@ -815,12 +815,12 @@ namespace Lexical.FileSystem
             /// </summary>
             /// <param name="vfs">parent object</param>
             /// <param name="observerNode">(optional) node where handle is placed in the tree. Can be assigned later</param>
-            /// <param name="sourceFileSystem">File system to show as the source of forwarded events (in <see cref="IFileSystemEvent.Observer"/>)</param>
+            /// <param name="sourceFileSystem">File system to show as the source of forwarded events (in <see cref="IEvent.Observer"/>)</param>
             /// <param name="filter"></param>
             /// <param name="observer">The observer were decorated events are forwarded to</param>
             /// <param name="state"></param>
             /// <param name="eventDispatcher">(optional) </param>
-            public ObserverHandle(VirtualFileSystem vfs, ObserverNode observerNode, IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher) : base(sourceFileSystem, filter, observer, state, eventDispatcher, false)
+            public ObserverHandle(VirtualFileSystem vfs, ObserverNode observerNode, IFileSystem sourceFileSystem, string filter, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher) : base(sourceFileSystem, filter, observer, state, eventDispatcher, false)
             {
                 this.vfs = vfs;
                 this.observerNode = observerNode;
@@ -973,7 +973,7 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public VirtualFileSystem Mount(string path, IFileSystem filesystem, IFileSystemOption mountOption = null, IFileSystemOption option = null)
+        public VirtualFileSystem Mount(string path, IFileSystem filesystem, IOption mountOption = null, IOption option = null)
             => Mount(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, option);
 
         /// <summary>
@@ -986,7 +986,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystems"></param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public VirtualFileSystem Mount(string path, params (IFileSystem filesystem, IFileSystemOption mountOption)[] filesystems)
+        public VirtualFileSystem Mount(string path, params (IFileSystem filesystem, IOption mountOption)[] filesystems)
             => Mount(path, filesystems.Select(fs=>new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), option: null);
 
         /// <summary>
@@ -1001,7 +1001,7 @@ namespace Lexical.FileSystem
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         /// <exception cref="DirectoryNotFoundException">If <paramref name="path"/> refers beyond root with ".."</exception>
-        public VirtualFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemOption option = null)
+        public VirtualFileSystem Mount(string path, FileSystemAssignment[] mounts, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1100,7 +1100,7 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public VirtualFileSystem Unmount(string path, IFileSystemOption option = null)
+        public VirtualFileSystem Unmount(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1197,7 +1197,7 @@ namespace Lexical.FileSystem
             // Datetime
             DateTimeOffset now = DateTimeOffset.UtcNow;
             // Gather events here
-            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            StructList12<IEvent> events = new StructList12<IEvent>();
             // Gather observers here
             StructList12<ObserverHandle> observers = new StructList12<ObserverHandle>();
 
@@ -1215,7 +1215,7 @@ namespace Lexical.FileSystem
                         // Qualify
                         if (!observers[j].Qualify(newVfsPath)) continue;
                         // Create event
-                        IFileSystemEvent e = new FileSystemEventCreate(observers[j], now, newVfsPath);
+                        IEvent e = new CreateEvent(observers[j], now, newVfsPath);
                         // Add to be dispatched
                         events.Add(e);
                     }
@@ -1237,7 +1237,7 @@ namespace Lexical.FileSystem
                         // Qualify
                         if (!observers[j].Qualify(newVfsPath)) continue;
                         // Create event
-                        IFileSystemEvent e = new FileSystemEventDelete(observers[j], now, newVfsPath);
+                        IEvent e = new DeleteEvent(observers[j], now, newVfsPath);
                         // Add to be dispatched
                         events.Add(e);
                     }
@@ -1271,7 +1271,7 @@ namespace Lexical.FileSystem
                         {
                             string parentPath;
                             if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
-                            IFileSystemEvent e = new FileSystemEventCreate(observer, now, parentPath);
+                            IEvent e = new CreateEvent(observer, now, parentPath);
                             events.Add(e);
                         }
                     }
@@ -1294,7 +1294,7 @@ namespace Lexical.FileSystem
                         {
                             string parentPath;
                             if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
-                            IFileSystemEvent e = new FileSystemEventDelete(observer, now, parentPath);
+                            IEvent e = new DeleteEvent(observer, now, parentPath);
                             events.Add(e);
                         }
                     }
@@ -1305,15 +1305,15 @@ namespace Lexical.FileSystem
             if (events.Count > 0) DispatchEvents(ref events);
         }
 
-        IFileSystem IFileSystemMount.Mount(string path, FileSystemAssignment[] mounts, IFileSystemOption option) => Mount(path, mounts, option);
-        IFileSystem IFileSystemMount.Unmount(string path, IFileSystemOption option) => Unmount(path, option);
+        IFileSystem IFileSystemMount.Mount(string path, FileSystemAssignment[] mounts, IOption option) => Mount(path, mounts, option);
+        IFileSystem IFileSystemMount.Unmount(string path, IOption option) => Unmount(path, option);
 
         /// <summary>
         /// List all mounts
         /// </summary>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
-        public IFileSystemEntryMount[] ListMountPoints(IFileSystemOption option)
+        public IMountEntry[] ListMountPoints(IOption option)
         {
             // Assert capability
             if (!this.CanListMountPoints || !option.CanListMountPoints(true)) throw new NotSupportedException(nameof(ListMountPoints));
@@ -1352,7 +1352,7 @@ namespace Lexical.FileSystem
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1383,7 +1383,7 @@ namespace Lexical.FileSystem
             {
                 var fs = mountpoints[i];
                 // Get fs option
-                var fs_option_open = fs.AsOption<IFileSystemOptionOpen>();
+                var fs_option_open = fs.AsOption<IOpenOption>();
                 // No feature
                 if (fs_option_open == null) continue;
                 // fs cannot open
@@ -1425,7 +1425,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void CreateDirectory(string path, IFileSystemOption option = null)
+        public void CreateDirectory(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1487,7 +1487,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Delete(string path, bool recurse = false, IFileSystemOption option = null)
+        public void Delete(string path, bool recurse = false, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1550,7 +1550,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        public void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemOption option = null)
+        public void SetFileAttribute(string path, FileAttributes fileAttribute, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1615,7 +1615,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string srcPath, string dstPath, IFileSystemOption option = null)
+        public void Move(string srcPath, string dstPath, IOption option = null)
         {
             // Assert arguments
             if (srcPath == null) throw new ArgumentNullException(nameof(srcPath));
@@ -1699,7 +1699,7 @@ namespace Lexical.FileSystem
                 {
                     try
                     {
-                        IFileSystemEntry e = component.FileSystem.GetEntry(dstParent, option.OptionIntersection(component.UnknownOptions));
+                        IEntry e = component.FileSystem.GetEntry(dstParent, option.OptionIntersection(component.UnknownOptions));
                         if (e != null && e.IsDirectory()) dstComponent = component;
                     }
                     catch (NotSupportedException)

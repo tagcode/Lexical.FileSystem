@@ -20,22 +20,22 @@ namespace Lexical.FileSystem.Decoration
     /// 
     /// Supports following decorating modifications:
     /// <list type="bullet">
-    ///     <item><see cref="IFileSystemOptionBrowse"/> </item>
-    ///     <item><see cref="IFileSystemOptionObserve"/> </item>
-    ///     <item><see cref="IFileSystemOptionOpen"/> </item>
-    ///     <item><see cref="IFileSystemOptionDelete"/> </item>
-    ///     <item><see cref="IFileSystemOptionMove"/> </item>
-    ///     <item><see cref="IFileSystemOptionCreateDirectory"/> </item>
-    ///     <item><see cref="IFileSystemOptionMount"/> </item>
-    ///     <item><see cref="IFileSystemOptionSubPath"/> </item>
+    ///     <item><see cref="IBrowseOption"/> </item>
+    ///     <item><see cref="IObserveOption"/> </item>
+    ///     <item><see cref="IOpenOption"/> </item>
+    ///     <item><see cref="IDeleteOption"/> </item>
+    ///     <item><see cref="IMoveOption"/> </item>
+    ///     <item><see cref="ICreateDirectoryOption"/> </item>
+    ///     <item><see cref="IMountOption"/> </item>
+    ///     <item><see cref="ISubPathOption"/> </item>
     /// </list>
     /// 
     /// See extension methods in <see cref="FileSystems"/> to create decorations, or use <see cref="VirtualFileSystem"/>.
     /// </summary>
-    public class FileSystemDecoration : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemMount, IFileSystemOptionPath
+    public class FileSystemDecoration : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemMount, IPathInfo
     {
         /// <summary>Zero entries</summary>
-        static IFileSystemEntry[] noEntries = new IFileSystemEntry[0];
+        static IEntry[] noEntries = new IEntry[0];
 
         /// <summary>FileSystem specific components.</summary>
         protected internal ArrayList<Component> components = new ArrayList<Component>();
@@ -84,11 +84,11 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Root entry
         /// </summary>
-        protected IFileSystemEntry rootEntry;
+        protected IEntry rootEntry;
 
         /// <summary>
         /// The <see cref="IFileSystem"/> reference that is passed to the decorated
-        /// <see cref="IFileSystemEntry"/> instances that this class creates.
+        /// <see cref="IEntry"/> instances that this class creates.
         /// 
         /// Usually it is the <see cref="FileSystemDecoration"/> itself, but if this class
         /// is used as a component, such as <see cref="VirtualFileSystem"/> does, then
@@ -107,7 +107,7 @@ namespace Lexical.FileSystem.Decoration
         /// A constructor version that exposes its filesystem at a subpath parentPath. 
         /// Also allows to configure what filesystem instance is exposed on decorated file entries and events.
         /// </summary>
-        /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IFileSystemEntry"/> that this class returns</param>
+        /// <param name="parentFileSystem">(optional) the <see cref="IFileSystem"/> reference to use in the decorated <see cref="IEntry"/> that this class returns</param>
         /// <param name="parentPath">(optional) path in parent filesyste, use "" if there is no parent filesystem (vfs)</param>
         /// <param name="assignments"></param>
         public FileSystemDecoration(IFileSystem parentFileSystem, string parentPath, params FileSystemAssignment[] assignments)
@@ -115,10 +115,10 @@ namespace Lexical.FileSystem.Decoration
             DateTimeOffset now = DateTimeOffset.UtcNow;
             this.assignments = assignments;
             this.components.AddRange( assignments.Select(a=> new Component(parentPath, a)) );
-            this.Option = FileSystemOptionsAll.Read(FileSystemOption.Union(this.components.Select(s => s.Options)));
+            this.Option = FileSystemOptionsAll.Read(Lexical.FileSystem.Option.Union(this.components.Select(s => s.Options)));
 
             this.sourceFileSystem = parentFileSystem ?? this;
-            this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
+            this.rootEntry = new Lexical.FileSystem.MountEntry.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
         }
 
         /// <summary>FileSystem (as component of composition) specific information</summary>
@@ -131,7 +131,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>Intersection of option in <see cref="FileSystem"/> and option that was provided in constructor.</summary>
             public FileSystemOptionsAll Options;
             /// <summary>Intersection of option in <see cref="FileSystem"/> and option that was provided in constructor.</summary>
-            public FileSystemOptionComposition UnknownOptions;
+            public OptionComposition UnknownOptions;
             /// <summary>Tool that converts paths.</summary>
             public IPathConverter Path;
 
@@ -141,8 +141,8 @@ namespace Lexical.FileSystem.Decoration
             public Component(string parentPath, FileSystemAssignment assignment)
             {
                 this.Assignment = assignment;
-                this.Options = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));                
-                this.UnknownOptions = new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, new IFileSystemOption[] { assignment.Option }, FileSystemOptionsAll.Types);
+                this.Options = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : Lexical.FileSystem.Option.Intersection(assignment.FileSystem, assignment.Option));                
+                this.UnknownOptions = new OptionComposition(OptionComposition.Op.Union, new IOption[] { assignment.Option }, FileSystemOptionsAll.Types);
                 if (this.UnknownOptions.Count() == 0) this.UnknownOptions = null;
                 this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
             }
@@ -156,7 +156,7 @@ namespace Lexical.FileSystem.Decoration
                 this.Assignment = assignment;
                 this.Options = option;
                 this.Path = new PathConverter(parentPath ?? "", assignment.Option.SubPath() ?? "");
-                this.UnknownOptions = new FileSystemOptionComposition(FileSystemOptionComposition.Op.Union, new IFileSystemOption[] { assignment.Option }, FileSystemOptionsAll.Types);
+                this.UnknownOptions = new OptionComposition(OptionComposition.Op.Union, new IOption[] { assignment.Option }, FileSystemOptionsAll.Types);
                 if (this.UnknownOptions.Count() == 0) this.UnknownOptions = null;
             }
         }
@@ -182,7 +182,7 @@ namespace Lexical.FileSystem.Decoration
                 foreach(FileSystemAssignment assignment in assignments)
                 {
                     // Take intersection and consolidate options
-                    FileSystemOptionsAll consolidatedOptions = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : FileSystemOption.Intersection(assignment.FileSystem, assignment.Option));
+                    FileSystemOptionsAll consolidatedOptions = FileSystemOptionsAll.Read(assignment.Option == null ? assignment.FileSystem : Lexical.FileSystem.Option.Intersection(assignment.FileSystem, assignment.Option));
 
                     // Reuse previous component
                     Component reusedComponent;
@@ -209,8 +209,8 @@ namespace Lexical.FileSystem.Decoration
                 DateTimeOffset now = DateTimeOffset.UtcNow;
                 // Update options
                 this.assignments = assignments;
-                this.Option = FileSystemOptionsAll.Read(FileSystemOption.Union(this.components.Select(s => s.Options)));
-                this.rootEntry = new FileSystemEntryMount.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
+                this.Option = FileSystemOptionsAll.Read(Lexical.FileSystem.Option.Union(this.components.Select(s => s.Options)));
+                this.rootEntry = new Lexical.FileSystem.MountEntry.AndOption(this.sourceFileSystem, "", "", now, now, null, assignments, Option);
             }
 
         }
@@ -231,7 +231,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry[] Browse(string path, IFileSystemOption option = null)
+        public IEntry[] Browse(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -262,16 +262,16 @@ namespace Lexical.FileSystem.Decoration
                     String/*Segment*/ childPath;
                     if (!component.Path.ParentToChild(path, out childPath)) return noEntries;
                     // Browse
-                    IFileSystemEntry[] childEntries = component.FileSystem.Browse(childPath, option.OptionIntersection(component.UnknownOptions));
+                    IEntry[] childEntries = component.FileSystem.Browse(childPath, option.OptionIntersection(component.UnknownOptions));
                     // Result array to be filled
-                    IFileSystemEntry[] result = new IFileSystemEntry[childEntries.Length];
+                    IEntry[] result = new IEntry[childEntries.Length];
                     // Is result array filled with null enties
                     int removedCount = 0;
                     // Decorate elements
                     for (int i = 0; i < childEntries.Length; i++)
                     {
                         // Get entry
-                        IFileSystemEntry e = childEntries[i];
+                        IEntry e = childEntries[i];
                         // Convert path
                         String parentPath;
                         if (!component.Path.ChildToParent(e.Path, out parentPath)) { /* Path conversion failed. Omit entry. Remove it later */ removedCount++; continue; }
@@ -281,7 +281,7 @@ namespace Lexical.FileSystem.Decoration
                     // Remove null entries
                     if (removedCount > 0)
                     {
-                        IFileSystemEntry[] newResult = new IFileSystemEntry[result.Length - removedCount];
+                        IEntry[] newResult = new IEntry[result.Length - removedCount];
                         int ix = 0;
                         foreach (var e in result) if (e != null) newResult[ix++] = e;
                         result = newResult;
@@ -294,7 +294,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can browse
                     if (!Option.CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
                     // browse result of each filesystem
-                    StructList4<(Component, IFileSystemEntry[])> entryArrays = new StructList4<(Component, IFileSystemEntry[])>();
+                    StructList4<(Component, IEntry[])> entryArrays = new StructList4<(Component, IEntry[])>();
                     // path exists and browse supported
                     bool exists = false, supported = false;
                     // Number of total entries
@@ -313,7 +313,7 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             // Browse
-                            IFileSystemEntry[] component_entries = component.FileSystem.Browse(childPath, option.OptionIntersection(component.UnknownOptions));
+                            IEntry[] component_entries = component.FileSystem.Browse(childPath, option.OptionIntersection(component.UnknownOptions));
                             entryArrays.Add((component, component_entries));
                             entryCount += component_entries.Length;
                             exists = true; supported = true;
@@ -325,14 +325,14 @@ namespace Lexical.FileSystem.Decoration
                     if (!exists) throw new DirectoryNotFoundException(path);
 
                     // Create list for result
-                    List<IFileSystemEntry> result = new List<IFileSystemEntry>(entryCount);
+                    List<IEntry> result = new List<IEntry>(entryCount);
 
                     for (int i = 0; i < entryArrays.Count; i++)
                     {
                         // Get component and result array
-                        (Component c, IFileSystemEntry[] array) = entryArrays[i];
+                        (Component c, IEntry[] array) = entryArrays[i];
                         // Prune and decorate
-                        foreach (IFileSystemEntry e in array)
+                        foreach (IEntry e in array)
                         {
                             // Remove already existing entry
                             if (filenames != null && !filenames.Add(e.Name)) continue;
@@ -340,7 +340,7 @@ namespace Lexical.FileSystem.Decoration
                             String/*Segment*/ parentPath;
                             if (!c.Path.ChildToParent(e.Path, out parentPath)) continue;
                             // Decorate
-                            IFileSystemEntry ee = CreateEntry(e, sourceFileSystem, parentPath, c.Options);
+                            IEntry ee = CreateEntry(e, sourceFileSystem, parentPath, c.Options);
                             // Add to result
                             result.Add(ee);
                         }
@@ -373,7 +373,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemOption option = null)
+        public IEntry GetEntry(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -412,7 +412,7 @@ namespace Lexical.FileSystem.Decoration
                         return null;
                     }
                     // GetEntry
-                    IFileSystemEntry childEntry = component.FileSystem.GetEntry(childPath, option.OptionIntersection(component.UnknownOptions));
+                    IEntry childEntry = component.FileSystem.GetEntry(childPath, option.OptionIntersection(component.UnknownOptions));
                     // Got no result
                     if (childEntry == null) return null;
                     // Convert again
@@ -450,7 +450,7 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             // Try to get etnry
-                            IFileSystemEntry e = component.FileSystem.GetEntry(childPath, option.OptionIntersection(component.UnknownOptions));
+                            IEntry e = component.FileSystem.GetEntry(childPath, option.OptionIntersection(component.UnknownOptions));
                             // Didn't throw exception
                             supported = true;
                             // Continue
@@ -500,7 +500,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -589,7 +589,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Delete(string path, bool recurse = false, IFileSystemOption option = null)
+        public void Delete(string path, bool recurse = false, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -670,7 +670,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        public void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemOption option = null)
+        public void SetFileAttribute(string path, FileAttributes fileAttribute, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -752,7 +752,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string srcPath, string dstPath, IFileSystemOption option = null)
+        public void Move(string srcPath, string dstPath, IOption option = null)
         {
             // Assert argument
             if (srcPath == null) throw new ArgumentNullException(nameof(srcPath));
@@ -822,7 +822,7 @@ namespace Lexical.FileSystem.Decoration
                         {
                             try
                             {
-                                IFileSystemEntry e = component.FileSystem.GetEntry(dstParent, option.OptionIntersection(component.UnknownOptions));
+                                IEntry e = component.FileSystem.GetEntry(dstParent, option.OptionIntersection(component.UnknownOptions));
                                 if (e != null && e.IsDirectory()) dstComponent = component;
                             }
                             catch (NotSupportedException)
@@ -891,7 +891,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void CreateDirectory(string path, IFileSystemOption option = null)
+        public void CreateDirectory(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -960,7 +960,7 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <inheritdoc/>
-        public IFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemOption option = null)
+        public IFileSystem Mount(string path, FileSystemAssignment[] mounts, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1039,7 +1039,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public IFileSystem Unmount(string path, IFileSystemOption option = null)
+        public IFileSystem Unmount(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -1116,7 +1116,7 @@ namespace Lexical.FileSystem.Decoration
         /// <returns></returns>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public IFileSystemEntryMount[] ListMountPoints(IFileSystemOption option = null)
+        public IMountEntry[] ListMountPoints(IOption option = null)
         {
             // Assert not disposed
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
@@ -1131,7 +1131,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can 
                     if (!this.Option.CanListMountPoints || !option.CanListMountPoints(true)) throw new NotSupportedException(nameof(ListMountPoints));
                     // No filesystem mounts
-                    return new IFileSystemEntryMount[0];
+                    return new IMountEntry[0];
                 }
 
                 // One component
@@ -1142,26 +1142,26 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can create
                     if (!component.Options.CanListMountPoints || !option.CanListMountPoints(true)) throw new NotSupportedException(nameof(ListMountPoints));
                     // List
-                    IFileSystemEntryMount[] childEntries = component.FileSystem.ListMountPoints(option.OptionIntersection(component.UnknownOptions));
+                    IMountEntry[] childEntries = component.FileSystem.ListMountPoints(option.OptionIntersection(component.UnknownOptions));
                     // Result array to be filled
-                    IFileSystemEntryMount[] result = new IFileSystemEntryMount[childEntries.Length];
+                    IMountEntry[] result = new IMountEntry[childEntries.Length];
                     // Is result array filled with null enties
                     int removedCount = 0;
                     // Decorate elements
                     for (int i = 0; i < childEntries.Length; i++)
                     {
                         // Get entry
-                        IFileSystemEntryMount e = childEntries[i];
+                        IMountEntry e = childEntries[i];
                         // Convert path
                         String parentPath;
                         if (!component.Path.ChildToParent(e.Path, out parentPath)) { /* Path conversion failed. Omit entry. Remove it later */ removedCount++; continue; }
                         // Decorate
-                        result[i] = (IFileSystemEntryMount)CreateEntry(e, sourceFileSystem, parentPath, component.Options);
+                        result[i] = (IMountEntry)CreateEntry(e, sourceFileSystem, parentPath, component.Options);
                     }
                     // Remove null entries
                     if (removedCount > 0)
                     {
-                        IFileSystemEntryMount[] newResult = new IFileSystemEntryMount[result.Length - removedCount];
+                        IMountEntry[] newResult = new IMountEntry[result.Length - removedCount];
                         int ix = 0;
                         foreach (var e in result) if (e != null) newResult[ix++] = e;
                         result = newResult;
@@ -1176,7 +1176,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can 
                     if (!this.Option.CanListMountPoints || !option.CanListMountPoints(true)) throw new NotSupportedException(nameof(ListMountPoints));
                     // result from each filesystem
-                    StructList4<(Component, IFileSystemEntryMount[])> entryArrays = new StructList4<(Component, IFileSystemEntryMount[])>();
+                    StructList4<(Component, IMountEntry[])> entryArrays = new StructList4<(Component, IMountEntry[])>();
                     // list supported
                     bool supported = false;
                     // Number of total entries
@@ -1192,7 +1192,7 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             // Browse
-                            IFileSystemEntryMount[] component_entries = component.FileSystem.ListMountPoints(option.OptionIntersection(component.UnknownOptions));
+                            IMountEntry[] component_entries = component.FileSystem.ListMountPoints(option.OptionIntersection(component.UnknownOptions));
                             entryArrays.Add((component, component_entries));
                             entryCount += component_entries.Length;
                             supported = true;
@@ -1203,14 +1203,14 @@ namespace Lexical.FileSystem.Decoration
                     if (!supported) throw new NotSupportedException(nameof(ListMountPoints));
 
                     // Create list for result
-                    List<IFileSystemEntryMount> result = new List<IFileSystemEntryMount>(entryCount);
+                    List<IMountEntry> result = new List<IMountEntry>(entryCount);
 
                     for (int i = 0; i < entryArrays.Count; i++)
                     {
                         // Get component and result array
-                        (Component c, IFileSystemEntry[] array) = entryArrays[i];
+                        (Component c, IEntry[] array) = entryArrays[i];
                         // Prune and decorate
-                        foreach (IFileSystemEntry e in array)
+                        foreach (IEntry e in array)
                         {
                             // Remove already existing entry
                             if (paths != null && !paths.Add(e.Path)) continue;
@@ -1218,7 +1218,7 @@ namespace Lexical.FileSystem.Decoration
                             String parentPath;
                             if (!c.Path.ChildToParent(e.Path, out parentPath)) continue;
                             // Decorate
-                            IFileSystemEntryMount ee = (IFileSystemEntryMount)CreateEntry(e, sourceFileSystem, parentPath, c.Options);
+                            IMountEntry ee = (IMountEntry)CreateEntry(e, sourceFileSystem, parentPath, c.Options);
                             // Add to result
                             result.Add(ee);
                         }
@@ -1256,7 +1256,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IEvent> observer, object state = null, IEventDispatcher eventDispatcher = default, IOption option = null)
         {
             // Assert argument
             if (filter == null) throw new ArgumentNullException(nameof(filter));
@@ -1273,8 +1273,8 @@ namespace Lexical.FileSystem.Decoration
             ObserverDecorator adapter = new ObserverDecorator(this, filter, observer, state, eventDispatcher, true);
             try
             {
-                // Send IFileSystemEventStart, must be sent before subscribing forwardees
-                observer.OnNext(new FileSystemEventStart(adapter, DateTimeOffset.UtcNow));
+                // Send IStartEvent, must be sent before subscribing forwardees
+                observer.OnNext(new StartEvent(adapter, DateTimeOffset.UtcNow));
 
                 // Observe each component
                 foreach (Component component in components)
@@ -1444,8 +1444,8 @@ namespace Lexical.FileSystem.Decoration
 
 
 
-        /// <summary>Override this to change entry class. Must implement <see cref="IFileSystemEntryMount"/></summary>
-        protected virtual IFileSystemEntry CreateEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier)
+        /// <summary>Override this to change entry class. Must implement <see cref="IMountEntry"/></summary>
+        protected virtual IEntry CreateEntry(IEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier)
             => original.Path == "" ?
                 new MountEntry(original, newFileSystem, newPath, optionModifier, this.assignments) :
                 new Entry(original, newFileSystem, newPath, optionModifier);
@@ -1453,7 +1453,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Decoration that offers modified Option. Creates option at runtime, if requested.
         /// </summary>
-        protected internal class Entry : FileSystemEntryDecoration
+        protected internal class Entry : DecorationEntry
         {
             /// <summary>New overriding filesystem.</summary>
             protected IFileSystem newFileSystem;
@@ -1466,9 +1466,9 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>(optional) Option that will be intersected lazily with original options.</summary>
             protected FileSystemOptionsAll optionModifier;
             /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and Original.Option()</summary>
-            protected IFileSystemOption optionIntersection;
+            protected IOption optionIntersection;
             /// <summary>Intersection of Original.Option() and <see cref="optionModifier"/></summary>
-            public override IFileSystemOption Options => optionIntersection ?? (optionIntersection = optionModifier == null ? Original.Options() : optionModifier.Intersection(Original.Options()));
+            public override IOption Options => optionIntersection ?? (optionIntersection = optionModifier == null ? Original.Options() : optionModifier.Intersection(Original.Options()));
             /// <summary>
             /// Create decoration with <paramref name="newFileSystem"/>.
             /// </summary>
@@ -1476,7 +1476,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="newFileSystem"></param>
             /// <param name="newPath"></param>
             /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
-            public Entry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier) : base(original)
+            public Entry(IEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier) : base(original)
             {
                 this.newFileSystem = newFileSystem;
                 this.newPath = newPath;
@@ -1504,7 +1504,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="newPath"></param>
             /// <param name="mounts"></param>
             /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
-            public MountEntry(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
+            public MountEntry(IEntry original, IFileSystem newFileSystem, string newPath, FileSystemOptionsAll optionModifier, FileSystemAssignment[] mounts) : base(original, newFileSystem, newPath, optionModifier)
             {
                 this.mounts = mounts;
             }

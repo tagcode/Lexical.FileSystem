@@ -10,20 +10,20 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     /// <summary>File system option for deleting files and directories.</summary>
-    [Operations(typeof(FileSystemOptionOperationDelete))]
-    // <IFileSystemOptionDelete>
-    public interface IFileSystemOptionDelete : IFileSystemOption
+    [Operations(typeof(DeleteOptionOperations))]
+    // <IDeleteOption>
+    public interface IDeleteOption : IOption
     {
         /// <summary>Has Delete capability.</summary>
         bool CanDelete { get; }
     }
-    // </IFileSystemOptionDelete>
+    // </IDeleteOption>
 
     // <doc>
     /// <summary>
     /// File system that can delete files and directories.
     /// </summary>
-    public interface IFileSystemDelete : IFileSystem, IFileSystemOptionDelete
+    public interface IFileSystemDelete : IFileSystem, IDeleteOption
     {
         /// <summary>
         /// Delete a file or directory.
@@ -46,7 +46,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        void Delete(string path, bool recurse = false, IFileSystemOption option = null);
+        void Delete(string path, bool recurse = false, IOption option = null);
     }
     // </doc>
 }

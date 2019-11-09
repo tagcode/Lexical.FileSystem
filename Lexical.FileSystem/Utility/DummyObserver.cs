@@ -21,7 +21,7 @@ namespace Lexical.FileSystem.Utility
         /// <param name="filter"></param>
         /// <param name="observer"></param>
         /// <param name="state"></param>
-        public DummyObserver(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher) : base(filesystem, filter, observer, state, eventDispatcher)
+        public DummyObserver(IFileSystem filesystem, string filter, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher) : base(filesystem, filter, observer, state, eventDispatcher)
         {
         }
     }

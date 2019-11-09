@@ -5,14 +5,13 @@
 // --------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 
 namespace Lexical.FileSystem
 {
     /// <summary>
     /// Extension methods for <see cref="IFileSystem"/>.
     /// </summary>
-    public static partial class IFileSystemExtensions
+    public static partial class IOptionExtensions
     {
 
         /// <summary>
@@ -21,10 +20,10 @@ namespace Lexical.FileSystem
         /// <typeparam name="T"></typeparam>
         /// <param name="option"></param>
         /// <returns>Option casted as <typeparamref name="T"/> or null</returns>
-        public static T AsOption<T>(this IFileSystemOption option) where T : IFileSystemOption
+        public static T AsOption<T>(this IOption option) where T : IOption
         {
             if (option is T casted) return casted;
-            if (option is IFileSystemOptionAdaptable adaptable && adaptable.GetOption(typeof(T)) is T casted_) return casted_;
+            if (option is IAdaptableOption adaptable && adaptable.GetOption(typeof(T)) is T casted_) return casted_;
             return default;
         }
 
@@ -35,10 +34,10 @@ namespace Lexical.FileSystem
         /// <param name="option"></param>
         /// <param name="casted"></param>
         /// <returns>true if option casted as <typeparamref name="T"/></returns>
-        public static bool TryAsOption<T>(this IFileSystemOption option, out T casted) where T : IFileSystemOption
+        public static bool TryAsOption<T>(this IOption option, out T casted) where T : IOption
         {
             if (option is T _casted) { casted = _casted; return true; }
-            if (option is IFileSystemOptionAdaptable adaptable && adaptable.GetOption(typeof(T)) is T casted_) { casted = casted_; return true; }
+            if (option is IAdaptableOption adaptable && adaptable.GetOption(typeof(T)) is T casted_) { casted = casted_; return true; }
             casted = default;
             return default;
         }
@@ -48,7 +47,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// </summary>
         /// <returns>mount path or null</returns>
-        public static String SubPath(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionSubPath>() is IFileSystemOptionSubPath mp ? mp.SubPath : null;
+        public static String SubPath(this IOption filesystemOption)
+            => filesystemOption.AsOption<ISubPathOption>() is ISubPathOption mp ? mp.SubPath : null;
     }
 }

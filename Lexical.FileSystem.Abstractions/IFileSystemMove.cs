@@ -11,20 +11,20 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     /// <summary>File system option for move/rename.</summary>
-    [Operations(typeof(FileSystemOptionOperationMove))]
-    // <IFileSystemOptionMove>
-    public interface IFileSystemOptionMove : IFileSystemOption
+    [Operations(typeof(MoveOptionOperations))]
+    // <IMoveOption>
+    public interface IMoveOption : IOption
     {
         /// <summary>Can Move files within same volume.</summary>
         bool CanMove { get; }
     }
-    // </IFileSystemOptionMove>
+    // </IMoveOption>
 
     // <doc>
     /// <summary>
     /// File system that can move/rename files and directories.
     /// </summary>
-    public interface IFileSystemMove : IFileSystem, IFileSystemOptionMove
+    public interface IFileSystemMove : IFileSystem, IMoveOption
     {
         /// <summary>
         /// Move/rename a file or directory. 
@@ -45,7 +45,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        void Move(string srcPath, string dstPath, IFileSystemOption option = null);
+        void Move(string srcPath, string dstPath, IOption option = null);
     }
     // </doc>
 }

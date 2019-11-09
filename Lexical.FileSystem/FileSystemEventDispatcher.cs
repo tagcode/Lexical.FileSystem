@@ -10,44 +10,44 @@ using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
-    /// <summary>Dispatches <see cref="IFileSystemEvent"/>s.</summary>
-    public interface IFileSystemEventDispatcherExtended : IFileSystemEventDispatcher
+    /// <summary>Dispatches <see cref="IEvent"/>s.</summary>
+    public interface IEventDispatcherExtended : IEventDispatcher
     {
         /// <summary>
         /// Send <paramref name="events"/> to observers>.
         /// </summary>
         /// <param name="events">events</param>
         /// <exception cref="Exception">Any exception from observer may be captured or passed to caller</exception>
-        void DispatchEvents(ref StructList12<IFileSystemEvent> events);
+        void DispatchEvents(ref StructList12<IEvent> events);
     }
 
     /// <summary>
     /// Dispatches events on API caller's current thread.
     /// </summary>
-    public class FileSystemEventDispatcher : IFileSystemEventDispatcherExtended
+    public class EventDispatcher : IEventDispatcherExtended
     {
-        static FileSystemEventDispatcher instance => new FileSystemEventDispatcher();
+        static EventDispatcher instance => new EventDispatcher();
 
         /// <summary>Singleton instance </summary>
-        public static FileSystemEventDispatcher Instance => instance;
+        public static EventDispatcher Instance => instance;
 
         /// <summary>
         /// (optional) Error handler;
         /// </summary>
-        protected Action<IFileSystemEventDispatcher, IFileSystemEvent, Exception> errorHandler;
+        protected Action<IEventDispatcher, IEvent, Exception> errorHandler;
 
         /// <summary>
         /// Create event dispatcher that dispatches events in the API caller's thread.
         /// </summary>
         /// <param name="errorHandler"></param>
-        public FileSystemEventDispatcher(Action<IFileSystemEventDispatcher, IFileSystemEvent, Exception> errorHandler = null)
+        public EventDispatcher(Action<IEventDispatcher, IEvent, Exception> errorHandler = null)
         {
             this.errorHandler = errorHandler;
         }
 
         /// <summary>Dispatch <paramref name="event"/></summary>
         /// <param name="event"></param>
-        public void DispatchEvent(IFileSystemEvent @event)
+        public void DispatchEvent(IEvent @event)
         {
             try
             {
@@ -60,13 +60,13 @@ namespace Lexical.FileSystem
 
         /// <summary>Dispatch <paramref name="events"/></summary>
         /// <param name="events"></param>
-        public void DispatchEvents(ref StructList12<IFileSystemEvent> events)
+        public void DispatchEvents(ref StructList12<IEvent> events)
         {
             // Errors
             StructList4<Exception> errors = new StructList4<Exception>();
             for (int i = 0; i < events.Count; i++)
             {
-                IFileSystemEvent e = events[i];
+                IEvent e = events[i];
                 try
                 {
                     e?.Observer?.Observer?.OnNext(e);
@@ -82,12 +82,12 @@ namespace Lexical.FileSystem
 
         /// <summary>Dispatch <paramref name="events"/></summary>
         /// <param name="events"></param>
-        public void DispatchEvents(IEnumerable<IFileSystemEvent> events)
+        public void DispatchEvents(IEnumerable<IEvent> events)
         {
             // Errors
             StructList4<Exception> errors = new StructList4<Exception>();
             if (events != null)
-                foreach (IFileSystemEvent e in events)
+                foreach (IEvent e in events)
                 {
                     try
                     {
@@ -106,12 +106,12 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Dispatches events in concurrent tasks.
     /// </summary>
-    public class FileSystemEventTaskDispatcher : IFileSystemEventDispatcherExtended
+    public class EventTaskDispatcher : IEventDispatcherExtended
     {
-        static FileSystemEventTaskDispatcher instance => new FileSystemEventTaskDispatcher(Task.Factory, null);
+        static EventTaskDispatcher instance => new EventTaskDispatcher(Task.Factory, null);
 
         /// <summary>Singleton instance </summary>
-        public static FileSystemEventTaskDispatcher Instance => instance;
+        public static EventTaskDispatcher Instance => instance;
 
         /// <summary>
         /// Task-factory that is used for sending events.
@@ -125,14 +125,14 @@ namespace Lexical.FileSystem
         /// <summary>
         /// (optional) Error handler;
         /// </summary>
-        protected Action<IFileSystemEventDispatcher, IFileSystemEvent, Exception> errorHandler;
+        protected Action<IEventDispatcher, IEvent, Exception> errorHandler;
 
         /// <summary>
         /// Create event dispatcher that uses task factory.
         /// </summary>
         /// <param name="taskFactory">(optional) task factory</param>
         /// <param name="errorHandler">(optional) error handler</param>
-        public FileSystemEventTaskDispatcher(TaskFactory taskFactory = default, Action<IFileSystemEventDispatcher, IFileSystemEvent, Exception> errorHandler = null)
+        public EventTaskDispatcher(TaskFactory taskFactory = default, Action<IEventDispatcher, IEvent, Exception> errorHandler = null)
         {
             this.taskFactory = taskFactory ?? Task.Factory;
             this.processEventsAction = processEvents;
@@ -141,12 +141,12 @@ namespace Lexical.FileSystem
 
         /// <summary>Dispatch <paramref name="event"/></summary>
         /// <param name="event"></param>
-        public void DispatchEvent(IFileSystemEvent @event)
+        public void DispatchEvent(IEvent @event)
             => taskFactory.StartNew(processEventsAction, @event);
 
         /// <summary>Dispatch <paramref name="events"/></summary>
         /// <param name="events"></param>
-        public void DispatchEvents(ref StructList12<IFileSystemEvent> events)
+        public void DispatchEvents(ref StructList12<IEvent> events)
         {
             if (events.Count == 1) taskFactory.StartNew(processEventsAction, events[0]);
             else if (events.Count >= 2) taskFactory.StartNew(processEventsAction, events.ToArray());
@@ -154,18 +154,18 @@ namespace Lexical.FileSystem
 
         /// <summary>Dispatch <paramref name="events"/></summary>
         /// <param name="events"></param>
-        public void DispatchEvents(IEnumerable<IFileSystemEvent> events)
+        public void DispatchEvents(IEnumerable<IEvent> events)
             => taskFactory.StartNew(processEventsAction, events);
 
         /// <summary>Forward events to observers.</summary>
-        /// <param name="events">IEnumerable or <see cref="IFileSystemEvent"/></param>
+        /// <param name="events">IEnumerable or <see cref="IEvent"/></param>
         protected void processEvents(object events)
         {
             // Errors
             StructList4<Exception> errors = new StructList4<Exception>();
-            if (events is IEnumerable<IFileSystemEvent> eventsEnumr)
+            if (events is IEnumerable<IEvent> eventsEnumr)
             {
-                foreach (IFileSystemEvent e in eventsEnumr)
+                foreach (IEvent e in eventsEnumr)
                 {
                     try
                     {
@@ -179,7 +179,7 @@ namespace Lexical.FileSystem
                 }
                 if (errors.Count > 0) throw new AggregateException(errors.ToArray());
             }
-            else if (events is IFileSystemEvent @event)
+            else if (events is IEvent @event)
             {
                 try
                 {

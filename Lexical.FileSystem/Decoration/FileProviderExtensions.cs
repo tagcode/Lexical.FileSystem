@@ -44,7 +44,7 @@ namespace Lexical.FileSystem
         /// <param name="fileProvider"></param>
         /// <param name="option"></param>
         /// <returns><see cref="IFileSystem"/></returns>
-        public static FileProviderSystem ToFileSystem(this IFileProvider fileProvider, IFileSystemOption option)
+        public static FileProviderSystem ToFileSystem(this IFileProvider fileProvider, IOption option)
             => new FileProviderSystem(fileProvider, option);
 
         /// <summary>

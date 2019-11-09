@@ -20,8 +20,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true if has Browse capability</returns>
-        public static bool CanBrowse(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionBrowse>() is IFileSystemOptionBrowse browser ? browser.CanBrowse : defaultValue;
+        public static bool CanBrowse(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IBrowseOption>() is IBrowseOption browser ? browser.CanBrowse : defaultValue;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Exists capability.
@@ -29,8 +29,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true if has Exists capability</returns>
-        public static bool CanGetEntry(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionBrowse>() is IFileSystemOptionBrowse browser ? browser.CanGetEntry : defaultValue;
+        public static bool CanGetEntry(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IBrowseOption>() is IBrowseOption browser ? browser.CanGetEntry : defaultValue;
 
         /// <summary>
         /// Browse a directory for child entries.
@@ -54,7 +54,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemEntry[] Browse(this IFileSystem filesystem, string path, IFileSystemOption option = null)
+        public static IEntry[] Browse(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.Browse(path, option);
             else throw new NotSupportedException(nameof(Browse));
@@ -76,7 +76,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemEntry GetEntry(this IFileSystem filesystem, string path, IFileSystemOption option = null)
+        public static IEntry GetEntry(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.GetEntry(path, option);
             else throw new NotSupportedException(nameof(GetEntry));
@@ -98,28 +98,28 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static bool Exists(this IFileSystem filesystem, string path, IFileSystemOption option = null)
+        public static bool Exists(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.GetEntry(path, option) != null;
             else throw new NotSupportedException(nameof(GetEntry));
         }
     }
 
-    /// <summary><see cref="IFileSystemOptionBrowse"/> operations.</summary>
-    public class FileSystemOptionOperationBrowse : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IBrowseOption"/> operations.</summary>
+    public class BrowseOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionBrowse);
+        public Type OptionType => typeof(IBrowseOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionBrowse b ? o is FileSystemOptionBrowse ? /*already flattened*/o : /*new instance*/new FileSystemOptionBrowse(b.CanBrowse, b.CanGetEntry) : throw new InvalidCastException($"{typeof(IFileSystemOptionBrowse)} expected.");
+        public IOption Flatten(IOption o) => o is IBrowseOption b ? o is BrowseOption ? /*already flattened*/o : /*new instance*/new BrowseOption(b.CanBrowse, b.CanGetEntry) : throw new InvalidCastException($"{typeof(IBrowseOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionBrowse b1 && o2 is IFileSystemOptionBrowse b2 ? new FileSystemOptionBrowse(b1.CanBrowse && b2.CanBrowse, b1.CanGetEntry && b2.CanGetEntry) : throw new InvalidCastException($"{typeof(IFileSystemOptionBrowse)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is IBrowseOption b1 && o2 is IBrowseOption b2 ? new BrowseOption(b1.CanBrowse && b2.CanBrowse, b1.CanGetEntry && b2.CanGetEntry) : throw new InvalidCastException($"{typeof(IBrowseOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionBrowse b1 && o2 is IFileSystemOptionBrowse b2 ? new FileSystemOptionBrowse(b1.CanBrowse || b2.CanBrowse, b1.CanGetEntry || b2.CanGetEntry) : throw new InvalidCastException($"{typeof(IFileSystemOptionBrowse)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is IBrowseOption b1 && o2 is IBrowseOption b2 ? new BrowseOption(b1.CanBrowse || b2.CanBrowse, b1.CanGetEntry || b2.CanGetEntry) : throw new InvalidCastException($"{typeof(IBrowseOption)} expected.");
     }
 
     /// <summary>File system options for browse.</summary>
-    public class FileSystemOptionBrowse : IFileSystemOptionBrowse
+    public class BrowseOption : IBrowseOption
     {
         /// <summary>Has Browse capability.</summary>
         public bool CanBrowse { get; protected set; }
@@ -127,7 +127,7 @@ namespace Lexical.FileSystem
         public bool CanGetEntry { get; protected set; }
 
         /// <summary>Create file system options for browse.</summary>
-        public FileSystemOptionBrowse(bool canBrowse, bool canGetEntry)
+        public BrowseOption(bool canBrowse, bool canGetEntry)
         {
             CanBrowse = canBrowse;
             CanGetEntry = canGetEntry;

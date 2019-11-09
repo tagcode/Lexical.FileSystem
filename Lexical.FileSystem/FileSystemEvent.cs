@@ -9,19 +9,19 @@ using System.Text;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// Base implementation to <see cref="IFileSystemEvent"/> classes.
+    /// Base implementation to <see cref="IEvent"/> classes.
     /// 
     /// See sub-classes:
     /// <list type="bullet">
-    ///     <item><see cref="FileSystemEventRename"/></item>
-    ///     <item><see cref="FileSystemEventCreate"/></item>
-    ///     <item><see cref="FileSystemEventChange"/></item>
-    ///     <item><see cref="FileSystemEventDelete"/></item>
-    ///     <item><see cref="FileSystemEventError"/></item>
-    ///     <item><see cref="FileSystemEventStart"/></item>
+    ///     <item><see cref="RenameEvent"/></item>
+    ///     <item><see cref="CreateEvent"/></item>
+    ///     <item><see cref="ChangeEvent"/></item>
+    ///     <item><see cref="DeleteEvent"/></item>
+    ///     <item><see cref="ErrorEvent"/></item>
+    ///     <item><see cref="StartEvent"/></item>
     /// </list>
     /// </summary>
-    public abstract class FileSystemEventBase : IFileSystemEvent
+    public abstract class EventBase : IEvent
     {
         /// <summary>
         /// The filesystem observer that sent the event.
@@ -44,7 +44,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        protected FileSystemEventBase(IFileSystemObserver observer, DateTimeOffset eventTime, string path)
+        protected EventBase(IFileSystemObserver observer, DateTimeOffset eventTime, string path)
         {
             Observer = observer;
             EventTime = eventTime;
@@ -60,7 +60,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File renamed event.
     /// </summary>
-    public class FileSystemEventRename : FileSystemEventBase, IFileSystemEventRename
+    public class RenameEvent : EventBase, IRenameEvent
     {
         /// <summary>
         /// The affected file or directory.
@@ -85,7 +85,7 @@ namespace Lexical.FileSystem
         /// <param name="eventTime"></param>
         /// <param name="oldPath"></param>
         /// <param name="newPath"></param>
-        public FileSystemEventRename(IFileSystemObserver observer, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath)
+        public RenameEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string oldPath, string newPath) : base(observer, eventTime, oldPath)
         {
             NewPath = newPath;
         }
@@ -99,7 +99,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File created event
     /// </summary>
-    public class FileSystemEventCreate : FileSystemEventBase, IFileSystemEventCreate
+    public class CreateEvent : EventBase, ICreateEvent
     {
         /// <summary>
         /// Create create event.
@@ -107,7 +107,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemEventCreate(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public CreateEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
 
@@ -120,7 +120,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File contents changed event
     /// </summary>
-    public class FileSystemEventChange : FileSystemEventBase, IFileSystemEventChange
+    public class ChangeEvent : EventBase, IChangeEvent
     {
         /// <summary>
         /// Create file contents changed event.
@@ -128,7 +128,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemEventChange(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public ChangeEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
 
@@ -141,7 +141,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File deleted event
     /// </summary>
-    public class FileSystemEventDelete : FileSystemEventBase, IFileSystemEventDelete
+    public class DeleteEvent : EventBase, IDeleteEvent
     {
         /// <summary>
         /// Create file deleted event.
@@ -149,7 +149,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
         /// <param name="path"></param>
-        public FileSystemEventDelete(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
+        public DeleteEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string path) : base(observer, eventTime, path)
         {
         }
 
@@ -162,7 +162,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Filesystem error event
     /// </summary>
-    public class FileSystemEventError : FileSystemEventBase, IFileSystemEventError
+    public class ErrorEvent : EventBase, IErrorEvent
     {
         /// <summary>
         /// Error
@@ -176,7 +176,7 @@ namespace Lexical.FileSystem
         /// <param name="eventTime"></param>
         /// <param name="error"></param>
         /// <param name="path">(optional)</param>
-        public FileSystemEventError(IFileSystemObserver observer, DateTimeOffset eventTime, Exception error, string path) : base(observer, eventTime, path)
+        public ErrorEvent(IFileSystemObserver observer, DateTimeOffset eventTime, Exception error, string path) : base(observer, eventTime, path)
         {
             this.Error = error;
         }
@@ -190,14 +190,14 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Filesystem observe started event.
     /// </summary>
-    public class FileSystemEventStart : FileSystemEventBase, IFileSystemEventStart
+    public class StartEvent : EventBase, IStartEvent
     {
         /// <summary>
         /// Create Error event.
         /// </summary>
         /// <param name="observer"></param>
         /// <param name="eventTime"></param>
-        public FileSystemEventStart(IFileSystemObserver observer, DateTimeOffset eventTime) : base(observer, eventTime, null)
+        public StartEvent(IFileSystemObserver observer, DateTimeOffset eventTime) : base(observer, eventTime, null)
         {
         }
 

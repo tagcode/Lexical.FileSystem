@@ -16,12 +16,12 @@ namespace Lexical.FileSystem
     /// <summary>
     /// File System that represents embedded resources of an <see cref="System.Reflection.Assembly"/>.
     /// </summary>
-    public class EmbeddedFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemOpen, IFileSystemOptionPath
+    public class EmbeddedFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemOpen, IPathInfo
     {
         /// <summary>
         /// Zero entries.
         /// </summary>
-        protected internal static IFileSystemEntry[] NoEntries = new IFileSystemEntry[0];
+        protected internal static IEntry[] NoEntries = new IEntry[0];
 
         /// <summary>
         /// Associated Assembly
@@ -31,19 +31,19 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Snapshot of entries.
         /// </summary>
-        protected IFileSystemEntry[] entries;
+        protected IEntry[] entries;
         /// <summary>
         /// Lazy construction of entries.
         /// </summary>
-        protected IFileSystemEntry[] Entries => entries ?? (entries = CreateEntries());
+        protected IEntry[] Entries => entries ?? (entries = CreateEntries());
         /// <summary>
         /// Snapshot of entries as map
         /// </summary>
-        protected Dictionary<string, IFileSystemEntry> entryMap;
+        protected Dictionary<string, IEntry> entryMap;
         /// <summary>
         /// Lazy construction of entries as map.
         /// </summary>
-        protected Dictionary<string, IFileSystemEntry> EntryMap => entryMap ?? (Entries.ToDictionary(e => e.Path));
+        protected Dictionary<string, IEntry> EntryMap => entryMap ?? (Entries.ToDictionary(e => e.Path));
 
         /// <inheritdoc/>
         public FileSystemCaseSensitivity CaseSensitivity => FileSystemCaseSensitivity.CaseSensitive;
@@ -67,7 +67,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Root entry
         /// </summary>
-        protected IFileSystemEntry rootEntry;
+        protected IEntry rootEntry;
 
         /// <summary>
         /// Create embedded 
@@ -76,14 +76,14 @@ namespace Lexical.FileSystem
         public EmbeddedFileSystem(Assembly assembly)
         {
             this.Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
-            this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, assembly.Location);
+            this.rootEntry = new DirectoryEntry(this, "", "", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, assembly.Location);
         }
 
         /// <summary>
         /// Create a snapshot of entries.
         /// </summary>
         /// <returns></returns>
-        protected IFileSystemEntry[] CreateEntries()
+        protected IEntry[] CreateEntries()
         {
             string[] names = Assembly.GetManifestResourceNames();
 
@@ -94,10 +94,10 @@ namespace Lexical.FileSystem
             else
                 writetime = DateTimeOffset.MinValue;
 
-            IFileSystemEntry[] result = new IFileSystemEntry[names.Length];
+            IEntry[] result = new IEntry[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
-                result[i] = new FileSystemEntryFile(this, names[i], names[i], writetime, DateTimeOffset.MinValue, -1L, null);
+                result[i] = new FileEntry(this, names[i], names[i], writetime, DateTimeOffset.MinValue, -1L, null);
             }
             return result;
         }
@@ -112,7 +112,7 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
-        public IFileSystemEntry[] Browse(string path, IFileSystemOption option = null)
+        public IEntry[] Browse(string path, IOption option = null)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
@@ -134,12 +134,12 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemOption option = null)
+        public IEntry GetEntry(string path, IOption option = null)
         {
             if (path == null) throw new ArgumentNullException(path);
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
             if (path == "") return rootEntry;
-            IFileSystemEntry e;
+            IEntry e;
             if (EntryMap.TryGetValue(path, out e)) return e;
             return null;
         }
@@ -153,7 +153,7 @@ namespace Lexical.FileSystem
         /// <param name="fileShare"></param>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
@@ -253,7 +253,7 @@ namespace Lexical.FileSystem
             => Assembly.FullName;
 
         /// <inheritdoc/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IEvent> observer, object state = null, IEventDispatcher eventDispatcher = null)
             => throw new NotSupportedException(nameof(Observe));
     }
 }

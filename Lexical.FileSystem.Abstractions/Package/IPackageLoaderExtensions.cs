@@ -85,17 +85,17 @@ namespace Lexical.FileSystem
         }
     }
 
-    /// <summary><see cref="IFileSystemOptionOpen"/> operations.</summary>
-    public class FileSystemOptionOperationAutoMount : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IOpenOption"/> operations.</summary>
+    public class FileSystemOptionOperationAutoMount : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionAutoMount);
+        public Type OptionType => typeof(IAutoMountOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionAutoMount c ? o is FileSystemOptionPackageLoader ? /*already flattened*/o : /*new instance*/new FileSystemOptionPackageLoader(c.AutoMounters) : throw new InvalidCastException($"{typeof(IFileSystemOptionAutoMount)} expected.");
+        public IOption Flatten(IOption o) => o is IAutoMountOption c ? o is FileSystemOptionPackageLoader ? /*already flattened*/o : /*new instance*/new FileSystemOptionPackageLoader(c.AutoMounters) : throw new InvalidCastException($"{typeof(IAutoMountOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2)
+        public IOption Intersection(IOption o1, IOption o2)
         {
-            IFileSystemOptionAutoMount p1 = (IFileSystemOptionAutoMount)o1, p2 = (IFileSystemOptionAutoMount)o2;
+            IAutoMountOption p1 = (IAutoMountOption)o1, p2 = (IAutoMountOption)o2;
             if (p1.AutoMounters == null) return p2;
             if (p2.AutoMounters == null) return p1;
 
@@ -103,9 +103,9 @@ namespace Lexical.FileSystem
             return new FileSystemOptionPackageLoader(list);
         }
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2)
+        public IOption Union(IOption o1, IOption o2)
         {
-            IFileSystemOptionAutoMount p1 = (IFileSystemOptionAutoMount)o1, p2 = (IFileSystemOptionAutoMount)o2;
+            IAutoMountOption p1 = (IAutoMountOption)o1, p2 = (IAutoMountOption)o2;
             if (p1.AutoMounters == null) return p2;
             if (p2.AutoMounters == null) return p1;
             if (p1.AutoMounters.Length == 0) return p2;
@@ -115,7 +115,7 @@ namespace Lexical.FileSystem
             {
                 foreach (string extension in pl.GetExtensions())
                 {
-                    if (byExtension.ContainsKey(extension)) throw new FileSystemExceptionOptionOperationNotSupported(null, null, o2, typeof(IFileSystemOptionAutoMount), typeof(IFileSystemOptionOperationUnion));
+                    if (byExtension.ContainsKey(extension)) throw new FileSystemExceptionOptionOperationNotSupported(null, null, o2, typeof(IAutoMountOption), typeof(IOptionUnionOperation));
                     byExtension[extension] = pl;
                 }
             }
@@ -125,7 +125,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>Option for auto-mounted packages.</summary>
-    public class FileSystemOptionPackageLoader : IFileSystemOptionAutoMount
+    public class FileSystemOptionPackageLoader : IAutoMountOption
     {
         /// <summary>Package loaders that can mount package files, such as .zip.</summary>
         public IPackageLoader[] AutoMounters { get; protected set; }

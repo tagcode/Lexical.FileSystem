@@ -25,7 +25,7 @@ namespace Lexical.FileSystem
     /// Maximum file length is <see cref="int.MaxValue"/>*<see cref="BlockSize"/>.
     /// The default blocksize is 1024 which allows 2TB - 1KB files.
     /// </summary>
-    public class MemoryFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IFileSystemOptionPath
+    public class MemoryFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemCreateDirectory, IFileSystemDelete, IFileSystemObserve, IFileSystemMove, IFileSystemOpen, IFileSystemDisposable, IPathInfo
     {
         // <summary>Shared blocks, up to 1GB of ram.</summary>
         //private static Lazy<IBlockPool> sharedBlock = new Lazy<IBlockPool>(() => new BlockPool(4096, 262144, 16, true));
@@ -185,7 +185,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry[] Browse(string path, IFileSystemOption option = null)
+        public IEntry[] Browse(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -223,7 +223,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemOption option = null)
+        public IEntry GetEntry(string path, IOption option = null)
         {
             // Assert allowed
             if (!option.CanGetEntry(true)) throw new NotSupportedException(nameof(GetEntry));
@@ -237,7 +237,7 @@ namespace Lexical.FileSystem
                 Node node = path == "" ? root : GetNode(path);
                 // Not found
                 if (node == null) return null;
-                // IFileSystemEntry
+                // IEntry
                 return node.Entry;
             }
             finally
@@ -262,7 +262,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void CreateDirectory(string path, IFileSystemOption option = null)
+        public void CreateDirectory(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -275,7 +275,7 @@ namespace Lexical.FileSystem
             // Datetime
             DateTimeOffset now = DateTimeOffset.UtcNow;
             // Queue of events
-            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            StructList12<IEvent> events = new StructList12<IEvent>();
             // Take snapshot of observers
             ObserverHandle[] observers = this.Observers;
             // Write lock
@@ -316,7 +316,7 @@ namespace Lexical.FileSystem
                             if (observers != null)
                                 foreach (ObserverHandle observer in observers)
                                 {
-                                    if (observer.Qualify(newDirectory.Path)) events.Add(new FileSystemEventCreate(observer, now, newDirectory.Path));
+                                    if (observer.Qualify(newDirectory.Path)) events.Add(new CreateEvent(observer, now, newDirectory.Path));
                                 }
                             // Update time of parent
                             directory.lastModified = now;
@@ -362,7 +362,7 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoWriteAccess">When trying to delete root</exception>
-        public void Delete(string path, bool recursive = false, IFileSystemOption option = null)
+        public void Delete(string path, bool recursive = false, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -375,7 +375,7 @@ namespace Lexical.FileSystem
             // Datetime
             DateTimeOffset now = DateTimeOffset.UtcNow;
             // Queue of events
-            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            StructList12<IEvent> events = new StructList12<IEvent>();
             // Take snapshot of observers
             ObserverHandle[] observers = this.Observers;
             // Write lock
@@ -402,7 +402,7 @@ namespace Lexical.FileSystem
                     // Create delete event
                     if (observers != null)
                         foreach (ObserverHandle observer in observers)
-                            if (observer.Qualify(node.Path)) events.Add(new FileSystemEventDelete(observer, now, node.Path));
+                            if (observer.Qualify(node.Path)) events.Add(new DeleteEvent(observer, now, node.Path));
                     // Flush caches
                     parent.FlushChildEntries();
                     parent.FlushEntry();
@@ -420,7 +420,7 @@ namespace Lexical.FileSystem
                         // Create delete event
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
-                                if (observer.Qualify(n.Path)) events.Add(new FileSystemEventDelete(observer, now, n.Path));
+                                if (observer.Qualify(n.Path)) events.Add(new DeleteEvent(observer, now, n.Path));
                         // Mark deleted
                         n.Dispose();
                         n.FlushEntry();
@@ -462,7 +462,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="newPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Move(string oldPath, string newPath, IFileSystemOption option = null)
+        public void Move(string oldPath, string newPath, IOption option = null)
         {
             // Assert arguments
             if (oldPath == null) throw new ArgumentNullException(nameof(oldPath));
@@ -476,7 +476,7 @@ namespace Lexical.FileSystem
             // Datetime
             DateTimeOffset time = DateTimeOffset.UtcNow;
             // Events
-            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            StructList12<IEvent> events = new StructList12<IEvent>();
             // Take snapshot of observers
             ObserverHandle[] observers = this.Observers;
             // Write lock
@@ -529,7 +529,7 @@ namespace Lexical.FileSystem
                     if (observers != null)
                         foreach (ObserverHandle observer in observers)
                             if (observer.Qualify(c_oldPath) || observer.Qualify(c_newPath))
-                                events.Add(new FileSystemEventRename(observer, time, c_oldPath, c_newPath));
+                                events.Add(new RenameEvent(observer, time, c_oldPath, c_newPath));
                 }
                 else
                 // Non-empty directory
@@ -555,7 +555,7 @@ namespace Lexical.FileSystem
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(c_oldPath) || observer.Qualify(c_newPath))
-                                    events.Add(new FileSystemEventRename(observer, time, c_oldPath, c_newPath));
+                                    events.Add(new RenameEvent(observer, time, c_oldPath, c_newPath));
                         c.FlushEntry();
                     }
                 }
@@ -602,7 +602,7 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         /// <exception cref="FileSystemExceptionDirectoryExists">Directory already exists</exception>
         /// <exception cref="FileSystemExceptionFileExists">File already exists</exception>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -617,7 +617,7 @@ namespace Lexical.FileSystem
             // Datetime
             DateTimeOffset now = DateTimeOffset.UtcNow;
             // Events
-            StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+            StructList12<IEvent> events = new StructList12<IEvent>();
             // Take snapshot of observers
             ObserverHandle[] observers = this.Observers;
             // result stream.
@@ -668,7 +668,7 @@ namespace Lexical.FileSystem
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(path))
-                                    events.Add(new FileSystemEventCreate(observer, now, path));
+                                    events.Add(new CreateEvent(observer, now, path));
                         // Return stream
                         return stream;
                     }
@@ -703,7 +703,7 @@ namespace Lexical.FileSystem
                             if (observers != null)
                                 foreach (ObserverHandle observer in observers)
                                     if (observer.Qualify(path))
-                                        events.Add(new FileSystemEventDelete(observer, now, path));
+                                        events.Add(new DeleteEvent(observer, now, path));
                         }
 
                         // Create file.
@@ -719,7 +719,7 @@ namespace Lexical.FileSystem
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(path))
-                                    events.Add(new FileSystemEventCreate(observer, now, path));
+                                    events.Add(new CreateEvent(observer, now, path));
                         // Return stream
                         return stream;
                     }
@@ -785,7 +785,7 @@ namespace Lexical.FileSystem
                         if (observers != null)
                             foreach (ObserverHandle observer in observers)
                                 if (observer.Qualify(path))
-                                    events.Add(new FileSystemEventCreate(observer, now, path));
+                                    events.Add(new CreateEvent(observer, now, path));
                         // Return stream
                         return stream;
                     }
@@ -1043,14 +1043,14 @@ namespace Lexical.FileSystem
             => GetType().Name;
 
         /// <inheritdoc/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IEvent> observer, object state = null, IEventDispatcher eventDispatcher = default, IOption option = null)
         {
             // Assert not disposed
             if (IsDisposing) throw new ObjectDisposedException(GetType().Name);
             ObserverHandle handle = new ObserverHandle(this, filter, observer, state, eventDispatcher);
             observers.Add(handle);
-            // Send IFileSystemEventStart
-            observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
+            // Send IStartEvent
+            observer.OnNext(new StartEvent(handle, DateTimeOffset.UtcNow));
             return handle;
         }
 
@@ -1076,7 +1076,7 @@ namespace Lexical.FileSystem
             /// <param name="observer"></param>
             /// <param name="state"></param>
             /// <param name="eventDispatcher"></param>
-            public ObserverHandle(MemoryFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default) : base(filesystem, filter, observer, state, eventDispatcher)
+            public ObserverHandle(MemoryFileSystem filesystem, string filter, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher = default) : base(filesystem, filter, observer, state, eventDispatcher)
             {
                 if (filter == "**") acceptAll = true;
                 else this.filterPattern = GlobPatternRegexFactory.Slash.CreateRegex(filter);
@@ -1146,12 +1146,12 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Cached entry
             /// </summary>
-            protected IFileSystemEntry entry;
+            protected IEntry entry;
 
             /// <summary>
             /// Get or create entry.
             /// </summary>
-            public IFileSystemEntry Entry =>  parent == null /*root*/ ? CreateEntry() : entry ?? (entry = CreateEntry());
+            public IEntry Entry =>  parent == null /*root*/ ? CreateEntry() : entry ?? (entry = CreateEntry());
 
             /// <summary>
             /// Path to the entry.
@@ -1175,7 +1175,7 @@ namespace Lexical.FileSystem
             }
 
             /// <summary>Create entry snapshot.</summary>
-            public abstract IFileSystemEntry CreateEntry();
+            public abstract IEntry CreateEntry();
             /// <summary>Visit self and subtree.</summary>
             public abstract IEnumerable<Node> VisitTree();
 
@@ -1204,18 +1204,18 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Cached child entries
             /// </summary>
-            protected IFileSystemEntry[] childEntries;
+            protected IEntry[] childEntries;
 
             /// <summary>
             /// Get or create child entries.
             /// </summary>
-            public IFileSystemEntry[] ChildEntries
+            public IEntry[] ChildEntries
             {
                 get
                 {
                     if (childEntries != null) return childEntries;
                     int c = children.Count;
-                    IFileSystemEntry[] array = new IFileSystemEntry[c];
+                    IEntry[] array = new IEntry[c];
                     int i = 0;
                     foreach (Node e in children.Values) array[i++] = e.Entry;
                     return childEntries = array;
@@ -1257,10 +1257,10 @@ namespace Lexical.FileSystem
             /// Create entry snapshot.
             /// </summary>
             /// <returns></returns>
-            public override IFileSystemEntry CreateEntry() =>
+            public override IEntry CreateEntry() =>
                 parent == null ? 
-                /*Root*/     (IFileSystemEntry) new FileSystemEntryDrive(filesystem, Path, name, lastModified, lastAccess, DriveType.Ram, filesystem.blockPool.BytesAvailable, filesystem.blockPool.MaxBlockCount*filesystem.blockPool.BlockSize, null, null, true, null) : 
-                /*non-root*/ (IFileSystemEntry) new FileSystemEntryDirectory(filesystem, Path, name, lastModified, lastAccess, null);
+                /*Root*/     (IEntry) new DriveEntry(filesystem, Path, name, lastModified, lastAccess, DriveType.Ram, filesystem.blockPool.BytesAvailable, filesystem.blockPool.MaxBlockCount*filesystem.blockPool.BlockSize, null, null, true, null) : 
+                /*non-root*/ (IEntry) new DirectoryEntry(filesystem, Path, name, lastModified, lastAccess, null);
 
             /// <summary>
             /// Flush cached array of child entries.
@@ -1339,10 +1339,10 @@ namespace Lexical.FileSystem
             /// Create entry snapshot.
             /// </summary>
             /// <returns></returns>
-            public override IFileSystemEntry CreateEntry()
+            public override IEntry CreateEntry()
             {
                 // Create entry snapshot
-                return new FileSystemEntryFile(filesystem, Path, name, memoryFile.LastModified, memoryFile.LastModified > lastAccess ? memoryFile.LastModified : lastAccess, memoryFile.Length, null);
+                return new FileEntry(filesystem, Path, name, memoryFile.LastModified, memoryFile.LastModified > lastAccess ? memoryFile.LastModified : lastAccess, memoryFile.Length, null);
             }
 
             void IObserver<MemoryFile.ModifiedEvent>.OnCompleted() { }
@@ -1365,11 +1365,11 @@ namespace Lexical.FileSystem
                 if (observers.Length > 0)
                 {
                     // Queue of events
-                    StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+                    StructList12<IEvent> events = new StructList12<IEvent>();
                     foreach (ObserverHandle observer in observers)
                     {
                         // Add event
-                        if (observer.Qualify(Path)) events.Add(new FileSystemEventChange(observer, value.Time, Path));
+                        if (observer.Qualify(Path)) events.Add(new ChangeEvent(observer, value.Time, Path));
                     }
                     // Send events
                     if (events.Count > 0) filesystem.DispatchEvents(ref events);

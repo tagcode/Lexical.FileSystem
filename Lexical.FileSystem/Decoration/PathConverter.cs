@@ -11,7 +11,7 @@ namespace Lexical.FileSystem.Decoration
     /// <summary>
     /// Tool that makes path conversions of decorated filesystems.
     /// 
-    /// This tool is used by <see cref="IFileSystem"/> implementations that support <see cref="IFileSystemOptionSubPath"/> option.
+    /// This tool is used by <see cref="IFileSystem"/> implementations that support <see cref="ISubPathOption"/> option.
     /// </summary>
     public class PathConverter : IPathConverter
     {

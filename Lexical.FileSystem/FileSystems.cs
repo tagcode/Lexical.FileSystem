@@ -64,7 +64,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="filesystemsAndOptions"></param>
         /// <returns></returns>
-        public static FileSystemDecoration Concat(params (IFileSystem filesystem, IFileSystemOption option)[] filesystemsAndOptions)
+        public static FileSystemDecoration Concat(params (IFileSystem filesystem, IOption option)[] filesystemsAndOptions)
             => new FileSystemDecoration(null, "", filesystemsAndOptions.Select(t=>new FileSystemAssignment(t.filesystem, t.option, flags: FileSystemAssignmentFlags.Decoration)).ToArray());
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static FileSystemDecoration Decorate(this IFileSystem filesystem, IFileSystemOption option)
+        public static FileSystemDecoration Decorate(this IFileSystem filesystem, IOption option)
             => new FileSystemDecoration(null, "", new FileSystemAssignment(filesystem, option, flags: FileSystemAssignmentFlags.Decoration));
 
         /// <summary>
@@ -91,7 +91,7 @@ namespace Lexical.FileSystem
         /// <param name="filesystem"></param>
         /// <returns></returns>
         public static FileSystemDecoration AsReadOnly(this IFileSystem filesystem)
-            => new FileSystemDecoration(null, "", new FileSystemAssignment(filesystem, FileSystemOption.ReadOnly, flags: FileSystemAssignmentFlags.Decoration));
+            => new FileSystemDecoration(null, "", new FileSystemAssignment(filesystem, Option.ReadOnly, flags: FileSystemAssignmentFlags.Decoration));
 
     }
 }

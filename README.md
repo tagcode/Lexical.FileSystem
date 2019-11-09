@@ -226,7 +226,7 @@ FileSystem.Temp.PrintTo(
 Files and directories can be observed for changes.
 
 ```csharp
-IObserver<IFileSystemEvent> observer = new Observer();
+IObserver<IEvent> observer = new Observer();
 IFileSystemObserver handle = FileSystem.OS.Observe("C:/**", observer);
 ```
 
@@ -244,11 +244,11 @@ using (var handle = FileSystem.Temp.Observe("*.dat", new PrintObserver()))
 
 
 ```csharp
-class PrintObserver : IObserver<IFileSystemEvent>
+class PrintObserver : IObserver<IEvent>
 {
     public void OnCompleted() => Console.WriteLine("OnCompleted");
     public void OnError(Exception error) => Console.WriteLine(error);
-    public void OnNext(IFileSystemEvent @event) => Console.WriteLine(@event);
+    public void OnNext(IEvent @event) => Console.WriteLine(@event);
 }
 ```
 
@@ -355,19 +355,19 @@ vfs.Mount("/tmp/", FileSystem.Temp);
 vfs.Mount("/tmp/", new MemoryFileSystem());
 ```
 
-**.Mount(<i>path</i>, params <i>IFilesystem</i>, <i>IFileSystemOption</i>)** assigns filesystem with mount option.
+**.Mount(<i>path</i>, params <i>IFilesystem</i>, <i>IOption</i>)** assigns filesystem with mount option.
 
 ```csharp
 IFileSystem vfs = new VirtualFileSystem();
-vfs.Mount("/app/", FileSystem.Application, FileSystemOption.ReadOnly);
+vfs.Mount("/app/", FileSystem.Application, Option.ReadOnly);
 ```
 
-Option such as *FileSystemOption.SubPath()*.
+Option such as *Option.SubPath()*.
 
 ```csharp
 IFileSystem vfs = new VirtualFileSystem();
 string appDir = AppDomain.CurrentDomain.BaseDirectory.Replace('\\', '/');
-vfs.Mount("/app/", FileSystem.OS, FileSystemOption.SubPath(appDir));
+vfs.Mount("/app/", FileSystem.OS, Option.SubPath(appDir));
 ```
 
 **.Mount(<i>path</i>, params <i>IFilesystem[]</i>)** assigns multiple filesystems into one mountpoint.
@@ -379,15 +379,15 @@ overrides.CreateFile("important.dat", new byte[] { 12, 23, 45, 67, 89 });
 vfs.Mount("/app/", overrides, FileSystem.Application);
 ```
 
-**.Mount(<i>path</i>, params (<i>IFilesystem</i>, <i>IFileSystemOption</i>)[])** assigns multiple filesystems with mount options.
+**.Mount(<i>path</i>, params (<i>IFilesystem</i>, <i>IOption</i>)[])** assigns multiple filesystems with mount options.
 
 ```csharp
 IFileSystem overrides = new MemoryFileSystem();
 IFileSystem vfs = new VirtualFileSystem();
 
 vfs.Mount("/app/", 
-    (overrides, FileSystemOption.ReadOnly), 
-    (FileSystem.Application, FileSystemOption.ReadOnly)
+    (overrides, Option.ReadOnly), 
+    (FileSystem.Application, Option.ReadOnly)
 );
 ```
 
@@ -406,7 +406,7 @@ vfs.Mount("/tmp/", filesystem: null);
 
 # Observing
 
-Observer can be placed before and after mounting. If observer is placed before, then mounting will notify the observer with *IFileSystemEventCreate* event for all the added files.
+Observer can be placed before and after mounting. If observer is placed before, then mounting will notify the observer with *ICreateEvent* event for all the added files.
 
 ```csharp
 IFileSystem vfs = new VirtualFileSystem();
@@ -421,11 +421,11 @@ vfs.Mount("", ram);
 
 
 ```csharp
-class PrintObserver : IObserver<IFileSystemEvent>
+class PrintObserver : IObserver<IEvent>
 {
     public void OnCompleted() => Console.WriteLine("OnCompleted");
     public void OnError(Exception error) => Console.WriteLine(error);
-    public void OnNext(IFileSystemEvent @event) => Console.WriteLine(@event);
+    public void OnNext(IEvent @event) => Console.WriteLine(@event);
 }
 ```
 
@@ -463,10 +463,10 @@ vfs.Unmount("");
 Delete(VirtualFileSystem, 19.10.2019 11.34.39 +00:00, /dir/file.txt)
 ```
 
-If filesystem is mounted with **FileSystemOption.NoObserve**, then the assigned filesystem cannot be observed, and it won't dispatch events of added files on mount.
+If filesystem is mounted with **Option.NoObserve**, then the assigned filesystem cannot be observed, and it won't dispatch events of added files on mount.
 
 ```csharp
-vfs.Mount("", ram, FileSystemOption.NoObserve);
+vfs.Mount("", ram, Option.NoObserve);
 ```
 
 Observer isn't closed by unmounting. It can be closed by disposing its handle.
@@ -511,8 +511,8 @@ new VirtualFileSystem.NonDisposable()
     .Mount("data://", FileSystem.Data)                // User's local program data.
     .Mount("program-data://", FileSystem.ProgramData) // Program data that is shared with every user.
     .Mount("application://", FileSystem.Application)  // Application's install directory
-    .Mount("http://", HttpFileSystem.Instance, FileSystemOption.SubPath("http://"))
-    .Mount("https://", HttpFileSystem.Instance, FileSystemOption.SubPath("https://"))
+    .Mount("http://", HttpFileSystem.Instance, Option.SubPath("http://"))
+    .Mount("https://", HttpFileSystem.Instance, Option.SubPath("https://"))
 ```
 
 *VirtualFileSystem.Url* can be read, browsed and written to with its different url schemes.
@@ -620,28 +620,28 @@ IFileSystemDisposable vfs =
 
 # Decoration
 
-The <i>IFileSystems</i><b>.Decorate(<i>IFileSystemOption</i>)</b> extension method decorates a filesystem with new decorated options. 
+The <i>IFileSystems</i><b>.Decorate(<i>IOption</i>)</b> extension method decorates a filesystem with new decorated options. 
 Decoration options is an intersection of filesystem's options and the options in the parameters, so decoration reduces features.
 
 ```csharp
 IFileSystem ram = new MemoryFileSystem();
-IFileSystem rom = ram.Decorate(FileSystemOption.ReadOnly);
+IFileSystem rom = ram.Decorate(Option.ReadOnly);
 ```
 
-<i>IFileSystems</i><b>.AsReadOnly()</b> is same as <i>IFileSystems.Decorate(FileSystemOption.ReadOnly)</i>.
+<i>IFileSystems</i><b>.AsReadOnly()</b> is same as <i>IFileSystems.Decorate(Option.ReadOnly)</i>.
 
 ```csharp
 IFileSystem rom = ram.AsReadOnly();
 ```
 
-**FileSystemOption.NoBrowse** prevents browsing, hiding files.
+**Option.NoBrowse** prevents browsing, hiding files.
 
 ```csharp
-IFileSystem invisible = ram.Decorate(FileSystemOption.NoBrowse);
+IFileSystem invisible = ram.Decorate(Option.NoBrowse);
 ```
 
-**FileSystemOption.SubPath(<i>subpath</i>)** option exposes only a subtree of the decorated filesystem. 
-The *subpath* argument must end with slash "/", or else it mounts to prefix of files.
+**Option.SubPath(<i>subpath</i>)** option exposes only a subtree of the decorated filesystem. 
+The *subpath* argument must end with slash "/", or else it mounts filename prefix, e.g. "tmp-".
 
 
 ```csharp
@@ -649,7 +649,7 @@ IFileSystem ram = new MemoryFileSystem();
 ram.CreateDirectory("tmp/dir/");
 ram.CreateFile("tmp/dir/file.txt", new byte[] { 32,32,32,32,32,32,32,32,32 });
 
-IFileSystem tmp = ram.Decorate(FileSystemOption.SubPath("tmp/"));
+IFileSystem tmp = ram.Decorate(Option.SubPath("tmp/"));
 tmp.PrintTo(Console.Out, format: PrintTree.Format.DefaultPath);
 ```
 <pre style="line-height:1.2;">
@@ -662,7 +662,7 @@ tmp.PrintTo(Console.Out, format: PrintTree.Format.DefaultPath);
 
 ```csharp
 MemoryFileSystem ram = new MemoryFileSystem();
-IFileSystemDisposable rom = ram.Decorate(FileSystemOption.ReadOnly).AddSourceToBeDisposed();
+IFileSystemDisposable rom = ram.Decorate(Option.ReadOnly).AddSourceToBeDisposed();
 // Do work ...
 rom.Dispose();
 ```
@@ -673,7 +673,7 @@ Decorations implement **IDisposeList** and **IBelatableDispose** which allows to
 MemoryFileSystem ram = new MemoryFileSystem();
 ram.CreateDirectory("tmp/dir/");
 ram.CreateFile("tmp/dir/file.txt", new byte[] { 32, 32, 32, 32, 32, 32, 32, 32, 32 });
-IFileSystemDisposable rom = ram.Decorate(FileSystemOption.ReadOnly).AddDisposable(ram);
+IFileSystemDisposable rom = ram.Decorate(Option.ReadOnly).AddDisposable(ram);
 // Do work ...
 rom.Dispose();
 ```
@@ -687,8 +687,8 @@ ram.CreateDirectory("tmp/dir/");
 ram.CreateFile("tmp/dir/file.txt", new byte[] { 32, 32, 32, 32, 32, 32, 32, 32, 32 });
 
 // Create decorations
-IFileSystemDisposable rom = ram.Decorate(FileSystemOption.ReadOnly).AddDisposable(ram.BelateDispose());
-IFileSystemDisposable tmp = ram.Decorate(FileSystemOption.SubPath("tmp/")).AddDisposable(ram.BelateDispose());
+IFileSystemDisposable rom = ram.Decorate(Option.ReadOnly).AddDisposable(ram.BelateDispose());
+IFileSystemDisposable tmp = ram.Decorate(Option.SubPath("tmp/")).AddDisposable(ram.BelateDispose());
 ram.Dispose(); // <- is actually postponed
 
 // Do work ...
@@ -752,14 +752,14 @@ composition.PrintTo(Console.Out, format: PrintTree.Format.Default | PrintTree.Fo
 └── "file.txt" 1024
 </pre>
 
-<b>FileSystems.Concat(<i>(IFileSystem, IFileSystemOption)[]</i>)</b> applies options to the filesystems.
+<b>FileSystems.Concat(<i>(IFileSystem, IOption)[]</i>)</b> applies options to the filesystems.
 
 ```csharp
 IFileSystem filesystem = FileSystem.Application;
 IFileSystem overrides = new MemoryFileSystem();
 IFileSystem composition = FileSystems.Concat(
     (filesystem, null), 
-    (overrides, FileSystemOption.ReadOnly)
+    (overrides, Option.ReadOnly)
 );
 ```
 
@@ -866,7 +866,7 @@ foreach (var line in fs.VisitTree(depth: 2))
 
 ```csharp
 IFileSystem fs = new PhysicalFileProvider(@"C:\Users").ToFileSystem();
-IObserver<IFileSystemEvent> observer = new Observer();
+IObserver<IEvent> observer = new Observer();
 using (IDisposable handle = fs.Observe("**", observer))
 {
 }
@@ -994,7 +994,7 @@ using (Stream s = filesystem.Open("file.txt", FileMode.OpenOrCreate, FileAccess.
 Files and directories can be observed for changes.
 
 ```csharp
-IObserver<IFileSystemEvent> observer = new Observer();
+IObserver<IEvent> observer = new Observer();
 using (IDisposable handle = filesystem.Observe("**", observer))
 {
 }
@@ -1166,7 +1166,7 @@ Console.WriteLine(pool.BytesAvailable); // Prints 3072
 ```
 
 # HttpFileSystem
-**new HttpFileSystem(<i>HttpClient, IFileSystemOption</i>)** creates a new http based filesystem.
+**new HttpFileSystem(<i>HttpClient, IOption</i>)** creates a new http based filesystem.
 
 ```csharp
 IFileSystem fs = new HttpFileSystem(httpClient: default, option: default);
@@ -1216,9 +1216,9 @@ HttpFileSystem can be constructed with various options, such as SubPath and cust
 // Create options
 List<KeyValuePair<string, IEnumerable<string>>> headers = new List<KeyValuePair<string, IEnumerable<string>>>();
 headers.Add(new KeyValuePair<string, IEnumerable<string>>("User-Agent", new String[] { "MyUserAgent" }));
-IFileSystemOption option1 = new FileSystemToken(headers, typeof(System.Net.Http.Headers.HttpHeaders).FullName);
-IFileSystemOption option2 = FileSystemOption.SubPath("http://lexical.fi/");
-IFileSystemOption options = FileSystemOption.Union(option1, option2);
+IOption option1 = new Token(headers, typeof(System.Net.Http.Headers.HttpHeaders).FullName);
+IOption option2 = Option.SubPath("http://lexical.fi/");
+IOption options = Option.Union(option1, option2);
 
 // Create FileSystem
 IFileSystem fs = new HttpFileSystem(option: options);
@@ -1232,11 +1232,11 @@ using (var s = fs.Open("index.html", FileMode.Open, FileAccess.Read, FileShare.N
 }
 ```
 
-User authentication header **AuthenticationHeaderValue** can be wrapped in **FileSystemToken** and passed to *Open()* method.
+User authentication header **AuthenticationHeaderValue** can be wrapped in **Token** and passed to *Open()* method.
 
 ```csharp
 AuthenticationHeaderValue authentication = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
-IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName);
+IToken token = new Token(authentication, typeof(AuthenticationHeaderValue).FullName);
 using (var s = HttpFileSystem.Instance.Open("https://lexical.fi/FileSystem/private/document.txt", FileMode.Open, FileAccess.Read, FileShare.None, token))
 {
     byte[] data = new byte[4096];
@@ -1254,7 +1254,7 @@ The token must be given glob patterns where the token applies, for example "http
 AuthenticationHeaderValue authentication = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
 
 // Token
-IFileSystemToken token = new FileSystemToken(
+IToken token = new Token(
     authentication, 
     typeof(AuthenticationHeaderValue).FullName, 
     "https://lexical.fi/FileSystem/private/**",
@@ -1281,7 +1281,7 @@ Third way is to pass authentication token into a decoration.
 AuthenticationHeaderValue authentication = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword")));
 
 // Create token
-IFileSystemToken token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+IToken token = new Token(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
 // Pass token into decorator
 IFileSystem decoration = HttpFileSystem.Instance.Decorate(token);
@@ -1307,9 +1307,9 @@ HttpFileSystem.Instance.Delete("https://lexical.fi/FileSystem/private/document.t
 ```csharp
 var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
 var authentication = new AuthenticationHeaderValue("Basic", authBlob);
-var token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+var token = new Token(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
-IFileSystemEntry[] entries = HttpFileSystem.Instance.Browse("https://lexical.fi/FileSystem/private/", token);
+IEntry[] entries = HttpFileSystem.Instance.Browse("https://lexical.fi/FileSystem/private/", token);
 ```
 
 **.GetEntry(<i>uri</i>)** reads resource headers and returns entry.
@@ -1317,9 +1317,9 @@ IFileSystemEntry[] entries = HttpFileSystem.Instance.Browse("https://lexical.fi/
 ```csharp
 var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
 var authentication = new AuthenticationHeaderValue("Basic", authBlob);
-var token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+var token = new Token(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
-IFileSystemEntry entry = HttpFileSystem.Instance.GetEntry("https://lexical.fi/FileSystem/private/document.txt", token);
+IEntry entry = HttpFileSystem.Instance.GetEntry("https://lexical.fi/FileSystem/private/document.txt", token);
 ```
 
 File system can be scanned with *.VisitTree()* and *.PrintTo()* extension methods.
@@ -1327,7 +1327,7 @@ File system can be scanned with *.VisitTree()* and *.PrintTo()* extension method
 ```csharp
 var authBlob = Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes($"webuser:webpassword"));
 var authentication = new AuthenticationHeaderValue("Basic", authBlob);
-var token = new FileSystemToken(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
+var token = new Token(authentication, typeof(AuthenticationHeaderValue).FullName, "https://lexical.fi/FileSystem/private/**");
 
 HttpFileSystem.Instance.PrintTo(Console.Out, "https://lexical.fi/FileSystem/private/", option: token);
 ```
@@ -1364,12 +1364,12 @@ HttpFileSystem.Instance.PrintTo(Console.Out, "https://github.com/tagcode/Lexical
    └── "Utility"
 </pre>
 
-*CancellationToken* can be passed as a token.
+*CancellationToken* can be passed to break-up operation.
 
 ```csharp
 // Cancel token
 CancellationTokenSource cancelSrc = new CancellationTokenSource();
-IFileSystemToken token = new FileSystemToken(cancelSrc.Token, typeof(CancellationToken).FullName);
+IToken token = new Token(cancelSrc.Token, typeof(CancellationToken).FullName);
 
 // Set canceled
 cancelSrc.Cancel();
@@ -1414,10 +1414,10 @@ The initial start path is extracted from the pattern.
 filescanner.AddGlobPattern("myfile.zip/**.txt");
 ```
 
-Search is started when **IEnumerator&lt;*IFileSystemEntry*&gt;** is enumerated from the scanner.
+Search is started when **IEnumerator&lt;*IEntry*&gt;** is enumerated from the scanner.
 
 ```csharp
-foreach (IFileSystemEntry entry in filescanner)
+foreach (IEntry entry in filescanner)
 {
     Console.WriteLine(entry.Path);
 }
@@ -1429,7 +1429,7 @@ Exceptions that occur at real-time can be captured into concurrent collection.
 // Collect errors
 filescanner.errors = new ConcurrentBag<Exception>();
 // Run scan
-IFileSystemEntry[] entries = filescanner.ToArray();
+IEntry[] entries = filescanner.ToArray();
 // View errors
 foreach (Exception e in filescanner.errors) Console.WriteLine(e);
 ```
@@ -1440,7 +1440,7 @@ The property **.ReturnDirectories** determines whether scanner returns directori
 filescanner.ReturnDirectories = true;
 ```
 
-The property **.SetDirectoryEvaluator(<i>Func&lt;IFileSystemEntry, bool&gt; func</i>)** sets a criteria that determines whether scanner enters a directory.
+The property **.SetDirectoryEvaluator(<i>Func&lt;IEntry, bool&gt; func</i>)** sets a criteria that determines whether scanner enters a directory.
 
 ```csharp
 filescanner.SetDirectoryEvaluator(e => e.Name != "tmp");

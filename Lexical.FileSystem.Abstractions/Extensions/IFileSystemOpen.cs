@@ -21,8 +21,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Open capability. If unspecified, the default value is false.</returns>
-        public static bool CanOpen(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanOpen : defaultValue;
+        public static bool CanOpen(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IOpenOption>() is IOpenOption opener ? opener.CanOpen : defaultValue;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Read capability.
@@ -30,8 +30,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Read capability</returns>
-        public static bool CanRead(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanRead : defaultValue;
+        public static bool CanRead(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IOpenOption>() is IOpenOption opener ? opener.CanRead : defaultValue;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has Write capability.
@@ -39,8 +39,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Write capability</returns>
-        public static bool CanWrite(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanWrite : defaultValue;
+        public static bool CanWrite(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IOpenOption>() is IOpenOption opener ? opener.CanWrite : defaultValue;
 
         /// <summary>
         /// Test if <paramref name="filesystemOption"/> has CreateFile capability.
@@ -48,8 +48,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has CreateFile capability</returns>
-        public static bool CanCreateFile(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionOpen>() is IFileSystemOptionOpen opener ? opener.CanCreateFile : defaultValue;
+        public static bool CanCreateFile(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IOpenOption>() is IOpenOption opener ? opener.CanCreateFile : defaultValue;
 
         /// <summary>
         /// Create a new file. If file exists, does nothing.
@@ -70,7 +70,7 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
-        public static void CreateFile(this IFileSystem filesystem, string path, byte[] initialData = null, IFileSystemOption option = null)
+        public static void CreateFile(this IFileSystem filesystem, string path, byte[] initialData = null, IOption option = null)
         {
             if (filesystem is IFileSystemOpen opener)
             {
@@ -106,28 +106,28 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
-        public static Stream Open(this IFileSystem filesystem, string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
+        public static Stream Open(this IFileSystem filesystem, string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             if (filesystem is IFileSystemOpen opener) return opener.Open(path, fileMode, fileAccess, fileShare, option);
             throw new NotSupportedException(nameof(Open));
         }
     }
 
-    /// <summary><see cref="IFileSystemOptionOpen"/> operations.</summary>
-    public class FileSystemOptionOperationOpen : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IOpenOption"/> operations.</summary>
+    public class OpenOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionOpen);
+        public Type OptionType => typeof(IOpenOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionOpen c ? o is FileSystemOptionOpen ? /*already flattened*/o : /*new instance*/new FileSystemOptionOpen(c.CanOpen, c.CanRead, c.CanWrite, c.CanCreateFile) : throw new InvalidCastException($"{typeof(IFileSystemOptionOpen)} expected.");
+        public IOption Flatten(IOption o) => o is IOpenOption c ? o is OpenOption ? /*already flattened*/o : /*new instance*/new OpenOption(c.CanOpen, c.CanRead, c.CanWrite, c.CanCreateFile) : throw new InvalidCastException($"{typeof(IOpenOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionOpen c1 && o2 is IFileSystemOptionOpen c2 ? new FileSystemOptionOpen(c1.CanOpen && c2.CanOpen, c1.CanRead && c2.CanRead, c1.CanWrite && c2.CanWrite, c1.CanCreateFile && c2.CanCreateFile) : throw new InvalidCastException($"{typeof(IFileSystemOptionOpen)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is IOpenOption c1 && o2 is IOpenOption c2 ? new OpenOption(c1.CanOpen && c2.CanOpen, c1.CanRead && c2.CanRead, c1.CanWrite && c2.CanWrite, c1.CanCreateFile && c2.CanCreateFile) : throw new InvalidCastException($"{typeof(IOpenOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionOpen c1 && o2 is IFileSystemOptionOpen c2 ? new FileSystemOptionOpen(c1.CanOpen || c2.CanOpen, c1.CanRead && c2.CanRead, c1.CanWrite && c2.CanWrite, c1.CanCreateFile && c2.CanCreateFile) : throw new InvalidCastException($"{typeof(IFileSystemOptionOpen)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is IOpenOption c1 && o2 is IOpenOption c2 ? new OpenOption(c1.CanOpen || c2.CanOpen, c1.CanRead && c2.CanRead, c1.CanWrite && c2.CanWrite, c1.CanCreateFile && c2.CanCreateFile) : throw new InvalidCastException($"{typeof(IOpenOption)} expected.");
     }
 
     /// <summary>File system options for open, create, read and write files.</summary>
-    public class FileSystemOptionOpen : IFileSystemOptionOpen
+    public class OpenOption : IOpenOption
     {
         /// <summary>Can open file</summary>
         public bool CanOpen { get; protected set; }
@@ -139,7 +139,7 @@ namespace Lexical.FileSystem
         public bool CanCreateFile { get; protected set; }
 
         /// <summary>Create file system options for open, create, read and write files.</summary>
-        public FileSystemOptionOpen(bool canOpen, bool canRead, bool canWrite, bool canCreateFile)
+        public OpenOption(bool canOpen, bool canRead, bool canWrite, bool canCreateFile)
         {
             CanOpen = canOpen;
             CanRead = canRead;

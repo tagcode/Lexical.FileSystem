@@ -36,7 +36,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// (optional) filesystem implementation specific token, such as session, security token or credential. Used for authorizing or facilitating the action.
         /// </summary>
-        protected IFileSystemToken token;
+        protected IToken token;
 
         /// <summary>
         /// Options all
@@ -47,12 +47,12 @@ namespace Lexical.FileSystem.Decoration
         /// Create adapter that adapts <paramref name="sourceFilesystem"/> into <see cref="IFileProvider"/>.
         /// </summary>
         /// <param name="sourceFilesystem"></param>
-        /// <param name="option">(optional) decorating options, such as <see cref="IFileSystemToken"/></param>
-        public FileSystemProvider(IFileSystem sourceFilesystem, IFileSystemOption option = null) : base()
+        /// <param name="option">(optional) decorating options, such as <see cref="IToken"/></param>
+        public FileSystemProvider(IFileSystem sourceFilesystem, IOption option = null) : base()
         {
             FileSystem = sourceFilesystem ?? throw new ArgumentNullException(nameof(sourceFilesystem));
-            this.options = FileSystemOptionsAll.Read(FileSystemOption.Union(sourceFilesystem, option));
-            this.token = option.AsOption<IFileSystemToken>();
+            this.options = FileSystemOptionsAll.Read(Option.Union(sourceFilesystem, option));
+            this.token = option.AsOption<IToken>();
         }
 
         /// <summary>
@@ -69,13 +69,13 @@ namespace Lexical.FileSystem.Decoration
                 try
                 {
                     // Read entry.
-                    IFileSystemEntry entry = FileSystem.GetEntry(subpath, token);
+                    IEntry entry = FileSystem.GetEntry(subpath, token);
                     // Directory doesn't exist
                     if (entry == null || !entry.IsDirectory()) return NotFoundDirectoryContents.Singleton;
                 }
                 catch (NotSupportedException) { /*GetEntry is not supported, try Browse() next*/ }
                 // Browse
-                IFileSystemEntry[] entries = FileSystem.Browse(subpath, token);
+                IEntry[] entries = FileSystem.Browse(subpath, token);
                 // Create infos
                 IFileInfo[] infos = new IFileInfo[entries.Length];
                 for (int i = 0; i < entries.Length; i++) infos[i] = new FileInfo(FileSystem, entries[i], options, token);
@@ -138,7 +138,7 @@ namespace Lexical.FileSystem.Decoration
             // Assert enabled feature
             if (!options.CanGetEntry) throw new NotSupportedException(nameof(GetFileInfo));
             // Get entry info
-            IFileSystemEntry entry = FileSystem.GetEntry(subpath, token);
+            IEntry entry = FileSystem.GetEntry(subpath, token);
             // Not found
             if (entry == null || !entry.IsFile()) return new NotFoundFileInfo(subpath);
             // Adapt
@@ -146,12 +146,12 @@ namespace Lexical.FileSystem.Decoration
         }
 
         /// <summary>
-        /// Adapts <see cref="IFileSystemEntry"/> to <see cref="IFileInfo"/>.
+        /// Adapts <see cref="IEntry"/> to <see cref="IFileInfo"/>.
         /// </summary>
         public class FileInfo : IFileInfo
         {
             /// <summary>Entry from filesystem.</summary>
-            public IFileSystemEntry Entry { get; protected set; }
+            public IEntry Entry { get; protected set; }
             /// <summary>Associated filesystem.</summary>
             public IFileSystem FileSystem { get; protected set; }
             /// <inheritdoc/>
@@ -170,12 +170,12 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>
             /// Enabled features
             /// </summary>
-            protected IFileSystemOption options;
+            protected IOption options;
 
             /// <summary>
             /// Token.
             /// </summary>
-            protected IFileSystemToken token;
+            protected IToken token;
 
             /// <summary>
             /// Create <see cref="IFileInfo"/> from <paramref name="entry"/>.
@@ -184,7 +184,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="entry"></param>
             /// <param name="options">(optional) options</param>
             /// <param name="token">(optional)</param>
-            public FileInfo(IFileSystem filesystem, IFileSystemEntry entry, IFileSystemOption options, IFileSystemToken token)
+            public FileInfo(IFileSystem filesystem, IEntry entry, IOption options, IToken token)
             {
                 this.FileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.Entry = entry ?? throw new ArgumentNullException(nameof(entry));
@@ -217,7 +217,7 @@ namespace Lexical.FileSystem.Decoration
             return watchToken;
         }
 
-        class WatchToken : IChangeToken, IObserver<IFileSystemEvent>
+        class WatchToken : IChangeToken, IObserver<IEvent>
         {
             /// <summary>
             /// Has there been change.
@@ -290,7 +290,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>
             /// File system ends observer.
             /// </summary>
-            void IObserver<IFileSystemEvent>.OnCompleted()
+            void IObserver<IEvent>.OnCompleted()
             {
                 closed = true;
                 // Only one thread can call Dispose()
@@ -303,7 +303,7 @@ namespace Lexical.FileSystem.Decoration
             /// File system has an internal error
             /// </summary>
             /// <param name="error"></param>
-            void IObserver<IFileSystemEvent>.OnError(Exception error)
+            void IObserver<IEvent>.OnError(Exception error)
             {
             }
 
@@ -311,12 +311,12 @@ namespace Lexical.FileSystem.Decoration
             /// Process event.
             /// </summary>
             /// <param name="value"></param>
-            void IObserver<IFileSystemEvent>.OnNext(IFileSystemEvent value)
+            void IObserver<IEvent>.OnNext(IEvent value)
             {
                 // Take reference to observer handle
                 if (observerHandle == null && value.Observer != null) observerHandle = value.Observer;
                 // Filesystem has changed
-                if (value is IFileSystemEventChange || value is IFileSystemEventCreate || value is IFileSystemEventDelete || value is IFileSystemEventRename)
+                if (value is IChangeEvent || value is ICreateEvent || value is IDeleteEvent || value is IRenameEvent)
                 {
                     // Mark changed
                     HasChanged = true;

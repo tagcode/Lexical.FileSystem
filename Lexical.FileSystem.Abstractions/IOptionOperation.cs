@@ -8,28 +8,28 @@ using System;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// <see cref="IFileSystemOption"/> interface type specific operations handling.
+    /// <see cref="IOption"/> interface type specific operations handling.
     /// 
     /// See sub-interfaces:
     /// <list type="bullet">
-    ///     <item><see cref="IFileSystemOptionOperationUnion"/></item>
-    ///     <item><see cref="IFileSystemOptionOperationIntersection"/></item>
-    ///     <item><see cref="IFileSystemOptionOperationFlatten"/></item>
+    ///     <item><see cref="IOptionUnionOperation"/></item>
+    ///     <item><see cref="IOptionIntersectionOperation"/></item>
+    ///     <item><see cref="IOptionFlattenOperation"/></item>
     /// </list>
     /// 
     /// </summary>
-    public interface IFileSystemOptionOperation
+    public interface IOptionOperation
     {
         /// <summary>
-        /// The subinterface of <see cref="IFileSystemOption"/> that this class manages.
+        /// The subinterface of <see cref="IOption"/> that this class manages.
         /// </summary>
         Type OptionType { get; }
     }
 
     /// <summary>
-    /// <see cref="IFileSystemOption"/> interface type specific operations handling.
+    /// <see cref="IOption"/> interface type specific operations handling.
     /// </summary>
-    public interface IFileSystemOptionOperationUnion : IFileSystemOptionOperation
+    public interface IOptionUnionOperation : IOptionOperation
     {
         /// <summary>
         /// Join two instances of the option type.
@@ -37,13 +37,13 @@ namespace Lexical.FileSystem
         /// <param name="o1"></param>
         /// <param name="o2"></param>
         /// <returns></returns>
-        IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2);
+        IOption Union(IOption o1, IOption o2);
     }
 
     /// <summary>
-    /// <see cref="IFileSystemOption"/> interface type specific operations handling.
+    /// <see cref="IOption"/> interface type specific operations handling.
     /// </summary>
-    public interface IFileSystemOptionOperationIntersection : IFileSystemOptionOperation
+    public interface IOptionIntersectionOperation : IOptionOperation
     {
 
         /// <summary>
@@ -52,13 +52,13 @@ namespace Lexical.FileSystem
         /// <param name="o1"></param>
         /// <param name="o2"></param>
         /// <returns></returns>
-        IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2);
+        IOption Intersection(IOption o1, IOption o2);
     }
 
     /// <summary>
-    /// <see cref="IFileSystemOption"/> interface type specific operations handling.
+    /// <see cref="IOption"/> interface type specific operations handling.
     /// </summary>
-    public interface IFileSystemOptionOperationFlatten : IFileSystemOptionOperation
+    public interface IOptionFlattenOperation : IOptionOperation
     {
         /// <summary>
         /// Creates more simplified instance of <paramref name="o"/>.
@@ -66,24 +66,24 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="o"></param>
         /// <returns>Effectively same content than <paramref name="o"/>, but may be reference to a lighter object</returns>
-        IFileSystemOption Flatten(IFileSystemOption o);
+        IOption Flatten(IOption o);
     }
 
     /// <summary>
-    /// Attribute for <see cref="IFileSystemOption"/> interfaces to expose a class that manages operations for that interface.
+    /// Attribute for <see cref="IOption"/> interfaces to expose a class that manages operations for that interface.
     /// </summary>
     [AttributeUsage(AttributeTargets.Interface)]
     public class OperationsAttribute : Attribute
     {
         /// <summary>
-        /// A class that implements <see cref="IFileSystemOptionOperation"/>.
+        /// A class that implements <see cref="IOptionOperation"/>.
         /// </summary>
         public readonly Type OperationsClass;
 
         /// <summary>
         /// Crate attribute that gives reference to a class that manages an operations for an option interface or class.
         /// </summary>
-        /// <param name="operationsClass">A class that implements <see cref="IFileSystemOptionOperation"/>.</param>
+        /// <param name="operationsClass">A class that implements <see cref="IOptionOperation"/>.</param>
         public OperationsAttribute(Type operationsClass)
         {
             OperationsClass = operationsClass ?? throw new ArgumentNullException(nameof(OperationsClass));

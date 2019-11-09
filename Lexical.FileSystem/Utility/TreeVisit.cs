@@ -44,10 +44,10 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="Exception">any exception that GetEntry or Browse can throw</exception>
         /// <exception cref="IOException">If Browse returns an entry whose path is not under parent entry's path</exception>
-        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, IFileSystemOption option = null)
+        public static IEnumerable<Line> VisitTree(this IFileSystem filesystem, string path = "", int depth = Int32.MaxValue, IOption option = null)
         {
             List<Line> queue = new List<Line>();
-            IFileSystemEntry entry = filesystem.GetEntry(path, option);
+            IEntry entry = filesystem.GetEntry(path, option);
             if (entry == null) yield break;
             queue.Add( new Line(entry, 0, 0UL) );
             while (queue.Count > 0)
@@ -64,13 +64,13 @@ namespace Lexical.FileSystem
                     try
                     {
                         // Browse children
-                        IFileSystemEntry[] children = filesystem.Browse(line.Entry.Path, option);
+                        IEntry[] children = filesystem.Browse(line.Entry.Path, option);
                         // Assert children don't refer to the parent of the parent
-                        foreach (IFileSystemEntry child in children) if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
+                        foreach (IEntry child in children) if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
                         // Bitmask when this level continues
                         ulong levelContinuesBitMask = line.LevelContinuesBitMask | (line.Level < 64 ? 1UL << line.Level : 0UL);
                         // Add children in reverse order
-                        foreach (IFileSystemEntry child in children) queue.Add(new Line(child, line.Level + 1, levelContinuesBitMask));
+                        foreach (IEntry child in children) queue.Add(new Line(child, line.Level + 1, levelContinuesBitMask));
                         // Sort the entries that were added
                         if (children.Length>1) sorter.QuickSortInverse(ref queue, startIndex, queue.Count - 1);
                         // Last entry doesn't continue on its level.
@@ -99,7 +99,7 @@ namespace Lexical.FileSystem
             /// <summary>
             /// Visited tree entry.
             /// </summary>
-            public readonly IFileSystemEntry Entry;
+            public readonly IEntry Entry;
 
             /// <summary>
             /// Visit depth, starts at 0.
@@ -133,7 +133,7 @@ namespace Lexical.FileSystem
             /// <param name="level"></param>
             /// <param name="levelContinuesBitMask"></param>
             /// <param name="error">(optional) initial error</param>
-            public Line(IFileSystemEntry entry, int level, ulong levelContinuesBitMask, Exception error = null)
+            public Line(IEntry entry, int level, ulong levelContinuesBitMask, Exception error = null)
             {
                 Entry = entry;
                 Level = level;
@@ -474,12 +474,12 @@ namespace Lexical.FileSystem
             public class Comparer : IComparer<Line>
             {
                 /// <summary>Comparer that sorts by: Type, Name.</summary>
-                private static IComparer<Line> typeNameComparer = new Comparer(FileSystemEntryComparer.TypeNameComparer);
+                private static IComparer<Line> typeNameComparer = new Comparer(EntryComparer.TypeNameComparer);
                 /// <summary>Comparer that sorts by: Type, Name.</summary>
                 public static IComparer<Line> TypeNameComparer => typeNameComparer;
 
                 /// <summary>Entry comparer</summary>
-                IComparer<IFileSystemEntry> entryComparer;
+                IComparer<IEntry> entryComparer;
 
                 /// <summary>
                 /// Sort by type, then name, using AlphaNumericComparer
@@ -494,7 +494,7 @@ namespace Lexical.FileSystem
                 /// Create comparer
                 /// </summary>
                 /// <param name="entryComparer"></param>
-                public Comparer(IComparer<IFileSystemEntry> entryComparer = null)
+                public Comparer(IComparer<IEntry> entryComparer = null)
                 {
                     this.entryComparer = entryComparer ?? throw new ArgumentException(nameof(entryComparer));
                 }

@@ -20,8 +20,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true if has SetFileAttribute capability</returns>
-        public static bool CanSetFileAttribute(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionFileAttribute>() is IFileSystemOptionFileAttribute attributer ? attributer.CanSetFileAttribute : defaultValue;
+        public static bool CanSetFileAttribute(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IFileAttributeOption>() is IFileAttributeOption attributer ? attributer.CanSetFileAttribute : defaultValue;
 
         /// <summary>
         /// Set <paramref name="fileAttribute"/> on <paramref name="path"/>.
@@ -41,7 +41,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        public static void SetFileAttribute(this IFileSystem filesystem, string path, FileAttributes fileAttribute, IFileSystemOption option = null)
+        public static void SetFileAttribute(this IFileSystem filesystem, string path, FileAttributes fileAttribute, IOption option = null)
         {
             if (filesystem is IFileSystemFileAttribute attributer) attributer.SetFileAttribute(path, fileAttribute, option);
             else throw new NotSupportedException(nameof(SetFileAttribute));
@@ -49,27 +49,27 @@ namespace Lexical.FileSystem
 
     }
 
-    /// <summary><see cref="IFileSystemOptionFileAttribute"/> operations.</summary>
-    public class FileSystemOptionOperationFileAttribute : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IFileAttributeOption"/> operations.</summary>
+    public class FileAttributeOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionFileAttribute);
+        public Type OptionType => typeof(IFileAttributeOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionFileAttribute b ? o is FileSystemOptionFileAttribute ? /*already flattened*/o : /*new instance*/new FileSystemOptionFileAttribute(b.CanSetFileAttribute) : throw new InvalidCastException($"{typeof(IFileSystemOptionFileAttribute)} expected.");
+        public IOption Flatten(IOption o) => o is IFileAttributeOption b ? o is FileAttributeOption ? /*already flattened*/o : /*new instance*/new FileAttributeOption(b.CanSetFileAttribute) : throw new InvalidCastException($"{typeof(IFileAttributeOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionFileAttribute b1 && o2 is IFileSystemOptionFileAttribute b2 ? new FileSystemOptionFileAttribute(b1.CanSetFileAttribute && b2.CanSetFileAttribute) : throw new InvalidCastException($"{typeof(IFileSystemOptionFileAttribute)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is IFileAttributeOption b1 && o2 is IFileAttributeOption b2 ? new FileAttributeOption(b1.CanSetFileAttribute && b2.CanSetFileAttribute) : throw new InvalidCastException($"{typeof(IFileAttributeOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionFileAttribute b1 && o2 is IFileSystemOptionFileAttribute b2 ? new FileSystemOptionFileAttribute(b1.CanSetFileAttribute || b2.CanSetFileAttribute) : throw new InvalidCastException($"{typeof(IFileSystemOptionFileAttribute)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is IFileAttributeOption b1 && o2 is IFileAttributeOption b2 ? new FileAttributeOption(b1.CanSetFileAttribute || b2.CanSetFileAttribute) : throw new InvalidCastException($"{typeof(IFileAttributeOption)} expected.");
     }
 
     /// <summary>File system options for browse.</summary>
-    public class FileSystemOptionFileAttribute : IFileSystemOptionFileAttribute
+    public class FileAttributeOption : IFileAttributeOption
     {
         /// <summary>Has SetFileAttribute capability.</summary>
         public bool CanSetFileAttribute { get; protected set; }
 
         /// <summary>Create file system options for browse.</summary>
-        public FileSystemOptionFileAttribute(bool canSetFileAttribute)
+        public FileAttributeOption(bool canSetFileAttribute)
         {
             this.CanSetFileAttribute = canSetFileAttribute;
         }

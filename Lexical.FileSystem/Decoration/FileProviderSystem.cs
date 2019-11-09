@@ -27,7 +27,7 @@ namespace Lexical.FileSystem.Decoration
     /// </summary>
     public class FileProviderSystem : FileSystemBase, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen
     {
-        static IFileSystemEntry[] NO_ENTRIES = new IFileSystemEntry[0];
+        static IEntry[] NO_ENTRIES = new IEntry[0];
 
         /// <summary>
         /// Source file provider. This value is nulled on dispose.
@@ -67,7 +67,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Root entry. Constructed only for PhysicalFileProvider. For other, is constructed at runtime.
         /// </summary>
-        protected IFileSystemEntry rootEntry;
+        protected IEntry rootEntry;
 
         /// <summary>
         /// Options all
@@ -79,7 +79,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="sourceFileProvider"></param>
         /// <param name="option"></param>
-        public FileProviderSystem(IFileProvider sourceFileProvider, IFileSystemOption option = null) : base()
+        public FileProviderSystem(IFileProvider sourceFileProvider, IOption option = null) : base()
         {
             this.fileProvider = sourceFileProvider ?? throw new ArgumentNullException(nameof(sourceFileProvider));
             this.options = option == null ? Options.AllEnabled : Options.Read(option);
@@ -90,16 +90,16 @@ namespace Lexical.FileSystem.Decoration
                 try
                 {
                     string physicalPath = sourceFileProvider.GetType().GetProperty("Root").GetValue(sourceFileProvider) as string;
-                    this.rootEntry = new FileSystemEntryDirectory(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, physicalPath);
+                    this.rootEntry = new DirectoryEntry(this, "", "", DateTimeOffset.MinValue, DateTimeOffset.MinValue, physicalPath);
                 }
                 catch (Exception) { } // Reflection error
             }
         }
 
         /// <summary>FileProvider options</summary>
-        public class Options : IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionBrowse, IFileSystemTokenEnumerable
+        public class Options : IObserveOption, IOpenOption, IBrowseOption, ITokenEnumerable
         {
-            static IFileSystemToken[] no_tokens = new IFileSystemToken[0];
+            static IToken[] no_tokens = new IToken[0];
             static Options allEnabled = new Options(true, true, true, true, true, true, true);
             /// <summary></summary>
             public static Options AllEnabled => allEnabled;
@@ -120,7 +120,7 @@ namespace Lexical.FileSystem.Decoration
             public bool CanObserve { get; protected set; } = true;
 
             /// <summary>Tokens</summary>
-            protected IFileSystemToken[] tokens = no_tokens;
+            protected IToken[] tokens = no_tokens;
 
 
             /// <summary>Create options</summary>
@@ -145,11 +145,11 @@ namespace Lexical.FileSystem.Decoration
             /// </summary>
             /// <param name="option"></param>
             /// <returns></returns>
-            public static Options Read(IFileSystemOption option)
+            public static Options Read(IOption option)
             {
                 Options result = new Options();
 
-                IFileSystemOptionOpen open = option.AsOption<IFileSystemOptionOpen>();
+                IOpenOption open = option.AsOption<IOpenOption>();
                 if (open != null)
                 {
                     result.CanCreateFile = open.CanCreateFile;
@@ -157,29 +157,29 @@ namespace Lexical.FileSystem.Decoration
                     result.CanRead = open.CanRead;
                     result.CanWrite = open.CanWrite;
                 }
-                IFileSystemOptionBrowse browse = option.AsOption<IFileSystemOptionBrowse>();
+                IBrowseOption browse = option.AsOption<IBrowseOption>();
                 if (browse != null)
                 {
                     result.CanBrowse = browse.CanBrowse;
                 }
-                IFileSystemOptionObserve observe = option.AsOption<IFileSystemOptionObserve>();
+                IObserveOption observe = option.AsOption<IObserveOption>();
                 if (observe != null)
                 {
                     result.CanObserve = observe.CanObserve;
                 }
-                IFileSystemToken token = option.AsOption<IFileSystemToken>();
+                IToken token = option.AsOption<IToken>();
                 if (token != null)
                 {
                     var enumr = option.ListTokens(false);
-                    result.tokens = enumr is IFileSystemToken[] arr ? arr : enumr.ToArray();
+                    result.tokens = enumr is IToken[] arr ? arr : enumr.ToArray();
                 }
                 return result;
             }
 
             /// <summary>Get enumerator</summary>
-            public IEnumerator<IFileSystemToken> GetEnumerator() => ((IEnumerable<IFileSystemToken>)tokens).GetEnumerator();
+            public IEnumerator<IToken> GetEnumerator() => ((IEnumerable<IToken>)tokens).GetEnumerator();
             /// <summary>Get enumerator</summary>
-            IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<IFileSystemToken>)tokens).GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<IToken>)tokens).GetEnumerator();
         }
 
 
@@ -203,7 +203,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null)
+        public Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             // Assert open is enabled
             if (!CanOpen || !option.CanOpen(true)) throw new NotSupportedException(nameof(Open));
@@ -242,7 +242,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry[] Browse(string path, IFileSystemOption option = null)
+        public IEntry[] Browse(string path, IOption option = null)
         {
             // Assert supported
             if (!CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
@@ -256,17 +256,17 @@ namespace Lexical.FileSystem.Decoration
             if (contents.Exists)
             {
                 // Convert result
-                StructList24<IFileSystemEntry> list = new StructList24<IFileSystemEntry>();
+                StructList24<IEntry> list = new StructList24<IEntry>();
                 foreach (IFileInfo info in contents)
                 {
                     if (info.IsDirectory)
                     {
-                        IFileSystemEntry e = new FileSystemEntryDirectory(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue, info.PhysicalPath);
+                        IEntry e = new DirectoryEntry(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue, info.PhysicalPath);
                         list.Add(e);
                     }
                     else
                     {
-                        IFileSystemEntry e = new FileSystemEntryFile(this, String.IsNullOrEmpty(path) ? info.Name : path + "/" + info.Name, info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length, info.PhysicalPath);
+                        IEntry e = new FileEntry(this, String.IsNullOrEmpty(path) ? info.Name : path + "/" + info.Name, info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length, info.PhysicalPath);
                         list.Add(e);
                     }
                 }
@@ -291,7 +291,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IFileSystemEntry GetEntry(string path, IFileSystemOption option = null)
+        public IEntry GetEntry(string path, IOption option = null)
         {
             // Assert allowed
             if (!CanGetEntry || !option.CanGetEntry(true)) throw new NotSupportedException(nameof(GetEntry));
@@ -310,9 +310,9 @@ namespace Lexical.FileSystem.Decoration
                 if (fi.IsDirectory)
                 {
                     if (path != "" && !path.EndsWith("/") && !path.EndsWith("\\")) path = path + "/";
-                    return new FileSystemEntryDirectory(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.PhysicalPath);
+                    return new DirectoryEntry(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.PhysicalPath);
                 }
-                else return new FileSystemEntryFile(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length, fi.PhysicalPath);
+                else return new FileEntry(this, path, fi.Name, fi.LastModified, DateTimeOffset.MinValue, fi.Length, fi.PhysicalPath);
             }
 
             // Directory
@@ -334,7 +334,7 @@ namespace Lexical.FileSystem.Decoration
                 {
                     name = Path.GetDirectoryName(path);
                 }
-                return new FileSystemEntryDirectory(this, path, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
+                return new DirectoryEntry(this, path, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
             }
 
             // Nothing was found
@@ -362,7 +362,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public virtual IFileSystemObserver Observe(string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
+        public virtual IFileSystemObserver Observe(string filter, IObserver<IEvent> observer, object state = null, IEventDispatcher eventDispatcher = default, IOption option = null)
         {
             // Assert observe is enabled.
             if (!CanObserve || !option.CanObserve(true)) throw new NotSupportedException(nameof(Observe));
@@ -377,7 +377,7 @@ namespace Lexical.FileSystem.Decoration
                 // Create observer that watches one file
                 FileObserver handle = new FileObserver(this, filter, observer, state, eventDispatcher, option.OptionIntersection(this.options));
                 // Send handle
-                observer.OnNext( new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
+                observer.OnNext( new StartEvent(handle, DateTimeOffset.UtcNow));
                 // Return handle
                 return handle;
             }
@@ -387,7 +387,7 @@ namespace Lexical.FileSystem.Decoration
                 // Create handle
                 PatternObserver handle = new PatternObserver(this, patternInfo, observer, state, eventDispatcher);
                 // Send handle
-                observer.OnNext(new FileSystemEventStart(handle, DateTimeOffset.UtcNow));
+                observer.OnNext(new StartEvent(handle, DateTimeOffset.UtcNow));
                 // Return handle
                 return handle;
             }
@@ -406,7 +406,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>
             /// Previous state of the file.
             /// </summary>
-            protected IFileSystemEntry previousEntry;
+            protected IEntry previousEntry;
 
             /// <summary>
             /// Change token
@@ -422,7 +422,7 @@ namespace Lexical.FileSystem.Decoration
             protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
 
             /// <summary></summary>
-            protected IFileSystemOption option;
+            protected IOption option;
 
             /// <summary>
             /// Print info
@@ -440,7 +440,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="state"></param>
             /// <param name="eventDispatcher">(optional)</param>
             /// <param name="option">(optional)</param>
-            public FileObserver(IFileSystem filesystem, string path, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, IFileSystemOption option)
+            public FileObserver(IFileSystem filesystem, string path, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher, IOption option)
                 : base(filesystem, path, observer, state, eventDispatcher)
             {
                 this.changeToken = FileProvider.Watch(path);
@@ -460,27 +460,27 @@ namespace Lexical.FileSystem.Decoration
                 // No observer
                 if (_observer == null) return;
                 // Get dispatcher
-                var _dispatcher = Dispatcher ?? FileSystemEventDispatcher.Instance;
+                var _dispatcher = Dispatcher ?? EventDispatcher.Instance;
 
                 // Disposed
                 IFileProvider _fileProvider = FileProvider;
                 if (_fileProvider == null || _observer == null) return;
 
                 // Event to send
-                IFileSystemEvent _event = null;
+                IEvent _event = null;
 
                 // Create new token
                 if (!IsDisposing) this.changeToken = FileProvider.Watch(Filter);
 
                 // Figure out change type
-                IFileSystemEntry currentEntry = FileSystem.GetEntry(Filter, option);
+                IEntry currentEntry = FileSystem.GetEntry(Filter, option);
                 bool exists = currentEntry != null;
                 bool existed = previousEntry != null;
                 DateTimeOffset time = DateTimeOffset.UtcNow;
 
-                if (exists && existed) _event = new FileSystemEventChange(this, time, Filter);
-                else if (exists && !existed) _event = new FileSystemEventCreate(this, time, Filter);
-                else if (!exists && existed) _event = new FileSystemEventDelete(this, time, Filter);
+                if (exists && existed) _event = new ChangeEvent(this, time, Filter);
+                else if (exists && !existed) _event = new CreateEvent(this, time, Filter);
+                else if (!exists && existed) _event = new DeleteEvent(this, time, Filter);
 
                 // Replace entry
                 previousEntry = currentEntry;
@@ -532,7 +532,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>
             /// Previous state of file existing.
             /// </summary>
-            protected IFileSystemEntry[] previousEntries;
+            protected IEntry[] previousEntries;
 
             /// <summary>
             /// Change token
@@ -547,7 +547,7 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>
             /// Previous snapshot of detected dirs and files
             /// </summary>
-            protected Dictionary<string, IFileSystemEntry> previousSnapshot;
+            protected Dictionary<string, IEntry> previousSnapshot;
 
             /// <summary>Time when observing started.</summary>
             protected DateTimeOffset startTime = DateTimeOffset.UtcNow;
@@ -560,7 +560,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="observer"></param>
             /// <param name="state"></param>
             /// <param name="eventDispatcher"></param>
-            public PatternObserver(IFileSystem filesystem, GlobPatternInfo patternInfo, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher = default)
+            public PatternObserver(IFileSystem filesystem, GlobPatternInfo patternInfo, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher = default)
                 : base(filesystem, patternInfo.Pattern, observer, state, eventDispatcher)
             {
                 this.changeToken = FileProvider.Watch(patternInfo.Pattern);
@@ -572,13 +572,13 @@ namespace Lexical.FileSystem.Decoration
             /// Read a snapshot of files and folders that match filter.
             /// </summary>
             /// <returns></returns>
-            Dictionary<string, IFileSystemEntry> ReadSnapshot()
+            Dictionary<string, IEntry> ReadSnapshot()
             {
-                Dictionary<string, IFileSystemEntry> result = new Dictionary<string, IFileSystemEntry>();
+                Dictionary<string, IEntry> result = new Dictionary<string, IEntry>();
                 FileScanner scanner = new FileScanner(FileSystem).AddGlobPattern(Filter).SetReturnDirectories(true);
 
                 // Run scan
-                foreach (IFileSystemEntry entry in scanner)
+                foreach (IEntry entry in scanner)
                     result[entry.Path] = entry;
 
                 return result;
@@ -598,31 +598,31 @@ namespace Lexical.FileSystem.Decoration
 
                 // Get new snapshot 
                 DateTimeOffset time = DateTimeOffset.UtcNow;
-                Dictionary<string, IFileSystemEntry> newSnapshot = ReadSnapshot();
+                Dictionary<string, IEntry> newSnapshot = ReadSnapshot();
 
                 // List of events
-                StructList12<IFileSystemEvent> events = new StructList12<IFileSystemEvent>();
+                StructList12<IEvent> events = new StructList12<IEvent>();
 
                 // Find adds
-                foreach (KeyValuePair<string, IFileSystemEntry> newEntry in newSnapshot)
+                foreach (KeyValuePair<string, IEntry> newEntry in newSnapshot)
                 {
                     string path = newEntry.Key;
                     // Find matching previous entry
-                    IFileSystemEntry prevEntry;
+                    IEntry prevEntry;
                     if (previousSnapshot.TryGetValue(path, out prevEntry))
                     {
                         // Send change event
-                        if (!FileSystemEntryComparer.PathDateLengthTypeEqualityComparer.Equals(newEntry.Value, prevEntry))
-                            events.Add(new FileSystemEventChange(this, time, path));
+                        if (!EntryComparer.PathDateLengthTypeEqualityComparer.Equals(newEntry.Value, prevEntry))
+                            events.Add(new ChangeEvent(this, time, path));
                     }
                     // Send create event
-                    else events.Add(new FileSystemEventCreate(this, time, path));
+                    else events.Add(new CreateEvent(this, time, path));
                 }
                 // Find Deletes
-                foreach (KeyValuePair<string, IFileSystemEntry> oldEntry in previousSnapshot)
+                foreach (KeyValuePair<string, IEntry> oldEntry in previousSnapshot)
                 {
                     string path = oldEntry.Key;
-                    if (!newSnapshot.ContainsKey(path)) events.Add(new FileSystemEventDelete(this, time, path));
+                    if (!newSnapshot.ContainsKey(path)) events.Add(new DeleteEvent(this, time, path));
                 }
 
                 // Replace entires

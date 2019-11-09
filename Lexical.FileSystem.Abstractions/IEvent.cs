@@ -8,22 +8,22 @@ using System.Collections.Generic;
 
 namespace Lexical.FileSystem
 {
-    // <IFileSystemEvent>
+    // <IEvent>
     /// <summary>
     /// File entry event.
     /// 
     /// See sub-interfaces:
     /// <list type="bullet">
-    ///     <item><see cref="IFileSystemEventCreate"/></item>
-    ///     <item><see cref="IFileSystemEventDelete"/></item>
-    ///     <item><see cref="IFileSystemEventChange"/></item>
-    ///     <item><see cref="IFileSystemEventRename"/></item>
-    ///     <item><see cref="IFileSystemEventError"/></item>
-    ///     <item><see cref="IFileSystemEventDecoration"/></item>
-    ///     <item><see cref="IFileSystemEventStart"/></item>
+    ///     <item><see cref="ICreateEvent"/></item>
+    ///     <item><see cref="IDeleteEvent"/></item>
+    ///     <item><see cref="IChangeEvent"/></item>
+    ///     <item><see cref="IRenameEvent"/></item>
+    ///     <item><see cref="IErrorEvent"/></item>
+    ///     <item><see cref="IStartEvent"/></item>
+    ///     <item><see cref="IEventDecoration"/></item>
     /// </list>
     /// </summary>
-    public interface IFileSystemEvent
+    public interface IEvent
     {
         /// <summary>
         /// The observer object that monitors the filesystem.
@@ -42,17 +42,17 @@ namespace Lexical.FileSystem
         /// Directory separator is "/". Root path doesn't use separator.
         /// Example: "dir/file.ext"
         /// 
-        /// If event is <see cref="IFileSystemEventRename"/> the value is same as <see cref="IFileSystemEventRename.OldPath"/>.
+        /// If event is <see cref="IRenameEvent"/> the value is same as <see cref="IRenameEvent.OldPath"/>.
         /// </summary>
         String Path { get; }
     }
-    // </IFileSystemEvent>
+    // </IEvent>
 
-    // <IFileSystemEventRename>
+    // <IRenameEvent>
     /// <summary>
     /// File renamed event.
     /// </summary>
-    public interface IFileSystemEventRename : IFileSystemEvent
+    public interface IRenameEvent : IEvent
     {
         /// <summary>
         /// The affected file or directory.
@@ -63,7 +63,7 @@ namespace Lexical.FileSystem
         /// 
         /// Example: "dir/file.ext"
         /// 
-        /// This value is same as inherited <see cref="IFileSystemEvent.Path"/>.
+        /// This value is same as inherited <see cref="IEvent.Path"/>.
         /// </summary>
         String OldPath { get; }
 
@@ -72,75 +72,75 @@ namespace Lexical.FileSystem
         /// </summary>
         String NewPath { get; }
     }
-    // </IFileSystemEventRename>
+    // </IRenameEvent>
 
-    // <IFileSystemEventCreate>
+    // <ICreateEvent>
     /// <summary>
     /// File created event
     /// </summary>
-    public interface IFileSystemEventCreate : IFileSystemEvent { }
-    // </IFileSystemEventCreate>
+    public interface ICreateEvent : IEvent { }
+    // </ICreateEvent>
 
-    // <IFileSystemEventDelete>
+    // <IDeleteEvent>
     /// <summary>
     /// File delete event
     /// </summary>
-    public interface IFileSystemEventDelete : IFileSystemEvent { }
-    // </IFileSystemEventDelete>
+    public interface IDeleteEvent : IEvent { }
+    // </IDeleteEvent>
 
-    // <IFileSystemEventChange>
+    // <IChangeEvent>
     /// <summary>
     /// File contents changed event.
     /// </summary>
-    public interface IFileSystemEventChange : IFileSystemEvent { }
-    // </IFileSystemEventChange>
+    public interface IChangeEvent : IEvent { }
+    // </IChangeEvent>
 
-    // <IFileSystemEventError>
+    // <IErrorEvent>
     /// <summary>
     /// Event for error with <see cref="IFileSystem"/> or a file entry.
     /// </summary>
-    public interface IFileSystemEventError : IFileSystemEvent
+    public interface IErrorEvent : IEvent
     {
         /// <summary>
         /// Error as exception.
         /// </summary>
         Exception Error { get; }
     }
-    // </IFileSystemEventError>
+    // </IErrorEvent>
 
-    // <IFileSystemEventStart>
+    // <IStartEvent>
     /// <summary>
     /// The very first event when <see cref="IFileSystemObserve.Observe"/> is called.
     /// 
-    /// <see cref="IFileSystemEventStart"/> must be handled in the thread that calls .Observe() 
+    /// <see cref="IStartEvent"/> must be handled in the thread that calls .Observe() 
     /// in the implementation of Observe() and before Observe() returns. It ignores .EventDispatcher property.
     /// </summary>
-    public interface IFileSystemEventStart : IFileSystemEvent
+    public interface IStartEvent : IEvent
     {
     }
-    // </IFileSystemEventStart>
+    // </IStartEvent>
 
-    // <IFileSystemEventDecoration>
+    // <IEventDecoration>
     /// <summary>
     /// Signals that the event object decorates another event object.
     /// </summary>
-    public interface IFileSystemEventDecoration : IFileSystemEvent
+    public interface IEventDecoration : IEvent
     {
         /// <summary>
         /// (optional) Original event that is decorated.
         /// </summary>
-        IFileSystemEvent Original { get; }
+        IEvent Original { get; }
     }
-    // </IFileSystemEventDecoration>
+    // </IEventDecoration>
 
-    // <IFileSystemEventDispatcher>
+    // <IEventDispatcher>
     /// <summary>
-    /// Dispatches <see cref="IFileSystemEvent"/>s.
+    /// Dispatches <see cref="IEvent"/>s.
     /// 
     /// Dispatcher implementation may capture unexpected exceptions from event handlers, or
     /// it may let them fly to the caller. 
     /// </summary>
-    public interface IFileSystemEventDispatcher
+    public interface IEventDispatcher
     {
         /// <summary>
         /// Dispatch <paramref name="events"/> to observers.
@@ -149,15 +149,15 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="events">(optional) Events</param>
         /// <exception cref="Exception">Any exception from observer may be captured or passed to caller</exception>
-        void DispatchEvents(IEnumerable<IFileSystemEvent> events);
+        void DispatchEvents(IEnumerable<IEvent> events);
 
         /// <summary>
         /// Dispatch single <paramref name="event"/> to observers.
         /// </summary>
         /// <param name="event">(optional) events</param>
         /// <exception cref="Exception">Any exception from observer may be captured or passed to caller</exception>
-        void DispatchEvent(IFileSystemEvent @event);
+        void DispatchEvent(IEvent @event);
     }
-    // </IFileSystemEventDispatcher>
+    // </IEventDispatcher>
 
 }

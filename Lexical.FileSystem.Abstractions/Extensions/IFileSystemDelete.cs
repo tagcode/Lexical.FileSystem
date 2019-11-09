@@ -20,8 +20,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Delete capability</returns>
-        public static bool CanDelete(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionDelete>() is IFileSystemOptionDelete deleter ? deleter.CanDelete : defaultValue;
+        public static bool CanDelete(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IDeleteOption>() is IDeleteOption deleter ? deleter.CanDelete : defaultValue;
 
         /// <summary>
         /// Delete a file or directory.
@@ -45,34 +45,34 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void Delete(this IFileSystem filesystem, string path, bool recurse = false, IFileSystemOption option = null)
+        public static void Delete(this IFileSystem filesystem, string path, bool recurse = false, IOption option = null)
         {
             if (filesystem is IFileSystemDelete deleter) deleter.Delete(path, recurse, option);
             else throw new NotSupportedException(nameof(Delete));
         }
     }
 
-    /// <summary><see cref="IFileSystemOptionDelete"/> operations.</summary>
-    public class FileSystemOptionOperationDelete : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IDeleteOption"/> operations.</summary>
+    public class DeleteOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionDelete);
+        public Type OptionType => typeof(IDeleteOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionDelete c ? o is FileSystemOptionDelete ? /*already flattened*/o : /*new instance*/new FileSystemOptionDelete(c.CanDelete) : throw new InvalidCastException($"{typeof(IFileSystemOptionDelete)} expected.");
+        public IOption Flatten(IOption o) => o is IDeleteOption c ? o is DeleteOption ? /*already flattened*/o : /*new instance*/new DeleteOption(c.CanDelete) : throw new InvalidCastException($"{typeof(IDeleteOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionDelete c1 && o2 is IFileSystemOptionDelete c2 ? new FileSystemOptionDelete(c1.CanDelete && c2.CanDelete) : throw new InvalidCastException($"{typeof(IFileSystemOptionDelete)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is IDeleteOption c1 && o2 is IDeleteOption c2 ? new DeleteOption(c1.CanDelete && c2.CanDelete) : throw new InvalidCastException($"{typeof(IDeleteOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionDelete c1 && o2 is IFileSystemOptionDelete c2 ? new FileSystemOptionDelete(c1.CanDelete || c2.CanDelete) : throw new InvalidCastException($"{typeof(IFileSystemOptionDelete)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is IDeleteOption c1 && o2 is IDeleteOption c2 ? new DeleteOption(c1.CanDelete || c2.CanDelete) : throw new InvalidCastException($"{typeof(IDeleteOption)} expected.");
     }
 
     /// <summary>File system option for deleting files and directories.</summary>
-    public class FileSystemOptionDelete : IFileSystemOptionDelete
+    public class DeleteOption : IDeleteOption
     {
         /// <summary>Has Delete capability.</summary>
         public bool CanDelete { get; protected set; }
 
         /// <summary>Create file system option for deleting files and directories.</summary>
-        public FileSystemOptionDelete(bool canDelete)
+        public DeleteOption(bool canDelete)
         {
             CanDelete = canDelete;
         }

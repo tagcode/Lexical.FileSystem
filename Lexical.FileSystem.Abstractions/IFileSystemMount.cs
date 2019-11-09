@@ -9,9 +9,9 @@ using System;
 namespace Lexical.FileSystem
 {
     /// <summary>File system option for mount capabilities. Used with <see cref="IFileSystemMount"/>.</summary>
-    [Operations(typeof(FileSystemOptionOperationMount))]
-    // <IFileSystemOptionMount>
-    public interface IFileSystemOptionMount : IFileSystemOption
+    [Operations(typeof(MountOptionOperations))]
+    // <IMountOption>
+    public interface IMountOption : IOption
     {
         /// <summary>Can filesystem mount other filesystems.</summary>
         bool CanMount { get; }
@@ -20,16 +20,16 @@ namespace Lexical.FileSystem
         /// <summary>Is filesystem allowed to list mountpoints.</summary>
         bool CanListMountPoints { get; }
     }
-    // </IFileSystemOptionMount>
+    // </IMountOption>
 
     // <doc>
     /// <summary>
     /// FileSystem that can mount other filesystems into its directory tree.
     /// </summary>
-    public interface IFileSystemMount : IFileSystem, IFileSystemOptionMount
+    public interface IFileSystemMount : IFileSystem, IMountOption
     {
         /// <summary>
-        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IFileSystemOption"/> in the parent filesystem.
+        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IOption"/> in the parent filesystem.
         /// 
         /// If no mounts are provided, then creates empty virtual directory.
         /// If one mount is provided, then mounts that to parent filesystem, with possible mount option.
@@ -48,7 +48,7 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystem Mount(string path, FileSystemAssignment[] mounts, IFileSystemOption option = null);
+        IFileSystem Mount(string path, FileSystemAssignment[] mounts, IOption option = null);
 
         /// <summary>
         /// Unmount a filesystem at <paramref name="path"/>.
@@ -61,7 +61,7 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystem Unmount(string path, IFileSystemOption option = null);
+        IFileSystem Unmount(string path, IOption option = null);
 
         /// <summary>
         /// List all mounts.
@@ -69,7 +69,7 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        IFileSystemEntryMount[] ListMountPoints(IFileSystemOption option = null);
+        IMountEntry[] ListMountPoints(IOption option = null);
     }
 
     /// <summary>Mount assignemnt related info <see cref="FileSystemAssignment"/>.</summary>
@@ -80,7 +80,7 @@ namespace Lexical.FileSystem
         None = 0,
         /// <summary>Signals that filesystem was manually mounted with <see cref="IFileSystemMount.Mount"/>.</summary>
         Mounted = 1,
-        /// <summary>Signals that filesystem was automatically mounted based on <see cref="IFileSystemOptionAutoMount"/> options.</summary>
+        /// <summary>Signals that filesystem was automatically mounted based on <see cref="IAutoMountOption"/> options.</summary>
         AutoMounted = 2,
         /// <summary>Filesystem is to be automatically unmounted by timer when it hasn't been used in a configured time.</summary>
         AutoUnmount = 4,
@@ -96,7 +96,7 @@ namespace Lexical.FileSystem
         /// <summary>(optional) Filesystem.</summary>
         public readonly IFileSystem FileSystem;
         /// <summary>(optional) Overriding option assignment.</summary>
-        public readonly IFileSystemOption Option;
+        public readonly IOption Option;
         /// <summary>Is flagged as automatically mounted.</summary>
         public readonly FileSystemAssignmentFlags Flags;
 
@@ -104,7 +104,7 @@ namespace Lexical.FileSystem
         /// <param name="fileSystem">(optional) file system</param>
         /// <param name="option">(optional) overriding option assignment</param>
         /// <param name="flags">(optional) assignment related flags</param>
-        public FileSystemAssignment(IFileSystem fileSystem, IFileSystemOption option = null, FileSystemAssignmentFlags flags = FileSystemAssignmentFlags.None)
+        public FileSystemAssignment(IFileSystem fileSystem, IOption option = null, FileSystemAssignmentFlags flags = FileSystemAssignmentFlags.None)
         {
             FileSystem = fileSystem;
             Option = option;
@@ -116,12 +116,12 @@ namespace Lexical.FileSystem
 
     /// <summary>Option for auto-mounted packages.</summary>
     [Operations(typeof(FileSystemOptionOperationAutoMount))]
-    // <IFileSystemOptionAutoMount>
-    public interface IFileSystemOptionAutoMount : IFileSystemOption
+    // <IOptionAutoMount>
+    public interface IAutoMountOption : IOption
     {
         /// <summary>Package loaders that can mount package files, such as .zip.</summary>
         IPackageLoader[] AutoMounters { get; }
     }
-    // </IFileSystemOptionAutoMount>
+    // </IOptionAutoMount>
 
 }

@@ -6,22 +6,22 @@ using System.Text;
 
 namespace Lexical.FileSystem.Decoration
 {
-    /// <summary>Class that implements all options except <see cref="IFileSystemToken"/>.</summary>
-    public class FileSystemOptionsAll : IFileSystemOptionBrowse, IFileSystemOptionObserve, IFileSystemOptionOpen, IFileSystemOptionDelete, IFileSystemOptionFileAttribute, IFileSystemOptionMove, IFileSystemOptionCreateDirectory, IFileSystemOptionMount, IFileSystemOptionPath, IFileSystemOptionSubPath
+    /// <summary>Class that implements all options except <see cref="IToken"/>.</summary>
+    public class FileSystemOptionsAll : IBrowseOption, IObserveOption, IOpenOption, IDeleteOption, IFileAttributeOption, IMoveOption, ICreateDirectoryOption, IMountOption, IPathInfo, ISubPathOption
     {
         /// <summary>Contained interface types.</summary>
         public static Type[] Types = new Type[]
         {
-            typeof(IFileSystemOptionBrowse),
-            typeof(IFileSystemOptionObserve),
-            typeof(IFileSystemOptionOpen),
-            typeof(IFileSystemOptionDelete),
-            typeof(IFileSystemOptionFileAttribute),
-            typeof(IFileSystemOptionMove),
-            typeof(IFileSystemOptionCreateDirectory),
-            typeof(IFileSystemOptionMount),
-            typeof(IFileSystemOptionPath),
-            typeof(IFileSystemOptionSubPath)
+            typeof(IBrowseOption),
+            typeof(IObserveOption),
+            typeof(IOpenOption),
+            typeof(IDeleteOption),
+            typeof(IFileAttributeOption),
+            typeof(IMoveOption),
+            typeof(ICreateDirectoryOption),
+            typeof(IMountOption),
+            typeof(IPathInfo),
+            typeof(ISubPathOption)
         };
 
         // TODO Implement Hash-Equals //
@@ -67,7 +67,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static FileSystemOptionsAll Read(IFileSystemOption option)
+        public static FileSystemOptionsAll Read(IOption option)
         {
             FileSystemOptionsAll result = new FileSystemOptionsAll();
             result.ReadFrom(option);
@@ -79,7 +79,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public virtual void ReadFrom(IFileSystemOption option)
+        public virtual void ReadFrom(IOption option)
         {
             this.CanBrowse = option.CanBrowse();
             this.CanGetEntry = option.CanGetEntry();
@@ -103,7 +103,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="option"></param>
         /// <returns>this if <paramref name="option"/> is null or new instance with intersection</returns>
-        public virtual FileSystemOptionsAll Intersection(IFileSystemOption option)
+        public virtual FileSystemOptionsAll Intersection(IOption option)
         {
             if (option == null) return this;
             FileSystemOptionsAll result = new FileSystemOptionsAll();
@@ -132,19 +132,19 @@ namespace Lexical.FileSystem.Decoration
     /// <summary>
     /// Options with tokens
     /// </summary>
-    public class FileSystemOptionsAllWithTokens : FileSystemOptionsAll, IFileSystemTokenEnumerable
+    public class FileSystemOptionsAllWithTokens : FileSystemOptionsAll, ITokenEnumerable
     {
-        static IFileSystemToken[] no_tokens = new IFileSystemToken[0];
+        static IToken[] no_tokens = new IToken[0];
 
         /// <summary>Tokens</summary>
-        protected IFileSystemToken[] tokens = no_tokens;
+        protected IToken[] tokens = no_tokens;
 
         /// <summary>
         /// Read options from <paramref name="option"/> and return flattened object.
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static new FileSystemOptionsAllWithTokens Read(IFileSystemOption option)
+        public static new FileSystemOptionsAllWithTokens Read(IOption option)
         {
             FileSystemOptionsAllWithTokens result = new FileSystemOptionsAllWithTokens();
             result.ReadFrom(option);
@@ -156,16 +156,16 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public override void ReadFrom(IFileSystemOption option)
+        public override void ReadFrom(IOption option)
         {
             base.ReadFrom(option);
             var enumr = option.ListTokens(false);
-            this.tokens = enumr is IFileSystemToken[] arr ? arr : enumr.ToArray();
+            this.tokens = enumr is IToken[] arr ? arr : enumr.ToArray();
         }
 
         /// <summary>Get enumerator</summary>
-        public IEnumerator<IFileSystemToken> GetEnumerator()
-            => ((IEnumerable<IFileSystemToken>)tokens).GetEnumerator();
+        public IEnumerator<IToken> GetEnumerator()
+            => ((IEnumerable<IToken>)tokens).GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator()
             => ((IEnumerable)tokens).GetEnumerator();

@@ -10,22 +10,22 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     /// <summary>File system options for browse.</summary>
-    [Operations(typeof(FileSystemOptionOperationBrowse))]
-    // <IFileSystemOptionBrowse>
-    public interface IFileSystemOptionBrowse : IFileSystemOption
+    [Operations(typeof(BrowseOptionOperations))]
+    // <IBrowseOption>
+    public interface IBrowseOption : IOption
     {
         /// <summary>Has Browse capability.</summary>
         bool CanBrowse { get; }
         /// <summary>Has GetEntry capability.</summary>
         bool CanGetEntry { get; }
     }
-    // </IFileSystemOptionBrowse>
+    // </IBrowseOption>
 
     // <doc>
     /// <summary>
     /// File system that can browse directories.
     /// </summary>
-    public interface IFileSystemBrowse : IFileSystem, IFileSystemOptionBrowse
+    public interface IFileSystemBrowse : IFileSystem, IBrowseOption
     {
         /// <summary>
         /// Browse a directory for child entries.
@@ -48,7 +48,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemEntry[] Browse(string path, IFileSystemOption option = null);
+        IEntry[] Browse(string path, IOption option = null);
 
         /// <summary>
         /// Get entry of a single file or directory.
@@ -65,7 +65,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IFileSystemEntry GetEntry(string path, IFileSystemOption option = null);
+        IEntry GetEntry(string path, IOption option = null);
     }
     // </doc>
 }

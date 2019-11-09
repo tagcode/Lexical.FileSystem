@@ -12,7 +12,7 @@ namespace Lexical.FileSystem.Decoration
     /// <summary>
     /// Abstract base class for decorated entry.
     /// </summary>
-    public abstract class FileSystemEntryDecoration : IFileSystemEntryDecoration, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive, IFileSystemEntryMount, IFileSystemOption, IFileSystemEntryFileAttributes, IFileSystemEntryPhysicalPath
+    public abstract class DecorationEntry : IEntryDecoration, IFileEntry, IDirectoryEntry, IDriveEntry, IMountEntry, IOption, IEntryFileAttributes, IEntryPhysicalPath
     {
         /// <summary>
         /// Decorate filesystem.
@@ -20,7 +20,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="entry"></param>
         /// <param name="newFileSystem"></param>
         /// <returns>decorated entry</returns>
-        public static IFileSystemEntry DecorateFileSystem(IFileSystemEntry entry, IFileSystem newFileSystem)
+        public static IEntry DecorateFileSystem(IEntry entry, IFileSystem newFileSystem)
             => new NewFileSystem(entry, newFileSystem);
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="newFileSystem"></param>
         /// <param name="newPath"></param>
         /// <returns>decorated entry</returns>
-        public static IFileSystemEntry DecorateFileSystemAndPath(IFileSystemEntry entry, IFileSystem newFileSystem, string newPath)
+        public static IEntry DecorateFileSystemAndPath(IEntry entry, IFileSystem newFileSystem, string newPath)
             => new NewFileSystemAndPath(entry, newFileSystem, newPath);
 
         /// <summary>
@@ -41,13 +41,13 @@ namespace Lexical.FileSystem.Decoration
         /// <param name="newPath"></param>
         /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
         /// <returns>decorated entry</returns>
-        public static IFileSystemEntry DecorateFileSystemPathAndOptionModifier(IFileSystemEntry entry, IFileSystem newFileSystem, string newPath, IFileSystemOption optionModifier)
+        public static IEntry DecorateFileSystemPathAndOptionModifier(IEntry entry, IFileSystem newFileSystem, string newPath, IOption optionModifier)
             => new NewFileSystemPathAndOptionModifier(entry, newFileSystem, newPath, optionModifier);        
 
         /// <summary>
         /// Original entry that is being decorated.
         /// </summary>
-        public virtual IFileSystemEntry Original { get; protected set; }
+        public virtual IEntry Original { get; protected set; }
         /// <inheritdoc/>
         public virtual IFileSystem FileSystem => Original.FileSystem;
         /// <inheritdoc/>
@@ -65,7 +65,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsDirectory => Original.IsDirectory();
         /// <inheritdoc/>
-        public virtual IFileSystemOption Options => Original.Options();
+        public virtual IOption Options => Original.Options();
         /// <inheritdoc/>
         public virtual bool IsDrive => Original.IsDrive();
         /// <inheritdoc/>
@@ -93,7 +93,7 @@ namespace Lexical.FileSystem.Decoration
         /// Create decorated entry.
         /// </summary>
         /// <param name="original"></param>
-        public FileSystemEntryDecoration(IFileSystemEntry original)
+        public DecorationEntry(IEntry original)
         {
             Original = original ?? throw new ArgumentNullException(nameof(original));
         }
@@ -105,7 +105,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// New overriding filesystem.
         /// </summary>
-        public class NewFileSystem : FileSystemEntryDecoration
+        public class NewFileSystem : DecorationEntry
         {
             /// <summary>New overriding filesystem.</summary>
             protected IFileSystem newFileSystem;
@@ -116,7 +116,7 @@ namespace Lexical.FileSystem.Decoration
             /// </summary>
             /// <param name="original"></param>
             /// <param name="newFileSystem"></param>
-            public NewFileSystem(IFileSystemEntry original, IFileSystem newFileSystem) : base(original)
+            public NewFileSystem(IEntry original, IFileSystem newFileSystem) : base(original)
             {
                 this.newFileSystem = newFileSystem;
             }
@@ -125,7 +125,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// New overriding filesystem and Path
         /// </summary>
-        public class NewFileSystemAndPath : FileSystemEntryDecoration
+        public class NewFileSystemAndPath : DecorationEntry
         {
             /// <summary>New overriding filesystem.</summary>
             protected IFileSystem newFileSystem;
@@ -141,7 +141,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="original"></param>
             /// <param name="newFileSystem"></param>
             /// <param name="newPath"></param>
-            public NewFileSystemAndPath(IFileSystemEntry original, IFileSystem newFileSystem, string newPath) : base(original)
+            public NewFileSystemAndPath(IEntry original, IFileSystem newFileSystem, string newPath) : base(original)
             {
                 this.newFileSystem = newFileSystem;
                 this.newPath = newPath;
@@ -151,7 +151,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// New overriding filesystem, Path and Option modifier
         /// </summary>
-        public class NewFileSystemPathAndOptionModifier : FileSystemEntryDecoration
+        public class NewFileSystemPathAndOptionModifier : DecorationEntry
         {
             /// <summary>New overriding filesystem.</summary>
             protected IFileSystem newFileSystem;
@@ -162,11 +162,11 @@ namespace Lexical.FileSystem.Decoration
             /// <summary>New path.</summary>
             public override string Path => newPath;
             /// <summary>(optional) Option that will be intersected lazily with original options.</summary>
-            protected IFileSystemOption optionModifier;
+            protected IOption optionModifier;
             /// <summary>Lazily construction intersection of <see cref="optionModifier"/> and <see cref="Original"/>.Option()</summary>
-            protected IFileSystemOption optionIntersection;
+            protected IOption optionIntersection;
             /// <summary>Intersection of <see cref="Original"/>.Option() and <see cref="optionModifier"/></summary>
-            public override IFileSystemOption Options => optionIntersection ?? (optionIntersection = FileSystemOption.Intersection(optionModifier, Original.Options()));
+            public override IOption Options => optionIntersection ?? (optionIntersection = Option.Intersection(optionModifier, Original.Options()));
             /// <summary>
             /// Create decoration with <paramref name="newFileSystem"/>.
             /// </summary>
@@ -174,7 +174,7 @@ namespace Lexical.FileSystem.Decoration
             /// <param name="newFileSystem"></param>
             /// <param name="newPath"></param>
             /// <param name="optionModifier">(optional) option that will be applied to original option with intersection</param>
-            public NewFileSystemPathAndOptionModifier(IFileSystemEntry original, IFileSystem newFileSystem, string newPath, IFileSystemOption optionModifier) : base(original)
+            public NewFileSystemPathAndOptionModifier(IEntry original, IFileSystem newFileSystem, string newPath, IOption optionModifier) : base(original)
             {
                 this.newFileSystem = newFileSystem;
                 this.newPath = newPath;
@@ -185,19 +185,19 @@ namespace Lexical.FileSystem.Decoration
     }
 
     /// <summary>
-    /// Decoration that uses two <see cref="IFileSystemEntry"/> instances: a and b. 
+    /// Decoration that uses two <see cref="IEntry"/> instances: a and b. 
     /// 
     /// Returns values from a if available, and if not then uses a fallback value from b.
     /// </summary>
-    public class FileSystemEntryPairDecoration : IFileSystemEntryDecoration, IFileSystemEntryFile, IFileSystemEntryDirectory, IFileSystemEntryDrive, IFileSystemEntryMount, IFileSystemOption, IFileSystemEntryFileAttributes, IFileSystemEntryPhysicalPath
+    public class PairEntry : IEntryDecoration, IFileEntry, IDirectoryEntry, IDriveEntry, IMountEntry, IOption, IEntryFileAttributes, IEntryPhysicalPath
     {
         /// <summary>Entry to decorate.</summary>
-        public readonly IFileSystemEntry A;
+        public readonly IEntry A;
         /// <summary>Entry to decorate, fallback values..</summary>
-        public readonly IFileSystemEntry B;
+        public readonly IEntry B;
 
         /// <summary>Original entry that is being decorated.</summary>
-        public virtual IFileSystemEntry Original => A;
+        public virtual IEntry Original => A;
         /// <inheritdoc/>
         public virtual IFileSystem FileSystem => A.FileSystem;
         /// <inheritdoc/>
@@ -215,7 +215,7 @@ namespace Lexical.FileSystem.Decoration
         /// <inheritdoc/>
         public virtual bool IsDirectory => A.IsDirectory() || B.IsDirectory();
         /// <inheritdoc/>
-        public virtual IFileSystemOption Options => FileSystemOption.Union(A.Options(), B.Options());
+        public virtual IOption Options => Option.Union(A.Options(), B.Options());
         /// <inheritdoc/>
         public virtual bool IsDrive => A.IsDrive() || B.IsDrive();
         /// <inheritdoc/>
@@ -244,7 +244,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <param name="a">entry to decoate</param>
         /// <param name="b">fallback values</param>
-        public FileSystemEntryPairDecoration(IFileSystemEntry a, IFileSystemEntry b)
+        public PairEntry(IEntry a, IEntry b)
         {
             A = a ?? throw new ArgumentNullException(nameof(a));
             B = b ?? throw new ArgumentNullException(nameof(b));

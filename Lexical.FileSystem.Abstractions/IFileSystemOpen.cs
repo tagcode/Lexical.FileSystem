@@ -10,9 +10,9 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     /// <summary>File system options for open, create, read and write files.</summary>
-    [Operations(typeof(FileSystemOptionOperationOpen))]
-    // <IFileSystemOptionOpen>
-    public interface IFileSystemOptionOpen : IFileSystemOption
+    [Operations(typeof(OpenOptionOperations))]
+    // <IOpenOption>
+    public interface IOpenOption : IOption
     {
         /// <summary>Can open file</summary>
         bool CanOpen { get; }
@@ -23,13 +23,13 @@ namespace Lexical.FileSystem
         /// <summary>Can open and create file.</summary>
         bool CanCreateFile { get; }
     }
-    // </IFileSystemOptionOpen>
+    // </IOpenOption>
 
     // <doc>
     /// <summary>
     /// File system that can open files for reading and writing. 
     /// </summary>
-    public interface IFileSystemOpen : IFileSystem, IFileSystemOptionOpen
+    public interface IFileSystemOpen : IFileSystem, IOpenOption
     {
         /// <summary>
         /// Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="FileMode.Create"/> or <see cref="FileMode.CreateNew"/>.
@@ -54,7 +54,7 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
-        Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IFileSystemOption option = null);
+        Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null);
     }
     // </doc>
 }

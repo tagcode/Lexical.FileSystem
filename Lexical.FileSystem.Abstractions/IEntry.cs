@@ -8,24 +8,25 @@ using System.IO;
 
 namespace Lexical.FileSystem
 {
-    // <IFileSystemEntry>
+    // <IEntry>
     /// <summary>
     /// Entry that represents a node of a <see cref="IFileSystem"/>.
     /// 
     /// The entry represents the snapshot state at the time of creation.
     /// 
-    /// See sub-interfaces:
+    /// See <see cref="IEntry"/> sub-interfaces:
     /// <list type="bullet">
-    ///     <item><see cref="IFileSystemEntryFile"/></item>
-    ///     <item><see cref="IFileSystemEntryDirectory"/></item>
-    ///     <item><see cref="IFileSystemEntryDrive"/></item>
-    ///     <item><see cref="IFileSystemEntryMount"/></item>
-    ///     <item><see cref="IFileSystemEntryOptions"/></item>
-    ///     <item><see cref="IFileSystemEntryFileAttributes"/></item>
-    ///     <item><see cref="IFileSystemEntryPhysicalPath"/></item>
-    /// </list>    
+    ///     <item><see cref="IFileEntry"/></item>
+    ///     <item><see cref="IDirectoryEntry"/></item>
+    ///     <item><see cref="IDriveEntry"/></item>
+    ///     <item><see cref="IMountEntry"/></item>
+    ///     <item><see cref="IEntryOptions"/></item>
+    ///     <item><see cref="IEntryFileAttributes"/></item>
+    ///     <item><see cref="IEntryPhysicalPath"/></item>
+    ///     <item><see cref="IEntryDecoration"/></item>
+    /// </list>
     /// </summary>
-    public interface IFileSystemEntry
+    public interface IEntry
     {
         /// <summary>
         /// (optional) Associated file system.
@@ -57,13 +58,13 @@ namespace Lexical.FileSystem
         /// </summary>
         DateTimeOffset LastAccess { get; }
     }
-    // </IFileSystemEntry>
+    // </IEntry>
 
-    // <IFileSystemEntryFile>
+    // <IFileEntry>
     /// <summary>
     /// File entry
     /// </summary>
-    public interface IFileSystemEntryFile : IFileSystemEntry
+    public interface IFileEntry : IEntry
     {
         /// <summary>
         /// Tests if entry represents a file.
@@ -75,28 +76,28 @@ namespace Lexical.FileSystem
         /// </summary>
         long Length { get; }
     }
-    // </IFileSystemEntryFile>
+    // </IFileEntry>
 
-    // <IFileSystemEntryDirectory>
+    // <IDirectoryEntry>
     /// <summary>
     /// Directory entry that can be browsed for contents with <see cref="IFileSystemBrowse"/>.
     /// </summary>
-    public interface IFileSystemEntryDirectory : IFileSystemEntry
+    public interface IDirectoryEntry : IEntry
     {
         /// <summary>
         /// Tests if entry represents a directory.
         /// </summary>
         bool IsDirectory { get; }
     }
-    // </IFileSystemEntryDirectory>
+    // </IDirectoryEntry>
 
-    // <IFileSystemEntryDrive>
+    // <IDriveEntry>
     /// <summary>
     /// Drive or volume entry. 
     /// 
-    /// If drive class is browsable, then the implementation also implements <see cref="IFileSystemEntryDirectory"/>.
+    /// If drive class is browsable, then the implementation also implements <see cref="IDirectoryEntry"/>.
     /// </summary>
-    public interface IFileSystemEntryDrive : IFileSystemEntry
+    public interface IDriveEntry : IEntry
     {
         /// <summary>
         /// Tests if entry represents a drive or volume.
@@ -134,13 +135,13 @@ namespace Lexical.FileSystem
         /// </summary>
         String DriveFormat { get; }
     }
-    // </IFileSystemEntryDrive>
+    // </IDriveEntry>
 
-    // <IFileSystemEntryMount>
+    // <IMountEntry>
     /// <summary>
     /// Entry represents a mount point (decoration or virtual filesystem directory). 
     /// </summary>
-    public interface IFileSystemEntryMount : IFileSystemEntry
+    public interface IMountEntry : IEntry
     {
         /// <summary>
         /// Tests if directory represents a mount point.
@@ -152,42 +153,42 @@ namespace Lexical.FileSystem
         /// </summary>
         FileSystemAssignment[] Mounts { get; }
     }
-    // </IFileSystemEntryMount>
+    // </IMountEntry>
 
-    // <IFileSystemEntryDecoration>
+    // <IEntryDecoration>
     /// <summary>
     /// Optional interface that exposes decoree.
     /// </summary>
-    public interface IFileSystemEntryDecoration : IFileSystemEntry
+    public interface IEntryDecoration : IEntry
     {
         /// <summary>
         /// (Optional) Original entry that is being decorated.
         /// </summary>
-        IFileSystemEntry Original { get; }
+        IEntry Original { get; }
     }
-    // </IFileSystemEntryDecoration>
+    // </IEntryDecoration>
 
-    // <IFileSystemEntryOptions>
+    // <IEntryOptions>
     /// <summary>
     /// Entry specific filesystem capability options.
     /// </summary>
-    public interface IFileSystemEntryOptions : IFileSystemEntry
+    public interface IEntryOptions : IEntry
     {
         /// <summary>
         /// (optional) Options that apply to this entry. The options here are equal or subset of the options in the parenting <see cref="IFileSystem"/>.
         /// </summary>
-        IFileSystemOption Options { get; }
+        IOption Options { get; }
     }
-    // </IFileSystemEntryOptions>
+    // </IEntryOptions>
 
-    // <IFileSystemEntryFileAttributes>
+    // <IEntryFileAttributes>
     /// <summary>
     /// Entry file Attributes.
     /// </summary>
-    public interface IFileSystemEntryFileAttributes : IFileSystemEntry
+    public interface IEntryFileAttributes : IEntry
     {
         /// <summary>
-        /// True, if has attached <see cref="FileAttributes"/>.
+        /// True, if has attached <see cref="System.IO.FileAttributes"/>.
         /// </summary>
         bool HasFileAttributes { get; }
 
@@ -196,18 +197,18 @@ namespace Lexical.FileSystem
         /// </summary>
         FileAttributes FileAttributes { get; }
     }
-    // </IFileSystemEntryFileAttributes>
+    // </IEntryFileAttributes>
 
-    // <IFileSystemEntryPhysicalPath>
+    // <IEntryPhysicalPath>
     /// <summary>
     /// Optional interface for entries that may have a physical file or directory path.
     /// </summary>
-    public interface IFileSystemEntryPhysicalPath : IFileSystemEntry
+    public interface IEntryPhysicalPath : IEntry
     {
         /// <summary>
         /// (optional) Physical (OS) path to file or directory.
         /// </summary>
         String PhysicalPath { get; }
     }
-    // </IFileSystemEntryPhysicalPath>
+    // </IEntryPhysicalPath>
 }

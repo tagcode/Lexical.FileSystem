@@ -22,8 +22,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Move capability</returns>
-        public static bool CanMove(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionMove>() is IFileSystemOptionMove mover ? mover.CanMove : defaultValue;
+        public static bool CanMove(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IMoveOption>() is IMoveOption mover ? mover.CanMove : defaultValue;
 
         /// <summary>
         /// Move/rename a file or directory. 
@@ -46,34 +46,34 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void Move(this IFileSystem filesystem, string srcPath, string dstPath, IFileSystemOption option = null)
+        public static void Move(this IFileSystem filesystem, string srcPath, string dstPath, IOption option = null)
         {
             if (filesystem is IFileSystemMove mover) mover.Move(srcPath, dstPath, option);
             else throw new NotSupportedException(nameof(Move));
         }
     }
 
-    /// <summary><see cref="IFileSystemOptionMove"/> operations.</summary>
-    public class FileSystemOptionOperationMove : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IMoveOption"/> operations.</summary>
+    public class MoveOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionMove);
+        public Type OptionType => typeof(IMoveOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionMove c ? o is FileSystemOptionMove ? /*already flattened*/o : /*new instance*/new FileSystemOptionMove(c.CanMove) : throw new InvalidCastException($"{typeof(IFileSystemOptionMove)} expected.");
+        public IOption Flatten(IOption o) => o is IMoveOption c ? o is MoveOption ? /*already flattened*/o : /*new instance*/new MoveOption(c.CanMove) : throw new InvalidCastException($"{typeof(IMoveOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMove c1 && o2 is IFileSystemOptionMove c2 ? new FileSystemOptionMove(c1.CanMove && c2.CanMove) : throw new InvalidCastException($"{typeof(IFileSystemOptionMove)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is IMoveOption c1 && o2 is IMoveOption c2 ? new MoveOption(c1.CanMove && c2.CanMove) : throw new InvalidCastException($"{typeof(IMoveOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMove c1 && o2 is IFileSystemOptionMove c2 ? new FileSystemOptionMove(c1.CanMove || c2.CanMove) : throw new InvalidCastException($"{typeof(IFileSystemOptionMove)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is IMoveOption c1 && o2 is IMoveOption c2 ? new MoveOption(c1.CanMove || c2.CanMove) : throw new InvalidCastException($"{typeof(IMoveOption)} expected.");
     }
 
     /// <summary>File system option for move/rename.</summary>
-    public class FileSystemOptionMove : IFileSystemOptionMove
+    public class MoveOption : IMoveOption
     {
         /// <summary>Has Move capability.</summary>
         public bool CanMove { get; protected set; }
 
         /// <summary>Create file system option for move/rename.</summary>
-        public FileSystemOptionMove(bool canMove)
+        public MoveOption(bool canMove)
         {
             CanMove = canMove;
         }

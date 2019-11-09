@@ -10,20 +10,20 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     /// <summary>File system option for creating directories.</summary>
-    [Operations(typeof(FileSystemOptionOperationCreateDirectory))]
-    // <IFileSystemOptionCreateDirectory>
-    public interface IFileSystemOptionCreateDirectory : IFileSystemOption
+    [Operations(typeof(CreateDirectoryOptionOperations))]
+    // <ICreateDirectoryOption>
+    public interface ICreateDirectoryOption : IOption
     {
         /// <summary>Has CreateDirectory capability.</summary>
         bool CanCreateDirectory { get; }
     }
-    // </IFileSystemOptionCreateDirectory>
+    // </ICreateDirectoryOption>
 
     // <doc>
     /// <summary>
     /// File system that can create directories.
     /// </summary>
-    public interface IFileSystemCreateDirectory : IFileSystem, IFileSystemOptionCreateDirectory
+    public interface IFileSystemCreateDirectory : IFileSystem, ICreateDirectoryOption
     {
         /// <summary>
         /// Create a directory, or multiple cascading directories.
@@ -44,7 +44,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        void CreateDirectory(string path, IFileSystemOption option = null);
+        void CreateDirectory(string path, IOption option = null);
     }
     // </doc>
 }

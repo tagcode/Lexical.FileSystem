@@ -15,26 +15,26 @@ namespace Lexical.FileSystem.Decoration
     /// 
     /// When this object is disposed, it forwards <see cref="IObserver{T}.OnCompleted"/> event.
     /// </summary>
-    public class ObserverDecorator : DisposeList, IFileSystemObserver, IObserver<IFileSystemEvent>
+    public class ObserverDecorator : DisposeList, IFileSystemObserver, IObserver<IEvent>
     {
         /// <summary>Parent filesystem to use in decorated events.</summary>
         public IFileSystem FileSystem { get; protected set; }
 
-        /// <summary><see cref="IFileSystemOptionSubPath"/> adapted path filter string.</summary>
+        /// <summary><see cref="ISubPathOption"/> adapted path filter string.</summary>
         public string Filter { get; protected set; }
 
         /// <summary>The observer were decorated events are forwarded to.</summary>
-        public IObserver<IFileSystemEvent> Observer { get; protected set; }
+        public IObserver<IEvent> Observer { get; protected set; }
 
         /// <summary>The state object the Observe() caller provided.</summary>
         public object State { get; protected set; }
 
         /// <summary>Event dispatcher</summary>
-        public IFileSystemEventDispatcher Dispatcher { get; protected set; }
+        public IEventDispatcher Dispatcher { get; protected set; }
 
         /// <summary>
         /// Number of feeding observers. 
-        /// This count is incremented when <see cref="IFileSystemEventStart"/> event is sent, and decremented when <see cref="IFileSystemEvent.Observer"/> is sent.
+        /// This count is incremented when <see cref="IStartEvent"/> event is sent, and decremented when <see cref="IEvent.Observer"/> is sent.
         /// </summary>
         long feedingObserverCount;
 
@@ -47,14 +47,14 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Create adapter observer.
         /// </summary>
-        /// <param name="sourceFileSystem">File system to show as the source of forwarded events (in <see cref="IFileSystemEvent.Observer"/>)</param>
+        /// <param name="sourceFileSystem">File system to show as the source of forwarded events (in <see cref="IEvent.Observer"/>)</param>
         /// <param name="filter"></param>
         /// <param name="observer">The IObserver from caller were the decorated events are forwarded to</param>
         /// <param name="state"></param>
         /// <param name="eventDispatcher">event dispatcher to show on the interface, doesn't use it</param>
         /// <param name="disposeWhenLastCompletes">if true, when last attached observer sends <see cref="IObserver{T}.OnCompleted"/> event, 
         /// then diposes this object and sends <see cref="IObserver{T}.OnCompleted"/> to <see cref="Observer"/>.</param>
-        public ObserverDecorator(IFileSystem sourceFileSystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher, bool disposeWhenLastCompletes)
+        public ObserverDecorator(IFileSystem sourceFileSystem, string filter, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher, bool disposeWhenLastCompletes)
         {
             this.FileSystem = sourceFileSystem;
             this.Filter = filter;
@@ -78,10 +78,10 @@ namespace Lexical.FileSystem.Decoration
         public void OnError(Exception error) => Observer.OnError(error);
 
         /// <summary>Forward OnNext</summary>
-        public void OnNext(IFileSystemEvent @event)
+        public void OnNext(IEvent @event)
         {
             // A component observer registers in.
-            if (@event is IFileSystemEventStart) { Interlocked.Increment(ref feedingObserverCount); return; }
+            if (@event is IStartEvent) { Interlocked.Increment(ref feedingObserverCount); return; }
 
             // If observer dispose has completed, don't forward events.
             if (this.IsDisposing) return;
@@ -94,15 +94,15 @@ namespace Lexical.FileSystem.Decoration
             if (pathConverter == null)
             {
                 newOldPath = @event.Path;
-                if (@event is IFileSystemEventRename re) newNewPath = re.NewPath;
+                if (@event is IRenameEvent re) newNewPath = re.NewPath;
             }
             else
             {
                 if (!pathConverter.ChildToParent(@event.Path, out newOldPath)) return;
-                if (@event is IFileSystemEventRename re) if (!pathConverter.ChildToParent(re.NewPath, out newNewPath)) return;
+                if (@event is IRenameEvent re) if (!pathConverter.ChildToParent(re.NewPath, out newNewPath)) return;
             }
             // Try to decorate event
-            @event = FileSystemEventDecoration.DecorateObserverAndPath(@event, this, newOldPath, newNewPath, false);
+            @event = EventDecoration.DecorateObserverAndPath(@event, this, newOldPath, newNewPath, false);
             // Forward event in this thread, which should be dispatcher's thread
             Observer.OnNext(@event);
         }

@@ -22,8 +22,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns>true, if has Observe capability</returns>
-        public static bool CanObserve(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionObserve>() is IFileSystemOptionObserve observer ? observer.CanObserve : defaultValue;
+        public static bool CanObserve(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IObserveOption>() is IObserveOption observer ? observer.CanObserve : defaultValue;
 
         /// <summary>
         /// Attach an <paramref name="observer"/> on to a directory. 
@@ -46,7 +46,7 @@ namespace Lexical.FileSystem
         ///     <item>"dir/**", to monitor files in a dir and its subdirectories</item>
         ///   </list>
         /// 
-        /// The implementation sends the reference to the observer handle in a <see cref="IFileSystemEventStart"/> event before this method returns to caller.
+        /// The implementation sends the reference to the observer handle in a <see cref="IStartEvent"/> event before this method returns to caller.
         /// </summary>
         /// <param name="filesystem"></param>
         /// <param name="filter">glob pattern to filter events. "**" means any directory. For example "mydir/**/somefile.txt", or "**" for <paramref name="filter"/> and sub-directories</param>
@@ -64,34 +64,34 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="filter"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IFileSystemObserver Observe(this IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state = null, IFileSystemEventDispatcher eventDispatcher = default, IFileSystemOption option = null)
+        public static IFileSystemObserver Observe(this IFileSystem filesystem, string filter, IObserver<IEvent> observer, object state = null, IEventDispatcher eventDispatcher = default, IOption option = null)
         {
             if (filesystem is IFileSystemObserve _observer) return _observer.Observe(filter, observer, state, eventDispatcher, option);
             else throw new NotSupportedException(nameof(Observe));
         }
     }
 
-    /// <summary><see cref="IFileSystemOptionObserve"/> operations.</summary>
-    public class FileSystemOptionOperationObserve : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IObserveOption"/> operations.</summary>
+    public class ObserverOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionObserve);
+        public Type OptionType => typeof(IObserveOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionObserve c ? o is FileSystemOptionObserve ? /*already flattened*/o : /*new instance*/new FileSystemOptionObserve(c.CanObserve) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+        public IOption Flatten(IOption o) => o is IObserveOption c ? o is ObserveOption ? /*already flattened*/o : /*new instance*/new ObserveOption(c.CanObserve) : throw new InvalidCastException($"{typeof(IObserveOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve && c2.CanObserve) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is IObserveOption c1 && o2 is IObserveOption c2 ? new ObserveOption(c1.CanObserve && c2.CanObserve) : throw new InvalidCastException($"{typeof(IObserveOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionObserve c1 && o2 is IFileSystemOptionObserve c2 ? new FileSystemOptionObserve(c1.CanObserve || c2.CanObserve) : throw new InvalidCastException($"{typeof(IFileSystemOptionObserve)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is IObserveOption c1 && o2 is IObserveOption c2 ? new ObserveOption(c1.CanObserve || c2.CanObserve) : throw new InvalidCastException($"{typeof(IObserveOption)} expected.");
     }
 
     /// <summary>File system option for observe.</summary>
-    public class FileSystemOptionObserve : IFileSystemOptionObserve
+    public class ObserveOption : IObserveOption
     {
         /// <summary>Has Observe capability.</summary>
         public bool CanObserve { get; protected set; }
 
         /// <summary>Create file system option for observe.</summary>
-        public FileSystemOptionObserve(bool canObserve)
+        public ObserveOption(bool canObserve)
         {
             CanObserve = canObserve;
         }

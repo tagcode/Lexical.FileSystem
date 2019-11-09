@@ -12,9 +12,9 @@ using System.Linq;
 namespace Lexical.FileSystem
 {
     /// <summary>
-    /// Implementations to <see cref="IFileSystemOption"/>.
+    /// Implementations to <see cref="IOption"/>.
     /// </summary>
-    public class FileSystemOptionComposition : IFileSystemOptionAdaptable
+    public class OptionComposition : IAdaptableOption
     {
         /// <summary>
         /// Join operation
@@ -42,7 +42,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Options sorted by type.
         /// </summary>
-        protected Dictionary<Type, IFileSystemOption> byType = new Dictionary<Type, IFileSystemOption>();
+        protected Dictionary<Type, IOption> byType = new Dictionary<Type, IOption>();
 
         /// <summary>
         /// Create composition of filesystem options.
@@ -50,28 +50,28 @@ namespace Lexical.FileSystem
         /// <param name="op">Join operation of same option intefaces</param>
         /// <param name="option1">option to join</param>
         /// <param name="option2">option to join</param>
-        public FileSystemOptionComposition(Op op, IFileSystemOption option1, IFileSystemOption option2)
+        public OptionComposition(Op op, IOption option1, IOption option2)
         {
             if (option1 != null)
             {
-                // IFileSystemOption
+                // IOption
                 foreach (Type type in option1.GetType().GetInterfaces())
-                    if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
+                    if (typeof(IOption).IsAssignableFrom(type) && !typeof(IOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
                         Add(op, type, option1);
-                // IFileSystemOptionAdaptable
-                if (option1 is IFileSystemOptionAdaptable adaptable)
-                    foreach (KeyValuePair<Type, IFileSystemOption> line in adaptable)
+                // IAdaptableOption
+                if (option1 is IAdaptableOption adaptable)
+                    foreach (KeyValuePair<Type, IOption> line in adaptable)
                         Add(op, line.Key, line.Value);
             }
             if (option2 != null)
             {
-                // IFileSystemOption
+                // IOption
                 foreach (Type type in option2.GetType().GetInterfaces())
-                    if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
+                    if (typeof(IOption).IsAssignableFrom(type) && !typeof(IOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
                         Add(op, type, option2);
-                // IFileSystemOptionAdaptable
-                if (option2 is IFileSystemOptionAdaptable adaptable)
-                    foreach (KeyValuePair<Type, IFileSystemOption> line in adaptable)
+                // IAdaptableOption
+                if (option2 is IAdaptableOption adaptable)
+                    foreach (KeyValuePair<Type, IOption> line in adaptable)
                         Add(op, line.Key, line.Value);
             }
             Flatten();
@@ -83,22 +83,22 @@ namespace Lexical.FileSystem
         /// <param name="op">Join operation of same option intefaces</param>
         /// <param name="options">options to compose</param>
         /// <param name="interfaceTypesToExclude">(optional)</param>
-        public FileSystemOptionComposition(Op op, IEnumerable<IFileSystemOption> options, Type[] interfaceTypesToExclude = null)
+        public OptionComposition(Op op, IEnumerable<IOption> options, Type[] interfaceTypesToExclude = null)
         {
-            foreach (IFileSystemOption option in options)
+            foreach (IOption option in options)
             {
                 // Check not null
                 if (option == null) continue;
-                // IFileSystemOption
+                // IOption
                 foreach (Type type in option.GetType().GetInterfaces())
                 {
                     if (interfaceTypesToExclude != null && interfaceTypesToExclude.Contains(type)) continue;
-                    if (typeof(IFileSystemOption).IsAssignableFrom(type) && !typeof(IFileSystemOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
+                    if (typeof(IOption).IsAssignableFrom(type) && !typeof(IOption).Equals(type) && !typeof(IFileSystem).IsAssignableFrom(type))
                         Add(op, type, option);
                 }
-                // IFileSystemOptionAdaptable
-                if (option is IFileSystemOptionAdaptable adaptable)
-                    foreach (KeyValuePair<Type, IFileSystemOption> line in adaptable)
+                // IAdaptableOption
+                if (option is IAdaptableOption adaptable)
+                    foreach (KeyValuePair<Type, IOption> line in adaptable)
                     {
                         if (interfaceTypesToExclude != null && interfaceTypesToExclude.Contains(line.Key)) continue;
                         Add(op, line.Key, line.Value);
@@ -112,7 +112,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="op">Join operation of same option intefaces</param>
         /// <param name="options">options to compose</param>
-        public FileSystemOptionComposition(Op op, params IFileSystemOption[] options) : this(op, (IEnumerable<IFileSystemOption>)options) { }
+        public OptionComposition(Op op, params IOption[] options) : this(op, (IEnumerable<IOption>)options) { }
 
         /// <summary>
         /// Add option to the composition.
@@ -122,9 +122,9 @@ namespace Lexical.FileSystem
         /// <param name="option">Option instance to add to composition</param>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="FileSystemExceptionOptionOperationNotSupported"></exception>
-        protected virtual void Add(Op op, Type type, IFileSystemOption option)
+        protected virtual void Add(Op op, Type type, IOption option)
         {
-            IFileSystemOption prev;
+            IOption prev;
             // Combine previousOption and option
             if (byType.TryGetValue(type, out prev))
             {
@@ -149,25 +149,25 @@ namespace Lexical.FileSystem
         protected virtual void Flatten()
         {
             // List where to add changes to be applied. Dictionary cannot be modified while enumerating it.
-            List<(Type, IFileSystemOption)> changes = null;
+            List<(Type, IOption)> changes = null;
             // Enumerate lines
-            foreach (KeyValuePair<Type, IFileSystemOption> line in byType)
+            foreach (KeyValuePair<Type, IOption> line in byType)
             {
                 // Is there flattener
-                if (line.Value.GetOperation(line.Key) is IFileSystemOptionOperationFlatten flattener)
+                if (line.Value.GetOperation(line.Key) is IOptionFlattenOperation flattener)
                 {
                     // Try flattining
-                    IFileSystemOption flattened = flattener.Flatten(line.Value);
+                    IOption flattened = flattener.Flatten(line.Value);
                     // Nothing was changed
                     if (flattened == line.Value) continue;
                     // Create list of modifications
-                    if (changes == null) changes = new List<(Type, IFileSystemOption)>();
+                    if (changes == null) changes = new List<(Type, IOption)>();
                     // Add modification
                     changes.Add((line.Key, flattened));
                 }
             }
             // Apply modifications
-            if (changes != null) foreach ((Type, IFileSystemOption) change in changes) byType[change.Item1] = change.Item2;
+            if (changes != null) foreach ((Type, IOption) change in changes) byType[change.Item1] = change.Item2;
         }
 
         /// <summary>
@@ -175,14 +175,14 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="optionInterfaceType"></param>
         /// <returns>option or null</returns>
-        public IFileSystemOption GetOption(Type optionInterfaceType)
+        public IOption GetOption(Type optionInterfaceType)
         {
-            IFileSystemOption result;
+            IOption result;
             if (byType.TryGetValue(optionInterfaceType, out result)) return result;
             return default;
         }
 
-        IEnumerator<KeyValuePair<Type, IFileSystemOption>> IEnumerable<KeyValuePair<Type, IFileSystemOption>>.GetEnumerator() => byType.GetEnumerator();
+        IEnumerator<KeyValuePair<Type, IOption>> IEnumerable<KeyValuePair<Type, IOption>>.GetEnumerator() => byType.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => byType.GetEnumerator();
     }
 }

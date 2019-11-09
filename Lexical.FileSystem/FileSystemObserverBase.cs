@@ -27,7 +27,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Callback.
         /// </summary>
-        public IObserver<IFileSystemEvent> Observer { get; protected set; }
+        public IObserver<IEvent> Observer { get; protected set; }
 
         /// <summary>
         /// State object that was attached at construction.
@@ -37,7 +37,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Event dispatcher.
         /// </summary>
-        public IFileSystemEventDispatcher Dispatcher { get; protected set; }
+        public IEventDispatcher Dispatcher { get; protected set; }
 
         /// <summary>
         /// Create observer.
@@ -47,7 +47,7 @@ namespace Lexical.FileSystem
         /// <param name="observer"></param>
         /// <param name="state"></param>
         /// <param name="eventDispatcher"></param>
-        protected FileSystemObserverBase(IFileSystem filesystem, string filter, IObserver<IFileSystemEvent> observer, object state, IFileSystemEventDispatcher eventDispatcher)
+        protected FileSystemObserverBase(IFileSystem filesystem, string filter, IObserver<IEvent> observer, object state, IEventDispatcher eventDispatcher)
         {
             this.FileSystem = filesystem;
             this.Filter = filter;
@@ -106,11 +106,11 @@ namespace Lexical.FileSystem
         /// <inheritdoc/>
         public virtual string Filter => original.Filter;
         /// <inheritdoc/>
-        public virtual IObserver<IFileSystemEvent> Observer => original.Observer;
+        public virtual IObserver<IEvent> Observer => original.Observer;
         /// <inheritdoc/>
         public virtual object State => original.State;
         /// <inheritdoc/>
-        public IFileSystemEventDispatcher Dispatcher => original.Dispatcher;
+        public IEventDispatcher Dispatcher => original.Dispatcher;
 
         /// <summary>
         /// Original observer handle

@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace Lexical.FileSystem
 {
-    // <IFileSystemToken>
+    // <IToken>
     /// <summary>
     /// Abstract token that can be passed to filesystem implementations.
     /// Token is typically a session, a security token such as credential
@@ -17,23 +17,23 @@ namespace Lexical.FileSystem
     /// 
     /// See more specific subinterfaces:
     /// <list type="bullet">
-    ///     <item><see cref="IFileSystemTokenObject"/></item>
-    ///     <item><see cref="IFileSystemTokenEnumerable"/></item>
-    ///     <item><see cref="IFileSystemTokenProvider"/></item>
+    ///     <item><see cref="ITokenObject"/></item>
+    ///     <item><see cref="ITokenEnumerable"/></item>
+    ///     <item><see cref="ITokenProvider"/></item>
     /// </list>
     /// </summary>
-    [Operations(typeof(FileSystemOperationToken))]
-    public interface IFileSystemToken : IFileSystemOption
+    [Operations(typeof(TokenOperations))]
+    public interface IToken : IOption
     {
     }
-    // </IFileSystemToken>
+    // </IToken>
 
-    // <IFileSystemTokenObject>
+    // <ITokenObject>
     /// <summary>
     /// A single token object.
     /// </summary>
-    [Operations(typeof(FileSystemOperationToken))]
-    public interface IFileSystemTokenObject : IFileSystemToken
+    [Operations(typeof(TokenOperations))]
+    public interface ITokenObject : IToken
     {
         /// <summary>
         /// (optional) Token object
@@ -52,14 +52,14 @@ namespace Lexical.FileSystem
         /// </summary>
         string[] Patterns { get; }
     }
-    // </IFileSystemTokenObject>
+    // </ITokenObject>
 
-    // <IFileSystemTokenProvider>
+    // <ITokenProvider>
     /// <summary>
     /// Queryable token.
     /// </summary>
-    [Operations(typeof(FileSystemOperationToken))]
-    public interface IFileSystemTokenProvider : IFileSystemToken
+    [Operations(typeof(TokenOperations))]
+    public interface ITokenProvider : IToken
     {
         /// <summary>
         /// Query for first token object at path <paramref name="path"/> as type <paramref name="key"/>.
@@ -79,18 +79,18 @@ namespace Lexical.FileSystem
         /// <returns>true if tokens were found for the parameters</returns>
         bool TryGetAllTokens(string path, string key, out object[] tokens);
     }
-    // </IFileSystemTokenProvider>
+    // </ITokenProvider>
 
-    // <IFileSystemTokenEnumerable>
+    // <ITokenEnumerable>
     /// <summary>
     /// Object that contains multiple tokens. 
     /// 
-    /// If class that implements <see cref="IFileSystemTokenEnumerable"/>, also implements <see cref="IFileSystemTokenProvider"/>
+    /// If class that implements <see cref="ITokenEnumerable"/>, also implements <see cref="ITokenProvider"/>
     /// then it must provide only for the tokens that it can enumerate (either recursively or not).
     /// </summary>
-    [Operations(typeof(FileSystemOperationToken))]
-    public interface IFileSystemTokenEnumerable : IFileSystemToken, IEnumerable<IFileSystemToken>
+    [Operations(typeof(TokenOperations))]
+    public interface ITokenEnumerable : IToken, IEnumerable<IToken>
     {
     }
-    // </IFileSystemTokenEnumerable>
+    // </ITokenEnumerable>
 }

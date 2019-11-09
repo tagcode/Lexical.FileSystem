@@ -9,7 +9,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// FileSystem option that denies write and modification operations.
     /// </summary>
-    public class FileSystemOptionReadOnly : IFileSystemOptionCreateDirectory, IFileSystemOptionDelete, IFileSystemOptionMove, IFileSystemOptionOpen, IFileSystemOptionMount, IFileSystemOptionBrowse, IFileSystemOptionObserve
+    public class ReadOnlyOption : ICreateDirectoryOption, IDeleteOption, IMoveOption, IOpenOption, IMountOption, IBrowseOption, IObserveOption
     {
         /// <inheritdoc/>
         public bool CanOpen => true;
@@ -41,13 +41,13 @@ namespace Lexical.FileSystem
         public override string ToString() => "ReadOnly";
     }
 
-    /// <summary>No options of <see cref="IFileSystemOption"/>.</summary>
-    public class FileSystemOptionNone : IFileSystemOption
+    /// <summary>No options of <see cref="IOption"/>.</summary>
+    public class NoneOption : IOption
     {
         /// <summary>No options</summary>
-        static IFileSystemOption noOptions = new FileSystemOptionNone();
+        static IOption noOptions = new NoneOption();
         /// <summary>No options</summary>
-        public static IFileSystemOption NoOptions => noOptions;
+        public static IOption NoOptions => noOptions;
         /// <inheritdoc/>
         public override string ToString() => "None";
     }
@@ -56,26 +56,26 @@ namespace Lexical.FileSystem
 
 namespace Lexical.FileSystem
 {
-    public static partial class FileSystemOption
+    public static partial class Option
     {
-        internal static IFileSystemOption noOptions = new FileSystemOptionNone();
-        internal static IFileSystemOptionBrowse browse = new FileSystemOptionBrowse(true, true);
-        internal static IFileSystemOptionBrowse noBrowse = new FileSystemOptionBrowse(false, false);
-        internal static IFileSystemOptionCreateDirectory createDirectory = new FileSystemOptionCreateDirectory(true);
-        internal static IFileSystemOptionCreateDirectory noCreateDirectory = new FileSystemOptionCreateDirectory(false);
-        internal static IFileSystemOptionDelete delete = new FileSystemOptionDelete(true);
-        internal static IFileSystemOptionDelete noDelete = new FileSystemOptionDelete(false);
-        internal static IFileSystemOptionMove move = new FileSystemOptionMove(true);
-        internal static IFileSystemOptionMove noMove = new FileSystemOptionMove(false);
-        internal static IFileSystemOptionMount mount = new FileSystemOptionMount(true, true, true);
-        internal static IFileSystemOptionMount noMount = new FileSystemOptionMount(false, false, false);
-        internal static IFileSystemOptionOpen openReadWriteCreate = new FileSystemOptionOpen(true, true, true, true);
-        internal static IFileSystemOptionOpen openReadWrite = new FileSystemOptionOpen(true, true, true, false);
-        internal static IFileSystemOptionOpen openRead = new FileSystemOptionOpen(true, true, false, false);
-        internal static IFileSystemOptionOpen noOpen = new FileSystemOptionOpen(false, false, false, false);
-        internal static IFileSystemOptionObserve observe = new FileSystemOptionObserve(true);
-        internal static IFileSystemOptionObserve noObserve = new FileSystemOptionObserve(false);
-        internal static IFileSystemOptionSubPath noSubPath = new FileSystemOptionSubPath(null);
-        internal static IFileSystemOption _readonly = new FileSystemOptionReadOnly();
+        internal static IOption noOptions = new NoneOption();
+        internal static IBrowseOption browse = new BrowseOption(true, true);
+        internal static IBrowseOption noBrowse = new BrowseOption(false, false);
+        internal static ICreateDirectoryOption createDirectory = new CreateDirectoryOption(true);
+        internal static ICreateDirectoryOption noCreateDirectory = new CreateDirectoryOption(false);
+        internal static IDeleteOption delete = new DeleteOption(true);
+        internal static IDeleteOption noDelete = new DeleteOption(false);
+        internal static IMoveOption move = new MoveOption(true);
+        internal static IMoveOption noMove = new MoveOption(false);
+        internal static IMountOption mount = new MountOption(true, true, true);
+        internal static IMountOption noMount = new MountOption(false, false, false);
+        internal static IOpenOption openReadWriteCreate = new OpenOption(true, true, true, true);
+        internal static IOpenOption openReadWrite = new OpenOption(true, true, true, false);
+        internal static IOpenOption openRead = new OpenOption(true, true, false, false);
+        internal static IOpenOption noOpen = new OpenOption(false, false, false, false);
+        internal static IObserveOption observe = new ObserveOption(true);
+        internal static IObserveOption noObserve = new ObserveOption(false);
+        internal static ISubPathOption noSubPath = new SubPathOption(null);
+        internal static IOption _readonly = new ReadOnlyOption();
     }
 }

@@ -10,20 +10,20 @@ using System.Security;
 namespace Lexical.FileSystem
 {
     /// <summary>File system options for browse.</summary>
-    [Operations(typeof(FileSystemOptionOperationFileAttribute))]
-    // <IFileSystemOptionFileAttribute>
-    public interface IFileSystemOptionFileAttribute : IFileSystemOption
+    [Operations(typeof(FileAttributeOptionOperations))]
+    // <IFileAttributeOption>
+    public interface IFileAttributeOption : IOption
     {
         /// <summary>Has SetFileAttribute capability.</summary>
         bool CanSetFileAttribute { get; }
     }
-    // </IFileSystemOptionFileAttribute>
+    // </IFileAttributeOption>
 
     // <doc>
     /// <summary>
     /// File system that set file attribute.
     /// </summary>
-    public interface IFileSystemFileAttribute : IFileSystem, IFileSystemOptionFileAttribute
+    public interface IFileSystemFileAttribute : IFileSystem, IFileAttributeOption
     {
         /// <summary>
         /// Set <paramref name="fileAttribute"/> on <paramref name="path"/>.
@@ -42,7 +42,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        void SetFileAttribute(string path, FileAttributes fileAttribute, IFileSystemOption option = null);
+        void SetFileAttribute(string path, FileAttributes fileAttribute, IOption option = null);
     }
     // </doc>
 }

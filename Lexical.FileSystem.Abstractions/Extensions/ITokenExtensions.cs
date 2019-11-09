@@ -15,23 +15,23 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Token extension methods.
     /// </summary>
-    public static class IFileSystemTokenExtensions
+    public static class ITokenExtensions
     {
         /// <summary>
         /// (optional) Get token object
         /// </summary>
         /// <param name="tokenContainer"></param>
         /// <returns>object or null</returns>
-        public static object TokenObject(this IFileSystemToken tokenContainer)
-            => tokenContainer.AsOption<IFileSystemTokenObject>()?.TokenObject;
+        public static object TokenObject(this IToken tokenContainer)
+            => tokenContainer.AsOption<ITokenObject>()?.TokenObject;
 
         /// <summary>
         /// (optional) Get token type
         /// </summary>
         /// <param name="tokenContainer"></param>
         /// <returns>type or null</returns>
-        public static string Key(this IFileSystemToken tokenContainer)
-            => tokenContainer.AsOption<IFileSystemTokenObject>()?.Key;
+        public static string Key(this IToken tokenContainer)
+            => tokenContainer.AsOption<ITokenObject>()?.Key;
 
 
         /// <summary>
@@ -39,8 +39,8 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="tokenContainer"></param>
         /// <returns>type or null</returns>
-        public static string[] Patterns(this IFileSystemToken tokenContainer)
-            => tokenContainer.AsOption<IFileSystemTokenObject>()?.Patterns;
+        public static string[] Patterns(this IToken tokenContainer)
+            => tokenContainer.AsOption<ITokenObject>()?.Patterns;
 
         /// <summary>
         /// Query for a token object at path <paramref name="path"/> as type <paramref name="key"/>.
@@ -50,9 +50,9 @@ namespace Lexical.FileSystem
         /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public static bool TryGetToken(this IFileSystemOption tokenContainer, string path, string key, out object token)
+        public static bool TryGetToken(this IOption tokenContainer, string path, string key, out object token)
         {
-            IFileSystemTokenProvider tp = tokenContainer.AsOption<IFileSystemTokenProvider>();
+            ITokenProvider tp = tokenContainer.AsOption<ITokenProvider>();
             if (tp != null && tp.TryGetToken(path, key, out token)) return true;
             token = null;
             return false;
@@ -67,10 +67,10 @@ namespace Lexical.FileSystem
         /// <param name="path">(optional) path to query token at</param>
         /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public static bool TryGetToken<T>(this IFileSystemOption tokenContainer, string path, out T token)
+        public static bool TryGetToken<T>(this IOption tokenContainer, string path, out T token)
         {
             object obj;
-            IFileSystemTokenProvider tp = tokenContainer.AsOption<IFileSystemTokenProvider>();
+            ITokenProvider tp = tokenContainer.AsOption<ITokenProvider>();
             if (tp != null && tp.TryGetToken(path, typeof(T).FullName, out obj) && obj is T casted) { token = casted; return true; }
             token = default;
             return false;
@@ -84,10 +84,10 @@ namespace Lexical.FileSystem
         /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="token">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public static bool TryGetToken<T>(this IFileSystemOption tokenContainer, string path, string key, out T token)
+        public static bool TryGetToken<T>(this IOption tokenContainer, string path, string key, out T token)
         {
             object obj;
-            IFileSystemTokenProvider tp = tokenContainer.AsOption<IFileSystemTokenProvider>();
+            ITokenProvider tp = tokenContainer.AsOption<ITokenProvider>();
             if (tp != null && tp.TryGetToken(path, key, out obj) && obj is T casted) { token = casted; return true; }
             token = default;
             return false;
@@ -101,9 +101,9 @@ namespace Lexical.FileSystem
         /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public static bool TryGetAllTokens(this IFileSystemOption tokenContainer, string path, string key, out object[] tokens)
+        public static bool TryGetAllTokens(this IOption tokenContainer, string path, string key, out object[] tokens)
         {
-            IFileSystemTokenProvider tp = tokenContainer.AsOption<IFileSystemTokenProvider>();
+            ITokenProvider tp = tokenContainer.AsOption<ITokenProvider>();
             if (tp != null && tp.TryGetAllTokens(path, key, out tokens)) return true;
             tokens = null;
             return false;
@@ -118,10 +118,10 @@ namespace Lexical.FileSystem
         /// <param name="path">(optional) path to query token at</param>
         /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public static bool TryGetAllTokens<T>(this IFileSystemOption tokenContainer, string path, out T[] tokens)
+        public static bool TryGetAllTokens<T>(this IOption tokenContainer, string path, out T[] tokens)
         {
             object[] objs;
-            IFileSystemTokenProvider tp = tokenContainer.AsOption<IFileSystemTokenProvider>();
+            ITokenProvider tp = tokenContainer.AsOption<ITokenProvider>();
             if (tp != null && tp.TryGetAllTokens(path, typeof(T).FullName, out objs))
             {
                 List<T> list = new List<T>(objs.Length);
@@ -144,10 +144,10 @@ namespace Lexical.FileSystem
         /// <param name="key">(optional) key to query, typically <see cref="Type.FullName"/></param>
         /// <param name="tokens">array of tokens, or null if failed to find matching tokens</param>
         /// <returns>true if tokens were found for the parameters</returns>
-        public static bool TryGetAllTokens<T>(this IFileSystemOption tokenContainer, string path, string key, out T[] tokens)
+        public static bool TryGetAllTokens<T>(this IOption tokenContainer, string path, string key, out T[] tokens)
         {
             object[] objs;
-            IFileSystemTokenProvider tp = tokenContainer.AsOption<IFileSystemTokenProvider>();
+            ITokenProvider tp = tokenContainer.AsOption<ITokenProvider>();
             if (tp !=null && tp.TryGetAllTokens(path, key, out objs))
             {
                 List<T> list = new List<T>(objs.Length);
@@ -162,7 +162,7 @@ namespace Lexical.FileSystem
             return false;
         }
 
-        static IFileSystemToken[] no_tokens = new IFileSystemToken[0];
+        static IToken[] no_tokens = new IToken[0];
 
         /// <summary>
         /// If <paramref name="tokenContainer"/> is a single token, then enumerates it.
@@ -172,37 +172,37 @@ namespace Lexical.FileSystem
         /// <param name="tokenContainer"></param>
         /// <param name="recurse"></param>
         /// <returns>enumerable of tokens</returns>
-        public static IEnumerable<IFileSystemToken> ListTokens(this IFileSystemOption tokenContainer, bool recurse = true)
+        public static IEnumerable<IToken> ListTokens(this IOption tokenContainer, bool recurse = true)
         {
             // Is a token
-            if (tokenContainer is IFileSystemToken token)
+            if (tokenContainer is IToken token)
             {
                 // Enumerable
-                if (tokenContainer is IFileSystemTokenEnumerable enumr)
+                if (tokenContainer is ITokenEnumerable enumr)
                 {
                     // Return enumerable as is
                     if (!recurse) return enumr;
 
                     // Put into queue
-                    StructList4<IFileSystemToken> queue = new StructList4<IFileSystemToken>();
-                    foreach (IFileSystemToken t in enumr) queue.Add(t);
-                    StructListSorter<StructList4<IFileSystemToken>, IFileSystemToken>.Reverse(ref queue);
+                    StructList4<IToken> queue = new StructList4<IToken>();
+                    foreach (IToken t in enumr) queue.Add(t);
+                    StructListSorter<StructList4<IToken>, IToken>.Reverse(ref queue);
 
-                    StructList4<IFileSystemToken> result = new StructList4<IFileSystemToken>();
+                    StructList4<IToken> result = new StructList4<IToken>();
                     while (queue.Count > 0)
                     {
                         int ix = queue.Count - 1;
-                        IFileSystemToken t = queue[ix];
+                        IToken t = queue[ix];
                         queue.RemoveAt(ix);
 
-                        if (t is IFileSystemTokenEnumerable enumr_)
-                            foreach (IFileSystemToken tt in enumr_) queue.Add(tt);
+                        if (t is ITokenEnumerable enumr_)
+                            foreach (IToken tt in enumr_) queue.Add(tt);
                         else result.Add(t);
                     }
                     return result.ToArray();
                 }
                 // Single token
-                else return new IFileSystemToken[] { token };
+                else return new IToken[] { token };
             }
             else
             {
@@ -218,22 +218,22 @@ namespace Lexical.FileSystem
         /// <param name="t1">(optional) Token</param>
         /// <param name="t2">(optional) Token</param>
         /// <returns>null, t1, t2, or concatenated token</returns>
-        public static IFileSystemToken Concat(this IFileSystemToken t1, IFileSystemToken t2)
+        public static IToken Concat(this IToken t1, IToken t2)
         {
-            StructList4<IFileSystemToken> tokens = new StructList4<IFileSystemToken>();
+            StructList4<IToken> tokens = new StructList4<IToken>();
             if (t1 != null)
             {
-                if (t1 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                if (t1 is ITokenEnumerable enumr) foreach (IToken t in enumr) tokens.AddIfNew(t);
                 else tokens.AddIfNew(t1);
             }
             if (t2 != null)
             {
-                if (t2 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                if (t2 is ITokenEnumerable enumr) foreach (IToken t in enumr) tokens.AddIfNew(t);
                 else tokens.AddIfNew(t2);
             }
             if (tokens.Count == 0) return null;
             if (tokens.Count == 1) return tokens[0];
-            return new FileSystemTokenList(tokens.ToArray());
+            return new TokenList(tokens.ToArray());
         }
 
         /// <summary>
@@ -244,27 +244,27 @@ namespace Lexical.FileSystem
         /// <param name="t2">(optional) Token</param>
         /// <param name="t3">(optional) Token</param>
         /// <returns>null, t1, t2, or concatenated token</returns>
-        public static IFileSystemToken Concat(this IFileSystemToken t1, IFileSystemToken t2, IFileSystemToken t3)
+        public static IToken Concat(this IToken t1, IToken t2, IToken t3)
         {
-            StructList4<IFileSystemToken> tokens = new StructList4<IFileSystemToken>();
+            StructList4<IToken> tokens = new StructList4<IToken>();
             if (t1 != null)
             {
-                if (t1 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                if (t1 is ITokenEnumerable enumr) foreach (IToken t in enumr) tokens.AddIfNew(t);
                 else tokens.AddIfNew(t1);
             }
             if (t2 != null)
             {
-                if (t2 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                if (t2 is ITokenEnumerable enumr) foreach (IToken t in enumr) tokens.AddIfNew(t);
                 else tokens.AddIfNew(t2);
             }
             if (t3 != null)
             {
-                if (t3 is IFileSystemTokenEnumerable enumr) foreach (IFileSystemToken t in enumr) tokens.AddIfNew(t);
+                if (t3 is ITokenEnumerable enumr) foreach (IToken t in enumr) tokens.AddIfNew(t);
                 else tokens.AddIfNew(t3);
             }
             if (tokens.Count == 0) return null;
             if (tokens.Count == 1) return tokens[0];
-            return new FileSystemTokenList(tokens.ToArray());
+            return new TokenList(tokens.ToArray());
         }
 
         /// <summary>
@@ -274,75 +274,75 @@ namespace Lexical.FileSystem
         /// <param name="t1"></param>
         /// <param name="moreTokens">(optional) more tokens</param>
         /// <returns>null, t1, t2, or concatenated token</returns>
-        public static IFileSystemToken Concat(this IFileSystemToken t1, params IFileSystemToken[] moreTokens)
+        public static IToken Concat(this IToken t1, params IToken[] moreTokens)
         {
             if (moreTokens == null) return t1;
             if (t1 == null)
             {
                 if (moreTokens.Length == 0) return null;
                 if (moreTokens.Length == 1) return moreTokens[0];
-                new FileSystemTokenList(moreTokens);
+                new TokenList(moreTokens);
             }
-            IFileSystemToken[] arr = new IFileSystemToken[moreTokens.Length + 1];
+            IToken[] arr = new IToken[moreTokens.Length + 1];
             arr[0] = t1;
             Array.Copy(moreTokens, 0, arr, 1, moreTokens.Length);
-            return new FileSystemTokenList(arr);
+            return new TokenList(arr);
         }
     }
 
-    /// <summary><see cref="IFileSystemToken"/> operations.</summary>
-    public class FileSystemOperationToken : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IToken"/> operations.</summary>
+    public class TokenOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemToken);
+        public Type OptionType => typeof(IToken);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o)
+        public IOption Flatten(IOption o)
         {
-            StructList4<IFileSystemToken> tokens = new StructList4<IFileSystemToken>();
-            if (o is IFileSystemToken t_)
-                foreach (IFileSystemToken t in t_.ListTokens(true))
+            StructList4<IToken> tokens = new StructList4<IToken>();
+            if (o is IToken t_)
+                foreach (IToken t in t_.ListTokens(true))
                     tokens.AddIfNew(t);
-            if (tokens.Count == 0) return FileSystemTokenList.NoTokens;
+            if (tokens.Count == 0) return TokenList.NoTokens;
             if (tokens.Count == 1) return tokens[0];
-            return new FileSystemTokenList(tokens.ToArray());
+            return new TokenList(tokens.ToArray());
         }
 
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) 
+        public IOption Intersection(IOption o1, IOption o2) 
         {
             // Actually union
-            StructList4<IFileSystemToken> tokens = new StructList4<IFileSystemToken>();
-            if (o1 is IFileSystemToken t1)
-                foreach (IFileSystemToken t in t1.ListTokens(true))
+            StructList4<IToken> tokens = new StructList4<IToken>();
+            if (o1 is IToken t1)
+                foreach (IToken t in t1.ListTokens(true))
                     tokens.AddIfNew(t);
-            if (o2 is IFileSystemToken t2)
-                foreach (IFileSystemToken t in t2.ListTokens(true))
+            if (o2 is IToken t2)
+                foreach (IToken t in t2.ListTokens(true))
                     tokens.AddIfNew(t);
-            if (tokens.Count == 0) return FileSystemTokenList.NoTokens;
+            if (tokens.Count == 0) return TokenList.NoTokens;
             if (tokens.Count == 1) return tokens[0];
-            return new FileSystemTokenList(tokens.ToArray());
+            return new TokenList(tokens.ToArray());
         }
 
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2)
+        public IOption Union(IOption o1, IOption o2)
         {
-            StructList4<IFileSystemToken> tokens = new StructList4<IFileSystemToken>();
-            if (o1 is IFileSystemToken t1)
-                foreach (IFileSystemToken t in t1.ListTokens(true))
+            StructList4<IToken> tokens = new StructList4<IToken>();
+            if (o1 is IToken t1)
+                foreach (IToken t in t1.ListTokens(true))
                     tokens.AddIfNew(t);
-            if (o2 is IFileSystemToken t2)
-                foreach (IFileSystemToken t in t2.ListTokens(true))
+            if (o2 is IToken t2)
+                foreach (IToken t in t2.ListTokens(true))
                     tokens.AddIfNew(t);
-            if (tokens.Count == 0) return FileSystemTokenList.NoTokens;
+            if (tokens.Count == 0) return TokenList.NoTokens;
             if (tokens.Count == 1) return tokens[0];
-            return new FileSystemTokenList(tokens.ToArray());
+            return new TokenList(tokens.ToArray());
         }
     }
 
     /// <summary>
     /// Single token container.
     /// </summary>
-    public class FileSystemToken : IFileSystemTokenObject, IFileSystemTokenProvider
+    public class Token : ITokenObject, ITokenProvider
     {
         static object[] emptyArray = new object[0];
 
@@ -370,7 +370,7 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="token"></param>
         /// <param name="key">(optional) The key <paramref name="token"/> is offered as. If null, then matches to every key criteria in TryGet</param>
-        public FileSystemToken(object token, String key = null)
+        public Token(object token, String key = null)
         {
             this.TokenObject = token;
             this.Key = key;
@@ -385,7 +385,7 @@ namespace Lexical.FileSystem
         /// <param name="token"></param>
         /// <param name="key">(optional) The key <paramref name="token"/> is offered as. If null, then matches to every key criteria in TryGet</param>
         /// <param name="patterns">(optional) path globa patterns to accept. If null, then accepts every path, which is equal to "**" pattern.</param>
-        public FileSystemToken(object token, String key = null, params string[] patterns) : this(token, key)
+        public Token(object token, String key = null, params string[] patterns) : this(token, key)
         {
             this.Patterns = patterns;
             if (patterns == null)
@@ -474,7 +474,7 @@ namespace Lexical.FileSystem
             if (TokenObject != null) sb.Append(TokenObject.ToString());
             if (Key != null || Patterns != null)
             {
-                sb.Append("FileSystemToken(");
+                sb.Append("Token(");
                 sb.Append(TokenObject?.ToString());
                 if (Key != null) { sb.Append(", Key="); sb.Append(Key); }
                 if (Patterns != null)
@@ -502,13 +502,13 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Readonly list of tokens.
     /// </summary>
-    public class FileSystemTokenList : IFileSystemTokenEnumerable, IFileSystemTokenProvider, IReadOnlyList<IFileSystemToken>
+    public class TokenList : ITokenEnumerable, ITokenProvider, IReadOnlyList<IToken>
     {
         static object[] emptyArray = new object[0];
-        static IFileSystemToken noTokens = new FileSystemTokenList();
+        static IToken noTokens = new TokenList();
 
         /// <summary>Singleton instance that contains 0 tokens.</summary>
-        public static IFileSystemToken NoTokens => noTokens;
+        public static IToken NoTokens => noTokens;
 
         /// <summary>Token count</summary>
         public int Count => tokens.Length;
@@ -516,10 +516,10 @@ namespace Lexical.FileSystem
         /// <summary>Get token at <paramref name="index"/>.</summary>
         /// <param name="index"></param>
         /// <returns></returns>
-        public IFileSystemToken this[int index] => tokens[index];
+        public IToken this[int index] => tokens[index];
 
         /// <summary>Array of tokens, nulls are removed</summary>
-        protected IFileSystemToken[] tokens;
+        protected IToken[] tokens;
 
         /// <summary>
         /// Create a token that combins a pair of tokens.
@@ -527,9 +527,9 @@ namespace Lexical.FileSystem
         /// </summary>
         /// <param name="token1"></param>
         /// <param name="token2"></param>
-        public FileSystemTokenList(IFileSystemToken token1, IFileSystemToken token2)
+        public TokenList(IToken token1, IToken token2)
         {
-            StructList2<IFileSystemToken> list = new StructList2<IFileSystemToken>();
+            StructList2<IToken> list = new StructList2<IToken>();
             if (token1 != null) list.Add(token1);
             if (token2 != null) list.Add(token2);
             this.tokens = list.ToArray();
@@ -540,9 +540,9 @@ namespace Lexical.FileSystem
         /// Removes null values.
         /// </summary>
         /// <param name="tokens"></param>
-        public FileSystemTokenList(IEnumerable<IFileSystemToken> tokens)
+        public TokenList(IEnumerable<IToken> tokens)
         {
-            StructList4<IFileSystemToken> list = new StructList4<IFileSystemToken>();
+            StructList4<IToken> list = new StructList4<IToken>();
             foreach (var t in tokens) if (t != null) list.Add(t);
             this.tokens = list.ToArray();
         }
@@ -551,7 +551,7 @@ namespace Lexical.FileSystem
         /// Create token list.
         /// </summary>
         /// <param name="tokens"></param>
-        public FileSystemTokenList(params IFileSystemToken[] tokens)
+        public TokenList(params IToken[] tokens)
         {
             int c = 0;
             for (int i = 0; i < tokens.Length; i++)
@@ -562,7 +562,7 @@ namespace Lexical.FileSystem
             }
             else
             {
-                this.tokens = new IFileSystemToken[c];
+                this.tokens = new IToken[c];
                 int ix = 0;
                 for (int i = 0; i < tokens.Length; i++)
                     if (tokens[i] != null) this.tokens[ix++] = tokens[i];
@@ -620,9 +620,9 @@ namespace Lexical.FileSystem
         }
 
         /// <summary>Get enumerator</summary>
-        public IEnumerator<IFileSystemToken> GetEnumerator() => ((IEnumerable<IFileSystemToken>)tokens).GetEnumerator();
+        public IEnumerator<IToken> GetEnumerator() => ((IEnumerable<IToken>)tokens).GetEnumerator();
         /// <summary>Get enumerator</summary>
-        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<IFileSystemToken>)tokens).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<IToken>)tokens).GetEnumerator();
 
         /// <summary>Print info</summary>
         /// <returns></returns>

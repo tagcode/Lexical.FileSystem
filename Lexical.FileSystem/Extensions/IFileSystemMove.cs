@@ -39,7 +39,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void Transfer(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath, IFileSystemOption srcOption = null, IFileSystemOption dstOption = null)
+        public static void Transfer(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath, IOption srcOption = null, IOption dstOption = null)
         {
             using (var s = new FileOperation.Session())
             {
@@ -71,7 +71,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void CopyFile(this IFileSystem filesystem, string srcPath, string dstPath, IFileSystemOption option = null)
+        public static void CopyFile(this IFileSystem filesystem, string srcPath, string dstPath, IOption option = null)
         {
             using (var s = new FileOperation.Session())
             {
@@ -104,7 +104,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void CopyFile(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath, IFileSystemOption srcOption = null, IFileSystemOption dstOption = null)
+        public static void CopyFile(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath, IOption srcOption = null, IOption dstOption = null)
         {
             using (var s = new FileOperation.Session())
             {
@@ -138,7 +138,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void CopyTree(this IFileSystem filesystem, string srcPath, string dstPath, IFileSystemOption option = null)
+        public static void CopyTree(this IFileSystem filesystem, string srcPath, string dstPath, IOption option = null)
         {
             using (var s = new FileOperation.Session())
             {
@@ -174,7 +174,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">path refers to non-file device, or an entry already exists at <paramref name="dstPath"/></exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static void CopyTree(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath, IFileSystemOption srcOption = null, IFileSystemOption dstOption = null)
+        public static void CopyTree(this IFileSystem filesystem, string srcPath, IFileSystem dstFileSystem, string dstPath, IOption srcOption = null, IOption dstOption = null)
         {
             using (var s = new FileOperation.Session())
             {

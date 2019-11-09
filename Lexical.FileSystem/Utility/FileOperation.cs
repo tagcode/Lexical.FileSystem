@@ -549,7 +549,7 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Rollback operation.</summary>
             protected FileOperation rollback;
             /// <summary>Target filesystem option or token</summary>
-            protected IFileSystemOption Option;
+            protected IOption Option;
 
 
             /// <summary>
@@ -562,7 +562,7 @@ namespace Lexical.FileSystem.Utility
             /// <param name="option">(optional) </param>
             /// <param name="policy">(optional) Responds to <see cref="Policy.DstThrow"/> and <see cref="Policy.DstSkip"/> policies.</param>
             /// <param name="rollback">(optional) Rollback operation</param>
-            public Delete(Session session, IFileSystem filesystem, string path, bool recurse, IFileSystemOption option = null, Policy policy = Policy.Unset, FileOperation rollback = null) : base(session, policy)
+            public Delete(Session session, IFileSystem filesystem, string path, bool recurse, IOption option = null, Policy policy = Policy.Unset, FileOperation rollback = null) : base(session, policy)
             {
                 this.fileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.path = path ?? throw new ArgumentNullException(nameof(path));
@@ -581,7 +581,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry e = FileSystem.GetEntry(Path, this.Option.OptionIntersection(session.Option));
+                        IEntry e = FileSystem.GetEntry(Path, this.Option.OptionIntersection(session.Option));
                         // Not found
                         if (e == null)
                         {
@@ -631,7 +631,7 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Directories created in Run().</summary>
             protected List<string> DirectoriesCreated = new List<string>();
             /// <summary>Target filesystem option or token</summary>
-            protected IFileSystemOption Option;
+            protected IOption Option;
 
             /// <summary>
             /// Create create directory op.
@@ -641,7 +641,7 @@ namespace Lexical.FileSystem.Utility
             /// <param name="path"></param>
             /// <param name="option"></param>
             /// <param name="policy">(optional) Responds to <see cref="Policy.DstThrow"/>, <see cref="Policy.DstSkip"/> and <see cref="Policy.DstOverwrite"/> policies</param>
-            public CreateDirectory(Session session, IFileSystem filesystem, string path, IFileSystemOption option = null, Policy policy = Policy.Unset) : base(session, policy)
+            public CreateDirectory(Session session, IFileSystem filesystem, string path, IOption option = null, Policy policy = Policy.Unset) : base(session, policy)
             {
                 this.fileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.path = path ?? throw new ArgumentNullException(nameof(path));
@@ -661,7 +661,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry e = FileSystem.GetEntry(Path, this.Option.OptionIntersection(session.Option));
+                        IEntry e = FileSystem.GetEntry(Path, this.Option.OptionIntersection(session.Option));
                         // Directory already exists
                         if (e != null)
                         {
@@ -710,7 +710,7 @@ namespace Lexical.FileSystem.Utility
                     {
                         try
                         {
-                            IFileSystemEntry e = FileSystem.GetEntry(Path, this.Option.OptionIntersection(session.Option));
+                            IEntry e = FileSystem.GetEntry(Path, this.Option.OptionIntersection(session.Option));
                             // Directory already exists
                             if (e != null)
                             {
@@ -743,7 +743,7 @@ namespace Lexical.FileSystem.Utility
                     while (etor.MoveNext())
                     {
                         string path = Path.Substring(0, etor.Current.Length+etor.Current.Start);
-                        IFileSystemEntry e = FileSystem.GetEntry(path, this.Option.OptionIntersection(session.Option));
+                        IEntry e = FileSystem.GetEntry(path, this.Option.OptionIntersection(session.Option));
 
                         // Entry exists
                         if (e != null) continue;
@@ -809,9 +809,9 @@ namespace Lexical.FileSystem.Utility
             public override string SrcPath => srcPath;
 
             /// <summary>Src filesystem option or token</summary>
-            protected IFileSystemOption srcOption;
+            protected IOption srcOption;
             /// <summary>Target filesystem option or token</summary>
-            protected IFileSystemOption Option;
+            protected IOption Option;
 
             /// <summary>Set to true if <see cref="Run"/> moved src.</summary>
             bool moved;
@@ -819,7 +819,7 @@ namespace Lexical.FileSystem.Utility
             bool deletedPrev;
 
             /// <summary>Create move op.</summary>
-            public Move(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, IFileSystemOption srcOption = null, IFileSystemOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
+            public Move(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, IOption srcOption = null, IOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
             {
                 this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
                 this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
@@ -843,7 +843,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, this.srcOption.OptionIntersection(session.Option));
+                        IEntry e = SrcFileSystem.GetEntry(SrcPath, this.srcOption.OptionIntersection(session.Option));
                         // Src not found
                         if (e == null)
                         {
@@ -864,7 +864,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry dstEntry = dstFileSystem.GetEntry(Path, this.Option.OptionIntersection(session.Option));
+                        IEntry dstEntry = dstFileSystem.GetEntry(Path, this.Option.OptionIntersection(session.Option));
                         if (dstEntry != null)
                         {
                             // Dst exists
@@ -911,7 +911,7 @@ namespace Lexical.FileSystem.Utility
                 // Test dst
                 try
                 {
-                    IFileSystemEntry dstEntry = dstFileSystem.GetEntry(dstPath, this.Option.OptionIntersection(session.Option));
+                    IEntry dstEntry = dstFileSystem.GetEntry(dstPath, this.Option.OptionIntersection(session.Option));
                     
                     // Dst exists
                     if (dstEntry != null)
@@ -979,9 +979,9 @@ namespace Lexical.FileSystem.Utility
             public override string SrcPath => srcPath;
 
             /// <summary>Src filesystem option or token</summary>
-            protected IFileSystemOption srcOption;
+            protected IOption srcOption;
             /// <summary>Target filesystem option or token</summary>
-            protected IFileSystemOption Option;
+            protected IOption Option;
 
             /// <summary>Was file overwritten</summary>
             public bool Overwritten { get; protected set; }
@@ -994,7 +994,7 @@ namespace Lexical.FileSystem.Utility
             protected bool prevExisted;
 
             /// <summary>Create copy file op.</summary>
-            public CopyFile(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, IFileSystemOption srcOption = null, IFileSystemOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
+            public CopyFile(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, IOption srcOption = null, IOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
             {
                 this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
                 this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
@@ -1017,7 +1017,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, srcOption.OptionIntersection(session.Option));
+                        IEntry e = SrcFileSystem.GetEntry(SrcPath, srcOption.OptionIntersection(session.Option));
                         // Src not found
                         if (e == null)
                         {
@@ -1040,7 +1040,7 @@ namespace Lexical.FileSystem.Utility
                 {
                     try
                     {
-                        IFileSystemEntry dstEntry = dstFileSystem.GetEntry(Path, Option.OptionIntersection(session.Option));
+                        IEntry dstEntry = dstFileSystem.GetEntry(Path, Option.OptionIntersection(session.Option));
                         prevExisted = dstEntry != null;
                         if (dstEntry != null)
                         {
@@ -1248,12 +1248,12 @@ namespace Lexical.FileSystem.Utility
             public override string SrcPath => srcPath;
 
             /// <summary>Src filesystem option or token</summary>
-            protected IFileSystemOption srcOption;
+            protected IOption srcOption;
             /// <summary>Target filesystem option or token</summary>
-            protected IFileSystemOption Option;
+            protected IOption Option;
 
             /// <summary>Create move op.</summary>
-            public CopyTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, IFileSystemOption srcOption = null, IFileSystemOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
+            public CopyTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, IOption srcOption = null, IOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
             {
                 this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
                 this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
@@ -1269,10 +1269,10 @@ namespace Lexical.FileSystem.Utility
             protected override void InnerEstimate()
             {
                 PathConverter pathConverter = new PathConverter(SrcPath, Path);
-                List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
+                List<IEntry> queue = new List<IEntry>();
 
                 // Src
-                IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, srcOption.OptionIntersection(session.Option));
+                IEntry e = SrcFileSystem.GetEntry(SrcPath, srcOption.OptionIntersection(session.Option));
                 // Src not found
                 if (e == null)
                 {
@@ -1291,7 +1291,7 @@ namespace Lexical.FileSystem.Utility
                     {
                         // Next entry
                         int lastIx = queue.Count - 1;
-                        IFileSystemEntry entry = queue[lastIx];
+                        IEntry entry = queue[lastIx];
                         queue.RemoveAt(lastIx);
 
                         // Omit package mounts
@@ -1301,9 +1301,9 @@ namespace Lexical.FileSystem.Utility
                         if (entry.IsDirectory())
                         {
                             // Browse children
-                            IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path, srcOption.OptionIntersection(session.Option));
+                            IEntry[] children = SrcFileSystem.Browse(entry.Path, srcOption.OptionIntersection(session.Option));
                             // Assert children don't refer to the parent of the parent
-                            foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
+                            foreach (IEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
                             // Visit child
                             for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
                             // Convert path
@@ -1346,12 +1346,12 @@ namespace Lexical.FileSystem.Utility
             public override String Path => path;
 
             /// <summary>Src filesystem option or token</summary>
-            protected IFileSystemOption srcOption;
+            protected IOption srcOption;
             /// <summary>Target filesystem option or token</summary>
-            protected IFileSystemOption Option;
+            protected IOption Option;
 
             /// <summary>Create move op.</summary>
-            public DeleteTree(Session session, IFileSystem filesystem, string path, IFileSystemOption srcOption = null, IFileSystemOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
+            public DeleteTree(Session session, IFileSystem filesystem, string path, IOption srcOption = null, IOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
             {
                 this.fileSystem = filesystem ?? throw new ArgumentNullException(nameof(filesystem));
                 this.path = path ?? throw new ArgumentNullException(nameof(path));
@@ -1367,8 +1367,8 @@ namespace Lexical.FileSystem.Utility
                 List<Delete> dirDeletes = new List<Delete>();
                 try
                 {
-                    List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
-                    IFileSystemEntry e = FileSystem.GetEntry(Path, Option.OptionIntersection(session.Option));
+                    List<IEntry> queue = new List<IEntry>();
+                    IEntry e = FileSystem.GetEntry(Path, Option.OptionIntersection(session.Option));
                     if (e == null) throw new FileNotFoundException(Path);
                     queue.Add(e);
                     while (queue.Count > 0)
@@ -1377,7 +1377,7 @@ namespace Lexical.FileSystem.Utility
                         {
                             // Next entry
                             int lastIx = queue.Count - 1;
-                            IFileSystemEntry entry = queue[lastIx];
+                            IEntry entry = queue[lastIx];
                             queue.RemoveAt(lastIx);
 
                             // Omit package mounts
@@ -1387,9 +1387,9 @@ namespace Lexical.FileSystem.Utility
                             if (entry.IsDirectory())
                             {
                                 // Browse children
-                                IFileSystemEntry[] children = FileSystem.Browse(entry.Path, Option.OptionIntersection(session.Option));
+                                IEntry[] children = FileSystem.Browse(entry.Path, Option.OptionIntersection(session.Option));
                                 // Assert children don't refer to the parent of the parent
-                                foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
+                                foreach (IEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
                                 // Visit children
                                 for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
                                 // Add op
@@ -1445,12 +1445,12 @@ namespace Lexical.FileSystem.Utility
             public override string SrcPath => srcPath;
 
             /// <summary>Src filesystem option or token</summary>
-            protected IFileSystemOption srcOption;
+            protected IOption srcOption;
             /// <summary>Target filesystem option or token</summary>
-            protected IFileSystemOption Option;
+            protected IOption Option;
 
             /// <summary>Create move op.</summary>
-            public TransferTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, IFileSystemOption srcOption = null, IFileSystemOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
+            public TransferTree(Session session, IFileSystem srcFilesystem, string srcPath, IFileSystem dstFilesystem, string dstPath, IOption srcOption = null, IOption dstOption = null, Policy policy = Policy.Unset) : base(session, policy)
             {
                 this.srcFileSystem = srcFilesystem ?? throw new ArgumentNullException(nameof(srcFilesystem));
                 this.dstFileSystem = dstFilesystem ?? throw new ArgumentNullException(nameof(dstFilesystem));
@@ -1464,10 +1464,10 @@ namespace Lexical.FileSystem.Utility
             protected override void InnerEstimate()
             {
                 PathConverter pathConverter = new PathConverter(SrcPath, Path);
-                List<IFileSystemEntry> queue = new List<IFileSystemEntry>();
+                List<IEntry> queue = new List<IEntry>();
 
                 // Src
-                IFileSystemEntry e = SrcFileSystem.GetEntry(SrcPath, srcOption);
+                IEntry e = SrcFileSystem.GetEntry(SrcPath, srcOption);
 
                 // Src not found
                 if (e == null)
@@ -1488,7 +1488,7 @@ namespace Lexical.FileSystem.Utility
                     {
                         // Next entry
                         int lastIx = queue.Count - 1;
-                        IFileSystemEntry entry = queue[lastIx];
+                        IEntry entry = queue[lastIx];
                         queue.RemoveAt(lastIx);
 
                         // Omit package mounts
@@ -1498,9 +1498,9 @@ namespace Lexical.FileSystem.Utility
                         if (entry.IsDirectory())
                         {
                             // Browse children
-                            IFileSystemEntry[] children = SrcFileSystem.Browse(entry.Path, srcOption.OptionIntersection(session.Option));
+                            IEntry[] children = SrcFileSystem.Browse(entry.Path, srcOption.OptionIntersection(session.Option));
                             // Assert children don't refer to the parent of the parent
-                            foreach (IFileSystemEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
+                            foreach (IEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
                             // Visit child
                             for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
                             // Convert path
@@ -1564,10 +1564,10 @@ namespace Lexical.FileSystem.Utility
             /// <summary>Interval of bytes interval to report progress on copying files.</summary>
             public long ProgressInterval { get; protected set; } = 524288L;
             /// <summary>(optional) Option or token</summary>
-            public IFileSystemOption Option { get; protected set; }
+            public IOption Option { get; protected set; }
 
             /// <summary>Create session</summary>
-            public Session(Policy policy = Policy.Default, IBlockPool blockPool = default, CancellationTokenSource cancelSrc = default, IFileSystemOption option = default)
+            public Session(Policy policy = Policy.Default, IBlockPool blockPool = default, CancellationTokenSource cancelSrc = default, IOption option = default)
             {
                 this.Policy = policy;
                 this.BlockPool = blockPool ?? new BlockPool();

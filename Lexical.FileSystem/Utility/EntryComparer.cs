@@ -9,24 +9,24 @@ using System.Collections.Generic;
 namespace Lexical.FileSystem.Utility
 {
     /// <summary>
-    /// Equality comparer compares <see cref="IFileSystemEntry"/> for Path, Date, Length and FileSystem equality.
+    /// Equality comparer compares <see cref="IEntry"/> for Path, Date, Length and FileSystem equality.
     /// 
     /// Order comparer compares by type, then by name. 
     /// </summary>
-    public class FileSystemEntryComparer
+    public class EntryComparer
     {
         /// <summary>Equality comparer for: Path, Date, Length, Type</summary>
-        private static IEqualityComparer<IFileSystemEntry> pathDateLengthTypeEqualityComparer = new _PathDateLengthTypeEqualityComparer();
+        private static IEqualityComparer<IEntry> pathDateLengthTypeEqualityComparer = new _PathDateLengthTypeEqualityComparer();
         /// <summary>Comparer that sorts by: Type, Name.</summary>
-        private static IComparer<IFileSystemEntry> typeNameComparer = new _TypeNameComparer();
+        private static IComparer<IEntry> typeNameComparer = new _TypeNameComparer();
 
         /// <summary>Equality comparer for: Path, Date, Length, Type</summary>
-        public static IEqualityComparer<IFileSystemEntry> PathDateLengthTypeEqualityComparer => pathDateLengthTypeEqualityComparer;
+        public static IEqualityComparer<IEntry> PathDateLengthTypeEqualityComparer => pathDateLengthTypeEqualityComparer;
         /// <summary>Comparer that sorts by: Type, Name.</summary>
-        public static IComparer<IFileSystemEntry> TypeNameComparer => typeNameComparer;
+        public static IComparer<IEntry> TypeNameComparer => typeNameComparer;
 
         /// <summary>Equality comparer for: Path, Date, Length, Type</summary>
-        class _PathDateLengthTypeEqualityComparer : IEqualityComparer<IFileSystemEntry>
+        class _PathDateLengthTypeEqualityComparer : IEqualityComparer<IEntry>
         {
             /// <summary>
             /// Compare entries.
@@ -36,7 +36,7 @@ namespace Lexical.FileSystem.Utility
             /// <param name="x"></param>
             /// <param name="y"></param>
             /// <returns></returns>
-            public bool Equals(IFileSystemEntry x, IFileSystemEntry y)
+            public bool Equals(IEntry x, IEntry y)
             {
                 if (x == null && y == null) return true;
                 if (x == null || y == null) return false;
@@ -63,7 +63,7 @@ namespace Lexical.FileSystem.Utility
         /// </summary>
         /// <param name="entry"></param>
         /// <returns></returns>
-        public int GetHashCode(IFileSystemEntry entry)
+        public int GetHashCode(IEntry entry)
         {
             int hash = 0;
             if (entry.FileSystem != null) hash ^= entry.FileSystem.GetHashCode();
@@ -75,14 +75,14 @@ namespace Lexical.FileSystem.Utility
 
             hash = hash * 3 + entry.GetType().GetHashCode();
 
-            if (entry is IFileSystemEntryFile file) hash = hash * 11 + file.Length.GetHashCode();
+            if (entry is IFileEntry file) hash = hash * 11 + file.Length.GetHashCode();
 
             return hash;
         }
         }
 
         /// <summary>Comparer that sorts by: Type, Name.</summary>
-        class _TypeNameComparer : IComparer<IFileSystemEntry>
+        class _TypeNameComparer : IComparer<IEntry>
         {
             /// <summary>
             /// Sort by type, then name, using AlphaNumericComparer
@@ -90,7 +90,7 @@ namespace Lexical.FileSystem.Utility
             /// <param name="x"></param>
             /// <param name="y"></param>
             /// <returns></returns>
-            public int Compare(IFileSystemEntry x, IFileSystemEntry y)
+            public int Compare(IEntry x, IEntry y)
             {
                 if (x == null && y == null) return 0;
                 if (x == null) return -1;

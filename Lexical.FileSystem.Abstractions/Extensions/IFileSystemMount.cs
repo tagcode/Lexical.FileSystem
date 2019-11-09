@@ -12,9 +12,9 @@ namespace Lexical.FileSystem
     public partial struct FileSystemAssignment : IEquatable<FileSystemAssignment>
     {
         /// <summary>Implicit conversion</summary>
-        public static implicit operator (IFileSystem, IFileSystemOption)(FileSystemAssignment info) => (info.FileSystem, info.Option);
+        public static implicit operator (IFileSystem, IOption)(FileSystemAssignment info) => (info.FileSystem, info.Option);
         /// <summary>Implicit conversion</summary>
-        public static implicit operator FileSystemAssignment((IFileSystem, IFileSystemOption) info) => new FileSystemAssignment(info.Item1, info.Item2);
+        public static implicit operator FileSystemAssignment((IFileSystem, IOption) info) => new FileSystemAssignment(info.Item1, info.Item2);
         /// <summary>Compare infos</summary>
         public static bool operator ==(FileSystemAssignment left, FileSystemAssignment right)
             => right.FileSystem.Equals(left.FileSystem) && ((left.Option == null) == (right.Option == null) || (left.Option != null && left.Option.Equals(right.Option)));
@@ -46,8 +46,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns></returns>
-        public static bool CanMount(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanMount : defaultValue;
+        public static bool CanMount(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IMountOption>() is IMountOption mountable ? mountable.CanMount : defaultValue;
 
         /// <summary>
         /// Is filesystem allowed to list mountpoints.
@@ -55,8 +55,8 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns></returns>
-        public static bool CanListMountPoints(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanListMountPoints : defaultValue;
+        public static bool CanListMountPoints(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IMountOption>() is IMountOption mountable ? mountable.CanListMountPoints : defaultValue;
 
         /// <summary>
         /// Is filesystem allowed to unmount a mount.
@@ -64,19 +64,19 @@ namespace Lexical.FileSystem
         /// <param name="filesystemOption"></param>
         /// <param name="defaultValue">Returned value if option is unspecified</param>
         /// <returns></returns>
-        public static bool CanUnmount(this IFileSystemOption filesystemOption, bool defaultValue = false)
-            => filesystemOption.AsOption<IFileSystemOptionMount>() is IFileSystemOptionMount mountable ? mountable.CanUnmount : defaultValue;
+        public static bool CanUnmount(this IOption filesystemOption, bool defaultValue = false)
+            => filesystemOption.AsOption<IMountOption>() is IMountOption mountable ? mountable.CanUnmount : defaultValue;
 
         /// <summary>
         /// Get automounters.
         /// </summary>
         /// <param name="filesystemOption"></param>
         /// <returns></returns>
-        public static IPackageLoader[] AutoMounters(this IFileSystemOption filesystemOption)
-            => filesystemOption.AsOption<IFileSystemOptionAutoMount>() is IFileSystemOptionAutoMount automount ? automount.AutoMounters : null;
+        public static IPackageLoader[] AutoMounters(this IOption filesystemOption)
+            => filesystemOption.AsOption<IAutoMountOption>() is IAutoMountOption automount ? automount.AutoMounters : null;
 
         /// <summary>
-        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IFileSystemOption"/> in the parent filesystem.
+        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IOption"/> in the parent filesystem.
         /// 
         /// If no mounts are provided, then creates empty virtual directory.
         /// If one mount is provided, then mounts that to parent filesystem, with possible mount option.
@@ -96,14 +96,14 @@ namespace Lexical.FileSystem
         /// <param name="mountOption">(optional) options</param>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IFileSystemOption mountOption = null, IFileSystemOption option = null)
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IOption mountOption = null, IOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, option);
             throw new NotSupportedException(nameof(Mount));
         }
 
         /// <summary>
-        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IFileSystemOption"/> in the parent filesystem.
+        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IOption"/> in the parent filesystem.
         /// 
         /// If no mounts are provided, then creates empty virtual directory.
         /// If one mount is provided, then mounts that to parent filesystem, with possible mount option.
@@ -138,14 +138,14 @@ namespace Lexical.FileSystem
         /// <param name="filesystems"></param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params (IFileSystem filesystem, IFileSystemOption mountOption)[] filesystems)
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params (IFileSystem filesystem, IOption mountOption)[] filesystems)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystems.Select(fs => new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), option: null);
             throw new NotSupportedException(nameof(Mount));
         }
 
         /// <summary>
-        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IFileSystemOption"/> in the parent filesystem.
+        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IOption"/> in the parent filesystem.
         /// 
         /// If no mounts are provided, then creates empty virtual directory.
         /// If one mount is provided, then mounts that to parent filesystem, with possible mount option.
@@ -164,7 +164,7 @@ namespace Lexical.FileSystem
         /// <param name="mounts">(optional) filesystem and option infos</param>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, FileSystemAssignment[] mounts, IFileSystemOption option = null)
+        public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, FileSystemAssignment[] mounts, IOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, mounts, option);
             throw new NotSupportedException(nameof(Mount));
@@ -180,7 +180,7 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>this (parent filesystem)</returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystem Unmount(this IFileSystem parentFileSystem, string path, IFileSystemOption option = null)
+        public static IFileSystem Unmount(this IFileSystem parentFileSystem, string path, IOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Unmount(path, option);
             throw new NotSupportedException(nameof(Unmount));
@@ -193,7 +193,7 @@ namespace Lexical.FileSystem
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
-        public static IFileSystemEntryMount[] ListMountPoints(this IFileSystem parentFileSystem, IFileSystemOption option = null)
+        public static IMountEntry[] ListMountPoints(this IFileSystem parentFileSystem, IOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.ListMountPoints(option);
             throw new NotSupportedException(nameof(ListMountPoints));
@@ -201,52 +201,52 @@ namespace Lexical.FileSystem
 
     }
 
-    /// <summary><see cref="IFileSystemOptionMount"/> operations.</summary>
-    public class FileSystemOptionOperationMount : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="IMountOption"/> operations.</summary>
+    public class MountOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionMount);
+        public Type OptionType => typeof(IMountOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionMount c ? o is FileSystemOptionMount ? /*already flattened*/o : /*new instance*/new FileSystemOptionMount(c.CanMount, c.CanUnmount, c.CanListMountPoints) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        public IOption Flatten(IOption o) => o is IMountOption c ? o is MountOption ? /*already flattened*/o : /*new instance*/new MountOption(c.CanMount, c.CanUnmount, c.CanListMountPoints) : throw new InvalidCastException($"{typeof(IMountOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanMount || c1.CanMount, c1.CanUnmount || c2.CanUnmount, c1.CanListMountPoints || c2.CanListMountPoints) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is IMountOption c1 && o2 is IMountOption c2 ? new MountOption(c1.CanMount || c1.CanMount, c1.CanUnmount || c2.CanUnmount, c1.CanListMountPoints || c2.CanListMountPoints) : throw new InvalidCastException($"{typeof(IMountOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionMount c1 && o2 is IFileSystemOptionMount c2 ? new FileSystemOptionMount(c1.CanMount && c1.CanMount, c1.CanUnmount && c2.CanUnmount, c1.CanListMountPoints && c2.CanListMountPoints) : throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is IMountOption c1 && o2 is IMountOption c2 ? new MountOption(c1.CanMount && c1.CanMount, c1.CanUnmount && c2.CanUnmount, c1.CanListMountPoints && c2.CanListMountPoints) : throw new InvalidCastException($"{typeof(IMountOption)} expected.");
     }
 
-    /// <summary><see cref="IFileSystemOptionSubPath"/> operations.</summary>
-    public class FileSystemOptionOperationSubPath : IFileSystemOptionOperationFlatten, IFileSystemOptionOperationIntersection, IFileSystemOptionOperationUnion
+    /// <summary><see cref="ISubPathOption"/> operations.</summary>
+    public class SubPathOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
-        public Type OptionType => typeof(IFileSystemOptionSubPath);
+        public Type OptionType => typeof(ISubPathOption);
         /// <summary>Flatten to simpler instance.</summary>
-        public IFileSystemOption Flatten(IFileSystemOption o) => o is IFileSystemOptionSubPath b ? o is FileSystemOptionSubPath ? /*already flattened*/o : /*new instance*/new FileSystemOptionSubPath(b.SubPath) : throw new InvalidCastException($"{typeof(IFileSystemOptionSubPath)} expected.");
+        public IOption Flatten(IOption o) => o is ISubPathOption b ? o is SubPathOption ? /*already flattened*/o : /*new instance*/new SubPathOption(b.SubPath) : throw new InvalidCastException($"{typeof(ISubPathOption)} expected.");
         /// <summary>Intersection of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Intersection(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionSubPath c1 && o2 is IFileSystemOptionSubPath c2 ?
-            (c1 != null && c2 == null ? new FileSystemOptionSubPath(c1.SubPath) :
-             c1 == null && c2 != null ? new FileSystemOptionSubPath(c2.SubPath) :
-             c1 != null && c2 != null && c1.SubPath == c1.SubPath ? new FileSystemOptionSubPath(c1.SubPath) :
-             c1 == null && c2 == null ? (IFileSystemOption) null: 
-             throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(IFileSystemOptionSubPath), typeof(IFileSystemOptionOperationIntersection))) : 
-            throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        public IOption Intersection(IOption o1, IOption o2) => o1 is ISubPathOption c1 && o2 is ISubPathOption c2 ?
+            (c1 != null && c2 == null ? new SubPathOption(c1.SubPath) :
+             c1 == null && c2 != null ? new SubPathOption(c2.SubPath) :
+             c1 != null && c2 != null && c1.SubPath == c1.SubPath ? new SubPathOption(c1.SubPath) :
+             c1 == null && c2 == null ? (IOption) null: 
+             throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(ISubPathOption), typeof(IOptionIntersectionOperation))) : 
+            throw new InvalidCastException($"{typeof(IMountOption)} expected.");
         /// <summary>Union of <paramref name="o1"/> and <paramref name="o2"/>.</summary>
-        public IFileSystemOption Union(IFileSystemOption o1, IFileSystemOption o2) => o1 is IFileSystemOptionSubPath c1 && o2 is IFileSystemOptionSubPath c2 ?
-            (c1 != null && c2 == null ? new FileSystemOptionSubPath(c1.SubPath) :
-             c1 == null && c2 != null ? new FileSystemOptionSubPath(c2.SubPath) :
-             c1 != null && c2 != null && c1.SubPath == c1.SubPath ? new FileSystemOptionSubPath(c1.SubPath) :
-             c1 == null && c2 == null ? (IFileSystemOption)null :
-             throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(IFileSystemOptionSubPath), typeof(IFileSystemOptionOperationIntersection))) :
-            throw new InvalidCastException($"{typeof(IFileSystemOptionMount)} expected.");
+        public IOption Union(IOption o1, IOption o2) => o1 is ISubPathOption c1 && o2 is ISubPathOption c2 ?
+            (c1 != null && c2 == null ? new SubPathOption(c1.SubPath) :
+             c1 == null && c2 != null ? new SubPathOption(c2.SubPath) :
+             c1 != null && c2 != null && c1.SubPath == c1.SubPath ? new SubPathOption(c1.SubPath) :
+             c1 == null && c2 == null ? (IOption)null :
+             throw new FileSystemExceptionOptionOperationNotSupported(null, null, o1, typeof(ISubPathOption), typeof(IOptionIntersectionOperation))) :
+            throw new InvalidCastException($"{typeof(IMountOption)} expected.");
     }
 
     /// <summary>Option for mount path. Use with decorator.</summary>
-    public class FileSystemOptionSubPath : IFileSystemOptionSubPath
+    public class SubPathOption : ISubPathOption
     {
         /// <summary>Mount path.</summary>
         public String SubPath { get; protected set; }
 
         /// <summary>Create option for mount path.</summary>
-        public FileSystemOptionSubPath(string mountPath)
+        public SubPathOption(string mountPath)
         {
             SubPath = mountPath;
         }
@@ -256,7 +256,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>File system option for mount capabilities.</summary>
-    public class FileSystemOptionMount : IFileSystemOptionMount
+    public class MountOption : IMountOption
     {
         /// <summary>Can filesystem mount other filesystems.</summary>
         public bool CanMount { get; protected set; }
@@ -266,7 +266,7 @@ namespace Lexical.FileSystem
         public bool CanListMountPoints { get; protected set; }
 
         /// <summary>Create file system option for mount capabilities.</summary>
-        public FileSystemOptionMount(bool canMount, bool canUnmount, bool canListMountPoints)
+        public MountOption(bool canMount, bool canUnmount, bool canListMountPoints)
         {
             CanMount = canMount;
             CanUnmount = canUnmount;
