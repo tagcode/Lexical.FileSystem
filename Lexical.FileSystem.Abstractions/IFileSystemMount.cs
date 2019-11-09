@@ -115,13 +115,13 @@ namespace Lexical.FileSystem
 
 
     /// <summary>Option for auto-mounted packages.</summary>
-    [Operations(typeof(FileSystemOptionOperationAutoMount))]
-    // <IOptionAutoMount>
+    [Operations(typeof(AutoMountOptionOperations))]
+    // <IAutoMountOption>
     public interface IAutoMountOption : IOption
     {
         /// <summary>Package loaders that can mount package files, such as .zip.</summary>
         IPackageLoader[] AutoMounters { get; }
     }
-    // </IOptionAutoMount>
+    // </IAutoMountOption>
 
 }

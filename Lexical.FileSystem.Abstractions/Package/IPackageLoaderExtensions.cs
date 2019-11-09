@@ -86,7 +86,7 @@ namespace Lexical.FileSystem
     }
 
     /// <summary><see cref="IOpenOption"/> operations.</summary>
-    public class FileSystemOptionOperationAutoMount : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
+    public class AutoMountOptionOperations : IOptionFlattenOperation, IOptionIntersectionOperation, IOptionUnionOperation
     {
         /// <summary>The option type that this class has operations for.</summary>
         public Type OptionType => typeof(IAutoMountOption);
