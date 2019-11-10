@@ -42,6 +42,8 @@ namespace Lexical.FileSystem.Decoration
                 case IChangeEvent cc: return new ChangeEventDecoration.NewObserver(@event, newObserver);
                 case IRenameEvent re: return new RenameEventDecoration.NewObserver(@event, newObserver);
                 case IErrorEvent  ee: return new ErrorEventDecoration.NewObserver(@event, newObserver);
+                case IMountEvent me: return new MountEventDecoration.NewObserver(@event, newObserver);
+                case IUnmountEvent ume: return new UnmountEventDecoration.NewObserver(@event, newObserver);
                 default:
                     if (throwIfUnknown) throw new NotSupportedException(@event.GetType().FullName);
                     else return new EventDecoration.NewObserver(@event, newObserver);
@@ -71,6 +73,8 @@ namespace Lexical.FileSystem.Decoration
                 case IChangeEvent cc: return new ChangeEventDecoration.NewObserverAndPath(@event, newObserver, newPath);
                 case IRenameEvent re: return new RenameEventDecoration.NewObserverAndPath(@event, newObserver, newPath, newNewPath);
                 case IErrorEvent ee: return new ErrorEventDecoration.NewObserverAndPath(@event, newObserver, newPath);
+                case IMountEvent me: return new MountEventDecoration.NewObserverAndPath(@event, newObserver, newPath);
+                case IUnmountEvent ume: return new UnmountEventDecoration.NewObserverAndPath(@event, newObserver, newPath);
                 default:
                     if (throwIfUnknown) throw new NotSupportedException(@event.GetType().FullName);
                     else return new EventDecoration.NewObserverAndPath(@event, newObserver, newPath);
@@ -175,7 +179,7 @@ namespace Lexical.FileSystem.Decoration
         /// </summary>
         /// <returns></returns>
         public override string ToString()
-            => $"Rename({this.Observer?.FileSystem}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
+            => $"RenameEvent({this.Observer?.FileSystem}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
 
         /// <summary>Decoration with observer override.</summary>
         public new class NewObserver : RenameEventDecoration
@@ -225,7 +229,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Create({Observer?.FileSystem}, {EventTime})" : $"Create({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"CreateEvent({Observer?.FileSystem}, {EventTime})" : $"CreateEvent({Observer?.FileSystem}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
         public new class NewObserver : CreateEventDecoration
@@ -271,7 +275,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Change({Observer?.FileSystem}, {EventTime})" : $"Change({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"ChangeEvent({Observer?.FileSystem}, {EventTime})" : $"ChangeEvent({Observer?.FileSystem}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
         public new class NewObserver : ChangeEventDecoration
@@ -317,7 +321,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Delete({Observer?.FileSystem}, {EventTime})" : $"Delete({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"DeleteEvent({Observer?.FileSystem}, {EventTime})" : $"DeleteEvent({Observer?.FileSystem}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
         public new class NewObserver : DeleteEventDecoration
@@ -355,7 +359,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>
         /// Error
         /// </summary>
-        public virtual Exception Error => ((IErrorEvent)Original).Error;
+        public virtual Exception Error => (Original as IErrorEvent)?.Error;
 
         /// <summary>
         /// Create delete event.
@@ -368,7 +372,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Error({Observer?.FileSystem}, {EventTime})" : $"Error({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"ErrorEvent({Observer?.FileSystem}, {EventTime})" : $"ErrorEvent({Observer?.FileSystem}, {EventTime}, {Path})";
 
         /// <summary>Decoration with observer override.</summary>
         public new class NewObserver : ErrorEventDecoration
@@ -414,7 +418,7 @@ namespace Lexical.FileSystem.Decoration
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => $"Start({Observer?.FileSystem}, {EventTime})";
+            => $"StartEvent({Observer?.FileSystem}, {EventTime})";
 
         /// <summary>Decoration with observer override.</summary>
         public new class NewObserver : StartEventDecoration
@@ -443,5 +447,98 @@ namespace Lexical.FileSystem.Decoration
 
     }
 
+    /// <summary>
+    /// Abstract base class for decorated observe started event.
+    /// </summary>
+    public class MountEventDecoration : EventDecoration, IMountEvent
+    {
+        /// <summary>(new) Assignment configuration at mountpoint</summary>
+        public virtual FileSystemAssignment[] Assignments => (Original as IMountEvent)?.Assignments;
+
+        /// <summary>Mount option</summary>
+        public virtual IOption Option => (Original as IMountEvent)?.Option;
+
+        /// <summary>
+        /// Start create event.
+        /// </summary>
+        /// <param name="original"></param>
+        public MountEventDecoration(IEvent original) : base((IMountEvent)original)
+        {
+        }
+
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
+        public override string ToString()
+            => $"MountEvent({Observer?.FileSystem}, {EventTime})";
+
+        /// <summary>Decoration with observer override.</summary>
+        public new class NewObserver : MountEventDecoration
+        {
+            /// <summary>New observer value.</summary>
+            protected IFileSystemObserver newObserver;
+            /// <summary>New observer value.</summary>
+            public override IFileSystemObserver Observer => newObserver;
+            /// <summary>Create observer decoration.</summary>
+            public NewObserver(IEvent original, IFileSystemObserver newObserver) : base(original)
+            {
+                this.newObserver = newObserver;
+            }
+        }
+
+        /// <summary>Override observer and path.</summary>
+        public new class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IEvent original, IFileSystemObserver newObserver, string newPath) : base(original, newObserver) { this.newPath = newPath; }
+        }
+    }
+
+    /// <summary>
+    /// Abstract base class for decorated observe started event.
+    /// </summary>
+    public class UnmountEventDecoration : EventDecoration, IUnmountEvent
+    {
+        /// <summary>
+        /// Start create event.
+        /// </summary>
+        /// <param name="original"></param>
+        public UnmountEventDecoration(IEvent original) : base((IUnmountEvent)original)
+        {
+        }
+
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
+        public override string ToString()
+            => $"UnmountEvent({Observer?.FileSystem}, {EventTime})";
+
+        /// <summary>Decoration with observer override.</summary>
+        public new class NewObserver : UnmountEventDecoration
+        {
+            /// <summary>New observer value.</summary>
+            protected IFileSystemObserver newObserver;
+            /// <summary>New observer value.</summary>
+            public override IFileSystemObserver Observer => newObserver;
+            /// <summary>Create observer decoration.</summary>
+            public NewObserver(IEvent original, IFileSystemObserver newObserver) : base(original)
+            {
+                this.newObserver = newObserver;
+            }
+        }
+
+        /// <summary>Override observer and path.</summary>
+        public new class NewObserverAndPath : NewObserver
+        {
+            /// <summary>New observer value.</summary>
+            protected string newPath;
+            /// <summary>New observer value.</summary>
+            public override string Path => newPath;
+            /// <summary>Create observer and path decoration.</summary>
+            public NewObserverAndPath(IEvent original, IFileSystemObserver newObserver, string newPath) : base(original, newObserver) { this.newPath = newPath; }
+        }
+    }
 
 }

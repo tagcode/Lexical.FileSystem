@@ -1084,8 +1084,23 @@ namespace Lexical.FileSystem
                 vfsLock.ReleaseWriterLock();
             }
 
+            // Gather observers here
+            StructList12<ObserverHandle> observers = new StructList12<ObserverHandle>();
+            // Get observers
+            GetObserverHandles(path, true, true, false, ref observers);
+            //
+            for (int j = 0; j < observers.Count; j++)
+            {
+                // Qualify
+                if (!observers[j].Qualify(path)) continue;
+                // Create event
+                IEvent e = new MountEvent(observers[j], now, path, mounts, option);
+                // Add to be dispatched
+                (observers[j].Dispatcher??EventDispatcher.Instance).DispatchEvent(e);
+            }
+
             // Process events
-            ProcessMountEvents(path, ref vfsDirectoriesCreated, ref vfsDirectoriesRemoved, ref componentsAdded, ref componentsRemoved);
+            ProcessMountEvents(path, ref observers, ref vfsDirectoriesCreated, ref vfsDirectoriesRemoved, ref componentsAdded, ref componentsRemoved);
 
             return this;
         }
@@ -1176,8 +1191,23 @@ namespace Lexical.FileSystem
                 vfsLock.ReleaseWriterLock();
             }
 
+            // Gather observers here
+            StructList12<ObserverHandle> observers = new StructList12<ObserverHandle>();
+            // Get observers
+            GetObserverHandles(path, true, true, false, ref observers);
+            //
+            for (int j = 0; j < observers.Count; j++)
+            {
+                // Qualify
+                if (!observers[j].Qualify(path)) continue;
+                // Create event
+                IEvent e = new UnmountEvent(observers[j], now, path);
+                // Add to be dispatched
+                (observers[j].Dispatcher ?? EventDispatcher.Instance).DispatchEvent(e);
+            }
+
             // Process events
-            ProcessMountEvents(path, ref vfsDirectoriesCreated, ref vfsDirectoriesRemoved, ref componentsAdded, ref componentsRemoved);
+            ProcessMountEvents(path, ref observers, ref vfsDirectoriesCreated, ref vfsDirectoriesRemoved, ref componentsAdded, ref componentsRemoved);
 
             return this;
         }
@@ -1186,26 +1216,21 @@ namespace Lexical.FileSystem
         /// Helper function for Mount and Unmount, processes changes to events, and dispatches them.
         /// </summary>
         /// <param name="path">Mount path</param>
+        /// <param name="observers">Observers without decendents, may mess up the list</param>
         /// <param name="vfsDirectoriesCreated"></param>
         /// <param name="vfsDirectoriesRemoved"></param>
         /// <param name="componentsAdded"></param>
         /// <param name="componentsRemoved"></param>
-        protected internal void ProcessMountEvents(string path, ref StructList4<string> vfsDirectoriesCreated, ref StructList4<string> vfsDirectoriesRemoved, ref StructList2<FileSystemDecoration.Component> componentsAdded, ref StructList2<FileSystemDecoration.Component> componentsRemoved)
+        protected internal void ProcessMountEvents(string path, ref StructList12<ObserverHandle> observers, ref StructList4<string> vfsDirectoriesCreated, ref StructList4<string> vfsDirectoriesRemoved, ref StructList2<FileSystemDecoration.Component> componentsAdded, ref StructList2<FileSystemDecoration.Component> componentsRemoved)
         {
             // Nothing to do
             if (vfsDirectoriesCreated.Count == 0 && vfsDirectoriesRemoved.Count == 0 && componentsAdded.Count == 0 && componentsRemoved.Count == 0) return;
             // Datetime
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            // Gather events here
-            StructList12<IEvent> events = new StructList12<IEvent>();
-            // Gather observers here
-            StructList12<ObserverHandle> observers = new StructList12<ObserverHandle>();
 
             // Vfs Directory create events
             if (vfsDirectoriesCreated.Count > 0)
             {
-                GetObserverHandles(path, true, true, false, ref observers);
-
                 // Find cross-section of added dirs and interested nodes
                 for (int i = 0; i < vfsDirectoriesCreated.Count; i++)
                 {
@@ -1217,17 +1242,14 @@ namespace Lexical.FileSystem
                         // Create event
                         IEvent e = new CreateEvent(observers[j], now, newVfsPath);
                         // Add to be dispatched
-                        events.Add(e);
+                        (observers[j].Dispatcher ?? EventDispatcher.Instance).DispatchEvent(e);
                     }
                 }
-                observers.Clear();
             }
 
             // VFS Directory create events
             if (vfsDirectoriesRemoved.Count > 0)
             {
-                GetObserverHandles(path, true, true, false, ref observers);
-
                 // Find cross-section of added dirs and interested nodes
                 for (int i = 0; i < vfsDirectoriesRemoved.Count; i++)
                 {
@@ -1239,16 +1261,15 @@ namespace Lexical.FileSystem
                         // Create event
                         IEvent e = new DeleteEvent(observers[j], now, newVfsPath);
                         // Add to be dispatched
-                        events.Add(e);
+                        (observers[j].Dispatcher ?? EventDispatcher.Instance).DispatchEvent(e);
                     }
                 }
-                observers.Clear();
             }
 
             // Process added and removed filesystems
             if (componentsAdded.Count > 0 || componentsRemoved.Count > 0)
             {
-                GetObserverHandles(path, true, true, true, ref observers);
+                GetObserverHandles(path, false, false, true, ref observers);
                 for (int i = 0; i < observers.Count; i++)
                 {
                     ObserverHandle observer = observers[i];
@@ -1272,7 +1293,7 @@ namespace Lexical.FileSystem
                             string parentPath;
                             if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
                             IEvent e = new CreateEvent(observer, now, parentPath);
-                            events.Add(e);
+                            (observers[j].Dispatcher ?? EventDispatcher.Instance).DispatchEvent(e);
                         }
                     }
 
@@ -1295,14 +1316,11 @@ namespace Lexical.FileSystem
                             string parentPath;
                             if (!c.Path.ChildToParent(entry.Path, out parentPath)) continue;
                             IEvent e = new DeleteEvent(observer, now, parentPath);
-                            events.Add(e);
+                            (observers[j].Dispatcher ?? EventDispatcher.Instance).DispatchEvent(e);
                         }
                     }
                 }
             }
-
-            // Dispatch events
-            if (events.Count > 0) DispatchEvents(ref events);
         }
 
         IFileSystem IFileSystemMount.Mount(string path, FileSystemAssignment[] mounts, IOption option) => Mount(path, mounts, option);

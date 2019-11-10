@@ -43,7 +43,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => $"Rename({Observer?.FileSystem}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
+            => $"RenameEvent({Observer?.FileSystem}, {EventTime}, OldPath={OldPath}, NewPath={NewPath})";
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Create({Observer?.FileSystem}, {EventTime})" : $"Create({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"CreateEvent({Observer?.FileSystem}, {EventTime})" : $"CreateEvent({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>
@@ -85,7 +85,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Change({Observer?.FileSystem}, {EventTime})" : $"Change({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"ChangeEvent({Observer?.FileSystem}, {EventTime})" : $"ChangeEvent({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Delete({Observer?.FileSystem}, {EventTime})" : $"Delete({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"DeleteEvent({Observer?.FileSystem}, {EventTime})" : $"DeleteEvent({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => Path == null ? $"Error({Observer?.FileSystem}, {EventTime})" : $"Error({Observer?.FileSystem}, {EventTime}, {Path})";
+            => Path == null ? $"ErrorEvent({Observer?.FileSystem}, {EventTime})" : $"ErrorEvent({Observer?.FileSystem}, {EventTime}, {Path})";
     }
 
     /// <summary>
@@ -154,7 +154,64 @@ namespace Lexical.FileSystem
         /// <summary>Print info</summary>
         /// <returns>Info</returns>
         public override string ToString()
-            => $"Start({Observer?.FileSystem}, {EventTime})";
+            => $"StartEvent({Observer?.FileSystem}, {EventTime})";
+    }
+
+    /// <summary>
+    /// The event when mountpoint is created or when assignments are changed when <see cref="IFileSystemMount.Mount"/> is called.
+    /// </summary>
+    public class MountEvent : EventBase, IMountEvent
+    {
+        /// <summary>(new) Assignment configuration at mountpoint</summary>
+        public FileSystemAssignment[] Assignments { get; protected set; }
+
+        /// <summary>Mount option</summary>
+        public IOption Option { get; protected set; }
+
+        /// <summary>
+        /// Create Error event.
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <param name="eventTime"></param>
+        /// <param name="mountpoint"></param>
+        /// <param name="assignments"></param>
+        /// <param name="option"></param>
+        public MountEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string mountpoint, FileSystemAssignment[] assignments, IOption option) : base(observer, eventTime, mountpoint)
+        {
+            this.Assignments = assignments;
+            this.Option = option;
+        }
+
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
+        public override string ToString()
+        {
+            string ass = Assignments == null ? "" : String.Join(", ", Assignments);
+            return $"MountEvent({Observer?.FileSystem}, {EventTime}, {Path}, {ass}, {Option})";
+        }
+    }
+
+    /// <summary>
+    /// The event when whole mountpoint is unmounted.
+    /// </summary>
+    public class UnmountEvent : EventBase, IUnmountEvent
+    {
+        /// <summary>
+        /// Create Error event.
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <param name="eventTime"></param>
+        /// <param name="mountpoint"></param>
+        public UnmountEvent(IFileSystemObserver observer, DateTimeOffset eventTime, string mountpoint) : base(observer, eventTime, mountpoint)
+        {
+        }
+
+        /// <summary>Print info</summary>
+        /// <returns>Info</returns>
+        public override string ToString()
+        {
+            return $"UnmountEvent({Observer?.FileSystem}, {EventTime}, {Path})";
+        }
     }
 
 }

@@ -2,8 +2,8 @@
 Lexical.FileSystem is a virtual filesystem class libraries for .NET.
 
 NuGet Packages:
-* Lexical.FileSystem ([Website](http://lexical.fi/FileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/))
-* Lexical.FileSystem.Abstractions ([Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
+* Lexical.FileSystem (.NET Standard 2.0, [Website](http://lexical.fi/FileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem/))
+* Lexical.FileSystem.Abstractions (.NET Standard 2.0, [Website](http://lexical.fi/docs/IFileSystem/index.html), [Github](https://github.com/tagcode/Lexical.FileSystem/tree/master/Lexical.FileSystem.Abstractions), [Nuget](https://www.nuget.org/packages/Lexical.FileSystem.Abstractions/))
 * License ([Apache-2.0 license](http://www.apache.org/licenses/LICENSE-2.0))
 
 Please leave a comment or feedback on [github](https://github.com/tagcode/Lexical.FileSystem/issues), or kindle a star if you like the library. 
@@ -254,10 +254,10 @@ class PrintObserver : IObserver<IEvent>
 ```
 
 ```none
-Start(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00)
-Create(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
-Change(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
-Delete(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+StartEvent(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00)
+CreateEvent(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+ChangeEvent(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
+DeleteEvent(C:\Users\\<i>&lt;user&gt;</i>\\AppData\Local\Temp\, 23.10.2019 16.27.01 +00:00, file.dat)
 OnCompleted
 ```
 
@@ -431,8 +431,9 @@ class PrintObserver : IObserver<IEvent>
 ```
 
 ```none
-Start(VirtualFileSystem, 19.10.2019 11.34.08 +00:00)
-Create(VirtualFileSystem, 19.10.2019 11.34.08 +00:00, /dir/file.txt)
+StartEvent(VirtualFileSystem, 19.10.2019 11.34.08 +00:00)
+MountEvent(VirtualFileSystem, 19.10.2019 11.34.08 +00:00, , MemoryFileSystem, )
+CreateEvent(VirtualFileSystem, 19.10.2019 11.34.08 +00:00, /dir/file.txt)
 ```
 
 Observer filter can be an intersection of the mounted filesystem's contents.
@@ -450,8 +451,8 @@ vfs.Mount("", ram);
 ```
 
 ```none
-Start(VirtualFileSystem, 19.10.2019 11.34.23 +00:00)
-Create(VirtualFileSystem, 19.10.2019 11.34.23 +00:00, /dir/file.txt)
+StartEvent(VirtualFileSystem, 19.10.2019 11.34.23 +00:00)
+CreateEvent(VirtualFileSystem, 19.10.2019 11.34.23 +00:00, /dir/file.txt)
 ```
 
 **.Unmount()** dispatches events of unmounted files as if they were deleted.

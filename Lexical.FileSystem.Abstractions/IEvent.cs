@@ -20,6 +20,8 @@ namespace Lexical.FileSystem
     ///     <item><see cref="IRenameEvent"/></item>
     ///     <item><see cref="IErrorEvent"/></item>
     ///     <item><see cref="IStartEvent"/></item>
+    ///     <item><see cref="IMountEvent"/></item>
+    ///     <item><see cref="IUnmountEvent"/></item>
     ///     <item><see cref="IEventDecoration"/></item>
     /// </list>
     /// </summary>
@@ -119,6 +121,33 @@ namespace Lexical.FileSystem
     {
     }
     // </IStartEvent>
+
+    // <IMountEvent>
+    /// <summary>
+    /// The event when mountpoint is created or when assignments are changed when <see cref="IFileSystemMount.Mount"/> is called.
+    /// 
+    /// Possible mounting <see cref="ICreateEvent"/>s are sent afterwards.
+    /// </summary>
+    public interface IMountEvent : IEvent
+    {
+        /// <summary>(new) Assignment configuration at mountpoint</summary>
+        FileSystemAssignment[] Assignments { get; }
+
+        /// <summary>Mount option</summary>
+        IOption Option { get; }
+    }
+    // </IMountEvent>
+
+    // <IUnmountEvent>
+    /// <summary>
+    /// The event when whole mountpoint is unmounted.
+    /// 
+    /// Possible unmounting <see cref="IDeleteEvent"/>s are sent afterwards.
+    /// </summary>
+    public interface IUnmountEvent : IEvent
+    {
+    }
+    // </IUnmountEvent>
 
     // <IEventDecoration>
     /// <summary>
