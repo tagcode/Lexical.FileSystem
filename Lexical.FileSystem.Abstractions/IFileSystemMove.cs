@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     }
     // </IMoveOption>
 
-    // <doc>
+    // <IFileSystemMove>
     /// <summary>
     /// File system that can move/rename files and directories.
     /// </summary>
@@ -47,7 +47,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         void Move(string srcPath, string dstPath, IOption option = null);
     }
+    // </IFileSystemMove>
 
+    // <IFileSystemMoveAsync>
     /// <summary>
     /// File system that can move/rename files and directories.
     /// </summary>
@@ -74,5 +76,5 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         Task MoveAsync(string srcPath, string dstPath, IOption option = null);
     }
-    // </doc>
+    // </IFileSystemMoveAsync>
 }

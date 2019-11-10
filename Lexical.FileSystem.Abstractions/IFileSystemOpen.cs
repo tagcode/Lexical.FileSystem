@@ -26,7 +26,7 @@ namespace Lexical.FileSystem
     }
     // </IOpenOption>
 
-    // <doc>
+    // <IFileSystemOpen>
     /// <summary>
     /// File system that can open files for reading and writing. 
     /// </summary>
@@ -57,7 +57,9 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         Stream Open(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null);
     }
+    // </IFileSystemOpen>
 
+    // <IFileSystemOpenAsync>
     /// <summary>
     /// File system that can open files for reading and writing. 
     /// </summary>
@@ -88,5 +90,5 @@ namespace Lexical.FileSystem
         /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
         Task<Stream> OpenAsync(string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null);
     }
-    // </doc>
+    // </IFileSystemOpenAsync>
 }

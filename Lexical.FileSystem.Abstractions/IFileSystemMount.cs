@@ -23,7 +23,7 @@ namespace Lexical.FileSystem
     }
     // </IMountOption>
 
-    // <doc>
+    // <IFileSystemMount>
     /// <summary>
     /// FileSystem that can mount other filesystems into its directory tree.
     /// </summary>
@@ -73,6 +73,48 @@ namespace Lexical.FileSystem
         IMountEntry[] ListMountPoints(IOption option = null);
     }
 
+    /// <summary>Mount assignemnt related info <see cref="FileSystemAssignment"/>.</summary>
+    [Flags]
+    public enum FileSystemAssignmentFlags
+    {
+        /// <summary>No flags</summary>
+        None = 0,
+        /// <summary>Signals that filesystem was manually mounted with <see cref="IFileSystemMount.Mount"/>.</summary>
+        Mounted = 1,
+        /// <summary>Signals that filesystem was automatically mounted based on <see cref="IAutoMountOption"/> options.</summary>
+        AutoMounted = 2,
+        /// <summary>Filesystem is to be automatically unmounted by timer when it hasn't been used in a configured time.</summary>
+        AutoUnmount = 4,
+        /// <summary>Mount represents a package file, such as .zip.</summary>
+        Package = 8,
+        /// <summary>Signaled as decoration assignment</summary>
+        Decoration = 16,
+    }
+
+    /// <summary>The filesystem and option assignment.</summary>
+    public partial struct FileSystemAssignment
+    {
+        /// <summary>(optional) Filesystem.</summary>
+        public readonly IFileSystem FileSystem;
+        /// <summary>(optional) Overriding option assignment.</summary>
+        public readonly IOption Option;
+        /// <summary>Is flagged as automatically mounted.</summary>
+        public readonly FileSystemAssignmentFlags Flags;
+
+        /// <summary>Create filesystem and option assignment.</summary>
+        /// <param name="fileSystem">(optional) file system</param>
+        /// <param name="option">(optional) overriding option assignment</param>
+        /// <param name="flags">(optional) assignment related flags</param>
+        public FileSystemAssignment(IFileSystem fileSystem, IOption option = null, FileSystemAssignmentFlags flags = FileSystemAssignmentFlags.None)
+        {
+            FileSystem = fileSystem;
+            Option = option;
+            Flags = flags;
+        }
+    }
+    // </IFileSystemMount>
+
+    // <IFileSystemMountAsync>
     /// <summary>
     /// FileSystem that can mount other filesystems into its directory tree.
     /// </summary>
@@ -121,47 +163,7 @@ namespace Lexical.FileSystem
         /// <exception cref="NotSupportedException">If operation is not supported</exception>
         Task<IMountEntry[]> ListMountPointsAsync(IOption option = null);
     }
-
-    /// <summary>Mount assignemnt related info <see cref="FileSystemAssignment"/>.</summary>
-    [Flags]
-    public enum FileSystemAssignmentFlags
-    {
-        /// <summary>No flags</summary>
-        None = 0,
-        /// <summary>Signals that filesystem was manually mounted with <see cref="IFileSystemMount.Mount"/>.</summary>
-        Mounted = 1,
-        /// <summary>Signals that filesystem was automatically mounted based on <see cref="IAutoMountOption"/> options.</summary>
-        AutoMounted = 2,
-        /// <summary>Filesystem is to be automatically unmounted by timer when it hasn't been used in a configured time.</summary>
-        AutoUnmount = 4,
-        /// <summary>Mount represents a package file, such as .zip.</summary>
-        Package = 8,
-        /// <summary>Signaled as decoration assignment</summary>
-        Decoration = 16,
-    }
-
-    /// <summary>The filesystem and option assignment.</summary>
-    public partial struct FileSystemAssignment
-    {
-        /// <summary>(optional) Filesystem.</summary>
-        public readonly IFileSystem FileSystem;
-        /// <summary>(optional) Overriding option assignment.</summary>
-        public readonly IOption Option;
-        /// <summary>Is flagged as automatically mounted.</summary>
-        public readonly FileSystemAssignmentFlags Flags;
-
-        /// <summary>Create filesystem and option assignment.</summary>
-        /// <param name="fileSystem">(optional) file system</param>
-        /// <param name="option">(optional) overriding option assignment</param>
-        /// <param name="flags">(optional) assignment related flags</param>
-        public FileSystemAssignment(IFileSystem fileSystem, IOption option = null, FileSystemAssignmentFlags flags = FileSystemAssignmentFlags.None)
-        {
-            FileSystem = fileSystem;
-            Option = option;
-            Flags = flags;
-        }
-    }
-    // </doc>
+    // </IFileSystemMountAsync>
 
 
     /// <summary>Option for auto-mounted packages.</summary>

@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     }
     // </IObserveOption>
 
-    // <doc>
+    // <IFileSystemObserve>
     /// <summary>
     /// File system that observe file and directory changes.
     /// </summary>
@@ -68,6 +68,39 @@ namespace Lexical.FileSystem
     }
 
     /// <summary>
+    /// Observer information.
+    /// </summary>
+    public interface IFileSystemObserver : IDisposable
+    {
+        /// <summary>
+        /// The file system where the observer was attached.
+        /// </summary>
+        IFileSystem FileSystem { get; }
+
+        /// <summary>
+        /// File filter as glob pattern.
+        /// </summary>
+        String Filter { get; }
+
+        /// <summary>
+        /// Callback.
+        /// </summary>
+        IObserver<IEvent> Observer { get; }
+
+        /// <summary>
+        /// State object that was attached at construction.
+        /// </summary>
+        Object State { get; }
+
+        /// <summary>
+        /// (optional) Event dispatcher.
+        /// </summary>
+        IEventDispatcher Dispatcher { get; }
+    }
+    // </IFileSystemObserve>
+
+    // <IFileSystemObserveAsync>
+    /// <summary>
     /// File system that observe file and directory changes.
     /// </summary>
     public interface IFileSystemObserveAsync : IFileSystem, IObserveOption
@@ -112,36 +145,6 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         Task<IFileSystemObserver> ObserveAsync(string filter, IObserver<IEvent> observer, object state = null, IEventDispatcher eventDispatcher = null, IOption option = null);
     }
+    // </IFileSystemObserveAsync>
 
-    /// <summary>
-    /// Observer information.
-    /// </summary>
-    public interface IFileSystemObserver : IDisposable
-    {
-        /// <summary>
-        /// The file system where the observer was attached.
-        /// </summary>
-        IFileSystem FileSystem { get; }
-
-        /// <summary>
-        /// File filter as glob pattern.
-        /// </summary>
-        String Filter { get; }
-
-        /// <summary>
-        /// Callback.
-        /// </summary>
-        IObserver<IEvent> Observer { get; }
-
-        /// <summary>
-        /// State object that was attached at construction.
-        /// </summary>
-        Object State { get; }
-
-        /// <summary>
-        /// (optional) Event dispatcher.
-        /// </summary>
-        IEventDispatcher Dispatcher { get; }
-    }
-    // </doc>
 }

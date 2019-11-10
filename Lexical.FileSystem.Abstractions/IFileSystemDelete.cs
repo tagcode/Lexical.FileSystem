@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     }
     // </IDeleteOption>
 
-    // <doc>
+    // <IFileSystemDelete>
     /// <summary>
     /// File system that can delete files and directories.
     /// </summary>
@@ -49,7 +49,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         void Delete(string path, bool recurse = false, IOption option = null);
     }
+    // </IFileSystemDelete>
 
+    // <IFileSystemDeleteAsync>
     /// <summary>
     /// File system that can delete files and directories.
     /// </summary>
@@ -77,5 +79,6 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException"><paramref name="path"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
         Task DeleteAsync(string path, bool recurse = false, IOption option = null);
-    }    // </doc>
+    }    
+    // </IFileSystemDeleteAsync>
 }

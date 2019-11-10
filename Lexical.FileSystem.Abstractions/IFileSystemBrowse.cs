@@ -23,7 +23,7 @@ namespace Lexical.FileSystem
     }
     // </IBrowseOption>
 
-    // <doc>
+    // <IFileSystemBrowse>
     /// <summary>
     /// File system that can browse directories.
     /// </summary>
@@ -69,7 +69,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         IEntry GetEntry(string path, IOption option = null);
     }
+    // </IFileSystemBrowse>
 
+    // <IFileSystemBrowseAsync>
     /// <summary>
     /// File system that can browse directories.
     /// </summary>
@@ -115,7 +117,7 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         Task<IEntry> GetEntryAsync(string path, IOption option = null);
     }
-    // </doc>
+    // </IFileSystemBrowseAsync>
 
 
 }

@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     }
     // </IFileAttributeOption>
 
-    // <doc>
+    // <IFileSystemFileAttribute>
     /// <summary>
     /// File system that set file attribute.
     /// </summary>
@@ -45,7 +45,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"></exception>
         void SetFileAttribute(string path, FileAttributes fileAttribute, IOption option = null);
     }
+    // </IFileSystemFileAttribute>
 
+    // <IFileSystemFileAttributeAsync>
     /// <summary>
     /// File system that set file attribute.
     /// </summary>
@@ -70,5 +72,5 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"></exception>
         Task SetFileAttributeAsync(string path, FileAttributes fileAttribute, IOption option = null);
     }
-    // </doc>
+    // </IFileSystemFileAttributeAsync>
 }

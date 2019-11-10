@@ -20,7 +20,7 @@ namespace Lexical.FileSystem
     }
     // </ICreateDirectoryOption>
 
-    // <doc>
+    // <IFileSystemCreateDirectory>
     /// <summary>
     /// File system that can create directories.
     /// </summary>
@@ -47,7 +47,9 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         void CreateDirectory(string path, IOption option = null);
     }
+    // </IFileSystemCreateDirectory>
 
+    // <IFileSystemCreateDirectoryAsync>
     /// <summary>
     /// File system that can create directories.
     /// </summary>
@@ -74,5 +76,5 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         Task CreateDirectoryAsync(string path, IOption option = null);
     }
-    // </doc>
+    // </IFileSystemCreateDirectoryAsync>
 }
