@@ -27,7 +27,7 @@ namespace Lexical.FileSystem
     /// <summary>
     /// Simple "http://" based filesystem that can download documents.
     /// </summary>
-    public class HttpFileSystem : FileSystemBase, IFileSystemOpen, IFileSystemDelete, IFileSystemBrowse
+    public class HttpFileSystem : FileSystemBase, IFileSystemOpen, IFileSystemDeleteAsync, IFileSystemBrowseAsync
     {
         /// <summary>
         /// Token key for http headers. 
@@ -456,14 +456,14 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="uri"/> refers to non-file device</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public void Delete(string uri, bool recurse = false, IOption option = null)
+        public async Task DeleteAsync(string uri, bool recurse = false, IOption option = null)
         {
             // Take reference
             var _httpClient = httpClient;
             // Assert not disposed
             if (_httpClient == null || IsDisposing) throw new ObjectDisposedException(nameof(HttpFileSystem));
             // Assert allowed
-            if (!options.CanDelete || !option.CanDelete(true)) throw new NotSupportedException(nameof(Delete));
+            if (!options.CanDelete || !option.CanDelete(true)) throw new NotSupportedException(nameof(DeleteAsync));
             // Append subpath
             string _subpath = option.SubPath() ?? this.options.SubPath;
             if (_subpath != null) uri = _subpath + uri;
@@ -484,20 +484,10 @@ namespace Lexical.FileSystem
                     if (this.token.TryGetToken(uri, out authenticationHeader) || option.TryGetToken(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
                     // Start DELETE
-                    Task<HttpResponseMessage> t = _httpClient.SendAsync(request);
-                    // Wait for headers to complete
-                    t.Wait(cancel);
-                    // Get result object
-                    HttpResponseMessage response = t.Result;
+                    HttpResponseMessage response = await _httpClient.SendAsync(request);
                     // Assert ok
                     if (!response.IsSuccessStatusCode) throw new FileSystemException(this, uri, response.ReasonPhrase);
                 }
-            }
-            catch (AggregateException e)
-            {
-                Exception _e = e;
-                if (e.InnerExceptions.Count == 1) _e = e.InnerExceptions.First();
-                throw new FileSystemException(this, uri, e.Message, e);
             }
             catch (Exception e) when (e is FileSystemException == false)
             {
@@ -511,14 +501,14 @@ namespace Lexical.FileSystem
         /// <param name="uri"></param>
         /// <param name="option"></param>
         /// <returns>child links</returns>
-        public IEntry[] Browse(string uri, IOption option = null)
+        public async Task<IEntry[]> BrowseAsync(string uri, IOption option = null)
         {
             // Take reference
             var _httpClient = httpClient;
             // Assert not disposed
             if (_httpClient == null || IsDisposing) throw new ObjectDisposedException(nameof(HttpFileSystem));
             // Assert allowed
-            if (!options.CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
+            if (!options.CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(BrowseAsync));
             // Path converter
             IPathConverter pathConverter;
             // Append subpath
@@ -539,7 +529,7 @@ namespace Lexical.FileSystem
             try
             {
                 // Request object
-                using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri))
+                using (var request = new HttpRequestMessage(HttpMethod.Get, uri))
                 {
                     // Read token
                     ReadTokenToHeaders(uri, option, request.Headers);
@@ -548,32 +538,20 @@ namespace Lexical.FileSystem
                     if (this.token.TryGetToken(uri, out authenticationHeader) || option.TryGetToken(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
                     // Start GET
-                    Task<HttpResponseMessage> t = _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-                    // Wait for headers to complete
-                    t.Wait(cancel);
-                    // Get result object
-                    HttpResponseMessage response = t.Result;
+                    HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                     // Assert ok
                     if (!response.IsSuccessStatusCode) throw new FileSystemException(this, uri, response.StatusCode.ToString());
-
                     // Stream Task
-                    Task<Stream> tt = response.Content.ReadAsStreamAsync();
-                    using (var s = tt.Result)
+                    using (var s = await response.Content.ReadAsStreamAsync())
                     {
-                        // Wait for stream
-                        tt.Wait(cancel);
+                        // Read document fully
+                        string document = await StreamUtils.ReadTextFullyAsync(s);
                         // Parse files
-                        IEntry[] entries = ReadEntries(uri, s, pathConverter).ToArray();
+                        IEntry[] entries = ReadEntries(uri, document, pathConverter).ToArray();
                         // Return entries
                         return entries;
                     }
                 }
-            }
-            catch (AggregateException e)
-            {
-                Exception _e = e;
-                if (e.InnerExceptions.Count == 1) _e = e.InnerExceptions.First();
-                throw new FileSystemException(this, uri, e.Message, e);
             }
             catch (Exception e) when (e is FileSystemException == false)
             {
@@ -589,14 +567,14 @@ namespace Lexical.FileSystem
         /// <param name="uri"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public IEntry GetEntry(string uri, IOption option = null)
+        public async Task<IEntry> GetEntryAsync(string uri, IOption option = null)
         {
             // Take reference
             var _httpClient = httpClient;
             // Assert not disposed
             if (_httpClient == null || IsDisposing) throw new ObjectDisposedException(nameof(HttpFileSystem));
             // Assert allowed
-            if (!options.CanGetEntry || !option.CanGetEntry(true)) throw new NotSupportedException(nameof(GetEntry));
+            if (!options.CanGetEntry || !option.CanGetEntry(true)) throw new NotSupportedException(nameof(GetEntryAsync));
             // Get subpath
             string _subpath = option.SubPath() ?? this.options.SubPath;
             // Append subpath, if needed
@@ -618,11 +596,7 @@ namespace Lexical.FileSystem
                     if (this.token.TryGetToken(uri_, out authenticationHeader) || option.TryGetToken(uri_, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
                     // Start GET
-                    Task<HttpResponseMessage> t = _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-                    // Wait for headers to complete
-                    t.Wait(cancel);
-                    // Get result object
-                    HttpResponseMessage response = t.Result;
+                    HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                     // Assert ok
                     if (!response.IsSuccessStatusCode) return null;
                     // Length
@@ -684,15 +658,15 @@ namespace Lexical.FileSystem
         static Regex anchorPattern = new Regex("\\<a\\s*.*href=\"([^\"]*)\".*\\>", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         /// <summary>
-        /// Reads through html <paramref name="document"/> and scans for anchor elements with "href" attributes.
+        /// Reads through html <paramref name="html"/> and scans for anchor elements with "href" attributes.
         /// Validates local or global links that refer to a subfile or subdirectory.
         /// </summary>
         /// <param name="baseUri">The uri where the document was loaded. Used for creating absolute uris from relative uris.</param>
-        /// <param name="document">document data as stream</param>
+        /// <param name="html">document data as stream</param>
         /// <param name="pathConverter">convert child urls (the real URIs) back to parent (API caller's) path format</param>
         /// <returns>array of files</returns>
         /// <exception cref="Exception"></exception>
-        public virtual IEnumerable<IEntry> ReadEntries(string baseUri, Stream document, IPathConverter pathConverter)
+        public virtual IEnumerable<IEntry> ReadEntries(string baseUri, string html, IPathConverter pathConverter)
         {
             // Result set
             HashSet<string> yielded = new HashSet<string>();
@@ -700,63 +674,57 @@ namespace Lexical.FileSystem
             Uri _baseUri = new Uri(baseUri);
             // Get absolute uri
             string baseUriAbsolute = _baseUri.GetComponents(UriComponents.Scheme | UriComponents.UserInfo | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped);
-            // Create reader
-            using (TextReader reader = new StreamReader(document, detectEncodingFromByteOrderMarks: true))
+            // Search achors
+            foreach (Match m in anchorPattern.Matches(html))
             {
-                // Read document as text
-                string html = reader.ReadToEnd();
-                // Search achors
-                foreach(Match m in anchorPattern.Matches(html))
+                // Get href
+                string href = m.Groups[1].Value;
+                // Test not empty
+                if (String.IsNullOrEmpty(href)) continue;
+                // Parse attribute
+                href = HttpUtility.HtmlDecode(href);
+                // Entry
+                IEntry entry = null;
+                try
                 {
-                    // Get href
-                    string href = m.Groups[1].Value;
-                    // Test not empty
-                    if (String.IsNullOrEmpty(href)) continue;
-                    // Parse attribute
-                    href = HttpUtility.HtmlDecode(href);
-                    // Entry
-                    IEntry entry = null;
-                    try
+                    // Parse uri
+                    Uri uri = new Uri(_baseUri, href);
+                    // Get absolute uri
+                    string absoluteUri = uri.GetComponents(UriComponents.Scheme | UriComponents.UserInfo | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped);
+                    // Test that is child of baseUri
+                    if (absoluteUri.Length <= baseUriAbsolute.Length || !absoluteUri.StartsWith(baseUriAbsolute)) continue;
+                    // Test only one slash after baseUriAbsolute
+                    int slashCount = 0;
+                    int startIx = baseUriAbsolute.EndsWith("/") ? baseUriAbsolute.Length : baseUriAbsolute.Length + 1;
+                    for (int i = startIx; i < absoluteUri.Length - 1; i++)
                     {
-                        // Parse uri
-                        Uri uri = new Uri(_baseUri, href);
-                        // Get absolute uri
-                        string absoluteUri = uri.GetComponents(UriComponents.Scheme | UriComponents.UserInfo | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped);
-                        // Test that is child of baseUri
-                        if (absoluteUri.Length <= baseUriAbsolute.Length || !absoluteUri.StartsWith(baseUriAbsolute)) continue;
-                        // Test only one slash after baseUriAbsolute
-                        int slashCount = 0;
-                        int startIx = baseUriAbsolute.EndsWith("/") ? baseUriAbsolute.Length : baseUriAbsolute.Length + 1;
-                        for (int i=startIx; i<absoluteUri.Length-1; i++)
-                        {
-                            // Not slash
-                            if (absoluteUri[i] != '/') continue;
-                            // Add slash
-                            slashCount++;
-                            break;
-                        }
-                        // Too many slashes "<baseuri>/Dir/Dir/file", thereof not immediate child
-                        if (slashCount >= 1) continue;
-                        // Already yielded?
-                        if (!yielded.Add(absoluteUri)) continue;
-                        // Extract name
-                        String name = GetEntryName(absoluteUri);
-                        // Convert path
-                        string parentUri;
-                        if (!pathConverter.ChildToParent(absoluteUri, out parentUri)) continue;
-                        // Is directory
-                        if (absoluteUri.EndsWith("/")) entry = new DirectoryEntry(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
-                        // Is unknown if is file or directory, so report as both
-                        else entry = new DirectoryAndFileEntry(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, -1L, null);
+                        // Not slash
+                        if (absoluteUri[i] != '/') continue;
+                        // Add slash
+                        slashCount++;
+                        break;
                     }
-                    catch (Exception)
-                    {
-                        // bad uri
-                        continue;
-                    }
-                    // Yield entry
-                    if (entry != null) yield return entry;
+                    // Too many slashes "<baseuri>/Dir/Dir/file", thereof not immediate child
+                    if (slashCount >= 1) continue;
+                    // Already yielded?
+                    if (!yielded.Add(absoluteUri)) continue;
+                    // Extract name
+                    String name = GetEntryName(absoluteUri);
+                    // Convert path
+                    string parentUri;
+                    if (!pathConverter.ChildToParent(absoluteUri, out parentUri)) continue;
+                    // Is directory
+                    if (absoluteUri.EndsWith("/")) entry = new DirectoryEntry(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, null);
+                    // Is unknown if is file or directory, so report as both
+                    else entry = new DirectoryAndFileEntry(this, parentUri, name, DateTimeOffset.MinValue, DateTimeOffset.MinValue, -1L, null);
                 }
+                catch (Exception)
+                {
+                    // bad uri
+                    continue;
+                }
+                // Yield entry
+                if (entry != null) yield return entry;
             }
         }
 
