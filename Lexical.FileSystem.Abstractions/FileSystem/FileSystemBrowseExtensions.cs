@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Security;
+using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
@@ -57,7 +58,37 @@ namespace Lexical.FileSystem
         public static IEntry[] Browse(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.Browse(path, option);
-            else throw new NotSupportedException(nameof(Browse));
+            if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.BrowseAsync(path, option).Result;
+            throw new NotSupportedException(nameof(Browse));
+        }
+
+        /// <summary>
+        /// Browse a directory for child entries.
+        /// 
+        /// <paramref name="path"/> should end with directory separator character '/', for example "mydir/".
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path">path to a directory, "" is root, separator is "/"</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <returns>
+        ///     Returns a snapshot of file and directory entries.
+        ///     Note, that the returned array be internally cached by the implementation, and therefore the caller must not modify the array.
+        /// </returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support browse</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public static Task<IEntry[]> BrowseAsync(this IFileSystem filesystem, string path, IOption option = null)
+        {
+            if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.BrowseAsync(path, option);
+            if (filesystem is IFileSystemBrowse browser) return Task.Run(() => browser.Browse(path, option));
+            throw new NotSupportedException(nameof(Browse));
         }
 
         /// <summary>
@@ -79,7 +110,31 @@ namespace Lexical.FileSystem
         public static IEntry GetEntry(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.GetEntry(path, option);
-            else throw new NotSupportedException(nameof(GetEntry));
+            if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.GetEntryAsync(path, option).Result;
+            throw new NotSupportedException(nameof(GetEntry));
+        }
+
+        /// <summary>
+        /// Get entry of a single file or directory.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <returns>entry, or null if entry is not found</returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support exists</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public static Task<IEntry> GetEntryAsync(this IFileSystem filesystem, string path, IOption option = null)
+        {
+            if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.GetEntryAsync(path, option);
+            if (filesystem is IFileSystemBrowse browser) return Task.Run(()=>browser.GetEntry(path, option));
+            throw new NotSupportedException(nameof(GetEntry));
         }
 
         /// <summary>
@@ -101,6 +156,30 @@ namespace Lexical.FileSystem
         public static bool Exists(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.GetEntry(path, option) != null;
+            if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.GetEntryAsync(path, option).Result != null;
+            else throw new NotSupportedException(nameof(GetEntry));
+        }
+
+        /// <summary>
+        /// Tests if a file or directory exists.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <returns>true if exists</returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support exists</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        public static Task<bool> ExistsAsync(this IFileSystem filesystem, string path, IOption option = null)
+        {
+            if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.GetEntryAsync(path, option).ContinueWith(t => t.Result != null);
+            if (filesystem is IFileSystemBrowse browser) return Task.Run(() => browser.GetEntry(path, option)).ContinueWith(t => t.Result != null);
             else throw new NotSupportedException(nameof(GetEntry));
         }
     }

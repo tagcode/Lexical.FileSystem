@@ -6,6 +6,7 @@
 using Lexical.FileSystem.Package;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
@@ -99,7 +100,36 @@ namespace Lexical.FileSystem
         public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IOption mountOption = null, IOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, option);
-            throw new NotSupportedException(nameof(Mount));
+            else if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.MountAsync(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, option).Result;
+            else throw new NotSupportedException(nameof(Mount));
+        }
+
+        /// <summary>
+        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IOption"/> in the parent filesystem.
+        /// 
+        /// If no mounts are provided, then creates empty virtual directory.
+        /// If one mount is provided, then mounts that to parent filesystem, with possible mount option.
+        /// If multiple mounts are provided, then mounts a composition of all the filesystem, with the precedence of the order in the provided array.
+        /// 
+        /// If previous mounts exist at the <paramref name="path"/>, then replaces them with new configuration.
+        /// 
+        /// If parent filesystem had observers monitoring the <paramref name="path"/>, then observers are notified with new emerged files from the mounted filesystems.
+        /// 
+        /// The <paramref name="path"/> parameter must end with directory separator character '/', unless root directory "" is mounted.
+        /// 
+        /// If there is an open stream to a mounted filesystem, then the file is unlinked from the parent filesystem, but stream maintains open.
+        /// </summary>
+        /// <param name="parentFileSystem"></param>
+        /// <param name="path">path to mount point</param>
+        /// <param name="filesystem">filesystem</param>
+        /// <param name="mountOption">(optional) options</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public static Task<IFileSystem> MountAsync(this IFileSystem parentFileSystem, string path, IFileSystem filesystem, IOption mountOption = null, IOption option = null)
+        {
+            if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.MountAsync(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, option);
+            else if (parentFileSystem is IFileSystemMount mountable) return Task.Run(()=>mountable.Mount(path, new FileSystemAssignment[] { new FileSystemAssignment(filesystem, mountOption) }, option));
+            else throw new NotSupportedException(nameof(Mount));
         }
 
         /// <summary>
@@ -124,7 +154,34 @@ namespace Lexical.FileSystem
         public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params IFileSystem[] filesystems)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystems.Select(fs=> new FileSystemAssignment(fs, null)).ToArray(), option: null);
-            throw new NotSupportedException(nameof(Mount));
+            else if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.MountAsync(path, filesystems.Select(fs=> new FileSystemAssignment(fs, null)).ToArray(), option: null).Result;
+            else throw new NotSupportedException(nameof(Mount));
+        }
+
+        /// <summary>
+        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IOption"/> in the parent filesystem.
+        /// 
+        /// If no mounts are provided, then creates empty virtual directory.
+        /// If one mount is provided, then mounts that to parent filesystem, with possible mount option.
+        /// If multiple mounts are provided, then mounts a composition of all the filesystem, with the precedence of the order in the provided array.
+        /// 
+        /// If previous mounts exist at the <paramref name="path"/>, then replaces them with new configuration.
+        /// 
+        /// If parent filesystem had observers monitoring the <paramref name="path"/>, then observers are notified with new emerged files from the mounted filesystems.
+        /// 
+        /// The <paramref name="path"/> parameter must end with directory separator character '/', unless root directory "" is mounted.
+        /// 
+        /// If there is an open stream to a mounted filesystem, then the file is unlinked from the parent filesystem, but stream maintains open.
+        /// </summary>
+        /// <param name="parentFileSystem"></param>
+        /// <param name="path"></param>
+        /// <param name="filesystems">filesystem</param>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public static Task<IFileSystem> MountAsync(this IFileSystem parentFileSystem, string path, params IFileSystem[] filesystems)
+        {
+            if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.MountAsync(path, filesystems.Select(fs => new FileSystemAssignment(fs, null)).ToArray(), option: null);
+            else if (parentFileSystem is IFileSystemMount mountable) return Task.Run(()=>mountable.Mount(path, filesystems.Select(fs => new FileSystemAssignment(fs, null)).ToArray(), option: null));
+            else throw new NotSupportedException(nameof(Mount));
         }
 
         /// <summary>
@@ -141,7 +198,26 @@ namespace Lexical.FileSystem
         public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, params (IFileSystem filesystem, IOption mountOption)[] filesystems)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, filesystems.Select(fs => new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), option: null);
-            throw new NotSupportedException(nameof(Mount));
+            else if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.MountAsync(path, filesystems.Select(fs => new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), option: null).Result;
+            else throw new NotSupportedException(nameof(Mount));
+        }
+
+        /// <summary>
+        /// Mount <paramref name="filesystems"/> at <paramref name="path"/> in the parent filesystem.
+        /// 
+        /// If <paramref name="path"/> is already mounted, then replaces previous mount.
+        /// If there is an open stream to previously mounted filesystem, that stream is unlinked from the filesystem.
+        /// </summary>
+        /// <param name="parentFileSystem"></param>
+        /// <param name="path">path to mount point</param>
+        /// <param name="filesystems"></param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public static Task<IFileSystem> MountAsync(this IFileSystem parentFileSystem, string path, params (IFileSystem filesystem, IOption mountOption)[] filesystems)
+        {
+            if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.MountAsync(path, filesystems.Select(fs => new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), option: null);
+            else if (parentFileSystem is IFileSystemMount mountable) return Task.Run(()=>mountable.Mount(path, filesystems.Select(fs => new FileSystemAssignment(fs.filesystem, fs.mountOption)).ToArray(), option: null));
+            else throw new NotSupportedException(nameof(Mount));
         }
 
         /// <summary>
@@ -167,7 +243,35 @@ namespace Lexical.FileSystem
         public static IFileSystem Mount(this IFileSystem parentFileSystem, string path, FileSystemAssignment[] mounts, IOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Mount(path, mounts, option);
-            throw new NotSupportedException(nameof(Mount));
+            else if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.MountAsync(path, mounts, option).Result;
+            else throw new NotSupportedException(nameof(Mount));
+        }
+
+        /// <summary>
+        /// Mounts zero, one or many <see cref="IFileSystem"/> with optional <see cref="IOption"/> in the parent filesystem.
+        /// 
+        /// If no mounts are provided, then creates empty virtual directory.
+        /// If one mount is provided, then mounts that to parent filesystem, with possible mount option.
+        /// If multiple mounts are provided, then mounts a composition of all the filesystem, with the precedence of the order in the provided array.
+        /// 
+        /// If previous mounts exist at the <paramref name="path"/>, then replaces them with new configuration.
+        /// 
+        /// If parent filesystem had observers monitoring the <paramref name="path"/>, then observers are notified with new emerged files from the mounted filesystems.
+        /// 
+        /// The <paramref name="path"/> parameter must end with directory separator character '/', unless root directory "" is mounted.
+        /// 
+        /// If there is an open stream to a mounted filesystem, then the file is unlinked from the parent filesystem, but stream maintains open.
+        /// </summary>
+        /// <param name="parentFileSystem"></param>
+        /// <param name="path">path to mount point</param>
+        /// <param name="mounts">(optional) filesystem and option infos</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public static Task<IFileSystem> MountAsync(this IFileSystem parentFileSystem, string path, FileSystemAssignment[] mounts, IOption option = null)
+        {
+            if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.MountAsync(path, mounts, option);
+            else if (parentFileSystem is IFileSystemMount mountable) return Task.Run(()=>mountable.Mount(path, mounts, option));
+            else throw new NotSupportedException(nameof(Mount));
         }
 
         /// <summary>
@@ -183,7 +287,25 @@ namespace Lexical.FileSystem
         public static IFileSystem Unmount(this IFileSystem parentFileSystem, string path, IOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.Unmount(path, option);
-            throw new NotSupportedException(nameof(Unmount));
+            else if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.UnmountAsync(path, option).Result;
+            else throw new NotSupportedException(nameof(Unmount));
+        }
+
+        /// <summary>
+        /// Unmount a filesystem at <paramref name="path"/>.
+        /// 
+        /// If there is no mount at <paramref name="path"/>, then does nothing.
+        /// </summary>
+        /// <param name="parentFileSystem"></param>
+        /// <param name="path">path to mount point</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <returns>this (parent filesystem)</returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public static Task<IFileSystem> UnmountAsync(this IFileSystem parentFileSystem, string path, IOption option = null)
+        {
+            if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.UnmountAsync(path, option);
+            else if (parentFileSystem is IFileSystemMount mountable) return Task.Run(()=>mountable.Unmount(path, option));
+            else throw new NotSupportedException(nameof(Unmount));
         }
 
         /// <summary>
@@ -196,9 +318,23 @@ namespace Lexical.FileSystem
         public static IMountEntry[] ListMountPoints(this IFileSystem parentFileSystem, IOption option = null)
         {
             if (parentFileSystem is IFileSystemMount mountable) return mountable.ListMountPoints(option);
+            if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.ListMountPointsAsync(option).Result;
             throw new NotSupportedException(nameof(ListMountPoints));
         }
 
+        /// <summary>
+        /// List all mounts.
+        /// </summary>
+        /// <param name="parentFileSystem"></param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException">If operation is not supported</exception>
+        public static Task<IMountEntry[]> ListMountPointsAsync(this IFileSystem parentFileSystem, IOption option = null)
+        {
+            if (parentFileSystem is IFileSystemMountAsync mountableAsync) return mountableAsync.ListMountPointsAsync(option);
+            else if (parentFileSystem is IFileSystemMount mountable) return Task.Run(()=>mountable.ListMountPoints(option));
+            else throw new NotSupportedException(nameof(ListMountPoints));
+        }
     }
 
     /// <summary><see cref="IMountOption"/> operations.</summary>

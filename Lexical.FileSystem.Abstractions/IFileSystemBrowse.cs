@@ -4,8 +4,10 @@
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security;
+using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
@@ -94,7 +96,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IEntry[] Browse(string path, IOption option = null);
+        Task<IEntry[]> BrowseAsync(string path, IOption option = null);
 
         /// <summary>
         /// Get entry of a single file or directory.
@@ -111,9 +113,8 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IEntry GetEntry(string path, IOption option = null);
+        Task<IEntry> GetEntryAsync(string path, IOption option = null);
     }
-
     // </doc>
 
 

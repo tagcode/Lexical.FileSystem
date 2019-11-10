@@ -7,6 +7,7 @@
 using System;
 using System.IO;
 using System.Security;
+using System.Threading.Tasks;
 
 namespace Lexical.FileSystem
 {
@@ -79,9 +80,63 @@ namespace Lexical.FileSystem
                     if (initialData != null) s.Write(initialData, 0, initialData.Length);
                 }
             }
+            else if (filesystem is IFileSystemOpenAsync openerAsync)
+            {
+                Task t = openerAsync.OpenAsync(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite, option)
+                    .ContinueWith(async ts =>
+                    {
+                        Stream s = ts.Result;
+                        if (initialData != null) await s.WriteAsync(initialData, 0, initialData.Length);
+                        s.Dispose();
+                    });
+                t.Wait();
+            }
             else throw new NotSupportedException(nameof(CreateFile));
         }
 
+        /// <summary>
+        /// Create a new file. If file exists, does nothing.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path">Relative path to file. Directory separator is "/". The root is without preceding slash "", e.g. "dir/file"</param>
+        /// <param name="initialData">(optional) initial data to write</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support create directory</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
+        /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
+        public static Task CreateFileAsync(this IFileSystem filesystem, string path, byte[] initialData = null, IOption option = null)
+        {
+            if (filesystem is IFileSystemOpenAsync openerAsync)
+            {
+                return openerAsync.OpenAsync(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite, option)
+                    .ContinueWith(async ts =>
+                    {
+                        Stream s = ts.Result;
+                        if (initialData != null) await s.WriteAsync(initialData, 0, initialData.Length);
+                        s.Dispose();
+                    });
+            }
+            else if (filesystem is IFileSystemOpen opener)
+            {
+                return Task.Run(() =>
+                {
+                    using (Stream s = opener.Open(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite, option))
+                    {
+                        if (initialData != null) s.Write(initialData, 0, initialData.Length);
+                    }
+                });
+            }
+            else throw new NotSupportedException(nameof(CreateFile));
+        }
         /// <summary>
         /// Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="FileMode.Create"/> or <see cref="FileMode.CreateNew"/>.
         /// </summary>
@@ -109,7 +164,39 @@ namespace Lexical.FileSystem
         public static Stream Open(this IFileSystem filesystem, string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
         {
             if (filesystem is IFileSystemOpen opener) return opener.Open(path, fileMode, fileAccess, fileShare, option);
-            throw new NotSupportedException(nameof(Open));
+            else if (filesystem is IFileSystemOpenAsync openerAsync) return openerAsync.OpenAsync(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite, option).Result;
+            else throw new NotSupportedException(nameof(Open));
+        }
+
+        /// <summary>
+        /// Open a file for reading and/or writing. File can be created when <paramref name="fileMode"/> is <see cref="FileMode.Create"/> or <see cref="FileMode.CreateNew"/>.
+        /// </summary>
+        /// <param name="filesystem"></param>
+        /// <param name="path">Relative path to file. Directory separator is "/". Root is without preceding "/", e.g. "dir/file.xml"</param>
+        /// <param name="fileMode">determines whether to open or to create the file</param>
+        /// <param name="fileAccess">how to access the file, read, write or read and write</param>
+        /// <param name="fileShare">how the file will be shared by processes</param>
+        /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
+        /// <returns>open file stream</returns>
+        /// <exception cref="IOException">On unexpected IO error</exception>
+        /// <exception cref="SecurityException">If caller did not have permission</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is an empty string (""), contains only white space, or contains one or more invalid characters</exception>
+        /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support opening files</exception>
+        /// <exception cref="FileNotFoundException">The file cannot be found, such as when mode is FileMode.Truncate or FileMode.Open, and and the file specified by path does not exist. The file must already exist in these modes.</exception>
+        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
+        /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
+        /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="fileMode"/>, <paramref name="fileAccess"/> or <paramref name="fileShare"/> contains an invalid value.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
+        /// <exception cref="ObjectDisposedException"/>
+        /// <exception cref="FileSystemExceptionNoReadAccess">No read access</exception>
+        /// <exception cref="FileSystemExceptionNoWriteAccess">No write access</exception>
+        public static Task<Stream> OpenAsync(this IFileSystem filesystem, string path, FileMode fileMode, FileAccess fileAccess, FileShare fileShare, IOption option = null)
+        {
+            if (filesystem is IFileSystemOpenAsync openerAsync) return openerAsync.OpenAsync(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite, option);
+            else if (filesystem is IFileSystemOpen opener) return Task.Run(()=>opener.Open(path, fileMode, fileAccess, fileShare, option));
+            else throw new NotSupportedException(nameof(Open));
         }
     }
 
