@@ -27,7 +27,7 @@ namespace Lexical.FileSystem.Operation
         public OperationState CurrentState => (OperationState)currentState;
 
         /// <summary>Error events that occured involving this op</summary>
-        public IEnumerable<Exception> Errors => session.Events.Where(e => e is OperationEvent.Error err && err.Op == this).Select(e => ((OperationEvent.Error)e).Exception);
+        public IEnumerable<Exception> Errors => session.Events.Where(e => e is OperationErrorEvent err && err.Op == this).Select(e => ((OperationErrorEvent)e).Exception);
 
         /// <summary>Child operations</summary>
         public virtual IOperation[] Children => null;
@@ -236,9 +236,9 @@ namespace Lexical.FileSystem.Operation
             // Change state
             if ((OperationState)Interlocked.Exchange(ref currentState, (int)OperationState.Error) != OperationState.Error)
             {
-                if (((EffectivePolicy & (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents)) == (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents))) session.LogAndDispatchEvent(new OperationEvent.Error(this, error));
-                else if ((EffectivePolicy & OperationPolicy.LogEvents) == OperationPolicy.LogEvents) session.Events.TryAdd(new OperationEvent.Error(this, error));
-                else if ((EffectivePolicy & OperationPolicy.DispatchEvents) == OperationPolicy.DispatchEvents) session.DispatchEvent(new OperationEvent.Error(this, error));
+                if (((EffectivePolicy & (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents)) == (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents))) session.LogAndDispatchEvent(new OperationErrorEvent(this, error));
+                else if ((EffectivePolicy & OperationPolicy.LogEvents) == OperationPolicy.LogEvents) session.Events.TryAdd(new OperationErrorEvent(this, error));
+                else if ((EffectivePolicy & OperationPolicy.DispatchEvents) == OperationPolicy.DispatchEvents) session.DispatchEvent(new OperationErrorEvent(this, error));
             }
             // Return true if has SuppressException
             return EffectivePolicy.HasFlag(OperationPolicy.SuppressException);
@@ -258,9 +258,9 @@ namespace Lexical.FileSystem.Operation
             if ((OperationState)Interlocked.CompareExchange(ref currentState, (int)newState, (int)expectedState) != expectedState) return false;
 
             // Send event of new state
-            if (((EffectivePolicy & (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents)) == (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents))) session.LogAndDispatchEvent(new OperationEvent.State(this, newState));
-            else if ((EffectivePolicy & OperationPolicy.LogEvents) == OperationPolicy.LogEvents) session.Events.TryAdd(new OperationEvent.State(this, newState));
-            else if ((EffectivePolicy & OperationPolicy.DispatchEvents) == OperationPolicy.DispatchEvents) session.DispatchEvent(new OperationEvent.State(this, newState));
+            if (((EffectivePolicy & (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents)) == (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents))) session.LogAndDispatchEvent(new OperationStateEvent(this, newState));
+            else if ((EffectivePolicy & OperationPolicy.LogEvents) == OperationPolicy.LogEvents) session.Events.TryAdd(new OperationStateEvent(this, newState));
+            else if ((EffectivePolicy & OperationPolicy.DispatchEvents) == OperationPolicy.DispatchEvents) session.DispatchEvent(new OperationStateEvent(this, newState));
             return true;
         }
 
@@ -276,9 +276,9 @@ namespace Lexical.FileSystem.Operation
             if ((OperationState)Interlocked.Exchange(ref currentState, (int)newState) == newState) return false;
 
             // Send event of new state
-            if (((EffectivePolicy & (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents)) == (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents))) session.LogAndDispatchEvent(new OperationEvent.State(this, newState));
-            else if ((EffectivePolicy & OperationPolicy.LogEvents) == OperationPolicy.LogEvents) session.Events.TryAdd(new OperationEvent.State(this, newState));
-            else if ((EffectivePolicy & OperationPolicy.DispatchEvents) == OperationPolicy.DispatchEvents) session.DispatchEvent(new OperationEvent.State(this, newState));
+            if (((EffectivePolicy & (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents)) == (OperationPolicy.LogEvents | OperationPolicy.DispatchEvents))) session.LogAndDispatchEvent(new OperationStateEvent(this, newState));
+            else if ((EffectivePolicy & OperationPolicy.LogEvents) == OperationPolicy.LogEvents) session.Events.TryAdd(new OperationStateEvent(this, newState));
+            else if ((EffectivePolicy & OperationPolicy.DispatchEvents) == OperationPolicy.DispatchEvents) session.DispatchEvent(new OperationStateEvent(this, newState));
             return true;
         }
     }

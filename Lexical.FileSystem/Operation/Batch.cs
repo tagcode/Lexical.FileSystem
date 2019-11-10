@@ -95,7 +95,7 @@ namespace Lexical.FileSystem.Operation
                         if (session.ProgressInterval > 0L && progressReminder > session.ProgressInterval && session.HasObservers)
                         {
                             progressReminder %= session.ProgressInterval;
-                            session.DispatchEvent(new OperationEvent.Progress(this, Progress, TotalLength));
+                            session.DispatchEvent(new OperationProgressEvent(this, Progress, TotalLength));
                         }
                     }
                 }

@@ -85,7 +85,7 @@ namespace Lexical.FileSystem.Operation
                     catch (Exception e)
                     {
                         // Add observer exception as error event, but don't dispatch it.
-                        Events.TryAdd(new OperationEvent.Error(null, e));
+                        Events.TryAdd(new OperationErrorEvent(null, e));
                         // Capture
                         errors.Add(e);
                     }
@@ -117,10 +117,10 @@ namespace Lexical.FileSystem.Operation
             public void Dispose() => session.observers.Remove(this);
         }
 
-        /// <summary>Add event to session log and dispatch it. <see cref="OperationEvent.Progress"/> events are not added to event log.</summary>
+        /// <summary>Add event to session log and dispatch it. <see cref="OperationProgressEvent"/> events are not added to event log.</summary>
         public void LogAndDispatchEvent(IOperationEvent @event)
         {
-            if (@event is OperationEvent.Progress == false) this.Events.TryAdd(@event);
+            if (@event is OperationProgressEvent == false) this.Events.TryAdd(@event);
             DispatchEvent(@event);
         }
 
@@ -136,7 +136,7 @@ namespace Lexical.FileSystem.Operation
                 }
                 catch (Exception error) when (CaptureError(error)) { }
             }
-            bool CaptureError(Exception e) { Events.TryAdd(new OperationEvent.Error(null, e)); return false; }
+            bool CaptureError(Exception e) { Events.TryAdd(new OperationErrorEvent(null, e)); return false; }
         }
 
     }

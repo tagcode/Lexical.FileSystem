@@ -3,7 +3,6 @@
 // Date:           17.10.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-
 namespace Lexical.FileSystem.Operation
 {
     /// <summary>Operation State</summary>

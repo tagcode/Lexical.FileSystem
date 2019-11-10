@@ -11,7 +11,7 @@ using System.Linq;
 namespace Lexical.FileSystem.Operation
 {
     /// <summary>
-    /// File operation utility class.
+    /// A file operation.
     /// </summary>
     public interface IOperation
     {

@@ -13,7 +13,6 @@ namespace Lexical.FileSystem
     /// </summary>
     public static partial class OptionExtensions
     {
-
         /// <summary>
         /// Get option as <typeparamref name="T"/>.
         /// </summary>
