@@ -1057,7 +1057,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Observer
         /// </summary>
-        class ObserverHandle : FileSystemObserverBase
+        class ObserverHandle : ObserverBase
         {
             /// <summary>Filter pattern that is used for filtering events by path.</summary>
             Regex filterPattern;

@@ -617,7 +617,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Single file observer.
         /// </summary>
-        protected internal class FileObserver : FileSystemObserverBase
+        protected internal class FileObserver : ObserverBase
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.
@@ -786,7 +786,7 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Watches a group of files using a pattern.
         /// </summary>
-        protected internal class PatternObserver : FileSystemObserverBase
+        protected internal class PatternObserver : ObserverBase
         {
             /// <summary>
             /// Absolute path as <see cref="FileSystem"/> root. Separator is '\\' or '/' depending on operating system.

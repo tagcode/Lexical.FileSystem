@@ -193,7 +193,7 @@ namespace Lexical.FileSystem
                     //
                     IEntry prevEntry;
                     // Unify entries
-                    if (entries.TryGetValue(key, out prevEntry)) entries[key] = new DoubleDecoratioEntry(prevEntry, e);
+                    if (entries.TryGetValue(key, out prevEntry)) entries[key] = new DoubleEntryDecoration(prevEntry, e);
                     // Add entry
                     else entries[key] = e;
                 }
@@ -242,7 +242,7 @@ namespace Lexical.FileSystem
                 try
                 {
                     IEntry e = fs.GetEntry(path, option);
-                    if (e != null) entry = entry != null ? new DoubleDecoratioEntry(entry, e) : e;
+                    if (e != null) entry = entry != null ? new DoubleEntryDecoration(entry, e) : e;
                 }
                 catch (NotSupportedException) { }
             }
