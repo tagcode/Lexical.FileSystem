@@ -3,7 +3,6 @@
 // Date:           3.11.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
-using Lexical.FileSystem.Decoration;
 using Lexical.FileSystem.Internal;
 using Lexical.FileSystem.Utility;
 using System;
@@ -18,14 +17,18 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using System.Xml;
-using System.Xml.Linq;
-using System.Xml.Schema;
 
 namespace Lexical.FileSystem
 {
     /// <summary>
     /// Simple "http://" based filesystem that can download documents.
+    /// 
+    /// HttpFileSystem utilizes three kinds of <see cref="ITokenObject"/>s:
+    /// <list type="bullet">
+    ///     <item>Key=<see cref="TOKEN_HEADERS"/> as Type=IEnumerable{KeyValuePair{string, IEnumerable{string}}}</item>
+    ///     <item>Key=<see cref="TOKEN_AUTHENTICATION"/> as Type=<see cref="AuthenticationHeaderValue"/></item>
+    ///     <item>Key=<see cref="CancellationToken"/>.FullName as Type=<see cref="CancellationToken"/></item>
+    /// </list>
     /// </summary>
     public class HttpFileSystem : FileSystemBase, IFileSystemOpen, IFileSystemDeleteAsync, IFileSystemBrowseAsync
     {
@@ -519,7 +522,8 @@ namespace Lexical.FileSystem
             {
                 uri_ = _subpath + __subpath + uri;
                 pathConverter = new PathConverter("", _subpath + __subpath);
-            } else
+            }
+            else
             {
                 pathConverter = new PathConverter("", "");
             }
@@ -650,15 +654,15 @@ namespace Lexical.FileSystem
         /// <returns>extracted name or null</returns>
         public static string GetEntryName(string uri)
         {
-            int endIx = uri.Length-1;
+            int endIx = uri.Length - 1;
             int queryIx = uri.IndexOf('?');
-            if (queryIx > 0) { endIx = queryIx - 1; if (endIx < 0 || endIx>=uri.Length) return null; }
+            if (queryIx > 0) { endIx = queryIx - 1; if (endIx < 0 || endIx >= uri.Length) return null; }
             if (endIx < 0 || endIx >= uri.Length) return null;
             if (uri[endIx] == '/') endIx--;
             if (endIx < 0 || endIx >= uri.Length) return null;
             int slashIx = uri.LastIndexOf('/', endIx);
             if (slashIx >= uri.Length) return null;
-            string name = slashIx < 0 ? uri : uri.Substring(slashIx+1, endIx-slashIx);
+            string name = slashIx < 0 ? uri : uri.Substring(slashIx + 1, endIx - slashIx);
             return name;
         }
 
