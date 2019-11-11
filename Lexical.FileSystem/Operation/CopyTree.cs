@@ -84,11 +84,11 @@ namespace Lexical.FileSystem.Operation
                     if (entry.IsDirectory())
                     {
                         // Browse children
-                        IEntry[] children = SrcFileSystem.Browse(entry.Path, srcOption.OptionIntersection(session.Option));
+                        IDirectoryContent content = SrcFileSystem.Browse(entry.Path, srcOption.OptionIntersection(session.Option));
                         // Assert children don't refer to the parent of the parent
-                        foreach (IEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
+                        foreach (IEntry child in content) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
                         // Visit child
-                        for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
+                        for (int i = content.Count - 1; i >= 0; i--) queue.Add(content[i]);
                         // Convert path
                         string _dstPath;
                         if (!pathConverter.ParentToChild(entry.Path, out _dstPath)) throw new Exception("Failed to convert path");

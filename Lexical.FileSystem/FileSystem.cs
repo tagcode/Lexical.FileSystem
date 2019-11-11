@@ -252,10 +252,8 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="concatenatedPath"></param>
         /// <param name="absolutePath"></param>
-        /// <param name="throwOnError">if true and <paramref name="path"/> refers beyond root, throws <see cref="DirectoryNotFoundException"/></param>
-        /// <return>path without trailing separator, or null if <paramref name="throwOnError"/> is true and refers beyond root</return>
-        /// <exception cref="DirectoryNotFoundException">If <paramref name="path"/> refers over constructed root, e.g. ".." and <paramref name="throwOnError"/> is true</exception>
-        string ConcatenateAndAssertPath(string path, out string concatenatedPath, out string absolutePath, bool throwOnError)
+        /// <return>path without trailing separator, or null if refers beyond root</return>
+        string ConcatenateAndAssertPath(string path, out string concatenatedPath, out string absolutePath)
         {
             // Assert not null
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -269,11 +267,7 @@ namespace Lexical.FileSystem
                 // Convert to absolute path. If path is drive-letter and root is "", add separator "\\".
                 absolutePath = System.IO.Path.GetFullPath(/*c: ?*/isWindows && concatenatedPath.EndsWith(":", StringComparison.InvariantCulture) ? /*c:\*/concatenatedPath + osSeparator : /*c:\nnn*/concatenatedPath);
                 // Assert that we are not browsing the parent of constructed path
-                if (!absolutePath.StartsWith(AbsolutePath, StringComparison.InvariantCulture))
-                {
-                    if (throwOnError) throw new DirectoryNotFoundException("Path cannot refer outside IFileSystem root");
-                    return null;
-                }
+                if (!absolutePath.StartsWith(AbsolutePath, StringComparison.InvariantCulture)) { concatenatedPath = null; absolutePath = null; return null; }
                 // Return path without trailing separator
                 return path;
             }
@@ -345,7 +339,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
-        public IEntry[] Browse(string path, IOption option = null)
+        public IDirectoryContent Browse(string path, IOption option = null)
         {
             // Return OS-root, return drive letters.
             if (path == "" && Path == "") return BrowseRoot();
@@ -354,31 +348,29 @@ namespace Lexical.FileSystem
 
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
-            path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath, true);
+            string _path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
+            if (_path == null) return new DirectoryNotFound(this, path);
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
-            if (dir.Exists)
-            {
-                string prefix = path.Length > 0 ? (path.EndsWith("/", StringComparison.InvariantCulture) ? path : path + "/") : null;
-                if (IsOsRoot && path == "" || path == "/") prefix = "/";
-                StructList24<IEntry> list = new StructList24<IEntry>();
-                foreach (FileSystemInfo fsi in dir.EnumerateFileSystemInfos())
-                {
-                    if (fsi is DirectoryInfo di)
-                    {
-                        IEntry e = new DirectoryEntry.WithAttributes(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), di.Attributes, di.FullName);
-                        list.Add(e);
-                    }
-                    else if (fsi is FileInfo _fi)
-                    {
-                        IEntry e = new FileEntry.WithAttributes(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length, _fi.Attributes, _fi.FullName);
-                        list.Add(e);
-                    }
-                }
-                return list.ToArray();
-            }
+            if (!dir.Exists) return new DirectoryNotFound(this, path);
 
-            throw new DirectoryNotFoundException(path);
+            string prefix = path.Length > 0 ? (path.EndsWith("/", StringComparison.InvariantCulture) ? path : path + "/") : null;
+            if (IsOsRoot && path == "" || path == "/") prefix = "/";
+            StructList24<IEntry> list = new StructList24<IEntry>();
+            foreach (FileSystemInfo fsi in dir.EnumerateFileSystemInfos())
+            {
+                if (fsi is DirectoryInfo di)
+                {
+                    IEntry e = new DirectoryEntry.WithAttributes(this, prefix + di.Name + "/", di.Name, di.LastWriteTimeUtcUnchecked(), di.LastAccessTimeUtcUnchecked(), di.Attributes, di.FullName);
+                    list.Add(e);
+                }
+                else if (fsi is FileInfo _fi)
+                {
+                    IEntry e = new FileEntry.WithAttributes(this, String.IsNullOrEmpty(prefix) ? _fi.Name : prefix + _fi.Name, _fi.Name, _fi.LastWriteTimeUtcUnchecked(), _fi.LastAccessTimeUtcUnchecked(), _fi.Length, _fi.Attributes, _fi.FullName);
+                    list.Add(e);
+                }
+            }
+            return new DirectoryContent(this, path, list.ToArray());
         }
 
         /// <summary>
@@ -403,7 +395,7 @@ namespace Lexical.FileSystem
 
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
-            path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath, false);
+            path = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
             if (path == null) return null;
 
             DirectoryInfo dir = new DirectoryInfo(absolutePath);
@@ -419,7 +411,7 @@ namespace Lexical.FileSystem
         /// Browse root drive letters
         /// </summary>
         /// <returns></returns>
-        protected IEntry[] BrowseRoot()
+        protected IDirectoryContent BrowseRoot()
         {
             DriveInfo[] driveInfos = DriveInfo.GetDrives();
 
@@ -434,7 +426,7 @@ namespace Lexical.FileSystem
                 foreach (DriveInfo _di in driveInfos) if (_di.Name == "/") { rootInfo = _di; break; }
                 DirectoryInfo di = new DirectoryInfo("/");
                 IEntry e = new DriveEntry(this, "/", "", di.LastWriteTimeUtcUnchecked(), DateTimeOffset.MinValue, DriveType.Fixed, rootInfo.AvailableFreeSpace, rootInfo.TotalSize, rootInfo.VolumeLabel, rootInfo.DriveFormat, true, di.FullName);
-                return new IEntry[] { e };
+                return new DirectoryContent(this, "", new IEntry[] { e });
             }
 
             List<IEntry> list = new List<IEntry>(matches.Length);
@@ -454,7 +446,7 @@ namespace Lexical.FileSystem
                 list.Add(e);
             }
 
-            return list.ToArray();
+            return new DirectoryContent(this, "", list);
         }
 
         /// <summary>
@@ -479,7 +471,8 @@ namespace Lexical.FileSystem
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
-            ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath, true);
+            string x = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
+            if (x == null) throw new DirectoryNotFoundException("Path cannot refer outside IFileSystem root");
 
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists) { fi.Delete(); return; }
@@ -511,7 +504,8 @@ namespace Lexical.FileSystem
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
-            ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath, true);
+            string x = ConcatenateAndAssertPath(path, out concatenatedPath, out absolutePath);
+            if (x == null) throw new DirectoryNotFoundException("Path cannot refer outside IFileSystem root");
 
             FileInfo fi = new FileInfo(absolutePath);
             if (fi.Exists) { fi.Attributes = fileAttribute; return; }
@@ -542,8 +536,11 @@ namespace Lexical.FileSystem
         {
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string oldConcatenatedPath, oldAbsolutePath, newConcatenatedPath, newAbsolutePath;
-            ConcatenateAndAssertPath(oldPath, out oldConcatenatedPath, out oldAbsolutePath, true);
-            ConcatenateAndAssertPath(newPath, out newConcatenatedPath, out newAbsolutePath, true);
+            string x = ConcatenateAndAssertPath(oldPath, out oldConcatenatedPath, out oldAbsolutePath);
+            if (x == null) throw new DirectoryNotFoundException($"{nameof(oldPath)} cannot refer outside IFileSystem root");
+            string y = ConcatenateAndAssertPath(newPath, out newConcatenatedPath, out newAbsolutePath);
+            if (y == null) throw new DirectoryNotFoundException($"{nameof(newPath)} cannot refer outside IFileSystem root");
+
 
             FileInfo fi = new FileInfo(oldAbsolutePath);
             if (fi.Exists) { fi.MoveTo(newAbsolutePath); return; }
@@ -587,7 +584,8 @@ namespace Lexical.FileSystem
             if (patternInfo.SuffixDepth == 0)
             {
                 string concatenatedPath, absolutePath;
-                string path = ConcatenateAndAssertPath(filter, out concatenatedPath, out absolutePath, true);
+                string path = ConcatenateAndAssertPath(filter, out concatenatedPath, out absolutePath);
+                if (path == null) throw new DirectoryNotFoundException("Path cannot refer outside IFileSystem root");
 
                 // Create observer object
                 FileObserver handle = new FileObserver(this, path, observer, state, eventDispatcher, AbsolutePath, absolutePath);
@@ -602,7 +600,8 @@ namespace Lexical.FileSystem
                 // Concatenate paths and assert that path doesn't refer to parent of the constructed path
                 string concatenatedPath, absolutePathToPrefixPart;
 
-                string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(patternInfo.Stem, out concatenatedPath, out absolutePathToPrefixPart, true);
+                string relativePathToPrefixPartWithoutTrailingSeparator = ConcatenateAndAssertPath(patternInfo.Stem, out concatenatedPath, out absolutePathToPrefixPart);
+                if (relativePathToPrefixPartWithoutTrailingSeparator == null) throw new DirectoryNotFoundException("Path cannot refer outside IFileSystem root");
 
                 // Create observer object
                 PatternObserver handle = new PatternObserver(this, observer, state, eventDispatcher, filter, AbsolutePath, relativePathToPrefixPartWithoutTrailingSeparator, absolutePathToPrefixPart, patternInfo.Suffix);

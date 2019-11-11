@@ -40,7 +40,6 @@ namespace Lexical.FileSystem
         ///     Returns a snapshot of file and directory entries.
         ///     Note, that the returned array be internally cached by the implementation, and therefore the caller must not modify the array.
         /// </returns>
-        /// <exception cref="DirectoryNotFoundException"></exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -50,7 +49,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        IEntry[] Browse(string path, IOption option = null);
+        IDirectoryContent Browse(string path, IOption option = null);
 
         /// <summary>
         /// Get entry of a single file or directory.
@@ -68,6 +67,27 @@ namespace Lexical.FileSystem
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
         IEntry GetEntry(string path, IOption option = null);
+    }
+
+    /// <summary>
+    /// Browse result. Result is a snapshot of entries. The contents are immutable and reflect the contents at the time of browsing.
+    /// </summary>
+    public interface IDirectoryContent : IReadOnlyList<IEntry>
+    {
+        /// <summary>
+        /// The filesystem where the browse was issued.
+        /// </summary>
+        IFileSystem FileSystem { get; }
+
+        /// <summary>
+        /// The browsed path at <see cref="FileSystem"/>.
+        /// </summary>
+        string Path { get; }
+
+        /// <summary>
+        /// <see cref="Path"/> exists.
+        /// </summary>
+        bool Exists { get; }
     }
     // </IFileSystemBrowse>
 
@@ -88,7 +108,6 @@ namespace Lexical.FileSystem
         ///     Returns a snapshot of file and directory entries.
         ///     Note, that the returned array be internally cached by the implementation, and therefore the caller must not modify the array.
         /// </returns>
-        /// <exception cref="DirectoryNotFoundException"></exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -98,7 +117,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        Task<IEntry[]> BrowseAsync(string path, IOption option = null);
+        Task<IDirectoryContent> BrowseAsync(string path, IOption option = null);
 
         /// <summary>
         /// Get entry of a single file or directory.

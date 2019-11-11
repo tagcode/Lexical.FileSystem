@@ -47,7 +47,6 @@ namespace Lexical.FileSystem
         /// </returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
-        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support browse</exception>
@@ -55,7 +54,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static IEntry[] Browse(this IFileSystem filesystem, string path, IOption option = null)
+        public static IDirectoryContent Browse(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemBrowse browser) return browser.Browse(path, option);
             if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.BrowseAsync(path, option).Result;
@@ -76,7 +75,6 @@ namespace Lexical.FileSystem
         /// </returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
-        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support browse</exception>
@@ -84,7 +82,7 @@ namespace Lexical.FileSystem
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public static Task<IEntry[]> BrowseAsync(this IFileSystem filesystem, string path, IOption option = null)
+        public static Task<IDirectoryContent> BrowseAsync(this IFileSystem filesystem, string path, IOption option = null)
         {
             if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.BrowseAsync(path, option);
             if (filesystem is IFileSystemBrowse browser) return Task.Run(() => browser.Browse(path, option));
@@ -181,6 +179,30 @@ namespace Lexical.FileSystem
             if (filesystem is IFileSystemBrowseAsync browserAsync) return browserAsync.GetEntryAsync(path, option).ContinueWith(t => t.Result != null);
             if (filesystem is IFileSystemBrowse browser) return Task.Run(() => browser.GetEntry(path, option)).ContinueWith(t => t.Result != null);
             else throw new NotSupportedException(nameof(GetEntry));
+        }
+
+        /// <summary>
+        /// If <see cref="IDirectoryContent.Exists"/> is false then throws <see cref="DirectoryNotFoundException"/>.
+        /// </summary>
+        /// <param name="browseResult"></param>
+        /// <returns><paramref name="browseResult"/></returns>
+        /// <exception cref="DirectoryNotFoundException">If <paramref name="browseResult"/> referes to non-existing path.</exception>
+        public static IDirectoryContent AssertExists(this IDirectoryContent browseResult)
+        {
+            if (!browseResult.Exists) throw new DirectoryNotFoundException(browseResult.Path);
+            return browseResult;
+        }
+
+        /// <summary>
+        /// If <paramref name="entry"/> is null, then throws <see cref="FileNotFoundException"/>.
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns></returns>
+        /// <exception cref="FileNotFoundException">If <paramref name="entry"/> is null.</exception>
+        public static IEntry AssertExists(this IEntry entry)
+        {
+            if (entry == null) throw new FileNotFoundException();
+            return entry;
         }
     }
 

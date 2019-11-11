@@ -501,7 +501,7 @@ namespace Lexical.FileSystem
         /// <param name="uri"></param>
         /// <param name="option"></param>
         /// <returns>child links</returns>
-        public async Task<IEntry[]> BrowseAsync(string uri, IOption option = null)
+        public async Task<IDirectoryContent> BrowseAsync(string uri, IOption option = null)
         {
             // Take reference
             var _httpClient = httpClient;
@@ -512,11 +512,13 @@ namespace Lexical.FileSystem
             // Path converter
             IPathConverter pathConverter;
             // Append subpath
-            string _subpath = option.SubPath() ?? this.options.SubPath;
-            if (_subpath != null)
+            string _subpath = this.options.SubPath;
+            string __subpath = option.SubPath();
+            string uri_ = uri;
+            if (_subpath != null || __subpath != null)
             {
-                uri = _subpath + uri;
-                pathConverter = new PathConverter("", _subpath);
+                uri_ = _subpath + __subpath + uri;
+                pathConverter = new PathConverter("", _subpath + __subpath);
             } else
             {
                 pathConverter = new PathConverter("", "");
@@ -529,16 +531,18 @@ namespace Lexical.FileSystem
             try
             {
                 // Request object
-                using (var request = new HttpRequestMessage(HttpMethod.Get, uri))
+                using (var request = new HttpRequestMessage(HttpMethod.Get, uri_))
                 {
                     // Read token
-                    ReadTokenToHeaders(uri, option, request.Headers);
+                    ReadTokenToHeaders(uri_, option, request.Headers);
                     // Read authentication token
                     AuthenticationHeaderValue authenticationHeader;
-                    if (this.token.TryGetToken(uri, out authenticationHeader) || option.TryGetToken(uri, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
+                    if (this.token.TryGetToken(uri_, out authenticationHeader) || option.TryGetToken(uri_, out authenticationHeader)) request.Headers.Authorization = authenticationHeader;
 
                     // Start GET
                     HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                    // Not found
+                    if (response.StatusCode == HttpStatusCode.NotFound) return new DirectoryNotFound(this, uri);
                     // Assert ok
                     if (!response.IsSuccessStatusCode) throw new FileSystemException(this, uri, response.StatusCode.ToString());
                     // Stream Task
@@ -549,7 +553,7 @@ namespace Lexical.FileSystem
                         // Parse files
                         IEntry[] entries = ReadEntries(uri, document, pathConverter).ToArray();
                         // Return entries
-                        return entries;
+                        return new DirectoryContent(this, uri, entries);
                     }
                 }
             }
@@ -575,10 +579,14 @@ namespace Lexical.FileSystem
             if (_httpClient == null || IsDisposing) throw new ObjectDisposedException(nameof(HttpFileSystem));
             // Assert allowed
             if (!options.CanGetEntry || !option.CanGetEntry(true)) throw new NotSupportedException(nameof(GetEntryAsync));
-            // Get subpath
-            string _subpath = option.SubPath() ?? this.options.SubPath;
-            // Append subpath, if needed
-            string uri_ = _subpath != null ? _subpath + uri : uri;
+            // Append subpath
+            string _subpath = this.options.SubPath;
+            string __subpath = option.SubPath();
+            string uri_ = uri;
+            if (_subpath != null || __subpath != null)
+            {
+                uri_ = _subpath + __subpath + uri;
+            }
 
             // Cancel token
             CancellationToken cancel = default;
@@ -597,8 +605,10 @@ namespace Lexical.FileSystem
 
                     // Start GET
                     HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                    // Not found
+                    if (response.StatusCode == HttpStatusCode.NotFound) return null;
                     // Assert ok
-                    if (!response.IsSuccessStatusCode) return null;
+                    if (!response.IsSuccessStatusCode) throw new FileSystemException(this, uri, response.StatusCode.ToString());
                     // Length
                     long? length = response.Content.Headers.ContentLength;
                     // Last modified

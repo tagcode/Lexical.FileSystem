@@ -63,11 +63,11 @@ namespace Lexical.FileSystem.Operation
                         if (entry.IsDirectory())
                         {
                             // Browse children
-                            IEntry[] children = FileSystem.Browse(entry.Path, Option.OptionIntersection(session.Option));
+                            IDirectoryContent content = FileSystem.Browse(entry.Path, Option.OptionIntersection(session.Option));
                             // Assert children don't refer to the parent of the parent
-                            foreach (IEntry child in children) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
+                            foreach (IEntry child in content) if (entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {entry.Path}");
                             // Visit children
-                            for (int i = children.Length - 1; i >= 0; i--) queue.Add(children[i]);
+                            for (int i = content.Count - 1; i >= 0; i--) queue.Add(content[i]);
                             // Add op
                             dirDeletes.Add(new Delete(session, FileSystem, entry.Path, false));
                         }

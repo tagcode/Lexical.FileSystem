@@ -110,7 +110,7 @@ namespace Lexical.FileSystem
 
         /// <inheritdoc/>
         /// <exception cref="DirectoryNotFoundException">If <paramref name="path"/> goes beyond root with ".."</exception>
-        public IEntry[] Browse(string path, IOption option = null)
+        public IDirectoryContent Browse(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -132,7 +132,7 @@ namespace Lexical.FileSystem
                 // Vfs Node
                 Directory directory;
                 // Search for vfs node
-                directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints, true);
+                directoryAtPath = GetVfsDirectory(path, out directory, ref mountpoints, false);
                 // Browse the vfs directory (mountpoint) at the path
                 if (directoryAtPath && directory.children.Count>0) foreach(var c in directory.children) vfsEntries.Add(c.Value.Entry);
             }
@@ -143,33 +143,42 @@ namespace Lexical.FileSystem
             // Found nothing.
             if (mountpoints.Count == 0 && vfsEntries.Count == 0)
             {
-                if (directoryAtPath) return new IEntry[0];
-                throw new DirectoryNotFoundException(path);
+                if (directoryAtPath) return new DirectoryEmpty(this, path);
+                return new DirectoryNotFound(this, path);
             }
             // Return vfs contents
-            if (mountpoints.Count == 0 && vfsEntries.Count > 0) return vfsEntries.ToArray();
+            if (mountpoints.Count == 0 && vfsEntries.Count > 0) return new DirectoryContent(this, path, vfsEntries.ToArray());
             // Return already decorated contents
-            if (mountpoints.Count == 1 && vfsEntries.Count == 0) return mountpoints[0].Browse(path, option);
+            if (mountpoints.Count == 1 && vfsEntries.Count == 0)
+            {
+                IDirectoryContent _content = mountpoints[0].Browse(path, option);
+                return _content.Exists ? new DirectoryContent(this, path, _content) : (IDirectoryContent)new DirectoryNotFound(this, path);
+            }
 
             // Create union of mountpoints and final directory. Unify overlapping content if same name. Priority: vfs, mountpoints
             // Estimation of entry count
             int entryCount = vfsEntries.Count;
             // Browse each mountpoint
-            StructList2<IEntry[]> entryArrays = new StructList2<IEntry[]>();
+            StructList2<IDirectoryContent> contentArray = new StructList2<IDirectoryContent>();
+            // exists
+            bool exists = false;
+
             for (int i = mountpoints.Count-1; i >= 0; i--)
             {
                 var fs = mountpoints[i];
                 if (!fs.CanBrowse()) continue;
                 try
                 {
-                    IEntry[] _entries = fs.Browse(path, option);
-                    if (_entries.Length == 0) continue;
-                    entryArrays.Add(_entries);
-                    entryCount += _entries.Length;
+                    IDirectoryContent _content = fs.Browse(path, option);
+                    exists |= _content.Exists;
+                    if (_content.Count == 0) continue;
+                    contentArray.Add(_content);
+                    entryCount += _content.Count;
                 }
-                catch (DirectoryNotFoundException) { }
                 catch (NotSupportedException) { }
             }
+            // Not found
+            if (!exists) return new DirectoryNotFound(this, path);
 
             // Create hashset for removing overlapping entry names
             Dictionary<StringSegment, IEntry> entries = new Dictionary<StringSegment, IEntry>(entryCount, StringSegment.Comparer.Instance);
@@ -184,9 +193,9 @@ namespace Lexical.FileSystem
                 entries[key] = e;
             }
             // Add entries from mounted filesystems
-            for (int i = 0; i < entryArrays.Count; i++)
+            for (int i = 0; i < contentArray.Count; i++)
             {
-                foreach (IEntry e in entryArrays[i])
+                foreach (IEntry e in contentArray[i])
                 {
                     // key for dictionary to match with files of same path
                     StringSegment key = e.IsDirectory() && e.Path.Length > 0 && e.Path[e.Path.Length - 1] == '/' ? new StringSegment(e.Path, 0, e.Path.Length - 1) : new StringSegment(e.Path);
@@ -199,7 +208,7 @@ namespace Lexical.FileSystem
                 }
             }
             // Return
-            return entries.Values.ToArray();
+            return new DirectoryContent(this, path, entries.Values.ToArray());
         }
 
         /// <inheritdoc/>
@@ -284,11 +293,9 @@ namespace Lexical.FileSystem
                 // ".."
                 if (name.Equals(StringSegment.DotDot))
                 {
-                    if (cursor.parent == null)
-                    {
-                        if (throwOnError) throw new DirectoryNotFoundException(path);
-                        return false;
-                    }
+                    if (throwOnError) throw new DirectoryNotFoundException(path);
+                    if (cursor.parent == null) return false;
+                    if (cursor.mount != null) mountpoints.Remove(cursor.mount);
                     cursor = cursor.parent;
                     continue;
                 }

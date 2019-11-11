@@ -234,7 +234,6 @@ namespace Lexical.FileSystem.Decoration
         /// <returns>a snapshot of file and directory entries</returns>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
-        /// <exception cref="DirectoryNotFoundException">The specified path is invalid, such as being on an unmapped drive.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
         /// <exception cref="NotSupportedException">The <see cref="IFileSystem"/> doesn't support browse</exception>
@@ -242,7 +241,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IEntry[] Browse(string path, IOption option = null)
+        public IDirectoryContent Browse(string path, IOption option = null)
         {
             // Assert supported
             if (!CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
@@ -253,27 +252,25 @@ namespace Lexical.FileSystem.Decoration
             if (fp == null) throw new ObjectDisposedException(nameof(FileProviderSystem));
             // Browse
             IDirectoryContents contents = fp.GetDirectoryContents(path);
-            if (contents.Exists)
+            // Not found
+            if (!contents.Exists) return new DirectoryNotFound(this, path);
+            // Convert result
+            StructList24<IEntry> list = new StructList24<IEntry>();
+            foreach (IFileInfo info in contents)
             {
-                // Convert result
-                StructList24<IEntry> list = new StructList24<IEntry>();
-                foreach (IFileInfo info in contents)
+                if (info.IsDirectory)
                 {
-                    if (info.IsDirectory)
-                    {
-                        IEntry e = new DirectoryEntry(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue, info.PhysicalPath);
-                        list.Add(e);
-                    }
-                    else
-                    {
-                        IEntry e = new FileEntry(this, String.IsNullOrEmpty(path) ? info.Name : path + "/" + info.Name, info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length, info.PhysicalPath);
-                        list.Add(e);
-                    }
+                    IEntry e = new DirectoryEntry(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue, info.PhysicalPath);
+                    list.Add(e);
                 }
-                return list.ToArray();
+                else
+                {
+                    IEntry e = new FileEntry(this, String.IsNullOrEmpty(path) ? info.Name : path + "/" + info.Name, info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length, info.PhysicalPath);
+                    list.Add(e);
+                }
             }
-
-            throw new DirectoryNotFoundException(path);
+            // Return contents
+            return new DirectoryContent(this, path, list.ToArray());
         }
 
         /// <summary>

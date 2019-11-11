@@ -177,7 +177,6 @@ namespace Lexical.FileSystem
         /// <param name="path">path to a directory or to a single file, "" is root, separator is "/"</param>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>a snapshot of file and directory entries</returns>
-        /// <exception cref="DirectoryNotFoundException"></exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> contains only white space, or contains one or more invalid characters</exception>
@@ -185,7 +184,7 @@ namespace Lexical.FileSystem
         /// <exception cref="UnauthorizedAccessException">The access requested is not permitted by the operating system for the specified path, such as when access is Write or ReadWrite and the file or directory is set for read-only access.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IEntry[] Browse(string path, IOption option = null)
+        public IDirectoryContent Browse(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -200,9 +199,9 @@ namespace Lexical.FileSystem
                 // Find entry
                 Node node = path == "" ? root : GetNode(path);
                 // Directory
-                if (node is Directory dir_) return dir_.ChildEntries;
+                if (node is Directory dir_) return new DirectoryContent(this, path, dir_.ChildEntries);
                 // Entry was not found, was not dir or file
-                throw new DirectoryNotFoundException(path);
+                return new DirectoryNotFound(this, path);
             }
             finally
             {

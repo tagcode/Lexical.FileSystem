@@ -34,9 +34,6 @@ namespace Lexical.FileSystem.Decoration
     /// </summary>
     public class FileSystemDecoration : FileSystemBase, IEnumerable<IFileSystem>, IFileSystemBrowse, IFileSystemObserve, IFileSystemOpen, IFileSystemDelete, IFileSystemFileAttribute, IFileSystemMove, IFileSystemCreateDirectory, IFileSystemMount, IPathInfo
     {
-        /// <summary>Zero entries</summary>
-        static IEntry[] noEntries = new IEntry[0];
-
         /// <summary>FileSystem specific components.</summary>
         protected internal ArrayList<Component> components = new ArrayList<Component>();
         /// <summary>Union of options.</summary>
@@ -231,7 +228,7 @@ namespace Lexical.FileSystem.Decoration
         /// <exception cref="PathTooLongException">The specified path, file name, or both exceed the system-defined maximum length. For example, on Windows-based platforms, paths must be less than 248 characters.</exception>
         /// <exception cref="InvalidOperationException">If <paramref name="path"/> refers to a non-file device, such as "con:", "com1:", "lpt1:", etc.</exception>
         /// <exception cref="ObjectDisposedException"/>
-        public IEntry[] Browse(string path, IOption option = null)
+        public IDirectoryContent Browse(string path, IOption option = null)
         {
             // Assert argument
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -248,7 +245,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert permission to browse
                     if (!Option.CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
                     // No entries
-                    return noEntries;
+                    return new DirectoryNotFound(this, path);
                 }
 
                 // One filesystem component
@@ -260,33 +257,35 @@ namespace Lexical.FileSystem.Decoration
                     if (!component.Options.CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
                     // Convert Path
                     String/*Segment*/ childPath;
-                    if (!component.Path.ParentToChild(path, out childPath)) return noEntries;
+                    if (!component.Path.ParentToChild(path, out childPath)) return new DirectoryNotFound(this, path);
                     // Browse
-                    IEntry[] childEntries = component.FileSystem.Browse(childPath, option.OptionIntersection(component.UnknownOptions));
+                    IDirectoryContent directoryContent = component.FileSystem.Browse(childPath, option.OptionIntersection(component.UnknownOptions));
+                    // Not found
+                    if (!directoryContent.Exists) return new DirectoryNotFound(this, path);
                     // Result array to be filled
-                    IEntry[] result = new IEntry[childEntries.Length];
+                    IEntry[] entries = new IEntry[directoryContent.Count];
                     // Is result array filled with null enties
                     int removedCount = 0;
                     // Decorate elements
-                    for (int i = 0; i < childEntries.Length; i++)
+                    for (int i = 0; i < directoryContent.Count; i++)
                     {
                         // Get entry
-                        IEntry e = childEntries[i];
+                        IEntry e = directoryContent[i];
                         // Convert path
                         String parentPath;
                         if (!component.Path.ChildToParent(e.Path, out parentPath)) { /* Path conversion failed. Omit entry. Remove it later */ removedCount++; continue; }
                         // Decorate
-                        result[i] = CreateEntry(e, sourceFileSystem, parentPath, component.Options);
+                        entries[i] = CreateEntry(e, sourceFileSystem, parentPath, component.Options);
                     }
                     // Remove null entries
                     if (removedCount > 0)
                     {
-                        IEntry[] newResult = new IEntry[result.Length - removedCount];
+                        IEntry[] newResult = new IEntry[entries.Length - removedCount];
                         int ix = 0;
-                        foreach (var e in result) if (e != null) newResult[ix++] = e;
-                        result = newResult;
+                        foreach (var e in entries) if (e != null) newResult[ix++] = e;
+                        entries = newResult;
                     }
-                    return result;
+                    return new DirectoryContent(this, path, entries);
                 }
 
                 // Many components
@@ -294,7 +293,7 @@ namespace Lexical.FileSystem.Decoration
                     // Assert can browse
                     if (!Option.CanBrowse || !option.CanBrowse(true)) throw new NotSupportedException(nameof(Browse));
                     // browse result of each filesystem
-                    StructList4<(Component, IEntry[])> entryArrays = new StructList4<(Component, IEntry[])>();
+                    StructList4<(Component, IDirectoryContent)> componentContents = new StructList4<(Component, IDirectoryContent)>();
                     // path exists and browse supported
                     bool exists = false, supported = false;
                     // Number of total entries
@@ -313,26 +312,29 @@ namespace Lexical.FileSystem.Decoration
                         try
                         {
                             // Browse
-                            IEntry[] component_entries = component.FileSystem.Browse(childPath, option.OptionIntersection(component.UnknownOptions));
-                            entryArrays.Add((component, component_entries));
-                            entryCount += component_entries.Length;
-                            exists = true; supported = true;
+                            IDirectoryContent directoryContent = component.FileSystem.Browse(childPath, option.OptionIntersection(component.UnknownOptions));
+                            if (directoryContent.Exists)
+                            {
+                                componentContents.Add((component, directoryContent));
+                                entryCount += directoryContent.Count;
+                                exists = true;
+                            }
+                            supported = true;
                         }
-                        catch (DirectoryNotFoundException) { supported = true; }
                         catch (NotSupportedException) { }
                     }
                     if (!supported) throw new NotSupportedException(nameof(Browse));
-                    if (!exists) throw new DirectoryNotFoundException(path);
+                    if (!exists) return new DirectoryNotFound(this, path);
 
                     // Create list for result
                     List<IEntry> result = new List<IEntry>(entryCount);
 
-                    for (int i = 0; i < entryArrays.Count; i++)
+                    for (int i = 0; i < componentContents.Count; i++)
                     {
                         // Get component and result array
-                        (Component c, IEntry[] array) = entryArrays[i];
+                        (Component c, IDirectoryContent entries) = componentContents[i];
                         // Prune and decorate
-                        foreach (IEntry e in array)
+                        foreach (IEntry e in entries)
                         {
                             // Remove already existing entry
                             if (filenames != null && !filenames.Add(e.Name)) continue;
@@ -347,14 +349,14 @@ namespace Lexical.FileSystem.Decoration
                     }
 
                     // Return as array
-                    return result.ToArray();
+                    return new DirectoryContent(this, path, result);
                 }
             }
             // Update references in the expception and let it fly
             catch (FileSystemException e) when (FileSystemExceptionUtil.Set(e, sourceFileSystem, path))
             {
                 // Never goes here
-                return noEntries;
+                return new DirectoryNotFound(this, path);
             }
         }
 

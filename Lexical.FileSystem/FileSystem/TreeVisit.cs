@@ -63,18 +63,18 @@ namespace Lexical.FileSystem
                     int startIndex = queue.Count;
                     try
                     {
-                        // Browse children
-                        IEntry[] children = filesystem.Browse(line.Entry.Path, option);
+                        // Browse
+                        IDirectoryContent content = filesystem.Browse(line.Entry.Path, option);
                         // Assert children don't refer to the parent of the parent
-                        foreach (IEntry child in children) if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
+                        foreach (IEntry child in content) if (line.Entry.Path.StartsWith(child.Path)) throw new IOException($"{child.Path} cannot be child of {line.Entry.Path}");
                         // Bitmask when this level continues
                         ulong levelContinuesBitMask = line.LevelContinuesBitMask | (line.Level < 64 ? 1UL << line.Level : 0UL);
                         // Add children in reverse order
-                        foreach (IEntry child in children) queue.Add(new Line(child, line.Level + 1, levelContinuesBitMask));
+                        foreach (IEntry child in content) queue.Add(new Line(child, line.Level + 1, levelContinuesBitMask));
                         // Sort the entries that were added
-                        if (children.Length>1) sorter.QuickSortInverse(ref queue, startIndex, queue.Count - 1);
+                        if (content.Count>1) sorter.QuickSortInverse(ref queue, startIndex, queue.Count - 1);
                         // Last entry doesn't continue on its level.
-                        if (children.Length>=1) queue[startIndex] = queue[startIndex].NewLevelContinuesBitMask(line.LevelContinuesBitMask);
+                        if (content.Count>=1) queue[startIndex] = queue[startIndex].NewLevelContinuesBitMask(line.LevelContinuesBitMask);
                     }
                     catch (Exception e)
                     {

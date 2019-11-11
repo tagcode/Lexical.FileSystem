@@ -19,11 +19,6 @@ namespace Lexical.FileSystem
     public class EmbeddedFileSystem : FileSystemBase, IFileSystemBrowse, IFileSystemOpen, IPathInfo
     {
         /// <summary>
-        /// Zero entries.
-        /// </summary>
-        protected internal static IEntry[] NoEntries = new IEntry[0];
-
-        /// <summary>
         /// Associated Assembly
         /// </summary>
         public readonly Assembly Assembly;
@@ -31,11 +26,11 @@ namespace Lexical.FileSystem
         /// <summary>
         /// Snapshot of entries.
         /// </summary>
-        protected IEntry[] entries;
+        protected IDirectoryContent entries;
         /// <summary>
         /// Lazy construction of entries.
         /// </summary>
-        protected IEntry[] Entries => entries ?? (entries = CreateEntries());
+        protected IDirectoryContent Entries => entries ?? (entries = CreateEntries());
         /// <summary>
         /// Snapshot of entries as map
         /// </summary>
@@ -83,7 +78,7 @@ namespace Lexical.FileSystem
         /// Create a snapshot of entries.
         /// </summary>
         /// <returns></returns>
-        protected IEntry[] CreateEntries()
+        protected IDirectoryContent CreateEntries()
         {
             string[] names = Assembly.GetManifestResourceNames();
 
@@ -99,7 +94,7 @@ namespace Lexical.FileSystem
             {
                 result[i] = new FileEntry(this, names[i], names[i], writetime, DateTimeOffset.MinValue, -1L, null);
             }
-            return result;
+            return new DirectoryContent(this, "", result);
         }
 
         /// <summary>
@@ -112,12 +107,12 @@ namespace Lexical.FileSystem
         /// <param name="path"></param>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns></returns>
-        public IEntry[] Browse(string path, IOption option = null)
+        public IDirectoryContent Browse(string path, IOption option = null)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (IsDisposed) throw new ObjectDisposedException(GetType().FullName);
             if (path == "") return entries ?? (entries = CreateEntries());
-            return NoEntries;
+            return new DirectoryNotFound(this, path);
         }
 
         /// <summary>

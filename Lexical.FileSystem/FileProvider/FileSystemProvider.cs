@@ -66,27 +66,21 @@ namespace Lexical.FileSystem.Decoration
             if (!options.CanBrowse) throw new NotSupportedException(nameof(GetDirectoryContents));
             try
             {
-                try
-                {
-                    // Read entry.
-                    IEntry entry = FileSystem.GetEntry(subpath, token);
-                    // Directory doesn't exist
-                    if (entry == null || !entry.IsDirectory()) return NotFoundDirectoryContents.Singleton;
-                }
-                catch (NotSupportedException) { /*GetEntry is not supported, try Browse() next*/ }
-                // Browse
-                IEntry[] entries = FileSystem.Browse(subpath, token);
-                // Create infos
-                IFileInfo[] infos = new IFileInfo[entries.Length];
-                for (int i = 0; i < entries.Length; i++) infos[i] = new FileInfo(FileSystem, entries[i], options, token);
-                // Wrap
-                return new DirectoryContents(infos);
-            }
-            catch (DirectoryNotFoundException)
-            {
+                // Read entry.
+                IEntry entry = FileSystem.GetEntry(subpath, token);
                 // Directory doesn't exist
-                return NotFoundDirectoryContents.Singleton;
+                if (entry == null || !entry.IsDirectory()) return NotFoundDirectoryContents.Singleton;
             }
+            catch (NotSupportedException) { /*GetEntry is not supported, try Browse() next*/ }
+            // Browse
+            IDirectoryContent entries = FileSystem.Browse(subpath, token);
+            //
+            if (!entries.Exists) return NotFoundDirectoryContents.Singleton;
+            // Create infos
+            IFileInfo[] infos = new IFileInfo[entries.Count];
+            for (int i = 0; i < entries.Count; i++) infos[i] = new FileInfo(FileSystem, entries[i], options, token);
+            // Wrap
+            return new DirectoryContents(infos);
         }
 
         /// <summary>
