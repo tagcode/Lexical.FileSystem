@@ -28,11 +28,37 @@ Contents:
 IFileSystem fs = new FileSystem(@"C:\Temp\");
 ```
 
-*FileSystem* can be browsed.
+**.Browse(<i>path</i>)** returns a snapshot of directory contents. 
 
 ```csharp
-foreach (var entry in fs.Browse(""))
+IDirectoryContent contents = fs.Browse("C:/Windows/");
+```
+
+*IDirectoryContent* is enumerable *IEnumerable&lt;IEntry&gt;*.
+
+```csharp
+foreach (IEntry entry in fs.Browse("C:/Windows/"))
     Console.WriteLine(entry.Path);
+```
+
+**.AssertExists()** asserts that directory exists. It throws *DirectoryNotFound* if not found.
+
+```csharp
+foreach (var entry in fs.Browse("C:/Windows/").AssertExists())
+    Console.WriteLine(entry.Path);
+```
+
+**.GetEntry(<i>path</i>)** reads a single file or directory entry. Returns null if entry is not found.
+
+```csharp
+IEntry e = FileSystem.OS.GetEntry("C:/Windows/win.ini");
+Console.WriteLine(e.Path);
+```
+
+**.AssertExists()** asserts that null is not returned. Throws *FileNotFoundException* if entry was not found.
+
+```csharp
+IEntry e = FileSystem.OS.GetEntry("C:/Windows/win.ini").AssertExists();
 ```
 
 Files can be opened for reading.

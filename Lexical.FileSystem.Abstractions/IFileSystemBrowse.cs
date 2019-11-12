@@ -68,27 +68,6 @@ namespace Lexical.FileSystem
         /// <exception cref="ObjectDisposedException"/>
         IEntry GetEntry(string path, IOption option = null);
     }
-
-    /// <summary>
-    /// Browse result. Result is a snapshot of entries. The contents are immutable and reflect the contents at the time of browsing.
-    /// </summary>
-    public interface IDirectoryContent : IReadOnlyList<IEntry>
-    {
-        /// <summary>
-        /// The filesystem where the browse was issued.
-        /// </summary>
-        IFileSystem FileSystem { get; }
-
-        /// <summary>
-        /// The browsed path at <see cref="FileSystem"/>.
-        /// </summary>
-        string Path { get; }
-
-        /// <summary>
-        /// <see cref="Path"/> exists.
-        /// </summary>
-        bool Exists { get; }
-    }
     // </IFileSystemBrowse>
 
     // <IFileSystemBrowseAsync>
@@ -138,5 +117,27 @@ namespace Lexical.FileSystem
     }
     // </IFileSystemBrowseAsync>
 
+    // <IDirectoryContent>
+    /// <summary>
+    /// Browse result. Result is a snapshot of entries. The contents are immutable and reflect the contents at the time of browsing.
+    /// </summary>
+    public interface IDirectoryContent : IReadOnlyList<IEntry>
+    {
+        /// <summary>
+        /// The filesystem where the browse was issued.
+        /// </summary>
+        IFileSystem FileSystem { get; }
+
+        /// <summary>
+        /// The browsed path at <see cref="FileSystem"/>.
+        /// </summary>
+        string Path { get; }
+
+        /// <summary>
+        /// <see cref="Path"/> exists.
+        /// </summary>
+        bool Exists { get; }
+    }
+    // </IDirectoryContent>
 
 }
