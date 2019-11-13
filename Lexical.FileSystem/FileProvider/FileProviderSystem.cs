@@ -260,12 +260,12 @@ namespace Lexical.FileSystem.Decoration
             {
                 if (info.IsDirectory)
                 {
-                    IEntry e = new DirectoryEntry(this, String.IsNullOrEmpty(path) ? info.Name + "/" : path + "/" + info.Name + "/", info.Name, info.LastModified, DateTimeOffset.MinValue, info.PhysicalPath);
+                    IEntry e = new DirectoryEntry(this, String.IsNullOrEmpty(path) ? info.Name + "/" : (path.EndsWith("/") ?path+info.Name+"/":path+"/"+info.Name+"/"), info.Name, info.LastModified, DateTimeOffset.MinValue, info.PhysicalPath);
                     list.Add(e);
                 }
                 else
                 {
-                    IEntry e = new FileEntry(this, String.IsNullOrEmpty(path) ? info.Name : path + "/" + info.Name, info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length, info.PhysicalPath);
+                    IEntry e = new FileEntry(this, String.IsNullOrEmpty(path) ? info.Name : (path.EndsWith("/") ? path + info.Name : path + "/" + info.Name), info.Name, info.LastModified, DateTimeOffset.MinValue, info.Length, info.PhysicalPath);
                     list.Add(e);
                 }
             }
