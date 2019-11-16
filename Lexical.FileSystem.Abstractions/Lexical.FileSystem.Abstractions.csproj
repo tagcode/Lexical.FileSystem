@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>N:\Lexical\FileSystem\Lexical.FileSystem.Abstractions\Lexical.FileSystem.Abstractions.xml</DocumentationFile>
+    <DocumentationFile>Lexical.FileSystem.Abstractions.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
