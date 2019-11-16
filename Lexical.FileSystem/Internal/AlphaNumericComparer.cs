@@ -427,21 +427,35 @@ namespace Lexical.FileSystem.Internal
                     // Compare numbers
                     if (x.Kind == Kind.Numeric)
                     {
-                        // decimal
+                        // Get culture
+                        CultureInfo ci = CultureInfo ?? CultureInfoFunc();
+                        // Ordinal comparison
+                        if (x.Length >= 28 || y.Length >= 28)
+                        {
+                            // Min Length
+                            int minLength = x.Length < y.Length ? x.Length : y.Length;
+                            // Compare common characters
+                            d = string.Compare(x.String, x.Start, y.String, y.Start, minLength, StringComparison.Ordinal);
+                            // Difference
+                            if (d != 0) return d;
+                            // Compare by length again
+                            return x.Length - y.Length;
+                        }
+                        // Decimal comparison
                         if (x.Length >= 18 || y.Length >= 18)
                         {
                             // Parse
-                            decimal x_value = decimal.Parse(x), y_value = decimal.Parse(y);
+                            decimal x_value = decimal.Parse(x, ci), y_value = decimal.Parse(y, ci);
                             // Compare
                             d = x_value.CompareTo(y_value);
                             // Delta
                             if (d != 0) return d;
                         }
                         else
-                        // Int64
+                        // Int64 comparison
                         {
                             // Parse
-                            long x_value = long.Parse(x), y_value = long.Parse(y);
+                            long x_value = long.Parse(x, ci), y_value = long.Parse(y, ci);
                             // Compare
                             d = x_value.CompareTo(y_value);
                             // Delta
