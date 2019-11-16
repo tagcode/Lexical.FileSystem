@@ -1,146 +1,499 @@
 ﻿// --------------------------------------------------------
 // Copyright:      Toni Kalajainen
-// Date:           17.2.2019
+// Date:           16.11.2019
 // Url:            http://lexical.fi
 // --------------------------------------------------------
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
+using System.Globalization;
+using System.Text;
 
 namespace Lexical.FileSystem.Internal
 {
     /// <summary>
     /// Alpha numeric string comparer. 
-    /// Considers numeric character sequences as numbers which are compared with number sorters.
+    /// 
+    /// Considers number sequences and text sequences as one individual comparable tokens .
     /// 
     /// For example: strings "a1", "a10", "a9" would be sorted to "a1", "a9", "a10".
+    /// 
+    /// Decimal separators are not supported, as they could be mixed with other separators.
+    /// Exponents are not supported.
     /// </summary>
     public class AlphaNumericComparer : IComparer, IComparer<string>
     {
-        readonly static AlphaNumericComparer instance = new AlphaNumericComparer();
+        static AlphaNumericComparer _InvariantCulture = new AlphaNumericComparer(Token.Comparer.InvariantCulture);
+        static AlphaNumericComparer _InvariantCulture_IgnoreCase = new AlphaNumericComparer(Token.Comparer.InvariantCulture_IgnoreCase);
+        static AlphaNumericComparer _CurrentCulture = new AlphaNumericComparer(Token.Comparer.CurrentCulture);
+        static AlphaNumericComparer _CurrentCulture_IgnoreCase = new AlphaNumericComparer(Token.Comparer.CurrentCulture_IgnoreCase);
+        static AlphaNumericComparer _CurrentUICulture = new AlphaNumericComparer(Token.Comparer.CurrentUICulture);
+        static AlphaNumericComparer _CurrentUICulture_IgnoreCase = new AlphaNumericComparer(Token.Comparer.CurrentUICulture_IgnoreCase);
 
-        /// <summary>
-        /// Singleton instance
-        /// </summary>
-        public static AlphaNumericComparer Default => instance;
+        /// <summary>Comparer</summary>
+        public static AlphaNumericComparer InvariantCulture => _InvariantCulture;
+        /// <summary>Comparer</summary>
+        public static AlphaNumericComparer InvariantCultureIgnoreCase => _InvariantCulture_IgnoreCase;
+        /// <summary>Comparer</summary>
+        public static AlphaNumericComparer CurrentCulture => _CurrentCulture;
+        /// <summary>Comparer</summary>
+        public static AlphaNumericComparer CurrentCultureIgnoreCase => _CurrentCulture_IgnoreCase;
+        /// <summary>Comparer</summary>
+        public static AlphaNumericComparer CurrentUICulture => _CurrentUICulture;
+        /// <summary>Comparer</summary>
+        public static AlphaNumericComparer CurrentUICulture_IgnoreCase => _CurrentUICulture_IgnoreCase;
 
-        /// <summary>
-        /// Pattern that classifies a substring either as number or text groups.
-        /// </summary>
-        static Regex pattern = new Regex("(-?[0-9]+)|([^0-9]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        /// <summary>Singleton instance</summary>
+        public static AlphaNumericComparer Default => _InvariantCulture;
 
-        enum Kind { Unknown = 0, Number = 1, Text = 2 }
+        /// <summary>Token specific comparer</summary>
+        IComparer<Token> tokenComparer;
 
-        /// <summary>
-        /// Placeholder for making text literal comparisons.
-        /// 
-        /// Override this to change behaviour.
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="x_ix"></param>
-        /// <param name="y"></param>
-        /// <param name="y_ix"></param>
-        /// <param name="length"></param>
-        /// <returns></returns>
-        protected virtual int StringCompare(string x, int x_ix, string y, int y_ix, int length)
-            => string.Compare(x, x_ix, y, y_ix, length, StringComparison.InvariantCulture);
+        /// <summary>Create alphanumeric comparer</summary>
+        /// <param name="tokenComparer"></param>
+        public AlphaNumericComparer(IComparer<Token> tokenComparer)
+        {
+            this.tokenComparer = tokenComparer ?? throw new ArgumentNullException(nameof(tokenComparer));
+        }
 
-        /// <summary>
-        /// Compare uncasted objects. Calls ToString().
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns></returns>
+        /// <summary>Compare uncasted objects. Calls ToString().</summary>
         public int Compare(object x, object y)
             => Compare(x?.ToString(), y?.ToString());
 
-        /// <summary>
-        /// Compare strings.
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns></returns>
+        /// <summary>Compare strings.</summary>
         public int Compare(string x, string y)
         {
-            if (x == null && y == null) return 0;
-            if (y == null) return 1;
-            if (x == null) return -1;
+            // Token enumerators
+            TokenEnumerator x_etor = new TokenEnumerator(x), y_etor = new TokenEnumerator(y);
 
-            MatchCollection x_matches = pattern.Matches(x), y_matches = pattern.Matches(y);
-            int min_count = Math.Min(x_matches.Count, y_matches.Count);
-            int max_count = Math.Max(x_matches.Count, y_matches.Count);
-            for (int ix = 0; ix < min_count; ix++)
+            // Has next tokens
+            bool x_next, y_next;
+            for (x_next = x_etor.MoveNext(), y_next = y_etor.MoveNext(); x_next && y_next; x_next = x_etor.MoveNext(), y_next = y_etor.MoveNext())
             {
-                // Get the next match
-                Match x_match = x_matches[ix], y_match = y_matches[ix];
+                // Compare tokens
+                int d = tokenComparer.Compare(x_etor.Current, y_etor.Current);
+                // Difference
+                if (d != 0) return d;
+            }
 
-                // Test if capture was ok
-                bool x_ok = x_match.Success, y_ok = y_match.Success;
-                if (!x_ok && !y_ok) return 0;
-                if (!x_ok) return -1;
-                if (!y_ok) return 1;
+            // Has more x, end of y.
+            if (x_next && !y_next) return 1;
+            // End of x, has more x.
+            if (!x_next && y_next) return -1;
+            // Equals
+            return 0;
+        }
 
-                // Put capture into enumeration
-                Kind x_kind = x_match.Groups[1].Success ? Kind.Number : x_match.Groups[2].Success ? Kind.Text : Kind.Unknown;
-                Kind y_kind = y_match.Groups[1].Success ? Kind.Number : y_match.Groups[2].Success ? Kind.Text : Kind.Unknown;
-                if (x_kind == Kind.Unknown || y_kind == Kind.Unknown) return 0;
-                if (x_kind > y_kind) return 1;
-                if (x_kind < y_kind) return -1;
+        /// <summary>token enumerable</summary>
+        struct TokenEnumerable : IEnumerable<Token>
+        {
+            String str;
+            public TokenEnumerable(String str)
+            {
+                this.str = str;
+            }
+            public IEnumerator<Token> GetEnumerator() => new TokenEnumerator(str);
+            IEnumerator IEnumerable.GetEnumerator() => new TokenEnumerator(str);
+        }
 
-                // Compare strings
-                if (x_kind == Kind.Text)
+        struct TokenEnumerator : IEnumerator<Token>
+        {
+            String str;
+            int ix;
+            Token current;
+            public Token Current => current;
+            object IEnumerator.Current => current;
+
+            public TokenEnumerator(String str)
+            {
+                this.str = str;
+                this.ix = -1;
+                this.current = new Token(Kind.Other, "");
+            }
+
+            public void Dispose()
+                => str = null;
+
+            public void Reset()
+            {
+                this.ix = -1;
+                this.current = new Token(Kind.Other, "");
+            }
+
+            enum State
+            {
+                Unset = 0,
+                CouldBeNumber = 20,
+                Number = 21,
+                Text = 30,
+                Other = 40
+            }
+
+            public bool MoveNext()
+            {
+                // Null
+                if (str == null) return false;
+
+                // End of string
+                if (++ix >= str.Length) return false;
+
+                // Start index, end index (exclusive)
+                int startIx = ix, endIx = ix;
+
+                // Unset state
+                State state = State.Unset;
+
+                // Move until end or change of token
+                while (ix < str.Length)
                 {
-                    // Take captured segments
-                    Group x_group = x_match.Groups[2], y_group = y_match.Groups[2];
-                    int len = Math.Min(x_group.Length, y_group.Length);
+                    // Get char and move
+                    char c = str[ix++];
 
-                    // Compare segments
-                    int c = StringCompare(x, x_group.Index, y, y_group.Index, len);
+                    // Start of token
+                    if (state == State.Unset)
+                    {
+                        // Character
+                        if (char.IsLetter(c)) { endIx = ix; state = State.Text; continue; }
+                        // Number
+                        if (char.IsNumber(c)) { endIx = ix; state = State.Number; continue; }
+                        // - / +
+                        if (c == '-' || c == '+') { endIx = ix; state = State.CouldBeNumber; continue; }
 
-                    // Text comparison was equal, compare lengths
-                    if (c == 0) c = Math.Sign(x_group.Length - y_group.Length);
+                        endIx = ix;
+                        state = State.Other;
+                        continue;
+                    }
 
-                    // Was there discrepancy
-                    if (c != 0) return c;
+                    // +/- [?]
+                    if (state == State.CouldBeNumber)
+                    {
+                        if (char.IsNumber(c)) { endIx = ix; state = State.Number; continue; }
+                        state = State.Other;
+                    }
+
+                    // 0-9
+                    if (state == State.Number)
+                    {
+                        if (char.IsNumber(c)) { endIx = ix; continue; }
+                        break;
+                    }
+
+                    // a-zA-Z + others
+                    if (state == State.Text)
+                    {
+                        if (char.IsLetter(c)) { endIx = ix; continue; }
+                        break;
+                    }
+
+                    // Other
+                    {
+                        if (char.IsLetter(c) || char.IsNumber(c)) break;
+                        endIx = ix;
+                        continue;
+                    }
                 }
-                else
+
+                // Got nothing
+                if (state == State.Unset) { current = Token.Empty; return false; }
+                // Move cursor
+                ix = endIx - 1;
+                // Choose kind
+                Kind kind = state == State.CouldBeNumber || state == State.Other ? Kind.Other :
+                    state == State.Text ? Kind.Text :
+                    Kind.Numeric;
+                // Create current token
+                current = new Token(kind, str, startIx, endIx - startIx);
+                // Ok.
+                return true;
+            }
+        }
+
+        /// <summary>Token kind</summary>
+        public enum Kind : int
+        {
+            /// <summary>Numeric segment</summary>
+            Numeric = 1,
+            /// <summary>Text segment</summary>
+            Text = 2,
+            /// <summary>Other characters</summary>
+            Other = 3
+        }
+
+        /// <summary>Token info</summary>
+        public struct Token : IEquatable<Token>
+        {
+            /// <summary>Character at <paramref name="ix"/></summary>
+            public char this[int ix] => String[Start + ix];
+            /// <summary>Empty string ""</summary>
+            public static Token Empty = new Token(Kind.Other, "");
+
+            /// <summary>Token kind</summary>
+            public readonly Kind Kind;
+
+            /// <summary>Start index</summary>
+            public readonly int Start;
+            /// <summary>Length</summary>
+            public readonly int Length;
+            /// <summary>String</summary>
+            public readonly string String;
+
+            /// <summary>Implicit converter</summary>
+            public static implicit operator String(Token str) => str.String.Substring(str.Start, str.Length);
+
+            /// <summary>Create token</summary>
+            /// <param name="kind"></param>
+            /// <param name="str"></param>
+            public Token(Kind kind, string str)
+            {
+                this.Kind = kind;
+                this.String = str ?? throw new ArgumentNullException(nameof(str));
+                this.Start = 0;
+                this.Length = str.Length;
+            }
+
+            /// <summary>
+            /// Create span of characters.
+            /// </summary>
+            /// <param name="kind"></param>
+            /// <param name="str"></param>
+            /// <param name="start"></param>
+            /// <param name="length"></param>
+            public Token(Kind kind, string str, int start, int length)
+            {
+                this.Kind = kind;
+                this.String = str ?? throw new ArgumentNullException(nameof(str));
+                if (start < 0 || start > str.Length) throw new ArgumentOutOfRangeException(nameof(start));
+                if (length < 0 || start + length > str.Length) throw new ArgumentOutOfRangeException(nameof(length));
+                this.Start = start;
+                this.Length = length;
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                if (obj is Token ss)
                 {
-                    // Capture number groups
-                    string x_num = x_match.Groups[1].Value, y_num = y_match.Groups[1].Value;
-
-                    if (x_num.Length >= 18 || y_num.Length >= 18)
-                    // decimal
+                    if (ss.Kind != Kind) return false;
+                    if (ss.String == String && ss.Start == Start && ss.Length == Length) return true;
+                    //if (ss.hashcode != hashcode) return false;
+                    if (ss.Length != Length) return false;
+                    for (int i = 0; i < Length; i++)
                     {
-                        // Parse
-                        decimal x_value = decimal.Parse(x_num), y_value = decimal.Parse(y_num);
-
-                        // Compare
-                        int c = x_value.CompareTo(y_value);
-
-                        // Discrepancy
-                        if (c != 0) return c;
+                        char c1 = String[Start + i], c2 = ss.String[ss.Start + i];
+                        if (c1 != c2) return false;
                     }
-                    else
-                    // Int64
+                    return true;
+                }
+                return false;
+            }
+
+            /// <summary></summary>
+            public static bool operator ==(Token a, Token b)
+            {
+                if (a.Kind != b.Kind) return false;
+                if (a.String == b.String && a.Start == b.Start && a.Length == b.Length) return true;
+                //if (ss.hashcode != hashcode) return false;
+                if (a.Length != b.Length) return false;
+                for (int i = 0; i < a.Length; i++)
+                {
+                    char c1 = a.String[a.Start + i], c2 = b.String[b.Start + i];
+                    if (c1 != c2) return false;
+                }
+                return true;
+            }
+
+            /// <summary></summary>
+            public static bool operator !=(Token a, Token b)
+            {
+                if (a.Kind == b.Kind) return false;
+                if (a.String == b.String && a.Start == b.Start && a.Length == b.Length) return false;
+                //if (ss.hashcode != hashcode) return false;
+                if (a.Length != b.Length) return true;
+                for (int i = 0; i < a.Length; i++)
+                {
+                    char c1 = a.String[a.Start + i], c2 = b.String[b.Start + i];
+                    if (c1 != c2) return true;
+                }
+                return false;
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                // Calculate hashcode from content
+                int hash = unchecked((int)2166136261);
+                for (int i = 0; i < Length; i++)
+                {
+                    hash ^= (int)String[i + Start];
+                    hash *= 16777619;
+                }
+                return hash;
+            }
+
+            /// <summary>Append to string builder</summary>
+            public void AppendTo(StringBuilder sb) => sb.Append(String, Start, Length);
+            /// <inheritdoc/>
+            public override string ToString() => String.Substring(Start, Length);
+            /// <inheritdoc/>
+            public bool Equals(Token other) => EqualityComparer.Instance.Equals(this, other);
+
+            /// <summary>Order comparer</summary>
+            public class Comparer : IComparer<Token>
+            {
+                static Comparer _InvariantCulture = new Comparer(CultureInfo.InvariantCulture, ignoreCase: false);
+                static Comparer _InvariantCulture_IgnoreCase = new Comparer(CultureInfo.InvariantCulture, ignoreCase: true);
+                static Comparer _CurrentCulture = new Comparer(() => CultureInfo.CurrentCulture, ignoreCase: false);
+                static Comparer _CurrentCulture_IgnoreCase = new Comparer(() => CultureInfo.CurrentCulture, ignoreCase: true);
+                static Comparer _CurrentUICulture = new Comparer(() => CultureInfo.CurrentUICulture, ignoreCase: false);
+                static Comparer _CurrentUICulture_IgnoreCase = new Comparer(() => CultureInfo.CurrentUICulture, ignoreCase: true);
+
+                /// <summary>Comparer</summary>
+                public static Comparer InvariantCulture => _InvariantCulture;
+                /// <summary>Comparer</summary>
+                public static Comparer InvariantCulture_IgnoreCase => _InvariantCulture_IgnoreCase;
+                /// <summary>Comparer</summary>
+                public static Comparer CurrentCulture => _CurrentCulture;
+                /// <summary>Comparer</summary>
+                public static Comparer CurrentCulture_IgnoreCase => _CurrentCulture_IgnoreCase;
+                /// <summary>Comparer</summary>
+                public static Comparer CurrentUICulture => _CurrentUICulture;
+                /// <summary>Comparer</summary>
+                public static Comparer CurrentUICulture_IgnoreCase => _CurrentUICulture_IgnoreCase;
+
+                /// <summary>Culture Info function</summary>
+                Func<CultureInfo> CultureInfoFunc;
+                /// <summary>Culture Info</summary>
+                CultureInfo CultureInfo;
+                /// <summary>Ignore Case</summary>
+                public readonly bool IgnoreCase;
+
+                /// <summary>Create comparer</summary>
+                /// <param name="cultureInfo"></param>
+                /// <param name="ignoreCase"></param>
+                public Comparer(CultureInfo cultureInfo, bool ignoreCase)
+                {
+                    this.CultureInfoFunc = null;
+                    this.CultureInfo = cultureInfo ?? throw new ArgumentNullException(nameof(cultureInfo));
+                    this.IgnoreCase = ignoreCase;
+                }
+
+                /// <summary>Create comparer</summary>
+                /// <param name="cultureInfoFunc"></param>
+                /// <param name="ignoreCase"></param>
+                public Comparer(Func<CultureInfo> cultureInfoFunc, bool ignoreCase)
+                {
+                    this.CultureInfoFunc = cultureInfoFunc ?? throw new ArgumentNullException(nameof(cultureInfoFunc));
+                    this.CultureInfo = null;
+                    this.IgnoreCase = ignoreCase;
+                }
+
+                /// <summary>Compare tokens</summary>
+                public int Compare(Token x, Token y)
+                {
+                    // Compare kinds
+                    int d = ((int)x.Kind) - ((int)y.Kind);
+                    if (d != 0) return d;
+
+                    // Zero length
+                    if (x.Length == 0 || y.Length == 0)
+                        return x.Length - y.Length;
+
+                    // Compare strings
+                    if (x.Kind == Kind.Text)
                     {
-                        // Parse
-                        long x_value = long.Parse(x_num), y_value = long.Parse(y_num);
-
-                        // Compare
-                        int c = x_value.CompareTo(y_value);
-
-                        // Discrepancy
-                        if (c != 0) return c;
+                        // Min Length
+                        int minLength = x.Length < y.Length ? x.Length : y.Length;
+                        // Compare common characters
+                        d = string.Compare(x.String, x.Start, y.String, y.Start, minLength, IgnoreCase, CultureInfo ?? CultureInfoFunc());
+                        // Difference
+                        if (d != 0) return d;
+                        // Compare by length again
+                        return x.Length - y.Length;
                     }
+
+                    // Compare other string sequences with ordinal comparer
+                    if (x.Kind == Kind.Other)
+                    {
+                        // Min Length
+                        int minLength = x.Length < y.Length ? x.Length : y.Length;
+                        // Compare common characters
+                        d = string.Compare(x.String, x.Start, y.String, y.Start, minLength, StringComparison.Ordinal);
+                        // Difference
+                        if (d != 0) return d;
+                        // Compare by length again
+                        return x.Length - y.Length;
+                    }
+
+                    // Compare numbers
+                    if (x.Kind == Kind.Numeric)
+                    {
+                        // decimal
+                        if (x.Length >= 18 || y.Length >= 18)
+                        {
+                            // Parse
+                            decimal x_value = decimal.Parse(x), y_value = decimal.Parse(y);
+                            // Compare
+                            d = x_value.CompareTo(y_value);
+                            // Delta
+                            if (d != 0) return d;
+                        }
+                        else
+                        // Int64
+                        {
+                            // Parse
+                            long x_value = long.Parse(x), y_value = long.Parse(y);
+                            // Compare
+                            d = x_value.CompareTo(y_value);
+                            // Delta
+                            if (d != 0) return d;
+                        }
+                        // Compare by length again
+                        return x.Length - y.Length;
+                    }
+
+                    // Shouldn't go here
+                    return 0;
                 }
             }
 
-            // One of the strings still have values
-            if (x_matches.Count < y_matches.Count) return -1;
-            if (x_matches.Count > y_matches.Count) return 1;
+            /// <summary>EqualityComparer</summary>
+            public class EqualityComparer : IEqualityComparer<Token>
+            {
+                /// <summary>Singleton instance</summary>
+                private static EqualityComparer instance => new EqualityComparer();
+                /// <summary>Singleton instance</summary>
+                public static EqualityComparer Instance => instance;
 
-            return 0;
+                /// <summary>Compare for equal content</summary>
+                public bool Equals(Token x, Token y)
+                {
+                    // Check kind
+                    if (x.Kind != y.Kind) return false;
+
+                    // Check for content equality
+                    if (x.String == y.String && x.Start == y.Start && x.Length == y.Length) return true;
+
+                    // Compare hashcode
+                    //if (x.hashcode != y.hashcode) return false;
+
+                    // Compare lengths
+                    if (x.Length != y.Length) return false;
+
+                    // Compare characters
+                    for (int i = 0; i < x.Length; i++)
+                    {
+                        char c1 = x.String[x.Start + i], c2 = y.String[y.Start + i];
+                        if (c1 != c2) return false;
+                    }
+
+                    return true;
+                }
+
+                /// <summary>Calculate hashcode</summary>
+                public int GetHashCode(Token obj) => obj.GetHashCode();
+            }
         }
+
+
     }
 }

@@ -10,9 +10,9 @@ using System.Text;
 namespace Lexical.FileSystem.Internal
 {
     /// <summary>
-    /// Span of characters of a <see cref="String"/>.
+    /// Span of characters.
     /// 
-    /// Used as workaround for missing Span class in .NET Standard.
+    /// Used due to lack of Span in .NET Standard 2.0.
     /// </summary>
     public struct StringSegment : IEquatable<StringSegment>
     {
@@ -82,6 +82,34 @@ namespace Lexical.FileSystem.Internal
                     if (c1 != c2) return false;
                 }
                 return true;
+            }
+            return false;
+        }
+
+        /// <summary></summary>
+        public static bool operator ==(StringSegment a, StringSegment b)
+        {
+            if (a.String == b.String && a.Start == b.Start && a.Length == b.Length) return true;
+            //if (ss.hashcode != hashcode) return false;
+            if (a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++)
+            {
+                char c1 = a.String[a.Start + i], c2 = b.String[b.Start + i];
+                if (c1 != c2) return false;
+            }
+            return true;
+        }
+
+        /// <summary></summary>
+        public static bool operator !=(StringSegment a, StringSegment b)
+        {
+            if (a.String == b.String && a.Start == b.Start && a.Length == b.Length) return false;
+            //if (ss.hashcode != hashcode) return false;
+            if (a.Length != b.Length) return true;
+            for (int i = 0; i < a.Length; i++)
+            {
+                char c1 = a.String[a.Start + i], c2 = b.String[b.Start + i];
+                if (c1 != c2) return true;
             }
             return false;
         }

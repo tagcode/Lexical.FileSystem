@@ -3157,7 +3157,6 @@
             <param name="path">path to directory, "" is root, separator is "/"</param>
             <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
             <returns>a snapshot of file and directory entries</returns>
-            <exception cref="T:System.IO.DirectoryNotFoundException"></exception>
             <exception cref="T:System.IO.IOException">On unexpected IO error</exception>
             <exception cref="T:System.Security.SecurityException">If caller did not have permission</exception>
             <exception cref="T:System.ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -4781,49 +4780,180 @@
         <member name="T:Lexical.FileSystem.Internal.AlphaNumericComparer">
             <summary>
             Alpha numeric string comparer. 
-            Considers numeric character sequences as numbers which are compared with number sorters.
+            
+            Considers number sequences and text sequences as one individual comparable tokens .
             
             For example: strings "a1", "a10", "a9" would be sorted to "a1", "a9", "a10".
+            
+            Decimal separators are not supported, as they could be mixed with other separators.
+            Exponents are not supported.
             </summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.InvariantCulture">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.InvariantCultureIgnoreCase">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.CurrentCulture">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.CurrentCultureIgnoreCase">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.CurrentUICulture">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.CurrentUICulture_IgnoreCase">
+            <summary>Comparer</summary>
         </member>
         <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Default">
-            <summary>
-            Singleton instance
-            </summary>
+            <summary>Singleton instance</summary>
         </member>
-        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.pattern">
-            <summary>
-            Pattern that classifies a substring either as number or text groups.
-            </summary>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.tokenComparer">
+            <summary>Token specific comparer</summary>
         </member>
-        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.StringCompare(System.String,System.Int32,System.String,System.Int32,System.Int32)">
-            <summary>
-            Placeholder for making text literal comparisons.
-            
-            Override this to change behaviour.
-            </summary>
-            <param name="x"></param>
-            <param name="x_ix"></param>
-            <param name="y"></param>
-            <param name="y_ix"></param>
-            <param name="length"></param>
-            <returns></returns>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.#ctor(System.Collections.Generic.IComparer{Lexical.FileSystem.Internal.AlphaNumericComparer.Token})">
+            <summary>Create alphanumeric comparer</summary>
+            <param name="tokenComparer"></param>
         </member>
         <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Compare(System.Object,System.Object)">
-            <summary>
-            Compare uncasted objects. Calls ToString().
-            </summary>
-            <param name="x"></param>
-            <param name="y"></param>
-            <returns></returns>
+            <summary>Compare uncasted objects. Calls ToString().</summary>
         </member>
         <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Compare(System.String,System.String)">
+            <summary>Compare strings.</summary>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.AlphaNumericComparer.TokenEnumerable">
+            <summary>token enumerable</summary>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.AlphaNumericComparer.Kind">
+            <summary>Token kind</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Kind.Numeric">
+            <summary>Numeric segment</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Kind.Text">
+            <summary>Text segment</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Kind.Other">
+            <summary>Other characters</summary>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.AlphaNumericComparer.Token">
+            <summary>Token info</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Item(System.Int32)">
+            <summary>Character at <paramref name="ix"/></summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Empty">
+            <summary>Empty string ""</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Kind">
+            <summary>Token kind</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Start">
+            <summary>Start index</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Length">
+            <summary>Length</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.String">
+            <summary>String</summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.op_Implicit(Lexical.FileSystem.Internal.AlphaNumericComparer.Token)~System.String">
+            <summary>Implicit converter</summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.#ctor(Lexical.FileSystem.Internal.AlphaNumericComparer.Kind,System.String)">
+            <summary>Create token</summary>
+            <param name="kind"></param>
+            <param name="str"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.#ctor(Lexical.FileSystem.Internal.AlphaNumericComparer.Kind,System.String,System.Int32,System.Int32)">
             <summary>
-            Compare strings.
+            Create span of characters.
             </summary>
-            <param name="x"></param>
-            <param name="y"></param>
-            <returns></returns>
+            <param name="kind"></param>
+            <param name="str"></param>
+            <param name="start"></param>
+            <param name="length"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Equals(System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.op_Equality(Lexical.FileSystem.Internal.AlphaNumericComparer.Token,Lexical.FileSystem.Internal.AlphaNumericComparer.Token)">
+            <summary></summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.op_Inequality(Lexical.FileSystem.Internal.AlphaNumericComparer.Token,Lexical.FileSystem.Internal.AlphaNumericComparer.Token)">
+            <summary></summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.GetHashCode">
+            <inheritdoc/>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.AppendTo(System.Text.StringBuilder)">
+            <summary>Append to string builder</summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Equals(Lexical.FileSystem.Internal.AlphaNumericComparer.Token)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer">
+            <summary>Order comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.InvariantCulture">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.InvariantCulture_IgnoreCase">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.CurrentCulture">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.CurrentCulture_IgnoreCase">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.CurrentUICulture">
+            <summary>Comparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.CurrentUICulture_IgnoreCase">
+            <summary>Comparer</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.CultureInfoFunc">
+            <summary>Culture Info function</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.CultureInfo">
+            <summary>Culture Info</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.IgnoreCase">
+            <summary>Ignore Case</summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.#ctor(System.Globalization.CultureInfo,System.Boolean)">
+            <summary>Create comparer</summary>
+            <param name="cultureInfo"></param>
+            <param name="ignoreCase"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.#ctor(System.Func{System.Globalization.CultureInfo},System.Boolean)">
+            <summary>Create comparer</summary>
+            <param name="cultureInfoFunc"></param>
+            <param name="ignoreCase"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Comparer.Compare(Lexical.FileSystem.Internal.AlphaNumericComparer.Token,Lexical.FileSystem.Internal.AlphaNumericComparer.Token)">
+            <summary>Compare tokens</summary>
+        </member>
+        <member name="T:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.EqualityComparer">
+            <summary>EqualityComparer</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.EqualityComparer.instance">
+            <summary>Singleton instance</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.EqualityComparer.Instance">
+            <summary>Singleton instance</summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.EqualityComparer.Equals(Lexical.FileSystem.Internal.AlphaNumericComparer.Token,Lexical.FileSystem.Internal.AlphaNumericComparer.Token)">
+            <summary>Compare for equal content</summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.EqualityComparer.GetHashCode(Lexical.FileSystem.Internal.AlphaNumericComparer.Token)">
+            <summary>Calculate hashcode</summary>
         </member>
         <member name="T:Lexical.FileSystem.Internal.ArrayList`1">
             <summary>
@@ -5342,9 +5472,9 @@
         </member>
         <member name="T:Lexical.FileSystem.Internal.StringSegment">
             <summary>
-            Span of characters of a <see cref="F:Lexical.FileSystem.Internal.StringSegment.String"/>.
+            Span of characters.
             
-            Used as workaround for missing Span class in .NET Standard.
+            Used due to lack of Span in .NET Standard 2.0.
             </summary>
         </member>
         <member name="P:Lexical.FileSystem.Internal.StringSegment.Item(System.Int32)">
@@ -5394,6 +5524,12 @@
         </member>
         <member name="M:Lexical.FileSystem.Internal.StringSegment.Equals(System.Object)">
             <inheritdoc/>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StringSegment.op_Equality(Lexical.FileSystem.Internal.StringSegment,Lexical.FileSystem.Internal.StringSegment)">
+            <summary></summary>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.StringSegment.op_Inequality(Lexical.FileSystem.Internal.StringSegment,Lexical.FileSystem.Internal.StringSegment)">
+            <summary></summary>
         </member>
         <member name="M:Lexical.FileSystem.Internal.StringSegment.GetHashCode">
             <inheritdoc/>

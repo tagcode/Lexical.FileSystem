@@ -330,7 +330,6 @@ namespace Lexical.FileSystem
         /// <param name="path">path to directory, "" is root, separator is "/"</param>
         /// <param name="option">(optional) operation specific option; capability constraint, a session, security token or credential. Used for authenticating, authorizing or restricting the operation.</param>
         /// <returns>a snapshot of file and directory entries</returns>
-        /// <exception cref="DirectoryNotFoundException"></exception>
         /// <exception cref="IOException">On unexpected IO error</exception>
         /// <exception cref="SecurityException">If caller did not have permission</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is null</exception>
@@ -344,7 +343,7 @@ namespace Lexical.FileSystem
             // Return OS-root, return drive letters.
             if (path == "" && Path == "") return BrowseRoot();
             //
-            if (isWindows && path.StartsWith("/")) throw new DirectoryNotFoundException(path);
+            if (isWindows && path.StartsWith("/")) return new DirectoryNotFound(this, path);
 
             // Concatenate paths and assert that path doesn't refer to parent of the constructed path
             string concatenatedPath, absolutePath;
