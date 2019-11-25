@@ -67,13 +67,50 @@ namespace Lexical.FileSystem.Internal
             TokenEnumerator x_etor = new TokenEnumerator(x), y_etor = new TokenEnumerator(y);
 
             // Has next tokens
-            bool x_next, y_next;
-            for (x_next = x_etor.MoveNext(), y_next = y_etor.MoveNext(); x_next && y_next; x_next = x_etor.MoveNext(), y_next = y_etor.MoveNext())
+            bool x_next = x_etor.MoveNext(), y_next = y_etor.MoveNext();
+            // Get tokens
+            Token x_token = x_etor.Current, y_token = y_etor.Current;
+            // Iterate
+            while (x_next && y_next)
             {
-                // Compare tokens
-                int d = tokenComparer.Compare(x_etor.Current, y_etor.Current);
-                // Difference
-                if (d != 0) return d;
+                // Equal length
+                if (x_token.Length == y_token.Length || x_token.Kind == Kind.Numeric || y_token.Kind == Kind.Numeric)
+                {
+                    // Compare tokens
+                    int d = tokenComparer.Compare(x_token, y_token);
+                    // Difference
+                    if (d != 0) return d;
+                    // Read more
+                    x_next = x_etor.MoveNext();
+                    y_next = y_etor.MoveNext();
+                    x_token = x_etor.Current;
+                    y_token = y_etor.Current;
+                }
+                // x is shorter
+                else if (x_token.Length<y_token.Length)
+                {
+                    Token y_left = y_token.Substring(0, x_token.Length);
+                    // Compare tokens
+                    int d = tokenComparer.Compare(x_token, y_left);
+                    // Difference
+                    if (d != 0) return d;
+                    // Read more
+                    y_token = y_token.Substring(x_token.Length, y_token.Length - x_token.Length);
+                    x_next = x_etor.MoveNext();
+                    x_token = x_etor.Current;
+                } else
+                // y is shorter
+                {
+                    Token x_left = x_token.Substring(0, y_token.Length);
+                    // Compare tokens
+                    int d = tokenComparer.Compare(x_left, y_token);
+                    // Difference
+                    if (d != 0) return d;
+                    // Read more
+                    x_token = x_token.Substring(y_token.Length, x_token.Length - y_token.Length);
+                    y_next = y_etor.MoveNext();
+                    y_token = y_etor.Current;
+                }
             }
 
             // Has more x, end of y.
@@ -98,11 +135,15 @@ namespace Lexical.FileSystem.Internal
 
         struct TokenEnumerator : IEnumerator<Token>
         {
-            String str;
-            int ix;
             Token current;
-            public Token Current => current;
             object IEnumerator.Current => current;
+
+            /// <summary>Source string</summary>
+            String str;
+            /// <summary>Character index, -1=start</summary>
+            int ix;
+            /// <summary>Current token</summary>
+            public Token Current => current;
 
             public TokenEnumerator(String str)
             {
@@ -268,6 +309,15 @@ namespace Lexical.FileSystem.Internal
                 this.Length = length;
             }
 
+            /// <summary>
+            /// Create substring token
+            /// </summary>
+            /// <param name="start"></param>
+            /// <param name="length"></param>
+            /// <returns>substring token</returns>
+            public Token Substring(int start, int length)
+                => new Token(Kind, String, this.Start + start, length);
+
             /// <inheritdoc/>
             public override bool Equals(object obj)
             {
@@ -392,7 +442,19 @@ namespace Lexical.FileSystem.Internal
                 {
                     // Compare kinds
                     int d = ((int)x.Kind) - ((int)y.Kind);
-                    if (d != 0) return d;
+
+                    // Different kinds
+                    if (d != 0)
+                    {
+                        // Min Length
+                        int minLength = x.Length < y.Length ? x.Length : y.Length;
+                        // Compare common characters
+                        int c = string.Compare(x.String, x.Start, y.String, y.Start, minLength, IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+                        // Difference
+                        if (c != 0) return c;
+                        // Compare by length
+                        return x.Length - y.Length;
+                    }
 
                     // Zero length
                     if (x.Length == 0 || y.Length == 0)
@@ -407,7 +469,7 @@ namespace Lexical.FileSystem.Internal
                         d = string.Compare(x.String, x.Start, y.String, y.Start, minLength, IgnoreCase, CultureInfo ?? CultureInfoFunc());
                         // Difference
                         if (d != 0) return d;
-                        // Compare by length again
+                        // Compare by length
                         return x.Length - y.Length;
                     }
 
@@ -420,7 +482,7 @@ namespace Lexical.FileSystem.Internal
                         d = string.Compare(x.String, x.Start, y.String, y.Start, minLength, StringComparison.Ordinal);
                         // Difference
                         if (d != 0) return d;
-                        // Compare by length again
+                        // Compare by length
                         return x.Length - y.Length;
                     }
 
@@ -438,7 +500,7 @@ namespace Lexical.FileSystem.Internal
                             d = string.Compare(x.String, x.Start, y.String, y.Start, minLength, StringComparison.Ordinal);
                             // Difference
                             if (d != 0) return d;
-                            // Compare by length again
+                            // Compare by length
                             return x.Length - y.Length;
                         }
                         // Decimal comparison

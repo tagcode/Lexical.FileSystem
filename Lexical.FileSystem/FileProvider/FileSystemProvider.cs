@@ -206,8 +206,8 @@ namespace Lexical.FileSystem.Decoration
             // Assert enabled feature
             if (!options.CanObserve) throw new NotSupportedException(nameof(Watch));
             WatchToken watchToken = new WatchToken();
-            IFileSystemObserver disposable = FileSystem.Observe(filter, watchToken, null, null, token);
-            Interlocked.CompareExchange(ref watchToken.observerHandle, disposable, null);
+            IFileSystemObserver observerHandle = FileSystem.Observe(filter, watchToken, null, null, token);
+            Interlocked.CompareExchange(ref watchToken.observerHandle, observerHandle, null);
             return watchToken;
         }
 

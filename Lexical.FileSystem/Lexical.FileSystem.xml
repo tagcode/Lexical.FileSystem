@@ -4826,6 +4826,15 @@
         <member name="T:Lexical.FileSystem.Internal.AlphaNumericComparer.TokenEnumerable">
             <summary>token enumerable</summary>
         </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.TokenEnumerator.str">
+            <summary>Source string</summary>
+        </member>
+        <member name="F:Lexical.FileSystem.Internal.AlphaNumericComparer.TokenEnumerator.ix">
+            <summary>Character index, -1=start</summary>
+        </member>
+        <member name="P:Lexical.FileSystem.Internal.AlphaNumericComparer.TokenEnumerator.Current">
+            <summary>Current token</summary>
+        </member>
         <member name="T:Lexical.FileSystem.Internal.AlphaNumericComparer.Kind">
             <summary>Token kind</summary>
         </member>
@@ -4875,6 +4884,14 @@
             <param name="str"></param>
             <param name="start"></param>
             <param name="length"></param>
+        </member>
+        <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Substring(System.Int32,System.Int32)">
+            <summary>
+            Create substring token
+            </summary>
+            <param name="start"></param>
+            <param name="length"></param>
+            <returns>substring token</returns>
         </member>
         <member name="M:Lexical.FileSystem.Internal.AlphaNumericComparer.Token.Equals(System.Object)">
             <inheritdoc/>
