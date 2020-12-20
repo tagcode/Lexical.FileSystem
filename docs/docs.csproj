@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <StartupObject>docs.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="another-embedded-file.txt" />
+    <None Remove="example-file.txt" />
+    <None Remove="file.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="file.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="another-embedded-file.txt" />
+    <EmbeddedResource Include="example-file.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lexical.FileSystem.Abstractions\Lexical.FileSystem.Abstractions.csproj" />
+    <ProjectReference Include="..\Lexical.FileSystem\Lexical.FileSystem.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="README.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>README.md</LastGenOutput>
+    </None>
+    <None Update="README.md">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>README.tt</DependentUpon>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+</Project>

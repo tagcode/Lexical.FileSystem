@@ -1,0 +1,1 @@
+﻿Hello, this is an example file that is embedded into an Assembly (.dll).

@@ -1,0 +1,168 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ output extension=".md" #>
+<#
+	string srcDir = Path.GetDirectoryName(Host.TemplateFile);
+	IEnumerable<string> indexFiles = Directory.GetFiles(srcDir, "index.md", SearchOption.AllDirectories);
+	string intro = "", filesystem = "", virtualfilesystem = "", decoration = "", fileprovider = "", memoryfilesystem = "", httpfilesystem = "", filescanner = "", treevisit = "", operation = "";
+	foreach(var srcFilename in indexFiles)
+	{
+	    string dstFilename = srcFilename.Replace("index.md", "README.md");
+		string srcTxt = File.ReadAllText(srcFilename);
+		string dstText = ConvertDocument(Path.GetDirectoryName(srcFilename), srcTxt);
+		File.WriteAllText(dstFilename, dstText);
+
+        // index.md
+        if (srcFilename == srcDir+"\\index.md")
+        {
+            intro = dstText;
+            File.WriteAllText($"{srcDir}/../index.md", srcTxt);
+			File.WriteAllText($"{srcDir}/../README.md", dstText);
+        }
+
+		if (srcFilename == srcDir+@"\FileSystem\index.md") filesystem = dstText;
+		if (srcFilename == srcDir+@"\VirtualFileSystem\index.md") virtualfilesystem = dstText;
+		if (srcFilename == srcDir+@"\MemoryFileSystem\index.md") memoryfilesystem = dstText;
+		if (srcFilename == srcDir+@"\HttpFileSystem\index.md") httpfilesystem = dstText;
+		if (srcFilename == srcDir+@"\Decoration\index.md") decoration = dstText;
+		if (srcFilename == srcDir+@"\IFileProvider\index.md") fileprovider = dstText;
+		if (srcFilename == srcDir+@"\FileScanner\index.md") filescanner = dstText;
+		if (srcFilename == srcDir+@"\TreeVisit\index.md") treevisit = dstText;
+		if (srcFilename == srcDir+@"\Operation\index.md") operation = dstText;
+	}
+
+#>
+<#= intro #>
+
+Contents:
+* [FileSystem](#FileSystem)
+* [VirtualFileSystem](#VirtualFileSystem)
+* [Decoration](#Decoration)
+* [IFileProvider](#IFileProvider)
+* [MemoryFileSystem](#MemoryFileSystem)
+* [HttpFileSystem](#HttpFileSystem)
+* [FileScanner](#FileScanner)
+* [VisitTree](#VisitTree)
+* [Operation](#Operation)
+
+<#= filesystem #>
+<#= virtualfilesystem #>
+<#= decoration #>
+<#= fileprovider #>
+<#= memoryfilesystem #>
+<#= httpfilesystem #>
+<#= filescanner #>
+<#= treevisit #>
+<#= operation #>
+<#+
+
+        static Regex splitter = new Regex("\r?\n\r?");
+
+        static string ConvertDocument(string dir, string src)
+        {
+            // [!code-<lang>[<title>](<filename>#<region>)]
+            // [!code[<title>](<filename>#<region>)]
+            Regex rex = new Regex(@"\[\!(?<code>[0-9a-zA-Z\-]*)\[\s*(?<title>.*)\s*\]\w*\((?<filename>[^#\)\]]*)(#(?<region>\w*))?\)\w*\]");
+
+            // Change into this
+            // ```csharp\r\n<file-remove-indent>
+            // ```
+            string dst = rex.Replace(src,
+                (Match m) =>
+                {
+                    string code = m.Groups[2].Value, title = m.Groups[3].Value, filename = m.Groups[4].Value, region = m.Groups[5].Value;
+                    if (title == "Fullcode") return $"[Fullcode]({filename})";
+                    string includeFile = Path.Combine(dir, filename);
+                    string includeText = File.ReadAllText(includeFile);
+                    if (code == "include") return includeText;
+                    if (region!="") includeText = GetRegion(includeText, region);
+                    IEnumerable<string> lines = splitter.Split(includeText).ToArray();
+                    int ws = CountWhiteSpace(lines);
+                    lines = RemoveWhiteSpace(lines, ws);
+                    string newText = string.Join("\r\n", lines);
+
+                    string codeType = code.StartsWith("code-") ? code.Substring(5) : "";
+                    return $"\r\n```{codeType}\r\n{newText}\r\n```";
+                }
+            );
+
+            return dst;
+        }        
+
+        /// <summary>
+        /// Searches text for a region.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="regionName"></param>
+        /// <returns>region or ""</returns>
+        static string GetRegion(string text, string regionName)
+        {
+            Regex rex = new Regex(@"#region\s*"+regionName+@"\s*\r?\n\r?(?<region>.*?)\r?\n\s*#endregion\s*"+regionName+@"\s*\r?\n", RegexOptions.Singleline);
+            Match match = rex.Match(text);
+			if (match.Success) return match.Groups[1].Value;
+
+            rex = new Regex(@"//\s*\<"+regionName+@"\>\s*\r?\n\r?(?<region>.*?)\r?\n\s*//\s*\</"+regionName+@"\>\s*\r?\n", RegexOptions.Singleline);
+            match = rex.Match(text);
+			return match.Groups[1].Value;
+        }
+
+        /// <summary>
+        /// Iterates lines, counts number of whitespace, return the smalles number of whitespace characters.
+        /// </summary>
+        /// <param name="lines"></param>
+        /// <param name="tabLength"></param>
+        /// <returns></returns>
+        static int CountWhiteSpace(IEnumerable<string> lines, int tabLength = 4)
+        {
+            int result = -1;
+            foreach (string line in lines)
+            {
+                if (line == "") continue;
+                int ws = 0;
+                for (int ix = 0;ix<line.Length; ix++)
+                {
+                    switch(line[ix])
+                    {
+                        case ' ': ws++; continue;
+                        case '\t': ws += tabLength; continue;
+                        default: goto exitForloop;
+                    }
+                }
+                exitForloop:
+                result = result < 0 ? ws : Math.Min(ws, result);
+            }
+            return result <0 ? 0 : result;
+        }
+
+        /// <summary>
+        /// Iterates lines, removes whitespace.
+        /// </summary>
+        /// <param name="lines"></param>
+        /// <param name="wsToRemove"></param>
+        /// <param name="tabLength"></param>
+        /// <returns></returns>
+        static IEnumerable<string> RemoveWhiteSpace(IEnumerable<string> lines, int wsToRemove, int tabLength = 4)
+        {
+            foreach(string line in lines)
+            {
+                int ix = 0;
+                for (int c = wsToRemove; ix<line.Length && c>0; ix++)
+                {
+                    switch(line[ix])
+                    {
+                        case ' ': c--; continue;
+                        case '\t': c -= tabLength; continue;
+                        default: goto exitForloop;
+                    }
+                }
+                exitForloop:
+                yield  return ix == 0 ? line :line.Substring(ix);
+            }
+        }
+#>
